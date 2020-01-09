@@ -1,5 +1,5 @@
 PROGRAM NESTED_FIT
-  ! Time-stamp: <Last changed by martino on Wednesday 08 January 2020 at CET 18:41:34>
+  ! Time-stamp: <Last changed by martino on Thursday 09 January 2020 at CET 09:55:28>
   ! 3.2  Pion mass function and laser interpolation taken out to avoid Numerical Recipes
   !      Indexing for sorting data from SLATEC routine now
   !      Log(factorial) and gamma function from intrinsic function DLGAMMA now (and via a new routine for the factorial)
@@ -246,12 +246,12 @@ PROGRAM NESTED_FIT
         DO i=1, maxdata
            READ(10,*,END=20) x_raw(i), nc_raw(i)
            ! Make test for integer numbers
-           !IF (ABS(nc_raw(i)-INT(nc_raw(i))).GT.1E-5) THEN
-           !   WRITE(*,*) 'Attention, input numbers are not counts and you are using Poisson statistic (no error bar)'
-           !   WRITE(*,*) 'n. counts = ', nc_raw(i) 
-           !   WRITE(*,*) 'Change something!'
-           !   STOP
-           !END IF
+           IF (ABS(nc_raw(i)-INT(nc_raw(i))).GT.1E-5) THEN
+              WRITE(*,*) 'Attention, input numbers are not counts and you are using Poisson statistic (no error bar)'
+              WRITE(*,*) 'n. counts = ', nc_raw(i) 
+              WRITE(*,*) 'Change something!'
+              STOP
+           END IF
            ! Select the data
            IF(x_raw(i).GE.xmin.AND.x_raw(i).LE.xmax) THEN
               nd = nd + 1
