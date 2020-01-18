@@ -8,7 +8,7 @@ More information on the program can be found in Refs. [3,4].
 
 **Articles about nested sampling method**:\
 [1] J. Skilling, *Nested sampling for general Bayesian computation*, Bayesian Anal. **1**, 833-859 (2006)\
-[2] D.S. Sivia and J. Skilling, *Data analysis: a Bayesian tutorial*. Second ed. 2006: Oxford University Press\
+[2] D.S. Sivia and J. Skilling, *Data analysis: a Bayesian tutorial*. Second ed. 2006: Oxford University Press
 
 **Reference articles of nested_fit**:\
 [3] M. Trassinelli, *The Nested_fit Data Analysis Program*, Proceedings **33**, 14 (2019), [https://doi.org/10.3390/proceedings2019033014](https://doi.org/10.3390/proceedings2019033014)\
@@ -72,10 +72,10 @@ Previous versions are:
       exponential part.
       Extraction of live points values in case of non-convergence
  - 2.1  Add of "Rocking curve" profile that uses external simulated data and
-      FITPACK routines for the use of smothed B-splines
+      FITPACK routines for the use of smoothed B-splines
  - 2.0  Treatment of data with error bars becomes possible
-      No errorbars: Likelihood with Poisson distribution
-      Errorbars   : Likelihood with Gaussian distribution
+      No error bars: Likelihood with Poisson distribution
+      Error bars   : Likelihood with Gaussian distribution
  - 1.0  Add of Shirley background for photoemission spectra
       Add of data output for mean and median parameter values (in addition to max likelihood values)
       Parallelization is back but only for the likelihood calculation otherwise it sucks (most of the time)
@@ -89,7 +89,7 @@ Previous versions are:
       D.S. Sivia, "Data Analysis, a Bayesian tutorial" (2006)
       R. Trotta, Contemporary Physics 49, 71 (2008).
       J. Veitch and A. Vecchio, Phys. Rev. D 81, 062003 (2010)
- - 0.3: Optimization with mermory allocation and more variables accessible from the input file
+ - 0.3: Optimization with memory allocation and more variables accessible from the input file
  - 0.2: Version with parallel seek of groups of live points inspired by (not working anymore since 2016)
       J. Veitch and A. Vecchio, Phys. Rev. D 81, 062003 (2010) and
       N. Chopin and C.P. Robert, Biometrika 97, 741-755 (2010)
@@ -100,7 +100,7 @@ Previous versions are:
  In addition to the original files from the main author (M. Trassinelli), nesed_fit includes
  - *FITPACK (DIERCKX)* package, to fit and interpolating data with splines (no license)
    - Ref: Paul Dierckx, Curve and Surface Fitting with Splines, Oxford University Press, 1993
- Developer, 
+ Developer,
    - Address: Paul Dierckx, Department of Computer Science, K.U. Leuven, Celestijnenlaan 200 A, B-3001, Heverlee, Belgium, Paul.Dierckx@cs.kuleuven.ac.be
    - [http://nalag.cs.kuleuven.be/research/topics/fitpack.shtml](http://nalag.cs.kuleuven.be/research/topics/fitpack.shtml)
  - '*dpsort.f*' + dependencies from SLATEC library (GPLv2 Licence) for sorting arrays with respect another array

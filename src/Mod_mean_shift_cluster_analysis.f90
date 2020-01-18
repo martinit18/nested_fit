@@ -9,15 +9,15 @@ MODULE MOD_MEAN_SHIFT_CLUSTER_ANALYSIS
   INTEGER(4), ALLOCATABLE, DIMENSION(:) :: p_cluster, cluster_np
   REAL(8) :: bandwidth=0.12, distance_limit=0.4
   CHARACTER :: cluster_method*1= 'f'
-  
-  
-  
+
+
+
 CONTAINS
- 
+
   !--------------------------------------------------------------------------------------------------------------
 
 
-  
+
   SUBROUTINE MAKE_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     ! From a group of np points p of dimension ndim, determine the clusters
     ! using distance and bandwidth as parameters
@@ -32,7 +32,7 @@ CONTAINS
     REAL(8), DIMENSION(ndim_in) :: num, dem
     INTEGER(4), PARAMETER :: iter_max=30, ncluster_max=500
     INTEGER(4) :: i, j, k, l, nn, min_nn
-    REAL(8), DIMENSION(ncluster_max,ndim_in) :: mean_cluster 
+    REAL(8), DIMENSION(ncluster_max,ndim_in) :: mean_cluster
     LOGICAL :: accuracy_reached
 
     np = np_in
@@ -42,12 +42,12 @@ CONTAINS
     p = 0.
     p_mean_shift = 0.
     p_mean_old = 0.
-    
+
     ! Allocate the variables if needed
     IF(.NOT.cluster_on) ALLOCATE(p_cluster(np))
     p_cluster = 0
 
-    
+
     ! Calculate min and max and renormalize the point dimensions
     DO l=1,ndim
        val_max = maxval(p_in(:,l))
@@ -55,7 +55,7 @@ CONTAINS
        p(:,l) = (p_in(:,l)-val_min)/(val_max-val_min)
     END DO
 
-    
+
     ! Before the main algorithm
     p_mean_shift = p
     accuracy_reached = .false.
@@ -66,7 +66,7 @@ CONTAINS
 !!$       WRITE(10,*) p_mean_shift(l,:)
 !!$    END DO
 !!$    CLOSE(10)
-    
+
     ! Run the algorithm -----------------------------------------------------------------------------------
     ! Stop when the mean values do not move anymore
     WRITE(*,*) 'Starting cluster analysis'
@@ -84,7 +84,7 @@ CONTAINS
           DO k=1,np
              IF (j.NE.k) THEN
                 dist = NORM2(p_mean_old(j,:)-p_mean_old(k,:))
-                ! ... that are close enough 
+                ! ... that are close enough
                 IF (dist.LE.distance_limit) THEN
                    nn = nn + 1
                    IF(cluster_method.EQ.'g'.OR.cluster_method.EQ.'G') THEN
@@ -129,15 +129,15 @@ CONTAINS
 !!$          WRITE(10,*) p_mean_shift(l,:)
 !!$       END DO
 !!$       CLOSE(10)
-       
+
        !pause
-       
+
        ! Accuracy reached. Exit the loop
        IF(max_accuracy.LE.accuracy) EXIT
-       
+
     END DO
 
-    
+
 !    WRITE(*,*) 'n_iteration = ', i, 'minimal n. of neighbours = ', min_nn, 'present accuracy = ', max_accuracy
 
     IF(i.EQ.iter_max) THEN
@@ -151,8 +151,8 @@ CONTAINS
     mean_cluster(1,:) = p_mean_shift(1,:)
     p_cluster(1) = 1
     ! Check other points
-    DO j=2,np  
-       ! Check if it is equal to other mean values 
+    DO j=2,np
+       ! Check if it is equal to other mean values
        DO k=1,ncluster
           IF (NORM2(p_mean_shift(j,:)-mean_cluster(k,:)).LE.(accuracy_cluster)) THEN
              p_cluster(j) = k
@@ -172,8 +172,10 @@ CONTAINS
 
     IF(ncluster.EQ.ncluster_max) THEN
        WRITE(*,*) 'Maximal number of clusters. Change something'
+       STOP
     END IF
 
+    ! Write file for further analysis and check of cluster recognition
     OPEN (UNIT=10, FILE='nf_meanshift_final_'//timestamp()//'.dat', STATUS='unknown')
     DO l=1,np
        WRITE(10,*) p_cluster(l), p_in(l,:)
@@ -203,14 +205,14 @@ CONTAINS
        END DO
     END DO
     CLOSE(10)
-    
-    
+
+
   END SUBROUTINE MAKE_CLUSTER_ANALYSIS
 
 
   !--------------------------------------------------------------------------------------------------------------
 
-  
+
 
   SUBROUTINE DEALLOCATE_CLUSTER()
     ! Deallocate variables
@@ -218,12 +220,12 @@ CONTAINS
     DEALLOCATE(p_cluster,cluster_std,cluster_mean,cluster_np)
 
   END SUBROUTINE DEALLOCATE_CLUSTER
-  
-  
+
+
   !--------------------------------------------------------------------------------------------------------------
 
- 
-  
+
+
   SUBROUTINE MAKE_CLUSTER_STD(p,icl)
     ! Make analysis of the selected cluster
     REAL(8), DIMENSION(np,ndim), INTENT(IN) :: p
@@ -232,7 +234,7 @@ CONTAINS
     INTEGER(4) :: np_cl, j, l
     REAL(8), DIMENSION(np,ndim) :: p_cl
 
-    
+
     ! Recognize cluster elements------------------------------
     np_cl = 0
     p_cl = 0.
@@ -243,13 +245,13 @@ CONTAINS
        END IF
     END DO
     cluster_np(icl) = np_cl
-    
+
     ! Compute average and std---------------------------------
     IF(cluster_np(icl).EQ.1) THEN
        cluster_mean(icl,:) = p_cl(1,:)
        cluster_std(icl,:) = 0.
     ELSE
-       DO l=1,ndim  
+       DO l=1,ndim
           cluster_mean(icl,l) = 0.
           cluster_std(icl,l) = 0.
           cluster_mean(icl,l) = SUM(p_cl(1:cluster_np(icl),l))/cluster_np(icl)
@@ -258,9 +260,9 @@ CONTAINS
                (cluster_np(icl)-1))
        END DO
     END IF
-    
+
   END SUBROUTINE MAKE_CLUSTER_STD
-  
+
   !--------------------------------------------------------------------------------------------------------------
 
   SUBROUTINE REMAKE_CLUSTER_STD(p,icl_new,icl_old)
@@ -275,26 +277,26 @@ CONTAINS
        ! if it is not empty
        IF(icl_old.GE.1) CALL MAKE_CLUSTER_STD(p,icl_old)
     END IF
-       
+
   END SUBROUTINE REMAKE_CLUSTER_STD
-  
+
 
   !--------------------------------------------------------------------------------------------------------------
-  
+
 
   FUNCTION GAUSSIAN_KERNEL(x,sigma)
     ! Gaussian kernel
     REAL(8), PARAMETER :: pi=3.141592653589793d0
     REAL(8) :: x, sigma, GAUSSIAN_KERNEL
-    
+
     GAUSSIAN_KERNEL = 1/(2*pi*sigma)*DEXP(-(x**2)/(2*sigma**2))
 
   END FUNCTION GAUSSIAN_KERNEL
-  
+
 
 
 !!$  ! ####################### OTHER USEFULL FUNCTIONS ##########################################################
-!!$  
+!!$
 !!$
 !!$  FUNCTION GET_CLUSTER_STD(icluster)
 !!$    ! Get the standar deviation of the selected cluster
@@ -308,7 +310,7 @@ CONTAINS
 
 
 
- 
+
 !##################################################################################################################
 
 END MODULE MOD_MEAN_SHIFT_CLUSTER_ANALYSIS

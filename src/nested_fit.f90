@@ -248,7 +248,7 @@ PROGRAM NESTED_FIT
            ! Make test for integer numbers
            IF (ABS(nc_raw(i)-INT(nc_raw(i))).GT.1E-5) THEN
               WRITE(*,*) 'Attention, input numbers are not counts and you are using Poisson statistic (no error bar)'
-              WRITE(*,*) 'n. counts = ', nc_raw(i) 
+              WRITE(*,*) 'n. counts = ', nc_raw(i)
               WRITE(*,*) 'Change something!'
               STOP
            END IF
@@ -316,7 +316,7 @@ PROGRAM NESTED_FIT
               ! Make test for integer numbers
               IF (ABS(nc_raw(i)-INT(nc_raw(i))).GT.1E-5) THEN
                  WRITE(*,*) 'Attention, input numbers are not counts and you are using Poisson statistic (no error bar)'
-                 WRITE(*,*) 'n. counts = ', nc_raw(i) 
+                 WRITE(*,*) 'n. counts = ', nc_raw(i)
                  WRITE(*,*) 'Change something!'
                  STOP
               END IF
@@ -902,8 +902,8 @@ PROGRAM NESTED_FIT
   WRITE(22,*) 'Minimal_required_iteration_(ntry*exp[info]):', nexp
   WRITE(22,*) 'Bayesian_complexity:                        ', comp
   WRITE(22,*) '###################################################################################################################'
-  WRITE(22,*) 'Number of used cores:                       ', nth
-  WRITE(22,*) 'Time elapsed (tot and real in s):           ', seconds, seconds_omp
+  WRITE(22,*) 'Number_of_used_cores:                       ', nth
+  WRITE(22,*) 'Time_elapsed_(tot_and_real_in_s):           ', seconds, seconds_omp
   CLOSE(22)
 
   WRITE(*,*) ' '
