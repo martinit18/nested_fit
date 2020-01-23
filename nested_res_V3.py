@@ -1031,12 +1031,17 @@ class Summary(object):
                 dirname =  dir
             else:
                 dirname = dir+'/'
+            print 'Loading directory ', dir
             # Start analysis in this directory if the analysis is done
             if not os.path.isfile(dirname+'nf_output_points.dat'):
-                #print 'Result file nf_output_points.dat not present\n Nothing to load'
+                print 'Result file nf_output_points.dat not present\n Nothing to load'
                 continue
             an = Analysis(path=dirname)
             print 'Analysis in ' + dirname
+            #
+            # Read results input and output types
+            input_types = an.load_input(dirname).keys()
+            output_types = an.load_output_results(dirname).keys()
             #
             input_par = an.load_input(dirname)
             par_tmp = par_tmp + [p[1].replace("'", "") for p in input_par['parameters']]
@@ -1045,9 +1050,6 @@ class Summary(object):
         [parameters.append(x) for x in par_tmp if x not in parameters]
         print "Parameters  found ", parameters
 
-        # Read results input and output types
-        input_types = an.load_input(dirname).keys()
-        output_types = an.load_output_results(dirname).keys()
 
         # Exceptions that have to be expanded with the parameter name
         inputs_par = ["value", "step","minl","maxl","fixed"]

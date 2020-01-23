@@ -5,6 +5,7 @@ The evidence calculation is based on the nested algorithm from Skilling 2004 [1,
 It is written in Fortran with some Python complementary routines for visualizing the output results and for doing automatic analyses of series of data.
 More information on the program can be found in Refs. [3,4].
 
+If you use this program, please cite it using these references and its author.
 
 **Articles about nested sampling method**:\
 [1] J. Skilling, *Nested sampling for general Bayesian computation*, Bayesian Anal. **1**, 833-859 (2006)\
@@ -14,6 +15,11 @@ More information on the program can be found in Refs. [3,4].
 [3] M. Trassinelli, *The Nested_fit Data Analysis Program*, Proceedings **33**, 14 (2019), [https://doi.org/10.3390/proceedings2019033014](https://doi.org/10.3390/proceedings2019033014)\
 [4] M. Trassinelli, *Bayesian data analysis tools for atomic physics*, Nucl. Instrum. Methods B **408**, 301-312 (2017),
 [http://dx.doi.org/10.1016/j.nimb.2017.05.030](http://dx.doi.org/10.1016/j.nimb.2017.05.030),  [	arXiv:1611.10189](https://arxiv.org/abs/1611.10189)
+
+**Author**:\
+Dr. Martino trassinelli\
+CNRS, Institute of NanoSciences of Paris\
+email: m.trassinelli AT gmail.com
 
 ## Basic instructions
 
