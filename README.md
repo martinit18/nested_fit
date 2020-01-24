@@ -109,6 +109,6 @@ Previous versions are:
  Developer,
    - Address: Paul Dierckx, Department of Computer Science, K.U. Leuven, Celestijnenlaan 200 A, B-3001, Heverlee, Belgium, Paul.Dierckx@cs.kuleuven.ac.be
    - [http://nalag.cs.kuleuven.be/research/topics/fitpack.shtml](http://nalag.cs.kuleuven.be/research/topics/fitpack.shtml)
- - '*dpsort.f*' + dependencies from SLATEC library (GPLv2 Licence) for sorting arrays with respect another array
+ - '*dpsort.f*' + dependencies from SLATEC library (no license) for sorting arrays with respect another array
  - '*WOFZ.f*'' for the complex error function from TOMS algorithm n. 680 (included in Fortran 2008)
  - '*rinteg.f*' to calculate the integral of a function using a nq points quadrature ( nq is any integer between 1 and 14 ). Written by C. C. J. Roothaan (no license)
