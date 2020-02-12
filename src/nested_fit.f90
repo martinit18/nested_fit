@@ -396,6 +396,11 @@ PROGRAM NESTED_FIT
         ! Suggestion for the values: s between m-sqrt(2*m),m+sqrt(2*m)
         ! with m the number of points
         CALL INIT_TWO_INTERP(val(14),val(15))
+     ELSE IF(funcname.EQ.'THREE_INTERP_VOIGT_POLY') THEN
+        ! Passing as argument the smoothing factors to be adjusted case by case
+        ! Suggestion for the values: s between m-sqrt(2*m),m+sqrt(2*m)
+        ! with m the number of points
+        CALL INIT_THREE_INTERP(val(12),val(13),val(14))
      ELSE IF(funcname.EQ.'SIX_GAUSS_SHIRLEYBG'&
           .OR.funcname.EQ.'SIX_VOIGT_SHIRLEYBG'&
           .OR.funcname.EQ.'SIX_VOIGT_PARA_SHIRBG_SIG_PLEIADES'&

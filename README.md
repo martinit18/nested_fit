@@ -20,6 +20,7 @@ If you use this program, please cite it using these references and its author.
 **Author**:\
 Dr. Martino trassinelli\
 CNRS, Institute of NanoSciences of Paris\
+email: trassinelli AT insp.jussieu.fr\
 email: m.trassinelli AT gmail.com
 
 ## Basic instructions
@@ -63,27 +64,27 @@ This is the first version with free sharing code only.
 
 Previous versions are:
 
- - 3.1  Optimization of parallel computing
-      Corrections to Shirley functions
-      Add of latest Shirley functions
-      Fix a bug in the fixed parameters
+ - 3.1  Optimization of parallel computing\
+      Corrections to Shirley functions\
+      Add of latest Shirley functions\
+      Fix a bug in the fixed parameters\
       Add of the time stamp to the cluster analysis files
  - 3.0  Cluster analysis for live points to improve (very much!!!) the search efficiency
- - 2.3  Parallelism optimization. Usercondition routine removed
+ - 2.3  Parallelism optimization. Usercondition routine removed\
       Correction for gaussian priors (before was done at each jump, now only at the end)
  - 2.2  Add of "Rocking curve" profile that uses external simulated data for set of files
       (parallel and antiparallel, still to test)
       Solved problem with probabilities > 1 for gaussian data. Each data point is considered distributed
       with a Gaussian. But in the normalization factor, sigmas have not to appear. Otherwise probabilities
       can have a dimension.The variables are naturally transformed in dimensionless unit in the
-      exponential part.
+      exponential part.\
       Extraction of live points values in case of non-convergence
  - 2.1  Add of "Rocking curve" profile that uses external simulated data and
       FITPACK routines for the use of smoothed B-splines
- - 2.0  Treatment of data with error bars becomes possible
-      No error bars: Likelihood with Poisson distribution
+ - 2.0  Treatment of data with error bars becomes possible\
+      No error bars: Likelihood with Poisson distribution\
       Error bars   : Likelihood with Gaussian distribution
- - 1.0  Add of Shirley background for photoemission spectra
+ - 1.0  Add of Shirley background for photoemission spectra\
       Add of data output for mean and median parameter values (in addition to max likelihood values)
       Parallelization is back but only for the likelihood calculation otherwise it sucks (most of the time)
  - 0.9  Implementation of complex error function from TOMS algorithm n. 680 (included in Fortran 2008) WOFZ.f
