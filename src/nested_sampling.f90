@@ -688,8 +688,8 @@ FUNCTION LOGLIKELIHOOD_PAR(funcname,ndata,x,nc,nc_err,errorbars_yn,npar,par)
      !$OMP PARALLEL DO
      DO i=1, ndata
         enc = USERFCN(x(i),npar,par,funcname)
-        !ll_tmp(i) = - (nc(i) - enc)**2/(2*nc_err(i)**2)
-        write(*,*) x(i),nc(i), enc,nc_err(i), ll_tmp(i), const_ll !!??
+        ll_tmp(i) = - (nc(i) - enc)**2/(2*nc_err(i)**2)
+        !write(*,*) x(i),nc(i), enc,nc_err(i), ll_tmp(i), const_ll !!??
      ENDDO
      !$OMP END PARALLEL DO
      !
