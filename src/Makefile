@@ -1,5 +1,5 @@
 #  Automatic Time-stamp: <Last changed by martino on Wednesday 08 January 2020 at CET 17:46:17>
-NAME    = nested_fit3.2.exe
+NAME    = nested_fit3.2_new_functions.exe
 .SUFFIXES : .f90 .f .o .c .mod
 CFLAGS  =
 FFLAGS  = -fopenmp
@@ -22,7 +22,7 @@ FFILES  =  USERFCN.f USERFCN_SET.f init_interpolation.f \
 
 F90FILES = Mod_timestamp.f90  Mod_mean_shift_cluster_analysis.f90 \
 	 nested_fit.f90 nested_sampling.f90 nested_sampling_set.f90 \
-	 dlog_fac.f90 sortn_slatec.f90 meanvar.f90 randn.f90 shirley_fitpack.f90 
+	 dlog_fac.f90 sortn_slatec.f90 meanvar.f90 randn.f90 shirley_fitpack.f90
 
 OPT = -O2 -static
 #OPT = -g  -C -static

@@ -1,4 +1,4 @@
-c     Automatic Time-stamp: <Last changed by martino on Tuesday 07 January 2020 at CET 17:26:39>
+c     Automatic Time-stamp: <Last changed by martino on Wednesday 12 February 2020 at CET 09:21:28>
 c################################### USERFCN DEFINITION #####################################
 
 
@@ -42,7 +42,7 @@ c################################### USERFCN DEFINITION ########################
       REAL*8 SIX_GAUSS_SHIRLEYBG
       REAL*8 SIX_VOIGT_SHIRLEYBG
       REAL*8 SIX_VOIGT_PARA_SHIRBG_SIG_PLEIADES
-      REAL*8 ROCKING_CURVE, TWO_INTERP_VOIGT_POLY
+      REAL*8 ROCKING_CURVE,TWO_INTERP_VOIGT_POLY,THREE_INTERP_VOIGT_POLY
       REAL*8 x
       CHARACTER*64 funcname
 
@@ -127,6 +127,8 @@ c     Choose your model (see below for definition)
          USERFCN =SIX_VOIGT_EXPBG_WF(x,npar,val)
       ELSE IF(funcname.EQ.'TWO_INTERP_VOIGT_POLY') THEN
          USERFCN =TWO_INTERP_VOIGT_POLY(x,npar,val)
+      ELSE IF(funcname.EQ.'THREE_INTERP_VOIGT_POLY') THEN
+         USERFCN =THREE_INTERP_VOIGT_POLY(x,npar,val)
       ELSE IF(funcname.EQ.'WEIBULL') THEN
          USERFCN = WEIBULL(x,npar,val)
       ELSE IF(funcname.EQ.'WEIBULL_BG') THEN
@@ -2816,6 +2818,75 @@ c     Save different components
 
       RETURN
       END
+
+c _______________________________________________________________________________________________
+
+
+            FUNCTION THREE_INTERP_VOIGT_POLY(X,npar,val)
+c     Rocking curve with s and p polarization extracted from simulations
+            IMPLICIT NONE
+            INTEGER*4 npar
+            REAL*8 val(npar), valp(8)
+            REAL*8 THREE_INTERP_VOIGT_POLY, VOIGT, POLY,x,y_1,y_2,y_3
+            REAL*8 amp1, amp2, amp3, x01, x02, x03
+            REAL*8 a, b, c, d, e
+c     Interpolation variables
+            INTEGER*4 k,nn_1,nn_2,nn_3,ier_1,ier_2,ier_3,nest
+            PARAMETER (nest=1000)
+            REAL*8 t_1(nest),c_1(nest),t_2(nest),c_2(nest)
+            REAL*8 t_3(nest),c_3(nest)
+            COMMON /three_interp/
+     +           t_1,t_2,t_3,c_1,c_2,c_3,k,nn_1,nn_2,nn_3
+c           To plot the different components
+            LOGICAL plot
+            COMMON /func_plot/ plot
+
+            amp1  = val(1)
+            amp2  = val(2)
+            amp3  = val(3)
+            x01   = val(4)
+            x02   = val(5)
+            x03   = val(6)
+            a     = val(7)
+            b     = val(8)
+            c     = val(9)
+            d     = val(10)
+            e     = val(11)
+
+
+c     Polynomial background
+            valp(1) = 0.
+            valp(2) = a
+            valp(3) = b
+            valp(4) = c
+            valp(5) = d
+            valp(6) = e
+            valp(7) = 0.
+            valp(8) = 0.
+
+
+c     First peak
+            CALL SPLEV(t_1,nn_1,c_1,k,x-x01,y_1,1,1,ier_1)
+
+c     Second peak
+            CALL SPLEV(t_2,nn_2,c_2,k,x-x02,y_2,1,1,ier_2)
+
+c     Third peak
+            CALL SPLEV(t_3,nn_3,c_3,k,x-x03,y_3,1,1,ier_3)
+
+            THREE_INTERP_VOIGT_POLY = amp1*y_1 + amp2*y_2 + amp3*y_3 +
+     +           POLY(x,8,valp)
+
+
+c     Save different components
+            IF(plot) THEN
+               WRITE(40,*) x, THREE_INTERP_VOIGT_POLY, 
+     +              amp1*y_1, amp2*y_2, amp3*y_3, POLY(x,8,valp)
+
+            ENDIF
+
+            RETURN
+            END
 
 
 

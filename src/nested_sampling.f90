@@ -2,7 +2,7 @@ SUBROUTINE NESTED_SAMPLING(itry,ndata,x,nc,nc_err,errorbars_yn,funcname,&
      npar,par_fix,par_step,par_in,par_bnd1,par_bnd2,nlive,evaccuracy,sdfraction,&
      njump,maxtries,maxntries,cluster_yn,maxstep,nall,evsum_final,live_like_final,weight,&
      live_final,live_like_max,live_max)
-  ! Time-stamp: <Last changed by martino on Wednesday 01 January 2020 at CET 22:27:59>
+  ! Time-stamp: <Last changed by martino on Wednesday 12 February 2020 at CET 09:33:54>
   ! For parallel tests only
   !SUBROUTINE NESTED_SAMPLING(irnmax,rng,itry,ndata,x,nc,funcname,&
   !   npar,par_fix,par_step,par_in,par_bnd1,par_bnd2,nlive,evaccuracy,sdfraction,&
