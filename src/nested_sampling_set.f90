@@ -2,7 +2,7 @@ SUBROUTINE NESTED_SAMPLING_SET(itry,ndata,nset,ndata_set,x_set,nc_set, &
      nc_err_set,errorbars_yn,funcname,&
      npar,par_fix,par_step,par_in,par_bnd1,par_bnd2,nlive,evaccuracy,sdfraction,&
      njump,cluster_yn,maxstep,nall,evsum_final,live_like_final,weight,live_final,live_like_max,live_max)
-  ! Time-stamp: <Last changed by martino on Wednesday 01 January 2020 at CET 22:28:11>
+  ! Time-stamp: <Last changed by martino on Sunday 08 March 2020 at CET 00:15:52>
   !!USE OMP_LIB
   !USE RNG
   !
@@ -546,18 +546,16 @@ FUNCTION LOGLIKELIHOOD_PAR_SET(funcname,ndata,nset,ndata_set,x_set,nc_set,nc_err
         DO i=1, ndata_set(k)
            enc = USERFCN_SET(x_set(i,k),npar,par,funcname,k)
            IF (nc_set(i,k).EQ.0..AND.enc.GT.0.) THEN
-              ll_tmp(i) = nc_set(i,k)*DLOG(enc) - enc
+              ll_tmp(i) = - enc
            ELSE IF(nc_set(i,k).GT.0..AND.enc.GT.0.) THEN
               ll_tmp(i) = nc_set(i,k)*DLOG(enc) - enc
            ELSE IF(nc_set(i,k).GT.0..AND.enc.LE.0.) THEN
               WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
               WRITE(*,*) 'number of counts different from 0, model prediction equal 0 or less'
               STOP
-           END IF
+           END IF        
         END DO
         !$OMP END PARALLEL DO
-        !pause
-        !
         ! Sum all together
         LOGLIKELIHOOD_PAR_SET =  LOGLIKELIHOOD_PAR_SET + SUM(ll_tmp) + const_ll
      END DO

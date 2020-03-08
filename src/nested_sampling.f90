@@ -2,7 +2,7 @@ SUBROUTINE NESTED_SAMPLING(itry,ndata,x,nc,nc_err,errorbars_yn,funcname,&
      npar,par_fix,par_step,par_in,par_bnd1,par_bnd2,nlive,evaccuracy,sdfraction,&
      njump,maxtries,maxntries,cluster_yn,maxstep,nall,evsum_final,live_like_final,weight,&
      live_final,live_like_max,live_max)
-  ! Time-stamp: <Last changed by martino on Friday 06 March 2020 at CET 16:45:52>
+  ! Time-stamp: <Last changed by martino on Sunday 08 March 2020 at CET 00:00:37>
   ! For parallel tests only
   !SUBROUTINE NESTED_SAMPLING(irnmax,rng,itry,ndata,x,nc,funcname,&
   !   npar,par_fix,par_step,par_in,par_bnd1,par_bnd2,nlive,evaccuracy,sdfraction,&
@@ -689,7 +689,7 @@ FUNCTION LOGLIKELIHOOD_PAR(funcname,ndata,x,nc,nc_err,errorbars_yn,npar,par)
      DO i=1, ndata
         enc = USERFCN(x(i),npar,par,funcname)
         ll_tmp(i) = - (nc(i) - enc)**2/(2*nc_err(i)**2)
-        !write(*,*) x(i),nc(i), enc,nc_err(i), ll_tmp(i), const_ll !!??
+        !write(*,*) x(i),nc(i), enc,nc_err(i), ll_tmp(i), const_ll 
      ENDDO
      !$OMP END PARALLEL DO
      !

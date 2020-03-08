@@ -1,5 +1,5 @@
 PROGRAM NESTED_FIT
-  ! Time-stamp: <Last changed by martino on Thursday 09 January 2020 at CET 09:55:28>
+  ! Time-stamp: <Last changed by martino on Sunday 08 March 2020 at CET 23:45:58>
   !
   ! Please read README and LICENSE file for more inforamtion
   !
@@ -282,19 +282,18 @@ PROGRAM NESTED_FIT
                  WRITE(*,*) 'Check our data or do not use errorbars'
                  STOP
               END IF
-              ! Calculation of the constant part of the likelihood with Gaussian distribution
-              const_ll = -nd*DLOG(2*pi)
            END IF
+           ! Calculation of the constant part of the likelihood with Gaussian distribution
+           const_ll = -nd*DLOG(2.*pi)/2
         ENDDO
      END IF
 20   CONTINUE
      CLOSE(10)
      ndata = nd
-
+     
      WRITE(*,*) 'Data file read'
      WRITE(*,*) 'ndata = ', ndata
      WRITE(*,*) 'constant in evidence calc. = ', const_ll
-     !pause
 
      ! Allocate set of data
      !ALLOCATE(x(ndata),nc(ndata),enc(ndata))
@@ -362,6 +361,7 @@ PROGRAM NESTED_FIT
         END IF
         WRITE(*,*) 'Data file read. N.', k, ' of ', nset, ' files'
         WRITE(*,*) 'ndata = ', ndata_set(k)
+        WRITE(*,*) 'constant in evidence calc. = ', const_ll
 
      END DO
 
@@ -472,8 +472,10 @@ PROGRAM NESTED_FIT
   !CALL INIT_RANDOM_SEED()
   !CALL RANDOM_SEED(PUT=seed_array)
   !CALL RANDOM_SEED()
+  
   ! To start always with the same random seeds for tests propose
-  !CALL RANDOM_SEED(PUT=seed_array)
+  CALL RANDOM_SEED(PUT=seed_array)
+  
   ! Other tries
   !CALL RANDOM_NUMBER(rng)
   !DO itry=1,ntry
@@ -509,7 +511,7 @@ PROGRAM NESTED_FIT
              live_final_try(:,:,itry),live_like_max_try(itry),live_max_try(:,itry))
      END IF
   END DO
-  !!!$OMP END PARALLEL DO
+!!!$OMP END PARALLEL DO
 
   ! Re-assemble the points ---------------------------------------------------------------
   ! Final number of points
@@ -577,6 +579,7 @@ PROGRAM NESTED_FIT
      live_max        = live_max_try(:,1)
   END IF
 
+
   ! ------------Calculate the final parameters, errors and data  --------------------------
 
   ! Calculate the uncertanity of the evidence calculation
@@ -595,25 +598,29 @@ PROGRAM NESTED_FIT
         mean_tmp = 0.
         mean2_tmp = 0.
         weight_tot = 0.
+        
+        ! Mean calculation
         DO i=1,nall
            weight_tot = weight_tot + weight(i)
            mean_tmp = mean_tmp + live_final(i,j)*weight(i)
-           mean2_tmp = mean2_tmp + live_final(i,j)**2*weight(i)
         END DO
-        ! Mean and standard deviation
         par_mean(j) = mean_tmp/weight_tot
-        par_sd(j) = DSQRT(mean2_tmp/weight_tot - par_mean(j)**2)
+      
+        !! Standard deviation calculation
+        DO i=1,nall
+           mean2_tmp = mean2_tmp + (live_final(i,j)-par_mean(j))**2*weight(i)   
+        END DO
+        par_sd(j) = DSQRT(mean2_tmp/weight_tot)
 
+        
         ! Median and confidence levels
         ! Order a defined parameter with his weight
-
-
         weight_par(:,1) = weight/weight_tot
         weight_par(:,2) = live_final(:,j)
         CALL SORTN(nall,2,weight_par(:,2),weight_par)
         ! Look for confidential levels and median
         weight_int = 0.
-        DO i=1,nall-1
+        DO i=1,nall-1           
            weight_int = weight_int + weight_par(i,1)
            weight_int_next = weight_int + weight_par(i+1,1)
            !write(*,*) j, i, nall, weight_int, weight_int_next, weight_par(i,2)
@@ -645,7 +652,7 @@ PROGRAM NESTED_FIT
            ELSE IF(weight_int.LT.0.995d0.AND.weight_int_next.GT.0.995) THEN
               par_p99_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
               !write(*,*) 'par_p99_w found', j, i, par_p99_w(j)
-           END IF
+           END IF           
         END DO
      ELSE
         par_mean(j) =  val(j)
@@ -653,7 +660,9 @@ PROGRAM NESTED_FIT
      END IF
   END DO
 
+
 501 CONTINUE
+
 
    !-----------------------Calculate the expected function values -------------------------
 
@@ -867,7 +876,7 @@ PROGRAM NESTED_FIT
   CLOSE(23)
   !END IF
 
-  ! Calculate end time
+  ! Calculate end time 
   seconds_omp = omp_get_wtime( ) - seconds
   CALL CPU_TIME(stopt)
   seconds  = stopt - startt
