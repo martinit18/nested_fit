@@ -1,8 +1,6 @@
-SUBROUTINE NESTED_SAMPLING(itry,ndata,x,nc,nc_err,errorbars_yn,funcname,&
-     npar,par_fix,par_step,par_in,par_bnd1,par_bnd2,nlive,evaccuracy,sdfraction,&
-     njump,maxtries,maxntries,cluster_yn,maxstep,nall,evsum_final,live_like_final,weight,&
+SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,&
      live_final,live_like_max,live_max)
-  ! Time-stamp: <Last changed by martino on Sunday 08 March 2020 at CET 00:00:37>
+  ! Time-stamp: <Last changed by martino on Friday 06 March 2020 at CET 16:12:32>
   ! For parallel tests only
   !SUBROUTINE NESTED_SAMPLING(irnmax,rng,itry,ndata,x,nc,funcname,&
   !   npar,par_fix,par_step,par_in,par_bnd1,par_bnd2,nlive,evaccuracy,sdfraction,&
@@ -10,8 +8,13 @@ SUBROUTINE NESTED_SAMPLING(itry,ndata,x,nc,nc_err,errorbars_yn,funcname,&
   !!USE OMP_LIB
   !USE RNG
   !
+  ! Module for input constants
+  USE MOD_PARAMETERS
+  ! Module for likelihood
+  USE MOD_LIKELIHOOD
   ! Module for cluster analysis
   USE MOD_MEAN_SHIFT_CLUSTER_ANALYSIS
+  !
   IMPLICIT NONE
   ! Random number variables
   !INTEGER, INTENT(IN) :: irnmax
@@ -20,15 +23,7 @@ SUBROUTINE NESTED_SAMPLING(itry,ndata,x,nc,nc_err,errorbars_yn,funcname,&
   REAL(8), DIMENSION(nlive) :: rng
   REAL(8) :: rn
   ! Data
-  INTEGER(4), INTENT(IN) :: itry, ndata, njump, maxstep
-  REAL(8), INTENT(IN), DIMENSION(ndata) :: x, nc,nc_err
-  CHARACTER, INTENT(IN) :: errorbars_yn*1, funcname*64
-  ! Model varialbles and co.
-  INTEGER(4), INTENT(IN) :: npar
-  INTEGER(4), INTENT(IN), DIMENSION(npar) :: par_fix
-  REAL(8), INTENT(IN), DIMENSION(npar) :: par_step, par_in, par_bnd1, par_bnd2
-  INTEGER(4), INTENT(IN) :: nlive
-  REAL(8), INTENT(IN) :: evaccuracy, sdfraction
+  INTEGER(4), INTENT(IN) :: itry, maxstep
   ! Prior variables
   REAL(8), DIMENSION(npar) :: par_prior
   ! Live points variables
@@ -43,12 +38,9 @@ SUBROUTINE NESTED_SAMPLING(itry,ndata,x,nc,nc_err,errorbars_yn,funcname,&
   REAL(8), DIMENSION(maxstep,npar) :: live_old
   REAL(8) :: evsum = 0., evrestest = 0., evtotest = 0.
   ! MCMC new point search varialbes
-  INTEGER(4) :: maxtries, maxntries
   REAL(8) :: min_live_like, gval
   REAL(8), DIMENSION(npar) :: live_ave, live_var, live_sd, start_jump, new_jump
   INTEGER(4) :: istart, ntries, n_ntries
-  ! Cluster analysis variables
-  CHARACTER, INTENT(IN) :: cluster_yn*1
   REAL(8), DIMENSION(nlive,npar) :: live_selected
   INTEGER(4) :: icluster, icluster_old
   ! Final calculations
@@ -62,10 +54,8 @@ SUBROUTINE NESTED_SAMPLING(itry,ndata,x,nc,nc_err,errorbars_yn,funcname,&
   REAL(8), INTENT(OUT), DIMENSION(maxstep,npar) :: live_final
   ! Rest
   INTEGER(4) :: i,j, l, n, jlim
-  REAL(8) :: ADDLOG, LOGLIKELIHOOD_PAR, RANDN
+  REAL(8) :: ADDLOG, RANDN
   CHARACTER :: out_filename*64
-  ! Parallel stuff
-  INTEGER(4) :: th_num
 
   ! This is very important
   !!$OMP THREADPRIVATE(evsum)
@@ -128,7 +118,7 @@ SUBROUTINE NESTED_SAMPLING(itry,ndata,x,nc,nc_err,errorbars_yn,funcname,&
 
      ! If it is good, take it
      live(j,:) = par_prior(:)
-     live_like(j) = LOGLIKELIHOOD_PAR(funcname,ndata,x,nc,nc_err,errorbars_yn,npar,par_prior)
+     live_like(j) = LOGLIKELIHOOD(par_prior)
 
      IF (live_like(j).GT.-10) THEN
         WRITE(*,*) 'Attention!! Log(likelihood) strangely large (',live_like(j),'). Change the parameters bouduaries'
@@ -136,6 +126,7 @@ SUBROUTINE NESTED_SAMPLING(itry,ndata,x,nc,nc_err,errorbars_yn,funcname,&
         STOP
      END IF
   END DO
+
 
 
   ! Calculate average and standard deviation of the parameters
@@ -290,7 +281,7 @@ SUBROUTINE NESTED_SAMPLING(itry,ndata,x,nc,nc_err,errorbars_yn,funcname,&
         !$OMP END PARALLEL DO
 
         ! Check if the new point is inside the parameter volume defined by the minimum likelihood of the live points
-        IF (LOGLIKELIHOOD_PAR(funcname,ndata,x,nc,nc_err,errorbars_yn,npar,new_jump).GT.min_live_like) THEN
+        IF (LOGLIKELIHOOD(new_jump).GT.min_live_like) THEN
            start_jump = new_jump
         ELSE
            ! Check failures
@@ -308,6 +299,9 @@ SUBROUTINE NESTED_SAMPLING(itry,ndata,x,nc,nc_err,errorbars_yn,funcname,&
               IF (n_ntries.GE.maxntries) THEN
                  IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
                     WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
+                    !
+                    !write(*,*) nlive, npar, cluster_yn, cluster_method, bandwidth, distance_limit
+                    !pause
                     CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
                     ! outputs: p_cluster ! flag of number of appartenance cluster for each live point
                     cluster_on = .true.
@@ -379,7 +373,7 @@ SUBROUTINE NESTED_SAMPLING(itry,ndata,x,nc,nc_err,errorbars_yn,funcname,&
                  END IF
                  !
 
-                 IF (LOGLIKELIHOOD_PAR(funcname,ndata,x,nc,nc_err,errorbars_yn,npar,start_jump).GT.min_live_like) THEN
+                 IF (LOGLIKELIHOOD(start_jump).GT.min_live_like) THEN
                     start_jump = new_jump
                  ELSE
                     ! Choose a new random live point and restart all
@@ -421,11 +415,11 @@ SUBROUTINE NESTED_SAMPLING(itry,ndata,x,nc,nc_err,errorbars_yn,funcname,&
 
 
      ! Last(maybe useless) check
-     IF (LOGLIKELIHOOD_PAR(funcname,ndata,x,nc,nc_err,errorbars_yn,npar,new_jump).LT.min_live_like) GOTO 500
+     IF (LOGLIKELIHOOD(new_jump).LT.min_live_like) GOTO 500
 
      ! Take the last point after jumps as new livepoint
      live_new = new_jump
-     live_like_new = LOGLIKELIHOOD_PAR(funcname,ndata,x,nc,nc_err,errorbars_yn,npar,new_jump)
+     live_like_new = LOGLIKELIHOOD(new_jump)
 
      ! ------------------------------------------------------------------------------------
 
@@ -629,7 +623,7 @@ SUBROUTINE NESTED_SAMPLING(itry,ndata,x,nc,nc_err,errorbars_yn,funcname,&
      IF(DABS(evstep(n) - evsum_final).LT.700) weight(n) = DEXP(evstep(n) - evsum_final)
   END DO
 
-1000 FORMAT (A12,I1,A4)
+!1000 FORMAT (A12,I1,A4)
 !2000 FORMAT (A7,I1,A4)
 !3000 FORMAT (A8,I1,A4)
 !4000 FORMAT (A,I3,A,I3,A,ES12.6,A,ES12.6,A,ES12.6,A,ES12.6,A,ES10.2)
@@ -640,188 +634,6 @@ END SUBROUTINE NESTED_SAMPLING
 
 !#############################################################################################
 
-
-
-
-!!$!OLD VERSION WORKING
-!!$
-! __________________________________________________________________________________________
-FUNCTION LOGLIKELIHOOD_PAR(funcname,ndata,x,nc,nc_err,errorbars_yn,npar,par)
-  ! Parallelizable version of the loglikelihood function
-  IMPLICIT NONE
-  INTEGER(4) :: ndata, npar
-  REAL(8), DIMENSION(ndata) :: x, nc, nc_err, ll_tmp
-  CHARACTER :: errorbars_yn*1, funcname*64
-  REAL(8) :: USERFCN, LOGLIKELIHOOD_PAR, enc, const_ll
-  REAL(8), DIMENSION(npar) :: par
-  INTEGER(4) :: i
-  COMMON /loglikelihood/ const_ll
-
-  ! Calculate LIKELIHOOD
-  LOGLIKELIHOOD_PAR = 0.
-  ll_tmp = 0.
-
-
-  IF (errorbars_yn.EQ.'n'.OR.errorbars_yn.EQ.'N') THEN
-     !$OMP PARALLEL DO
-     DO i=1, ndata
-        enc = USERFCN(x(i),npar,par,funcname)
-        IF (nc(i).EQ.0..AND.enc.GT.0.) THEN
-           ll_tmp(i) = - enc
-        ELSE IF(nc(i).GT.0..AND.enc.GT.0.) THEN
-           !ll_tmp(i) = nc(i)*DLOG(enc) - enc - DFACTLN(INT(nc(i)))
-           ll_tmp(i) = nc(i)*DLOG(enc) - enc
-        ELSE IF(nc(i).GT.0..AND.enc.LE.0.) THEN
-           WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
-           WRITE(*,*) 'nuber of counts different from 0, model prediction equal 0 or less'
-           STOP
-        END IF
-        !write(*,*) x(i),nc(i), enc, ll_tmp(i), sum(ll_tmp), sum(ll_tmp) + const_ll
-     ENDDO
-     !$OMP END PARALLEL DO
-     !pause
-     !
-     ! Sum all together
-     LOGLIKELIHOOD_PAR = SUM(ll_tmp) + const_ll
-     !LOGLIKELIHOOD_PAR = SUM(ll_tmp)
-  ELSE
-     !$OMP PARALLEL DO
-     DO i=1, ndata
-        enc = USERFCN(x(i),npar,par,funcname)
-        ll_tmp(i) = - (nc(i) - enc)**2/(2*nc_err(i)**2)
-        !write(*,*) x(i),nc(i), enc,nc_err(i), ll_tmp(i), const_ll 
-     ENDDO
-     !$OMP END PARALLEL DO
-     !
-     ! Sum all together
-     LOGLIKELIHOOD_PAR = SUM(ll_tmp) + const_ll
-     !LOGLIKELIHOOD_PAR = SUM(ll_tmp)
-  END IF
-
-END FUNCTION LOGLIKELIHOOD_PAR
-
-
-!!$! Working too but slower too!! 105 sec instead ~90
-!!$! __________________________________________________________________________________________
-!!$FUNCTION LOGLIKELIHOOD_PAR(funcname,ndata,x,nc,nc_err,errorbars_yn,npar,par)
-!!$  ! Parallelizable version of the loglikelihood function MODIFIED!!!!!!
-!!$  IMPLICIT NONE
-!!$  INTEGER(4) :: ndata, npar
-!!$  REAL(8), DIMENSION(ndata) :: x, nc, nc_err
-!!$  REAL(8) :: ll_tmp
-!!$  CHARACTER :: errorbars_yn*1, funcname*64
-!!$  REAL(8) :: USERFCN, LOGLIKELIHOOD_PAR, enc, const_ll
-!!$  REAL(8), DIMENSION(npar) :: par
-!!$  INTEGER(4) :: i
-!!$  REAL(8), PARAMETER :: pi=3.141592653589793d0
-!!$  COMMON /loglikelihood/ const_ll
-!!$
-!!$  ! Calculate LIKELIHOOD
-!!$  !$OMP PARALLEL PRIVATE(ll_tmp,enc) SHARED(LOGLIKELIHOOD_PAR,x,nc,npar,funcname)
-!!$  LOGLIKELIHOOD_PAR = 0.
-!!$  ll_tmp = 0.
-!!$
-!!$
-!!$  IF (errorbars_yn.EQ.'n'.OR.errorbars_yn.EQ.'N') THEN
-!!$     !$OMP DO
-!!$     DO i=1, ndata
-!!$        enc = USERFCN(x(i),npar,par,funcname)
-!!$        IF (nc(i).EQ.0..AND.enc.GT.0.) THEN
-!!$           ll_tmp = ll_tmp - enc
-!!$        ELSE IF(nc(i).GT.0..AND.enc.GT.0.) THEN
-!!$           !ll_tmp(i) = nc(i)*DLOG(enc) - enc - DFACTLN(INT(nc(i)))
-!!$           ll_tmp = ll_tmp + nc(i)*DLOG(enc) - enc
-!!$        ELSE IF(nc(i).GT.0..AND.enc.EQ.0.) THEN
-!!$           WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
-!!$           WRITE(*,*) 'nuber of counts different from 0, model prediction equal 0'
-!!$           STOP
-!!$        END IF
-!!$        !write(*,*) x(i),nc(i), enc, ll_tmp(i), sum(ll_tmp), sum(ll_tmp) + const_ll
-!!$     ENDDO
-!!$     !$OMP END  DO
-!!$     !pause
-!!$     !
-!!$     ! Sum all together
-!!$     !$OMP CRITICAL
-!!$     LOGLIKELIHOOD_PAR =  LOGLIKELIHOOD_PAR + ll_tmp
-!!$     !$OMP END CRITICAL
-!!$  ELSE
-!!$     ! ???????? TO CHANGE IF WORKING
-!!$     DO i=1, ndata
-!!$        enc = USERFCN(x(i),npar,par,funcname)
-!!$        ll_tmp = ll_tmp - (nc(i) - enc)**2/(2*nc_err(i)**2)
-!!$        !write(*,*) x(i),nc(i), enc,nc_err(i), ll_tmp(i), const_ll !!??
-!!$     ENDDO
-!!$     !
-!!$     ! Sum all together
-!!$     LOGLIKELIHOOD_PAR = LOGLIKELIHOOD_PAR + const_ll
-!!$  END IF
-!!$  !$OMP END PARALLEL
-!!$  LOGLIKELIHOOD_PAR = LOGLIKELIHOOD_PAR + const_ll
-!!$
-!!$END FUNCTION LOGLIKELIHOOD_PAR
-!!$
-
-
-
-!!$! WORKING?? SLOWER !!!!  120 sec instead ~90
-!!$! __________________________________________________________________________________________
-!!$FUNCTION LOGLIKELIHOOD_PAR(funcname,ndata,x,nc,nc_err,errorbars_yn,npar,par)
-!!$  ! Parallelizable version of the loglikelihood function
-!!$  IMPLICIT NONE
-!!$  INTEGER(4) :: ndata, npar
-!!$  REAL(8), DIMENSION(ndata) :: x, nc, nc_err, ll_tmp
-!!$  CHARACTER :: errorbars_yn*1, funcname*64
-!!$  REAL(8) :: USERFCN, LOGLIKELIHOOD_PAR, enc, const_ll
-!!$  REAL(8), DIMENSION(npar) :: par
-!!$  INTEGER(4) :: i
-!!$  REAL(8), PARAMETER :: pi=3.141592653589793d0
-!!$  COMMON /loglikelihood/ const_ll
-!!$
-!!$  ! Calculate LIKELIHOOD
-!!$  LOGLIKELIHOOD_PAR = 0.
-!!$  ll_tmp = 0.
-!!$
-!!$
-!!$  IF (errorbars_yn.EQ.'n'.OR.errorbars_yn.EQ.'N') THEN
-!!$     !$OMP PARALLEL DO
-!!$     DO i=1, ndata
-!!$        enc = USERFCN(x(i),npar,par,funcname)
-!!$        IF (nc(i).EQ.0..AND.enc.GT.0.) THEN
-!!$           ll_tmp(i) = - enc
-!!$        ELSE IF(nc(i).GT.0..AND.enc.GT.0.) THEN
-!!$           !ll_tmp(i) = nc(i)*DLOG(enc) - enc - DFACTLN(INT(nc(i)))
-!!$           ll_tmp(i) = nc(i)*DLOG(enc) - enc
-!!$        ELSE IF(nc(i).GT.0..AND.enc.EQ.0.) THEN
-!!$           WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
-!!$           WRITE(*,*) 'nuber of counts different from 0, model prediction equal 0'
-!!$           STOP
-!!$        END IF
-!!$        !write(*,*) x(i),nc(i), enc, ll_tmp(i), sum(ll_tmp), sum(ll_tmp) + const_ll
-!!$     ENDDO
-!!$     !$OMP END PARALLEL DO
-!!$     !pause
-!!$     !
-!!$     ! Sum all together
-!!$     !$OMP PARALLEL DO REDUCTION(+:LOGLIKELIHOOD_PAR)
-!!$     DO i=1, ndata
-!!$        LOGLIKELIHOOD_PAR = LOGLIKELIHOOD_PAR+ ll_tmp(i)
-!!$     END DO
-!!$     LOGLIKELIHOOD_PAR =  LOGLIKELIHOOD_PAR + const_ll
-!!$  ELSE
-!!$     !$OMP PARALLEL DO
-!!$     DO i=1, ndata
-!!$        enc = USERFCN(x(i),npar,par,funcname)
-!!$        ll_tmp(i) = - (nc(i) - enc)**2/(2*nc_err(i)**2)
-!!$        !write(*,*) x(i),nc(i), enc,nc_err(i), ll_tmp(i), const_ll !!??
-!!$     ENDDO
-!!$     !$OMP END PARALLEL DO
-!!$     !
-!!$     ! Sum all together
-!!$     LOGLIKELIHOOD_PAR = SUM(ll_tmp) + const_ll
-!!$  END IF
-
-!!$  END FUNCTION LOGLIKELIHOOD_PAR
 
 ! ___________________________________________________________________________________________
 FUNCTION ADDLOG(log1,log2)

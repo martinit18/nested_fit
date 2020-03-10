@@ -3,25 +3,26 @@
 Nested_fit is a data program analysis based on the Bayesian statistics for the computation of, for a given set of data and chosen model, the complete probability distribution for each parameter and the Bayesian evidence.
 The evidence calculation is based on the nested algorithm from Skilling 2004 [1,2] with the implementation of specific random walk for the search of new live points.
 It is written in Fortran with some Python complementary routines for visualizing the output results and for doing automatic analyses of series of data.
-More information on the program can be found in Refs. [3-5].
+More information on the program can be found in Refs. [A,B,C] here above.
 
-If you use this program, please cite it using these references and its author.
+### Licence
 
-**Articles about nested sampling method**:\
-[1] J. Skilling, *Nested sampling for general Bayesian computation*, Bayesian Anal. **1**, 833-859 (2006)\
-[2] D.S. Sivia and J. Skilling, *Data analysis: a Bayesian tutorial*. Second ed. 2006: Oxford University Press
+Users are required to accept the licence agreement given in LICENCE file. Nested Fit is free for academic usage.
 
-**Reference articles of nested_fit**:\
-[3] M. Trassinelli, *Bayesian data analysis tools for atomic physics*, Nucl. Instrum. Methods B **408**, 301-312 (2017),
-[http://dx.doi.org/10.1016/j.nimb.2017.05.030](doi:10.1016/j.nimb.2017.05.030),  [	arXiv:1611.10189](https://arxiv.org/abs/1611.10189)\
-[4] M. Trassinelli, *The Nested_fit Data Analysis Program*, Proceedings **33**, 14 (2019), [doi:10.3390/proceedings2019033014](https://doi.org/10.3390/proceedings2019033014)\
-[5] M. Trassinelli, P. Ciccodicola *Mean Shift Cluster Recognition Method Implementation in the Nested Sampling Algorithm*, Entropy **22**, 185 (2020), [doi:10.3390/e22020185](https://doi.org/10.3390/e22020185)
+Users are also required to cite the Nested Fit papers here below in their publications (at least (A) and (B)) and their author.
 
-**Author**:\
-Dr. Martino trassinelli\
+**Reference articles of nested_fit**:
+- [A] M. Trassinelli, *Bayesian data analysis tools for atomic physics*, Nucl. Instrum. Methods B **408**, 301-312 (2017),
+[doi:10.1016/j.nimb.2017.05.030](http://dx.doi.org/10.1016/j.nimb.2017.05.030),  [	arXiv:1611.10189](https://arxiv.org/abs/1611.10189)\
+- [B] M. Trassinelli, *The Nested_fit Data Analysis Program*, Proceedings **33**, 14 (2019), [doi:10.3390/proceedings2019033014](https://doi.org/10.3390/proceedings2019033014)\
+- [C] M. Trassinelli, P. Ciccodicola *Mean Shift Cluster Recognition Method Implementation in the Nested Sampling Algorithm*, Entropy **22**, 185 (2020), [doi:10.3390/e22020185](https://doi.org/10.3390/e22020185)
+
+### Author
+Dr. Martino Trassinelli\
 CNRS, Institute of NanoSciences of Paris\
 email: trassinelli AT insp.jussieu.fr\
 email: m.trassinelli AT gmail.com
+
 
 ## Basic instructions
 
@@ -114,3 +115,10 @@ Previous versions are:
  - '*dpsort.f*' + dependencies from SLATEC library (no license) for sorting arrays with respect another array
  - '*WOFZ.f*'' for the complex error function from TOMS algorithm n. 680 (included in Fortran 2008)
  - '*rinteg.f*' to calculate the integral of a function using a nq points quadrature ( nq is any integer between 1 and 14 ). Written by C. C. J. Roothaan (no license)
+
+## Other resources
+
+
+**Articles about nested sampling method**:\
+[1] J. Skilling, *Nested sampling for general Bayesian computation*, Bayesian Anal. **1**, 833-859 (2006)\
+[2] D.S. Sivia and J. Skilling, *Data analysis: a Bayesian tutorial*. Second ed. 2006: Oxford University Press

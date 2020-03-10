@@ -1,5 +1,5 @@
-#  Automatic Time-stamp: <Last changed by martino on Friday 06 March 2020 at CET 12:22:46>
-NAME    = nested_fit3.2.2.exe
+#  Automatic Time-stamp: <Last changed by martino on Sunday 08 March 2020 at CET 23:51:09>
+NAME    = nested_fit3.3.exe
 .SUFFIXES : .f90 .f .o .c .mod
 CFLAGS  =
 FFLAGS  = -fopenmp
@@ -20,8 +20,8 @@ FFILES  =  USERFCN.f USERFCN_SET.f init_interpolation.f \
 #	cw.f
 #	splint.f fpintb.f
 
-F90FILES = Mod_timestamp.f90  Mod_mean_shift_cluster_analysis.f90 \
-	 nested_fit.f90 nested_sampling.f90 nested_sampling_set.f90 \
+F90FILES = Mod_parameters.f90 Mod_likelihood.f90 Mod_timestamp.f90 Mod_mean_shift_cluster_analysis.f90 \
+	 nested_fit.f90 nested_sampling.f90 \
 	 dlog_fac.f90 sortn_slatec.f90 meanvar.f90 randn.f90 shirley_fitpack.f90
 
 OPT = -O2 -static
@@ -29,7 +29,7 @@ OPT = -O2 -static
 #OPT = -O0 -g
 #OPT = -O0 -g  -fbounds-check -Wall  -ffpe-trap=invalid,zero,overflow,underflow -fbacktrace -ftrapv
 #OPT = -g -Wall -Wextra -Warray-temporaries -Wconversion -fimplicit-none -fbacktrace -ffree-line-length-0 -fcheck=all -ffpe-trap=zero,overflow,underflow -finit-real=nan
-#OPT = -g -Wall -Wextra -Warray-temporaries -Wconversion -fbacktrace -ffree-line-length-0 -fcheck=all -ffpe-trap=zero,overflow,underflow -finit-real=nan
+#OPT = -g -Wall -Wextra -Warray-temporaries -Wconversion -fbacktrace -ffree-line-length-0 -fcheck=all -ffpe-trap=zero,overflow -finit-real=nan
 
 
 #LDFLAGS =  -framework veclib -L/Users/martino/lib -luserfcn

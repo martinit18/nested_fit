@@ -1,14 +1,16 @@
 MODULE MOD_MEAN_SHIFT_CLUSTER_ANALYSIS
-  ! Automatic Time-stamp: <Last changed by martino on Tuesday 31 December 2019 at CET 19:15:29>
+  ! Automatic Time-stamp: <Last changed by martino on Friday 06 March 2020 at CET 14:11:01>
   ! Module for cluster analysis for point in n dimensions
-
+ 
+  ! Module for the input parameter definition
+  USE MOD_PARAMETERS
+  
   IMPLICIT NONE
+ 
   LOGICAL :: cluster_on = .false.
   INTEGER(4) :: np=0, ndim=0, ncluster=0
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: cluster_std, cluster_mean
   INTEGER(4), ALLOCATABLE, DIMENSION(:) :: p_cluster, cluster_np
-  REAL(8) :: bandwidth=0.12, distance_limit=0.4
-  CHARACTER :: cluster_method*1= 'f'
 
 
 
@@ -124,12 +126,12 @@ CONTAINS
 
        WRITE(*,*) 'n_iteration = ', i, 'present accuracy = ', max_accuracy
 
-!!$       OPEN (UNIT=10, FILE='nf_meanshift_check.dat', STATUS='unknown')
-!!$       DO l=1,np
-!!$          WRITE(10,*) p_mean_shift(l,:)
-!!$       END DO
-!!$       CLOSE(10)
-
+       OPEN (UNIT=10, FILE='nf_meanshift_check.dat', STATUS='unknown')
+       DO l=1,np
+          WRITE(10,*) p_mean_shift(l,:)
+       END DO
+       CLOSE(10)
+       !write(*,*) bandwidth, distance_limit, cluster_method
        !pause
 
        ! Accuracy reached. Exit the loop
