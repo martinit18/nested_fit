@@ -3,7 +3,7 @@ PROGRAM NESTED_FIT
   !
   ! Please read README and LICENSE files for more inforamtion
   !
-  ! 3.2  Modular version of likelihood function in preparation for handling more complex data (2D data, ...)
+  ! 3.3  Modular version of likelihood function in preparation for handling more complex data (2D data, ...)
   ! 3.2  Pion mass function and laser interpolation taken out to avoid Numerical Recipes
   !      Indexing for sorting data from SLATEC routine now
   !      Log(factorial) and gamma function from intrinsic function DLGAMMA now (and via a new routine for the factorial)
