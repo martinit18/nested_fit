@@ -50,20 +50,17 @@ Additional information can be found in the reference articles.
 
 ## History of the past versions
 
-The present version is 3.2.
-
-Previous versions were including libraries without free licenses
-(Numerical Recipes).
-This is the first version with free sharing code only.
-
-- Pion mass function and laser interpolation taken out to avoid Numerical Recipes
-- Indexing for sorting data from SLATEC routine now
-- Log(factorial) and gamma function from intrinsic function DLGAMMA now (and via a new routine for the factorial)
-- Test for integer input for Poisson likelihood
-- Fitpack for splines in Shirley profile too
+The present version is 3.3.
+What is new: a modular version of likelihood for preparing to a generalization to the problem to be treated (not only data analysis)
 
 
 Previous versions are:
+ - This is the first version with free sharing code only.
+  - Pion mass function and laser interpolation taken out to avoid Numerical Recipes
+  - Indexing for sorting data from SLATEC routine now
+  - Log(factorial) and gamma function from intrinsic function DLGAMMA now (and via a new routine for the factorial)
+  - Test for integer input for Poisson likelihood
+  - Fitpack for splines in Shirley profile too
 
  - 3.1  Optimization of parallel computing\
       Corrections to Shirley functions\
