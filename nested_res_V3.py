@@ -296,6 +296,9 @@ class Analysis(object):
         The limit of the plot can be indicated. If not, the maximum and the minimum of the histogram are taken into account.
         If there is a set of profiles to fit, specify which one has to be visualized
         '''
+        
+        linestyle = {"markeredgewidth":2, "elinewidth":2, "capsize":4,"markersize":3}
+        linestyle2 = {"markeredgewidth":0, "elinewidth":2, "capsize":0,"markersize":0}
 
         # Adjust the path first
         if path[-1]<>'/' and path <> None:  path = path+'/'
@@ -308,6 +311,8 @@ class Analysis(object):
 
 
         print nset, typeof
+
+        
 
 
         # Read the output file(s)
@@ -380,6 +385,108 @@ class Analysis(object):
         if logscale: plt.yscale('log')
         plt.errorbar(x,y,yerr=sy,xerr=None,fmt='or',ecolor='red',mec='red',**linestyle)
         plt.errorbar(x_fit,y_fit,yerr=None,xerr=None,fmt='-b',**linestyle2)
+        #plt.plot(x_fit,y_fit,'-b',label='Fit')
+
+
+        plt.show()
+
+####################################################################################################################################
+    def plot_with_inset(self,path=currentpath,xmin=0,xmax=0,ymin=0,ymax=0,typeof='max',
+                 logscale=False,nset=0,high_definition=False,xinset_min=0.2,xinset_width=0.4,yinset_min=0.2,yinset_width=0.3):
+        '''
+        Plot the fit results present in the file output_data.dat and eventually to the file output_fit.dat.
+        The limit of the plot can be indicated. If not, the maximum and the minimum of the histogram are taken into account.
+        If there is a set of profiles to fit, specify which one has to be visualized
+        '''
+        
+        linestyle = {"markeredgewidth":2, "elinewidth":2, "capsize":4,"markersize":3}
+        linestyle2 = {"markeredgewidth":0, "elinewidth":2, "capsize":0,"markersize":0}
+
+        # Adjust the path first
+        if path[-1]<>'/' and path <> None:  path = path+'/'
+        #
+
+        self.path = path
+
+        from numpy import loadtxt, size
+        import matplotlib.pyplot as plt
+
+
+        print nset, typeof
+
+
+        # Read the output file(s)
+        if nset < 1:
+            print 'nf_output_data_'+ typeof + '.dat'
+            data = loadtxt(self.path+'nf_output_data_'+ typeof + '.dat')
+        else:
+            print 'nf_output_data_'+ typeof + '_' + str(nset) +'.dat'
+            data = loadtxt(self.path+'nf_output_data_'+ typeof + '_' + str(nset) +'.dat')
+
+        # Assign variables
+        x  = data[:,0]
+        y  = data[:,1]
+        yf = data[:,2]
+        r  = data[:,3]
+        sy = data[:,4]
+
+        if high_definition:
+            # Data from fit results with a higher density
+            if nset < 1:
+                data_fit = loadtxt(self.path+'nf_output_fit_'+ typeof + '.dat')
+            else:
+                data_fit = loadtxt(self.path+'nf_output_fit_'+ typeof + '_' + str(nset) +'.dat')
+
+            x_fit = data_fit[:,0]
+            y_fit = data_fit[:,1]
+        else:
+            x_fit = x
+            y_fit = yf
+
+        minx = x.min()
+        maxx = x.max()
+        miny = y.min()
+        maxy = y.max()*1.3
+
+
+        # Plot the results
+        plt.figure()
+        plt.clf()
+        plt.title('Fit result')
+        plt.xlabel('Channel')
+        plt.ylabel('Counts')
+        # Border of the graph
+        if xmin==0 and xmax==0:
+            plt.xlim([minx,maxx])
+        else:
+            plt.xlim([xmin,xmax])
+        if ymin==0 and ymax==0:
+            plt.ylim(miny,maxy)
+        else:
+            plt.ylim(ymin,ymax)
+        if logscale: plt.yscale('log')
+        plt.errorbar(x,y,yerr=sy,xerr=None,fmt='or',ecolor='red',mec='red',**linestyle)
+        plt.errorbar(x_fit,y_fit,yerr=None,xerr=None,fmt='-b',**linestyle2)
+        #plt.plot(x_fit,y_fit,'-b',label='Fit')
+
+        
+       # Plot the results in an inset
+        # Inset
+        inset=plt.axes([xinset_min,yinset_min,xinset_width,yinset_width])
+        #plt.xlabel('Channel')
+        #plt.ylabel('Counts')
+        # Border of the graph
+        if xmin==0 and xmax==0:
+            plt.xlim([minx,maxx])
+        else:
+            plt.xlim([xmin,xmax])
+        #if ymin==0 and ymax==0:
+        #    plt.ylim(miny,maxy)
+        #else:
+        #    plt.ylim(ymin,ymax)
+        #if logscale: plt.yscale('log')
+        plt.errorbar(x,r,yerr=sy,xerr=None,fmt='ob',ecolor='blue',mec='blue',**linestyle)
+        plt.errorbar([minx,maxx],[0.,0.],yerr=None,xerr=None,fmt='-k',**linestyle2)
         #plt.plot(x_fit,y_fit,'-b',label='Fit')
 
 
