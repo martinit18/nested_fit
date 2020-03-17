@@ -1,5 +1,5 @@
 MODULE MOD_LIKELIHOOD
-  ! Automatic Time-stamp: <Last changed by martino on Sunday 08 March 2020 at CET 23:37:12>
+  ! Automatic Time-stamp: <Last changed by martino on Tuesday 17 March 2020 at CET 19:25:08>
   ! Module of the likelihood function
 
   ! Module for the input parameter definition
@@ -51,10 +51,8 @@ CONTAINS
     ndata_set = 0
     const_ll = 0.
 
-    ! Case with set of files --------------------------------------------------------------------------------------------
-    ! READ set of data
     IF (errorbars_yn.EQ.'n'.OR.errorbars_yn.EQ.'N') THEN
-       ! Case with coutnts ----------------------------------------------------------------
+       ! Case with counts ----------------------------------------------------------------
        DO k=1,nset
           CALL READ_FILE_COUNTS(filename(k),xmin(k),xmax(k),ndata_set(k), &
                x_tmp(:,k),nc_tmp(:,k))
@@ -78,7 +76,6 @@ CONTAINS
        DO k=1,nset
           CALL READ_FILE_ERRORBARS(filename(k),xmin(k),xmax(k),ndata_set(k), &
                x_tmp(:,k),nc_tmp(:,k),nc_err_tmp(:,k))
-          
           WRITE(*,*) 'Number of file = ', k, ' of ', nset
           WRITE(*,*) 'Data file', filename(k), ' read'
           WRITE(*,*) 'ndata = ', ndata
@@ -167,12 +164,12 @@ CONTAINS
     x_tmp = 0.
     nc_tmp = 0.
     nc_err_tmp = 0.
-    
+    nd = 0
 
     ! Open file and read
     OPEN(10,file=namefile,status='old')
     DO i=1, maxdata
-       READ(10,*,END=20) x_raw(i), nc_raw(i), nc_err_raw(i)
+       READ(10,*,END=20) x_raw(i), nc_raw(i), nc_err_raw(i)     
        ! Select the data
        IF(x_raw(i).GE.minx.AND.x_raw(i).LE.maxx) THEN
           nd = nd + 1
@@ -260,7 +257,6 @@ CONTAINS
 
     ! Calculate LIKELIHOOD
     ll_tmp = 0.
-    LOGLIKELIHOOD = 0.
 
     IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
        ! No set --------------------------------------------------------------------------------------------------------
@@ -291,7 +287,6 @@ CONTAINS
           ENDDO
           !$OMP END PARALLEL DO
        END IF
-
     ELSE
        ! Set ----------------------------------------------------------------------------------------------------------
        DO k=1,nset
@@ -318,6 +313,7 @@ CONTAINS
                 ! Normal (Gaussian) distribution calculation --------------------------------------
                 enc = USERFCN_SET(x(i,k),npar,par,funcname,k)
                 ll_tmp = ll_tmp - (nc(i,k) - enc)**2/(2*nc_err(i,k)**2)
+
              ENDDO
              !$OMP END PARALLEL DO
           END IF
