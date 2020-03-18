@@ -1,6 +1,16 @@
 MODULE MOD_LIKELIHOOD
-  ! Automatic Time-stamp: <Last changed by martino on Tuesday 17 March 2020 at CET 19:25:08>
-  ! Module of the likelihood function
+  ! Automatic Time-stamp: <Last changed by martino on Wednesday 18 March 2020 at CET 11:12:52>
+  ! Module of the likelihood function for data analysis
+  
+  
+  !#####################################################################################################################
+  
+  ! IMPORTANT: to switch between likelihood types for test and others,
+  ! change the name of the file to compile in the Makefile,
+  ! Mod_likeihood.f90 or Mod_likeihood_tests.f90
+  
+  !#####################################################################################################################
+  
 
   ! Module for the input parameter definition
   USE MOD_PARAMETERS
@@ -15,15 +25,6 @@ MODULE MOD_LIKELIHOOD
   REAL(8) :: const_ll = 0.
 
 CONTAINS
-
-  !#####################################################################################################################
-
-  ! IMPORTANT: to switch between likelihood types for test and others, name your function LOGLIKELIHOOD and and change the
-  ! name of the following routine INIT_LOGLIKEFUNCTION.
-  ! Keep track of the changes renaming the standard LOGLIKELIHOOD function LOGLIKELIHOOD_NORMAL
-  ! Otherwise, write another module and substitute it
-
-  !#####################################################################################################################
 
   SUBROUTINE INIT_LIKELIHOOD()
     ! Initialize the normal likelihood with data files and special function
@@ -169,7 +170,7 @@ CONTAINS
     ! Open file and read
     OPEN(10,file=namefile,status='old')
     DO i=1, maxdata
-       READ(10,*,END=20) x_raw(i), nc_raw(i), nc_err_raw(i)     
+       READ(10,*,END=20) x_raw(i), nc_raw(i), nc_err_raw(i)
        ! Select the data
        IF(x_raw(i).GE.minx.AND.x_raw(i).LE.maxx) THEN
           nd = nd + 1
@@ -232,19 +233,9 @@ CONTAINS
 
   END SUBROUTINE INIT_FUNCTIONS
 
-  !#####################################################################################################################
-
-  ! IMPORTANT: to switch between likelihood types for test and others, name your function LOGLIKELIHOOD and and change the
-  ! name of the routine INIT_LOGLIKEFUNCTION.
-  ! Keep track of the changes renaming the standard LOGLIKELIHOOD here below in LOGLIKELIHOOD_NORMAL
-  ! Otherwise, write another module and substitute it.
-
-  !#####################################################################################################################
-
 
   FUNCTION LOGLIKELIHOOD(par)
-    ! Change name in LOGLIKELIHOOD_NORMAL if not needed but, in this way, keeping the function as it is
-    !
+
     ! Main likelihood function
     ! Type: Poisson , Gaussian , .... soon 2D I hope
 

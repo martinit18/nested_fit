@@ -1,4 +1,4 @@
-c     Automatic Time-stamp: <Last changed by martino on Wednesday 12 February 2020 at CET 09:21:28>
+c     Automatic Time-stamp: <Last changed by martino on Wednesday 18 March 2020 at CET 11:56:40>
 c################################### USERFCN DEFINITION #####################################
 
 
@@ -234,7 +234,7 @@ c     The value of 'amp' is the value of the surface below the curve
       amp   = val(2)
       sigma = val(3)
 
-c     Test of under of overflow first
+c     Test of under of underflow first
       IF(DABS(-(x-x0)**2/(2*sigma**2)).LT.700) THEN
          GAUSS = amp/(dsqrt(2*pi)*sigma)*
      +        dexp(-(x-x0)**2/(2*sigma**2))
