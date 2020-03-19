@@ -1,8 +1,14 @@
 PROGRAM NESTED_FIT
-  ! Time-stamp: <Last changed by martino on Sunday 08 March 2020 at CET 18:32:22>
+  ! Time-stamp: <Last changed by martino on Thursday 19 March 2020 at CET 18:20:44>
   !
   ! Please read README and LICENSE files for more inforamtion
   !
+  ! Now  Introduction of benchmark tests with synthetic likelihood functions
+  !      via the module Mod_likkelihood_tests,f90 (instead of Mod_likkelihood.f90)
+  !      Available tests: TEST_GAUSS (multidimensional Gaussian)
+  !                       TEST_EGGBOX (eggbox style profile to test clustering)
+  !                       TEST .... work in progress
+  !      Next: Change of the outputs (nf_output_points.dat) to be compatible with GetDist Python package and Polychord
   ! 3.3  Modular version of likelihood function in preparation for handling more complex data (2D data, ...)
   ! 3.2  Pion mass function and laser interpolation taken out to avoid Numerical Recipes
   !      Indexing for sorting data from SLATEC routine now
@@ -280,7 +286,7 @@ PROGRAM NESTED_FIT
   ! Re-assemble the points ---------------------------------------------------------------
   ! Final number of points
   nall = SUM(nall_try)
-  ALLOCATE(weight(nall),live_like_final(nall),live_final(nall,npar),weight_par(nall,npar))
+  ALLOCATE(weight(nall),live_like_final(nall),live_final(nall,npar),weight_par(nall,2))
   weight = 0.
   live_final = 0.
   live_like_final = 0.
