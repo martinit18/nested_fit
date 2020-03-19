@@ -1,5 +1,5 @@
 MODULE MOD_LIKELIHOOD
-  ! Automatic Time-stamp: <Last changed by martino on Wednesday 18 March 2020 at CET 11:12:52>
+  ! Automatic Time-stamp: <Last changed by martino on Thursday 19 March 2020 at CET 18:52:45>
   ! Module of the likelihood function for data analysis
   
   
@@ -13,7 +13,9 @@ MODULE MOD_LIKELIHOOD
   
 
   ! Module for the input parameter definition
-  USE MOD_PARAMETERS
+  USE MOD_PARAMETERS,
+  !ONLY: maxdata, nsetmax, filename, errorbars_yn, set_yn, nset, funcname, &
+  !     xmin, xmax, npar, par_in
 
   IMPLICIT NONE
 

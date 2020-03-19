@@ -1,9 +1,9 @@
 PROGRAM NESTED_FIT
-  ! Time-stamp: <Last changed by martino on Thursday 19 March 2020 at CET 18:20:44>
+  ! Time-stamp: <Last changed by martino on Thursday 19 March 2020 at CET 18:25:14>
   !
   ! Please read README and LICENSE files for more inforamtion
   !
-  ! Now  Introduction of benchmark tests with synthetic likelihood functions
+  ! 3.4  Introduction of benchmark tests with synthetic likelihood functions
   !      via the module Mod_likkelihood_tests,f90 (instead of Mod_likkelihood.f90)
   !      Available tests: TEST_GAUSS (multidimensional Gaussian)
   !                       TEST_EGGBOX (eggbox style profile to test clustering)
@@ -70,7 +70,7 @@ PROGRAM NESTED_FIT
   ! Parameters values and co.
   CHARACTER :: string*128
   REAL(4) :: version_file
-  REAL(4), PARAMETER :: version = 3.3
+  REAL(4), PARAMETER :: version = 3.4
   ! Results from Nested sampling
   INTEGER(4) :: nall=0
   REAL(8) :: evsum_final=0., live_like_max=0.

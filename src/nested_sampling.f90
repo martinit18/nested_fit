@@ -1,6 +1,6 @@
 SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,&
      live_final,live_like_max,live_max)
-  ! Time-stamp: <Last changed by martino on Wednesday 18 March 2020 at CET 19:11:16>
+  ! Time-stamp: <Last changed by martino on Thursday 19 March 2020 at CET 18:52:49>
   ! For parallel tests only
   !SUBROUTINE NESTED_SAMPLING(irnmax,rng,itry,ndata,x,nc,funcname,&
   !   npar,par_fix,par_step,par_in,par_bnd1,par_bnd2,nlive,evaccuracy,sdfraction,&
@@ -9,7 +9,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   !USE RNG
   !
   ! Module for input constants
-  USE MOD_PARAMETERS
+  !USE MOD_PARAMETERS
   ! Module for likelihood
   USE MOD_LIKELIHOOD
   ! Module for cluster analysis

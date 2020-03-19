@@ -1,5 +1,5 @@
 MODULE MOD_LIKELIHOOD
-  ! Automatic Time-stamp: <Last changed by martino on Thursday 19 March 2020 at CET 15:06:43>
+  ! Automatic Time-stamp: <Last changed by martino on Thursday 19 March 2020 at CET 18:33:42>
   ! Module of likelihood test function, no real data are involved here
 
     
@@ -15,7 +15,7 @@ MODULE MOD_LIKELIHOOD
   
 
   ! Module for the input parameter definition
-  USE MOD_PARAMETERS
+  USE MOD_PARAMETERS, ONLY: npar, funcname
 
   IMPLICIT NONE
   INTEGER(8) :: ncall=0
