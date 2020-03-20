@@ -9,7 +9,7 @@ More information on the program can be found in Refs. [A,B,C] here above.
 
 Users are required to accept the licence agreement given in LICENCE file. Nested Fit is free for academic usage.
 
-Users are also required to cite the Nested Fit papers here below in their publications (at least (A) and (B)) and their author.
+Users are also required to cite the Nested Fit papers here below in their publications (at least (A) and (B)) and their authors.
 
 **Reference articles of nested_fit**:
 - [A] M. Trassinelli, *Bayesian data analysis tools for atomic physics*, Nucl. Instrum. Methods B **408**, 301-312 (2017),
@@ -42,64 +42,68 @@ The corresponding information gain and the Bayesian complexity are also provided
 - '*nf_output_data_ .dat*': original input data together with the model function values corresponding to the parameters with the highest likelihood function value ('max') to the mean value ('mean') or median ('median'), the residuals and the uncertainty associated to the data.
 - '*nf_output_fit_ .dat*': Model function values with higher density sampling that the data (for plot purpose). In addition, different components of the model are given
 - '*nf_output_tries.dat*': For each live points trial, it contains the final evidence, the number of iterations and the maximum value of the likelihood function.
-- '*nf_output_points.dat*': contains all discarded and final live points values, their associated likelihood values and posterior probabilities. From them, the different parameter probability distributions can be built.
+- '*nf_output_points.txt*': contains all discarded and final live points values, their associated likelihood values and posterior probabilities. From them, the different parameter probability distributions can be built.
 For this purpose, the python function in '*nested_res_ .py*' can be used.
+Together with this file, also the files '*nf_output_points.paramnames*' and '*nf_output_points.ranges*' are created for the use of GetDist python library.
 
 
 Additional information can be found in the reference articles.
 
-## History of the past versions
+## Present version and history of the past versions
 
-The present version is 3.3.
-What is new: a modular version of likelihood for preparing to a generalization to the problem to be treated (not only data analysis)
+The present version is 3.4.\
+New features:
+- Introduction of benchmark tests with synthetic likelihood function via the module Mod_likelihood_tests,f90 (instead of Mod_likelihood.f90).
+- Available tests: TEST_GAUSS (multidimensional Gaussian)
+TEST_EGGBOX (eggbox style profile to test clustering).
+- Change of the outputs: nf_output_points.dat -> nf_output_points.dat, plus files nf_output_points.paramnames,  and nf_output_points.ranges to be compatible with GetDist Python package. New 'triangle plot' available now.
 
 
 Previous versions are:
+ - 3.3 Modular version of likelihood function in preparation for handling more complex data (2D data, ...).
  - 3.2  This is the first version with free sharing code only.
-    Pion mass function and laser interpolation taken out to avoid Numerical Recipes\
-    Indexing for sorting data from SLATEC routine now\
-    Log(factorial) and gamma function from intrinsic function DLGAMMA now (and via a new routine for the factorial)\
-    Test for integer input for Poisson likelihood\
-    Fitpack for splines in Shirley profile too
-
- - 3.1  Optimization of parallel computing\
-      Corrections to Shirley functions\
-      Add of latest Shirley functions\
-      Fix a bug in the fixed parameters\
+    Pion mass function and laser interpolation taken out to avoid Numerical Recipes.\
+    Indexing for sorting data from SLATEC routine now.\
+    Log(factorial) and gamma function from intrinsic function DLGAMMA now (and via a new routine for the factorial).\
+    Test for integer input for Poisson likelihood.\
+    Fitpack for splines in Shirley profile too.
+ - 3.1  Optimization of parallel computing.\
+      Corrections to Shirley functions.\
+      Add of latest Shirley functions.\
+      Fix a bug in the fixed parameters.\
       Add of the time stamp to the cluster analysis files
- - 3.0  Cluster analysis for live points to improve (very much!!!) the search efficiency
+ - 3.0  Cluster analysis for live points to improve (very much!!!) the search efficiency.
  - 2.3  Parallelism optimization. Usercondition routine removed\
-      Correction for gaussian priors (before was done at each jump, now only at the end)
+      Correction for gaussian priors (before was done at each jump, now only at the end).
  - 2.2  Add of "Rocking curve" profile that uses external simulated data for set of files
-      (parallel and antiparallel, still to test)
+      (parallel and antiparallel, still to test).
       Solved problem with probabilities > 1 for gaussian data. Each data point is considered distributed
       with a Gaussian. But in the normalization factor, sigmas have not to appear. Otherwise probabilities
       can have a dimension.The variables are naturally transformed in dimensionless unit in the
       exponential part.\
       Extraction of live points values in case of non-convergence
- - 2.1  Add of "Rocking curve" profile that uses external simulated data and
-      FITPACK routines for the use of smoothed B-splines
- - 2.0  Treatment of data with error bars becomes possible\
-      No error bars: Likelihood with Poisson distribution\
-      Error bars   : Likelihood with Gaussian distribution
+ - 2.1  Add of "Rocking curve" profile that uses external simulated data and FITPACK routines for the use of smoothed B-splines.
+ - 2.0  Treatment of data with error bars becomes possible.\
+      No error bars: Likelihood with Poisson distribution.\
+      Error bars   : Likelihood with Gaussian distribution.
  - 1.0  Add of Shirley background for photoemission spectra\
-      Add of data output for mean and median parameter values (in addition to max likelihood values)
-      Parallelization is back but only for the likelihood calculation otherwise it sucks (most of the time)
- - 0.9  Implementation of complex error function from TOMS algorithm n. 680 (included in Fortran 2008) WOFZ.f
- - 0.8: Save in a file the different fit components (to implement in part of the functions)
- - 0.7: Add of pion mass function for sets
- - 0.6: Add capabilities to analyze sets of spectra
- - 0.5: Add of the pion mass function
+      Add of data output for mean and median parameter values (in addition to max likelihood values).
+      Parallelization is back but only for the likelihood calculation otherwise it sucks (most of the time).
+ - 0.9  Implementation of complex error function from TOMS algorithm n. 680 (included in Fortran 2008) WOFZ.f.
+ - 0.8: Save in a file the different fit components (to implement in part of the functions).
+ - 0.7: Add of pion mass function for sets.
+ - 0.6: Add capabilities to analyze sets of spectra.
+ - 0.5: Add of the pion mass function.
  - 0.4: Improved search algorithm for presence of local maxima
       Add of the information, minimum required iteration and complexity calculation
-      D.S. Sivia, "Data Analysis, a Bayesian tutorial" (2006)
-      R. Trotta, Contemporary Physics 49, 71 (2008).
-      J. Veitch and A. Vecchio, Phys. Rev. D 81, 062003 (2010)
- - 0.3: Optimization with memory allocation and more variables accessible from the input file
+      D.S. Sivia, "Data Analysis, a Bayesian tutorial" (2006),
+      R. Trotta, Contemporary Physics 49, 71 (2008),
+      J. Veitch and A. Vecchio, Phys. Rev. D 81, 062003 (2010).
+ - 0.3: Optimization with memory allocation and more variables accessible from the input file.
  - 0.2: Version with parallel seek of groups of live points inspired by (not working anymore since 2016)
       J. Veitch and A. Vecchio, Phys. Rev. D 81, 062003 (2010) and
-      N. Chopin and C.P. Robert, Biometrika 97, 741-755 (2010)
- - 0.1: Program developed from D.S. Sivia, "Data Analysis, a Bayesian tutorial" (2006) and L. Simons' original program
+      N. Chopin and C.P. Robert, Biometrika 97, 741-755 (2010).
+ - 0.1: Program developed from D.S. Sivia, "Data Analysis, a Bayesian tutorial" (2006) and L. Simons' original program.
 
  ## Additional included sources
 

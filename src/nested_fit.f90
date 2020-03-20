@@ -1,14 +1,14 @@
 PROGRAM NESTED_FIT
-  ! Time-stamp: <Last changed by martino on Thursday 19 March 2020 at CET 18:25:14>
+  ! Time-stamp: <Last changed by martino on Friday 20 March 2020 at CET 12:37:42>
   !
   ! Please read README and LICENSE files for more inforamtion
   !
   ! 3.4  Introduction of benchmark tests with synthetic likelihood functions
-  !      via the module Mod_likkelihood_tests,f90 (instead of Mod_likkelihood.f90)
+  !      via the module Mod_likelihood_tests,f90 (instead of Mod_likkelihood.f90)
   !      Available tests: TEST_GAUSS (multidimensional Gaussian)
   !                       TEST_EGGBOX (eggbox style profile to test clustering)
-  !                       TEST .... work in progress
-  !      Next: Change of the outputs (nf_output_points.dat) to be compatible with GetDist Python package and Polychord
+  !      Change of the outputs: nf_output_points.dat -> nf_output_points.dat, plus files nf_output_points.paramnames, 
+  !      and nf_output_points.ranges to be compatible with GetDist Python package and Polychord
   ! 3.3  Modular version of likelihood function in preparation for handling more complex data (2D data, ...)
   ! 3.2  Pion mass function and laser interpolation taken out to avoid Numerical Recipes
   !      Indexing for sorting data from SLATEC routine now
@@ -364,29 +364,34 @@ PROGRAM NESTED_FIT
   !write(*,*) 'weight_par dimensions', shape(weight_par)
   !write(*,*) 'weight dimensions', shape(weight)
 
+  ! Normalize the weights
+  weight_tot = 0.
+  DO i=1,nall
+     weight_tot = weight_tot + weight(i)
+  END DO
+  weight = weight/weight_tot
+
   DO j=1,npar
      IF (par_fix(j).NE.1) THEN
         mean_tmp = 0.
         mean2_tmp = 0.
-        weight_tot = 0.
 
         ! Mean calculation
         DO i=1,nall
-           weight_tot = weight_tot + weight(i)
            mean_tmp = mean_tmp + live_final(i,j)*weight(i)
         END DO
-        par_mean(j) = mean_tmp/weight_tot
+        par_mean(j) = mean_tmp
 
         !! Standard deviation calculation
         DO i=1,nall
            mean2_tmp = mean2_tmp + (live_final(i,j)-par_mean(j))**2*weight(i)
         END DO
-        par_sd(j) = DSQRT(mean2_tmp/weight_tot)
+        par_sd(j) = DSQRT(mean2_tmp)
 
 
         ! Median and confidence levels
         ! Order a defined parameter with his weight
-        weight_par(:,1) = weight/weight_tot
+        weight_par(:,1) = weight
         weight_par(:,2) = live_final(:,j)
         CALL SORTN(nall,2,weight_par(:,2),weight_par)
         ! Look for confidential levels and median
@@ -444,10 +449,9 @@ PROGRAM NESTED_FIT
   live_like_mean = 0.
   weight_tot = 0.
   DO i=1,nall
-     weight_tot = weight_tot + weight(i)
      live_like_mean = live_like_mean + weight(i)*live_like_final(i)
   END DO
-  live_like_mean = live_like_mean/weight_tot
+  live_like_mean = live_like_mean
 
 
   ! Calculation of the information (see Sivia page 186)
@@ -466,14 +470,34 @@ PROGRAM NESTED_FIT
   !pause
 
   ! ---------------- Write results on screen and files -------------------------------------
-  !IF(arg.EQ. ' ') THEN
   OPEN(23,FILE='nf_output_points.dat',STATUS= 'UNKNOWN')
   WRITE(23,*) '# n     lnlikelihood     weight      parameters'
   DO j=1,nall
      WRITE(23,*) j, live_like_final(j), weight(j), live_final(j,:)
   END DO
   CLOSE(23)
-  !END IF
+  
+  ! Write files in the format for GetDist
+  ! Data
+  OPEN(23,FILE='nf_output_points.txt',STATUS= 'UNKNOWN')
+  !WRITE(23,*) '# weight   lnlikelihood      parameters'
+  DO j=1,nall
+     WRITE(23,*) weight(j), live_like_final(j), live_final(j,:)
+  END DO
+  CLOSE(23)
+  ! Names of parameters
+  OPEN(23,FILE='nf_output_points.paramnames',STATUS= 'UNKNOWN')
+  DO i=1,npar
+     WRITE(23,*) par_name(i)
+  END DO
+  CLOSE(23)
+  ! Range of parameters
+  OPEN(23,FILE='nf_output_points.ranges',STATUS= 'UNKNOWN')
+  DO i=1,npar
+     WRITE(23,*) par_name(i), par_bnd1(i),par_bnd2(i)
+  END DO
+  CLOSE(23)
+  
 
   ! Calculate end time
   seconds_omp = omp_get_wtime( ) - seconds

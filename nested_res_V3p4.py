@@ -6,7 +6,7 @@ import sys
 import matplotlib.pyplot as plt
 import os
 
-current_version=3.3 
+current_version=3.4 # and beyond
 
 
 
@@ -17,11 +17,11 @@ a="""
 #                                                         #
 #                                                         #
 # Start with                                              #
-# 'an=nested_res_V3.Analysis()'                           #
+# 'an=nested_res_V3p4.Analysis()'                         #
 # By default the current path is considered.              #
 #                                                         #
 # If you want analyze another path:                       #
-# 'an=nested_res_V3.Analysis(path="path")'                #
+# 'an=nested_res_V3p4.Analysis(path="path")'              #
 #                                                         #
 # If you do not want to specify any path:                 #
 # 'an=nested_res.Analysis(path=None)'                     #
@@ -46,7 +46,7 @@ a="""
 """
 print(a)
 
-print 'Present version '+str(current_version) + ' compatible down to v3.0\n'
+print 'Present version '+str(current_version) + '\n'
 
 
 class Analysis(object):
@@ -96,11 +96,11 @@ class Analysis(object):
         self.path = path
         self.number_of_values = self.input_data['npar']
         # Check first if is there
-        if not os.path.isfile(path+'nf_output_points.dat'):
-            print 'Result file nf_output_points.dat not present\n Nothing to load'
+        if not os.path.isfile(path+'nf_output_points.txt'):
+            print 'Result file nf_output_points.txt not present\n Nothing to load'
             return None
-        self.df = pd.read_csv(path+'nf_output_points.dat', delim_whitespace=True, header=0,
-                names=["n", "lnlikelihood", "weight"] + ["val_%s" % d for d in range(1, self.number_of_values+1)])
+        self.df = pd.read_csv(path+'nf_output_points.txt', delim_whitespace=True, header=0,
+                names=["weight","lnlikelihood"] + ["val_%s" % d for d in range(1, self.number_of_values+1)])
 
         self.df = self.df.rename(columns={'val_%d' % p[0] : p[1].replace("'", "") for p in self.input_data['parameters']})
 
@@ -509,7 +509,7 @@ class Analysis(object):
             title = par_number
             print "Set par_number %s to %s" % (par_number, par_index)
         else:
-            par_index = par_number + 2
+            par_index = par_number + 1
             print "Set par_number %s to %s" % (par_number, par_index)
             title = self.input_data['parameters'][par_number-1][1]
 
@@ -599,7 +599,7 @@ class Analysis(object):
         '''Plot parameter evolution during the nested sampling as
         function of the corresponding value of likelihood (order, xaxis)
         and weight (color)'''
-        from numpy import loadtxt, max, log
+        from numpy import loadtxt, max, log, arange
         import matplotlib.pyplot as plt
 
         self.path = path
@@ -611,21 +611,22 @@ class Analysis(object):
             title = par_number
             print "Set par_number %s to %s" % (par_number, par_index)
         else:
-            par_index = par_number + 2
+            par_index = par_number + 1
             print "Set par_number %s to %s" % (par_number, par_index)
             title = self.input_data['parameters'][par_number-1][1]
             print "Selected parameter = ", title
 
         # Read the data
         data = self.df.values
+        ix = arange(shape(data)[0])
 
         # Plot of one parameter
         plt.clf()
-        plt.xlim(0,max(data[:,0])*1.1)
+        plt.xlim(0,shape(data)[0]*1.1)
         plt.xlabel('Sort number')
         plt.ylabel('Value of parameter ' + title)
         cmap=plt.cm.get_cmap('jet')
-        plt.scatter(data[:,0],data[:,par_index],c=data[:,2],linewidth=0.,cmap=cmap)
+        plt.scatter(ix,data[:,par_index],c=data[:,0],linewidth=0.,cmap=cmap)
         cbar = plt.colorbar()
         cbar.set_label('Weight')
         #plt.tight_layout()
@@ -641,7 +642,7 @@ class Analysis(object):
 
         # Find the good number of parameter from its number or name
         if type(par_number1) == str:
-            par_index1 = list(self.df.columns).index(par_number1) - 2
+            par_index1 = list(self.df.columns).index(par_number1) - 1
             title1 = par_number1
             print "Set par_number %s to %s" % (par_number1, par_index1)
         else:
@@ -650,7 +651,7 @@ class Analysis(object):
             title1 = self.input_data['parameters'][par_number1-1][1]
 
         if type(par_number2) == str:
-            par_index2 = list(self.df.columns).index(par_number2) - 2
+            par_index2 = list(self.df.columns).index(par_number2) - 1
             title2 = par_number2
             print "Set par_number %s to %s" % (par_number2, par_index2)
         else:
@@ -781,7 +782,7 @@ class Analysis(object):
 
         # Find the good number of parameter from its number or name
         if type(par_number1) == str:
-            par_index1 = list(self.df.columns).index(par_number1) - 1
+            par_index1 = list(self.df.columns).index(par_number1) 
             title1 = par_number1
             print "Set par_number %s to %s" % (par_number1, par_index1)
         else:
@@ -790,7 +791,7 @@ class Analysis(object):
             title1 = self.input_data['parameters'][par_number1-1][1]
 
         if type(par_number2) == str:
-            par_index2 = list(self.df.columns).index(par_number2) - 1
+            par_index2 = list(self.df.columns).index(par_number2) 
             title2 = par_number2
             print "Set par_number %s to %s" % (par_number2, par_index2)
         else:
@@ -802,10 +803,12 @@ class Analysis(object):
         # Read the data
         if typeof=='final':
             data = loadtxt('nf_output_last_live_points.dat')
-        elif typeof=='inital':
+        elif typeof=='initial':
             data = loadtxt('nf_initial_live_points.dat')
         elif typeof=='intermediate':
             data = loadtxt('nf_intermediate_live_points.dat')
+        else:
+            print('Choose between final, initial or intermediate')
 
         # Plot of one parameter
         plt.clf()
@@ -850,7 +853,7 @@ class Analysis(object):
             title1 = par_number1
             print "Set par_number %s to %s" % (par_number1, par_index1)
         else:
-            par_index1 = par_number1 + 2
+            par_index1 = par_number1 + 1
             print "Set par_number %s to %s" % (par_number1, par_index1)
             title1 = self.input_data['parameters'][par_number1-1][1]
 
@@ -859,7 +862,7 @@ class Analysis(object):
             title2 = par_number2
             print "Set par_number %s to %s" % (par_number2, par_index2)
         else:
-            par_index2 = par_number2 + 2
+            par_index2 = par_number2 + 1
             print "Set par_number %s to %s" % (par_number2, par_index2)
             title2 = self.input_data['parameters'][par_number2-1][1]
 
@@ -966,7 +969,7 @@ class Analysis(object):
 ########################################################################################################
     def plot_like(self,path=currentpath):
         ''' Plot the likelihood of the nested sampling points '''
-        from numpy import loadtxt, exp
+        from numpy import arange, shape
         import matplotlib.pyplot as plt
 
         self.path = path
@@ -974,22 +977,24 @@ class Analysis(object):
 
         # Read the data
         data = self.df.values
+        ix = arange(shape(data)[0])
 
         # Plot
         plt.clf()
         plt.xlabel('Sort number')
         plt.ylabel('Log(likelihood)')
-        plt.plot(data[:,0],data[:,1])
+        plt.plot(ix,data[:,1])
         #plt.tight_layout()
 
 ########################################################################################################
     def plot_weights(self,path=currentpath):
         ''' Plot the likelihood of the nested sampling points '''
-        from numpy import loadtxt, exp
+        from numpy import arange, shape
         import matplotlib.pyplot as plt
 
         # Read the data
         data = self.df.values
+        ix = arange(shape(data)[0])
 
         self.path = path
 
@@ -998,7 +1003,7 @@ class Analysis(object):
         plt.clf()
         plt.xlabel('Sort number')
         plt.ylabel('Nested sampling weights')
-        plt.plot(data[:,0],data[:,2])
+        plt.plot(ix,data[:,0])
         #plt.tight_layout()
 
 ######################################################################################################## WORKING !!
@@ -1024,7 +1029,7 @@ class Analysis(object):
             title1 = par_number1
             print "Set par_number %s to %s" % (par_number1, par_index1)
         else:
-            par_index1 = par_number1+2
+            par_index1 = par_number1 + 1
             print "Set par_number %s to %s" % (par_number1, par_index1)
             title1 = self.input_data['parameters'][par_number1-1][1]
 
@@ -1033,7 +1038,7 @@ class Analysis(object):
             title2 = par_number2
             print "Set par_number %s to %s" % (par_number2, par_index2)
         else:
-            par_index2 = par_number2+2
+            par_index2 = par_number2 + 1
             print "Set par_number %s to %s" % (par_number2, par_index2)
             title2 = self.input_data['parameters'][par_number2-1][1]
 
@@ -1119,6 +1124,26 @@ class Analysis(object):
         # Interpolate using delaunay triangularization
         zi = mlab.griddata(data[:,0],data[:,1],data[:,2],xi,yi)
         '''
+
+
+        ######################################################################################################## WORKING !!
+
+    def triangle_plot(self,path=currentpath):
+        '''
+        Triangle plot of all probability distributions using GetDist package
+        '''
+        from getdist import plots
+
+        self.path = path
+
+
+        g = plots.get_subplot_plotter()
+        g.triangle_plot(self.path+'/nf_output_points',filled=True)
+
+
+
+
+        
 #########################################################################################################################################
 class Summary(object):
     '''
@@ -1144,8 +1169,8 @@ class Summary(object):
                 dirname = dir+'/'
             print 'Loading directory ', dir
             # Start analysis in this directory if the analysis is done
-            if not os.path.isfile(dirname+'nf_output_points.dat'):
-                print 'Result file nf_output_points.dat not present\n Nothing to load'
+            if not os.path.isfile(dirname+'nf_output_points.txt'):
+                print 'Result file nf_output_points.txt not present\n Nothing to load'
                 continue
             an = Analysis(path=dirname)
             print 'Analysis in ' + dirname
@@ -1198,8 +1223,8 @@ class Summary(object):
             else:
                 dirname = dir+'/'
             # Check if the analysis is done in the directory
-            if not os.path.isfile(dirname+'nf_output_points.dat'):
-                print 'Result file nf_output_points.dat not present\n Nothing to load'
+            if not os.path.isfile(dirname+'nf_output_points.txt'):
+                print 'Result file nf_output_points.txt not present\n Nothing to load'
                 continue
             input = an.load_input(dirname)
             output = an.load_output_results(dirname)
