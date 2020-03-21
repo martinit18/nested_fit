@@ -1,6 +1,6 @@
 SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,&
      live_final,live_like_max,live_max)
-  ! Time-stamp: <Last changed by martino on Thursday 19 March 2020 at CET 18:52:49>
+  ! Time-stamp: <Last changed by martino on Saturday 21 March 2020 at CET 16:33:32>
   ! For parallel tests only
   !SUBROUTINE NESTED_SAMPLING(irnmax,rng,itry,ndata,x,nc,funcname,&
   !   npar,par_fix,par_step,par_in,par_bnd1,par_bnd2,nlive,evaccuracy,sdfraction,&
@@ -332,16 +332,16 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 
               IF(.not.cluster_on) THEN
                  ! Store the present live points as they are
-                 OPEN(99,FILE='nf_intermediate_live_points.dat',STATUS= 'UNKNOWN')
-                 WRITE(99,*) '# n step =',  n-1
-                 WRITE(99,*) '# n tries =', n_ntries
-                 WRITE(99,*) '# Evidence of the step =', evstep(n-1)
-                 WRITE(99,*) '# Evidence accuracy =',  ADDLOG(evsum,live_like(nlive) + tlnrest(n-1)) - evsum
-                 WRITE(99,*) '# n     lnlikelihood     parameters'
-                 DO j=1,nlive
-                    WRITE(99,*) j, live_like(j), live(j,:)
-                 END DO
-                 CLOSE(99)
+                 !OPEN(99,FILE='nf_intermediate_live_points.dat',STATUS= 'UNKNOWN')
+                 !WRITE(99,*) '# n step =',  n-1
+                 !WRITE(99,*) '# n tries =', n_ntries
+                 !WRITE(99,*) '# Evidence of the step =', evstep(n-1)
+                 !WRITE(99,*) '# Evidence accuracy =',  ADDLOG(evsum,live_like(nlive) + tlnrest(n-1)) - evsum
+                 !WRITE(99,*) '# n     lnlikelihood     parameters'
+                 !DO j=1,nlive
+                 !   WRITE(99,*) j, live_like(j), live(j,:)
+                 !END DO
+                 !CLOSE(99)
 
                  ! Alternate the three techniques to find a new life point
                  CALL RANDOM_NUMBER(rn)

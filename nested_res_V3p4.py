@@ -897,7 +897,7 @@ class Analysis(object):
         if cmap == 'normal':
             cmap=plt.cm.get_cmap('jet')
         elif cmap == 'accurate':
-            cmap=plt.cm.get_cmap('spectral')
+            cmap=plt.cm.get_cmap('gist_ncar')
         elif cmap == 'moreaccurate':
             cmap=plt.cm.get_cmap('prism')
 

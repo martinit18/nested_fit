@@ -1,5 +1,5 @@
 MODULE MOD_LIKELIHOOD
-  ! Automatic Time-stamp: <Last changed by martino on Saturday 21 March 2020 at CET 16:04:58>
+  ! Automatic Time-stamp: <Last changed by martino on Saturday 21 March 2020 at CET 17:11:12>
   ! Module of likelihood test function, no real data are involved here
 
 
@@ -36,9 +36,9 @@ CONTAINS
 
     WRITE(*,*) 'Initialization of test likelihood function'
 
-    IF (funcname.eq.'TEST_ROSENBROCK') THEN
-       CALL INIT_ROSENBROCK()
-    END IF
+    !IF (funcname.eq.'TEST_ROSENBROCK') THEN
+    !   CALL INIT_ROSENBROCK()
+    !END IF
 
   END SUBROUTINE INIT_LIKELIHOOD
 
@@ -161,6 +161,8 @@ CONTAINS
 
     IF (npar.EQ.2) THEN
        a_norm =  -0.5d0 * DLOG( pi**npar / (2d0*100) )
+    ELSE
+       a_norm = 0.d0
     END IF
 
   END SUBROUTINE INIT_ROSENBROCK
@@ -181,7 +183,7 @@ CONTAINS
 
     x = par
     
-    TEST_ROSENBROCK = a_norm - SUM( (1-x(1:npar-1))**2 + 100d0*(x(2:npar) - x(1:npar-1)**2)**2 )
+    TEST_ROSENBROCK =  - SUM( (1-x(1:npar-1))**2 + 100d0*( x(2:npar) - x(1:npar-1)**2 )**2 )
     
   END FUNCTION TEST_ROSENBROCK
 
