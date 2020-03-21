@@ -517,7 +517,7 @@ class Analysis(object):
             sys.exit('Attention! too fews bins')
 
         # Read the data
-        data = self.df.values
+        data = self.data
 
         # Select range
         if xmin == None: xmin = data[:,par_index].min()
@@ -532,7 +532,7 @@ class Analysis(object):
             print 'not working I do not why'
         else:
             # Make histogram with differnet colors for different confidence levels
-            histo, edges = histogram(data[:,par_index],bins=bins,weights=data[:,2])
+            histo, edges = histogram(data[:,par_index],bins=bins,weights=data[:,0])\
 
             # Make array with histogram values, position, and order
             pos = zeros((bins))
@@ -877,7 +877,7 @@ class Analysis(object):
         data = data[(data[:,par_index1] < xmax) & (data[:,par_index1] > xmin) & (data[:,par_index2] < ymax) & (data[:,par_index2] > ymin)]
 
         # Make histogram
-        histo2D, yedges, xedges = histogram2d(data[:,par_index2],data[:,par_index1],bins=bins,weights=data[:,2])
+        histo2D, yedges, xedges = histogram2d(data[:,par_index2],data[:,par_index1],bins=bins,weights=data[:,0])
         extent = [ xedges[0], xedges[-1],yedges[0], yedges[-1]]
 
         '''

@@ -1,5 +1,5 @@
 PROGRAM NESTED_FIT
-  ! Time-stamp: <Last changed by martino on Friday 20 March 2020 at CET 12:37:42>
+  ! Time-stamp: <Last changed by martino on Friday 20 March 2020 at CET 19:29:08>
   !
   ! Please read README and LICENSE files for more inforamtion
   !
@@ -259,7 +259,7 @@ PROGRAM NESTED_FIT
   !CALL RANDOM_SEED()
 
   ! To start always with the same random seeds for tests propose
-  CALL RANDOM_SEED(PUT=seed_array)
+  !CALL RANDOM_SEED(PUT=seed_array)
 
   ! Other tries
   !CALL RANDOM_NUMBER(rng)
@@ -470,12 +470,12 @@ PROGRAM NESTED_FIT
   !pause
 
   ! ---------------- Write results on screen and files -------------------------------------
-  OPEN(23,FILE='nf_output_points.dat',STATUS= 'UNKNOWN')
-  WRITE(23,*) '# n     lnlikelihood     weight      parameters'
-  DO j=1,nall
-     WRITE(23,*) j, live_like_final(j), weight(j), live_final(j,:)
-  END DO
-  CLOSE(23)
+  !OPEN(23,FILE='nf_output_points.dat',STATUS= 'UNKNOWN')
+  !WRITE(23,*) '# n     lnlikelihood     weight      parameters'
+  !DO j=1,nall
+  !   WRITE(23,*) j, live_like_final(j), weight(j), live_final(j,:)
+  !END DO
+  !CLOSE(23)
   
   ! Write files in the format for GetDist
   ! Data
