@@ -1,5 +1,5 @@
 PROGRAM NESTED_FIT
-  ! Time-stamp: <Last changed by martino on Saturday 21 March 2020 at CET 18:34:33>
+  ! Time-stamp: <Last changed by martino on Tuesday 24 March 2020 at CET 09:56:20>
   !
   ! Please read README and LICENSE files for more inforamtion
   !
@@ -254,9 +254,10 @@ PROGRAM NESTED_FIT
   ! Run the Nested sampling
 
   ! Initiate random generator with a different seed each time
-  !CALL INIT_RANDOM_SEED()
-  !CALL RANDOM_SEED(PUT=seed_array)
+  CALL RANDOM_SEED(PUT=seed_array)
+  ! Other variants 
   !CALL RANDOM_SEED()
+  !CALL INIT_RANDOM_SEED()
 
   ! To start always with the same random seeds for tests propose
   !CALL RANDOM_SEED(PUT=seed_array)

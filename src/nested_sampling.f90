@@ -1,60 +1,57 @@
 SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,&
      live_final,live_like_max,live_max)
-  ! Time-stamp: <Last changed by martino on Saturday 21 March 2020 at CET 16:33:32>
+  ! Time-stamp: <Last changed by martino on Tuesday 24 March 2020 at CET 11:27:49>
   ! For parallel tests only
   !SUBROUTINE NESTED_SAMPLING(irnmax,rng,itry,ndata,x,nc,funcname,&
   !   npar,par_fix,par_step,par_in,par_bnd1,par_bnd2,nlive,evaccuracy,sdfraction,&
   !   nall,evsum_final,live_like_final,weight,live_final,live_like_max,live_max)
   !!USE OMP_LIB
   !USE RNG
-  !
-  ! Module for input constants
-  !USE MOD_PARAMETERS
+
+  ! Parameter module
+  USE MOD_PARAMETERS, ONLY:  par_step, par_bnd1, par_bnd2, par_fix
   ! Module for likelihood
   USE MOD_LIKELIHOOD
+  ! Module for searching new live points
+  USE MOD_SEARCH_NEW_POINT
   ! Module for cluster analysis
-  USE MOD_MEAN_SHIFT_CLUSTER_ANALYSIS
+  USE MOD_MEAN_SHIFT_CLUSTER_ANALYSIS, ONLY: cluster_on
+  
   !
   IMPLICIT NONE
-  ! Random number variables
-  !INTEGER, INTENT(IN) :: irnmax
-  !REAL(8), INTENT(IN), DIMENSION(irnmax) :: rng
-  INTEGER(4) :: irn
-  REAL(8), DIMENSION(nlive) :: rng
-  REAL(8) :: rn
-  ! Data
   INTEGER(4), INTENT(IN) :: itry, maxstep
-  ! Prior variables
-  REAL(8), DIMENSION(npar) :: par_prior
-  ! Live points variables
-  REAL(8), DIMENSION(nlive) :: live_like
-  REAL(8), DIMENSION(nlive,npar) :: live
-  ! Loop variables
-  INTEGER(4) :: nstep = 8000
-  REAL(8), DIMENSION(maxstep) :: tstep, tlnmass, tlnrest, evstep
-  REAL(8) :: live_like_new
-  REAL(8), DIMENSION(npar) :: live_new
-  REAL(8), DIMENSION(maxstep) :: live_like_old
-  REAL(8), DIMENSION(maxstep,npar) :: live_old
-  REAL(8) :: evsum = 0., evrestest = 0., evtotest = 0.
-  ! MCMC new point search varialbes
-  REAL(8) :: min_live_like, gval
-  REAL(8), DIMENSION(npar) :: live_ave, live_var, live_sd, start_jump, new_jump
-  INTEGER(4) :: istart, ntries, n_ntries
-  REAL(8), DIMENSION(nlive,npar) :: live_selected
-  INTEGER(4) :: icluster, icluster_old
-  ! Final calculations
-  INTEGER(4) :: nstep_final
-  REAL(8) :: last_likes, live_like_last, evrest_last, evlast
   INTEGER(4), INTENT(OUT) :: nall
   REAL(8), INTENT(OUT) :: evsum_final, live_like_max
   REAL(8), INTENT(OUT), DIMENSION(npar) :: live_max
   REAL(8), INTENT(OUT), DIMENSION(maxstep) :: weight
   REAL(8), INTENT(OUT), DIMENSION(maxstep) :: live_like_final
   REAL(8), INTENT(OUT), DIMENSION(maxstep,npar) :: live_final
+  ! Random number variables
+  !INTEGER, INTENT(IN) :: irnmax
+  !REAL(8), INTENT(IN), DIMENSION(irnmax) :: rng
+  ! Prior variables
+  REAL(8), DIMENSION(npar) :: par_prior
+  ! Loop variables
+  INTEGER(4) :: nstep = 2
+  REAL(8), DIMENSION(maxstep) :: tstep, tlnmass, tlnrest, evstep
+  REAL(8) :: live_like_new
+  REAL(8), DIMENSION(npar) :: live_new
+  REAL(8), DIMENSION(maxstep) :: live_like_old
+  REAL(8), DIMENSION(maxstep,npar) :: live_old
+  REAL(8) :: evsum = 0., evrestest = 0., evtotest = 0.
+  ! Search variable
+  INTEGER(4) :: icluster=0, icluster_old=0, ntries=0
+  LOGICAL :: too_many_tries = .false. 
+  ! Live points variables 
+  REAL(8) :: min_live_like = 0.
+  REAL(8), DIMENSION(nlive) :: live_like
+  REAL(8), DIMENSION(nlive,npar) :: live
+  ! Final calculations
+  INTEGER(4) :: nstep_final
+  REAL(8) :: last_likes, live_like_last, evrest_last, evlast
   ! Rest
   INTEGER(4) :: i,j, l, n, jlim
-  REAL(8) :: ADDLOG, RANDN
+  REAL(8) :: ADDLOG, RANDN, rn
   CHARACTER :: out_filename*64
 
   ! This is very important
@@ -92,8 +89,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 
 
      ! Sort point considering priors
-     ! Generate random prior if not fixed
-800  DO l=1,npar
+     ! Generate random prior if not fixe
+     DO l=1,npar
         IF(par_fix(l).NE.1) THEN
            ! Uniform prior inside the limits
            IF (par_step(l).LE.0.) THEN
@@ -197,228 +194,22 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 
      !tstep(n+1) = MAXVAL(rng(irn:irn+nlive))*tstep(n)
      !irn = irn + nlive
+     ! trapezoidal rule applied here (Skilling Entropy 2006)
      tlnmass(n) = DLOG(-(tstep(n+1)-tstep(n-1))/2.d0)
      tlnrest(n) = DLOG((tstep(n+1)+tstep(n-1))/2.d0)
 
-     ! Find new live points
-     ! ----------------------------------FIND_POINT_MCMC------------------------------------
-     new_jump = par_in
-     live_new = 0.
-     live_like_new = 0.
-     live_ave = 0.
-     live_var = 0.
-     live_sd  = 0.
-     n_ntries = 0
+     ! Present minimal value of the likelihood
      min_live_like = live_like(1)
 
-
-     ! Select a live point as starting point
-     ntries = 0
-     CALL RANDOM_NUMBER(rn)
-     istart= FLOOR((nlive-1)*rn+1)
-     !istart= FLOOR((nlive-1)*RAND(0)+1)
-     !istart= FLOOR((nlive-1)*rng(irn)+1)
-     !irn = irn + 1
-     start_jump = live(istart,:)
-
-
-     ! Calculate momenta of the live points
-400  IF (cluster_on) THEN
-        ! Identify cluster appartenance
-        icluster = p_cluster(istart)
-        ! Get for the specific cluster if the cluster analusis is on
-        live_sd(:) = cluster_std(icluster,:)
-        IF(cluster_std(icluster,1).EQ.0.) THEN
-           ! If the cluster is formed only from one point, take the standard standard deviation
-           !$OMP PARALLEL DO
-           DO i=1,npar
-              IF(par_fix(i).NE.1) THEN
-                 CALL MEANVAR(live(:,i),nlive,live_ave(i),live_var(i))
-              ELSE
-                 live_ave(i) = par_in(i)
-              END IF
-           END DO
-           !$OMP END PARALLEL DO
-        live_sd = DSQRT(live_var)
-        END IF
-     ELSE
-        !$OMP PARALLEL DO
-        DO i=1,npar
-           IF(par_fix(i).NE.1) THEN
-              CALL MEANVAR(live(:,i),nlive,live_ave(i),live_var(i))
-           ELSE
-              live_ave(i) = par_in(i)
-           END IF
-        END DO
-        !$OMP END PARALLEL DO
-        live_sd = DSQRT(live_var)
+     ! ##########################################################################
+     ! Find a new live point                                                    
+     CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
+          live_like_new,live_new,icluster,ntries,too_many_tries)
+     IF (too_many_tries) THEN
+        nstep_final = n - 1
+        GOTO 601
      END IF
-
-
-
-     ! Make several consecutive casual jumps in the region with loglikelyhood > minlogll
-500  CONTINUE
-     DO i=1,njump
-501     CONTINUE
-        ntries = ntries + 1
-        !$OMP PARALLEL DO
-        DO l=1,npar
-           IF (par_fix(l).NE.1) THEN
-502           CALL RANDOM_NUMBER(rn)
-              new_jump(l) = start_jump(l) + live_sd(l)*sdfraction*(2.*rn-1.)
-              !new_jump(l) = start_jump(l) + live_sd(l)*sdfraction*(2.*RAND(0)-1.)
-              !new_jump(l) = start_jump(l) + live_sd(l)*sdfraction*(2.*rng(irn)-1.)
-              !irn = irn + 1
-              IF (new_jump(l).LT.par_bnd1(l).OR.new_jump(l).GT.par_bnd2(l)) THEN
-                 ntries = ntries + 1
-                 GOTO 502
-              END IF
-           END IF
-        END DO
-        !$OMP END PARALLEL DO
-
-        ! Check if the new point is inside the parameter volume defined by the minimum likelihood of the live points
-        IF (LOGLIKELIHOOD(new_jump).GT.min_live_like) THEN
-           start_jump = new_jump
-        ELSE
-           ! Check failures
-           ! message of too many failures
-           ! Choose another point determinated with a specific method (at present mine)
-
-           !
-           ! But before, if you already tried many times, do something different or eventually gave up
-           IF (ntries.GT.maxtries) THEN   ! Loop for ntries > maxtries
-              n_ntries = n_ntries + 1
-              ! If nothing is found, restart from a livepoint
-              ntries = 0
-
-              ! If you already did too much tries, gave up or start a cluster analysis
-              IF (n_ntries.GE.maxntries) THEN
-                 IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
-                    WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
-                    !
-                    !write(*,*) nlive, npar, cluster_yn, cluster_method, bandwidth, distance_limit
-                    !pause
-                    CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
-                    ! outputs: p_cluster ! flag of number of appartenance cluster for each live point
-                    cluster_on = .true.
-                    n_ntries = 0
-
-                    ! Choose a new random live point and restart all
-                    CALL RANDOM_NUMBER(rn)
-                    istart= FLOOR((nlive-1)*rn+1)
-                    start_jump = live(istart,:)
-
-                    GOTO 400
-
-                 ELSE
-                    WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries*maxntries
-                    WRITE(*,*) 'We take the data as they are :-~'
-                    nstep_final = n - 1
-
-                    GOTO 601
-
-                 END IF
-              END IF
-              !
-              WRITE(*,*) 'Too many tries to find new live points for try n.',itry,'!!!! More than',maxtries,'n_ntries =',n_ntries, &
-                   'n. step =', n
-              ! Some test for desesperate seeking (for presence of several maxima)
-
-
-              ! DO CLUSTER ANALYSIS if selected, or use other randomizations
-              ! For all live points, assign a cluster number, which is used to calculate specific standard deviation
-              ! for the search of the new point
-
-              IF(.not.cluster_on) THEN
-                 ! Store the present live points as they are
-                 !OPEN(99,FILE='nf_intermediate_live_points.dat',STATUS= 'UNKNOWN')
-                 !WRITE(99,*) '# n step =',  n-1
-                 !WRITE(99,*) '# n tries =', n_ntries
-                 !WRITE(99,*) '# Evidence of the step =', evstep(n-1)
-                 !WRITE(99,*) '# Evidence accuracy =',  ADDLOG(evsum,live_like(nlive) + tlnrest(n-1)) - evsum
-                 !WRITE(99,*) '# n     lnlikelihood     parameters'
-                 !DO j=1,nlive
-                 !   WRITE(99,*) j, live_like(j), live(j,:)
-                 !END DO
-                 !CLOSE(99)
-
-                 ! Alternate the three techniques to find a new life point
-                 CALL RANDOM_NUMBER(rn)
-                 irn = FLOOR(2*rn+1)
-                 IF(MOD(ntries,2).EQ.1) THEN
-                    ! My new technique: mix parameter values from different sets to hope to find a good new value
-                    !$OMP PARALLEL DO
-                    DO l=1,npar
-                       IF (par_fix(l).NE.1) THEN
-                          CALL RANDOM_NUMBER(rn)
-                          istart= FLOOR((nlive-1)*rn+1)
-                          new_jump(l) = live(istart,l)
-                       END IF
-                    END DO
-                    !$OMP END PARALLEL DO
-                 ELSE
-                    ! Leo's technique, go between the average and this point
-                    !$OMP PARALLEL DO
-                    DO l=1,npar
-                       IF (par_fix(l).NE.1) THEN
-                          CALL RANDOM_NUMBER(rn)
-                          new_jump(l) = live_ave(l) + (new_jump(l) - live_ave(l))*rn
-                       END IF
-                    END DO
-                    !$OMP END PARALLEL DO
-                 END IF
-                 !
-
-                 IF (LOGLIKELIHOOD(start_jump).GT.min_live_like) THEN
-                    start_jump = new_jump
-                 ELSE
-                    ! Choose a new random live point and restart all
-                    CALL RANDOM_NUMBER(rn)
-                    istart= FLOOR((nlive-1)*rn+1)
-                    start_jump = live(istart,:)
-                 END IF
-                 GOTO 500
-              ELSE
-                 ! If cluster analysis, do not mix the points!!
-                 ! Choose a new random live point and restart all
-                 CALL RANDOM_NUMBER(rn)
-                 istart= FLOOR((nlive-1)*rn+1)
-                 start_jump = live(istart,:)
-                 GOTO 400
-              END IF
-
-           END IF    ! End loop for ntries > maxtries
-
-           GOTO 501  ! Restart looking for new points without changing the starting point
-
-        END IF  ! End of loop with failure for likelihood value
-     END DO
-
-
-     ! Final check of the last point for gaussian priors
-     !CALL USERCONDITIONS(funcname,npar,par_fix,new_jump,par_in,par_step,par_bnd1,par_bnd2, &
-     !     live_sd,start_jump,sdfraction,outlimits)
-     DO l=1,npar
-        IF(par_fix(l).NE.1) THEN
-           IF(par_step(l).GT.0) THEN
-              ! maximum of the distribution is 1 (and is not normalized to 1 as the previous line)
-              gval = dexp(-(new_jump(l)-par_in(l))**2/(2*par_step(l)**2))
-              CALL RANDOM_NUMBER(rn)
-              IF (rn.GT.gval) GOTO 500
-           END IF
-        END IF
-     END DO
-
-
-     ! Last(maybe useless) check
-     IF (LOGLIKELIHOOD(new_jump).LT.min_live_like) GOTO 500
-
-     ! Take the last point after jumps as new livepoint
-     live_new = new_jump
-     live_like_new = LOGLIKELIHOOD(new_jump)
-
-     ! ------------------------------------------------------------------------------------
+     ! ##########################################################################
 
      ! Reorder found point (no parallel here) and make the required calculation for the evidence
      ! Reorder point
@@ -428,7 +219,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
            jlim = j
         END IF
      END DO
-     IF (jlim.LE.1) GOTO 500
+     IF (jlim.LE.1) THEN
+        WRITE(*,*) 'Problem in the search method, no improvement in the likelihood value after finding the new point'
+        STOP
+     END IF
      IF (live_like_new.GT.live_like(nlive)) jlim = nlive
 
      ! Store old values
@@ -442,7 +236,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
      live(jlim,:) =  live_new
      ! The rest stay as it is
 
-
      ! Assign to the new point, the same cluster number of the start point
      IF (cluster_on) THEN
         ! Instert new point
@@ -453,10 +246,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
         icluster_old = p_cluster(1)
         cluster_np(icluster_old) = cluster_np(icluster_old) - 1
         ! Call cluster module to recalculate the std of the considered cluster and the cluster of the discarted point
-         CALL REMAKE_CLUSTER_STD(live,icluster,icluster_old)
+        CALL REMAKE_CLUSTER_STD(live,icluster,icluster_old)
      END IF
-
-
 
      ! Calculate the evidence for this step
      evstep(n) = live_like_old(n) + tlnmass(n)
@@ -563,7 +354,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   ! Store the last live points
   OPEN(99,FILE='nf_output_last_live_points.dat',STATUS= 'UNKNOWN')
   WRITE(99,*) '# n step =',  n-1
-  WRITE(99,*) '# n tries =', n_ntries
   WRITE(99,*) '# Evidence of the step =', evstep(n-1)
   WRITE(99,*) '# Evidence accuracy =',  ADDLOG(evsum,live_like(nlive) + tlnrest(n-1)) - evsum
   WRITE(99,*) '# n     lnlikelihood     parameters'
