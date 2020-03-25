@@ -1,7 +1,9 @@
 PROGRAM NESTED_FIT
-  ! Time-stamp: <Last changed by martino on Tuesday 24 March 2020 at CET 09:56:20>
+  ! Time-stamp: <Last changed by martino on Wednesday 25 March 2020 at CET 18:35:43>
   !
   ! Please read README and LICENSE files for more inforamtion
+  !
+  ! 3.5beta Modularization of the search algorithm (in preparation of new algorithms implementation)
   !
   ! 3.4  Introduction of benchmark tests with synthetic likelihood functions
   !      via the module Mod_likelihood_tests,f90 (instead of Mod_likkelihood.f90)
@@ -70,7 +72,7 @@ PROGRAM NESTED_FIT
   ! Parameters values and co.
   CHARACTER :: string*128
   REAL(4) :: version_file
-  REAL(4), PARAMETER :: version = 3.4
+  REAL(4), PARAMETER :: version = 3.5
   ! Results from Nested sampling
   INTEGER(4) :: nall=0
   REAL(8) :: evsum_final=0., live_like_max=0.

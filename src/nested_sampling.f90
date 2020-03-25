@@ -1,6 +1,6 @@
 SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,&
      live_final,live_like_max,live_max)
-  ! Time-stamp: <Last changed by martino on Tuesday 24 March 2020 at CET 11:27:49>
+  ! Time-stamp: <Last changed by martino on Wednesday 25 March 2020 at CET 19:17:52>
   ! For parallel tests only
   !SUBROUTINE NESTED_SAMPLING(irnmax,rng,itry,ndata,x,nc,funcname,&
   !   npar,par_fix,par_step,par_in,par_bnd1,par_bnd2,nlive,evaccuracy,sdfraction,&
@@ -217,24 +217,33 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
      DO j=1,nlive-1
         IF (live_like_new.GT.live_like(j).AND.live_like_new.LT.live_like(j+1)) THEN
            jlim = j
+        ELSE IF (live_like_new.GT.live_like(nlive)) THEN
+           jlim = nlive
         END IF
      END DO
-     IF (jlim.LE.1) THEN
-        WRITE(*,*) 'Problem in the search method, no improvement in the likelihood value after finding the new point'
-        STOP
-     END IF
-     IF (live_like_new.GT.live_like(nlive)) jlim = nlive
 
      ! Store old values
      live_like_old(n) = live_like(1)
      live_old(n,:) = live(1,:)
-     ! Shift values
-     live_like(1:jlim-1) =  live_like(2:jlim)
-     live(1:jlim-1,:) =  live(2:jlim,:)
-     ! Insert new value
-     live_like(jlim) =  live_like_new
-     live(jlim,:) =  live_new
-     ! The rest stay as it is
+     
+     IF (jlim.LT.1.OR.jlim.GT.nlive) THEN
+        WRITE(*,*) 'Problem in the search method, or in the calculations'
+        WRITE(*,*) 'No improvement in the likelihood value after finding the new point'
+        WRITE(*,*) 'j = ', jlim, 'old min like = ', min_live_like, 'new min like = ', live_like_new
+        STOP
+     ELSE IF (jlim.EQ.1) THEN
+        live_like(1) = live_like_new
+        live(1,:) = live_new(:)
+     ELSE
+        ! Shift values
+        live_like(1:jlim-1) =  live_like(2:jlim)
+        live(1:jlim-1,:) =  live(2:jlim,:)
+        ! Insert new value
+        live_like(jlim) =  live_like_new
+        live(jlim,:) =  live_new
+        ! The rest stay as it is
+     END IF
+
 
      ! Assign to the new point, the same cluster number of the start point
      IF (cluster_on) THEN
