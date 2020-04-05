@@ -1,5 +1,5 @@
 MODULE MOD_LIKELIHOOD
-  ! Automatic Time-stamp: <Last changed by martino on Thursday 19 March 2020 at CET 18:52:45>
+  ! Automatic Time-stamp: <Last changed by martino on Sunday 05 April 2020 at CEST 08:26:12>
   ! Module of the likelihood function for data analysis
   
   
@@ -208,7 +208,8 @@ CONTAINS
           ! Suggestion for the values: s between m-sqrt(2*m),m+sqrt(2*m)
           ! with m the number of points
           CALL INIT_ROCKING(par_in(6),par_in(7))
-       ELSE IF(funcname.EQ.'TWO_INTERP_VOIGT_POLY') THEN
+       ELSE IF(funcname.EQ.'TWO_INTERP_VOIGT_POLY'&
+            .OR.funcname.EQ.'TWO_INTERP_VOIGT_POLY_X0') THEN
           ! Passing as argument the smoothing factors to be adjusted case by case
           ! Suggestion for the values: s between m-sqrt(2*m),m+sqrt(2*m)
           ! with m the number of points
