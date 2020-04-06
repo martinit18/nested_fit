@@ -3,13 +3,13 @@ PROGRAM NESTED_FIT
   !
   ! Please read README and LICENSE files for more inforamtion
   !
-  ! 3.5beta Modularization of the search algorithm (in preparation of new algorithms implementation)
-  !
+  ! 3.5 Modularization of the search algorithm (in preparation of new algorithms implementation)
   ! 3.4  Introduction of benchmark tests with synthetic likelihood functions
   !      via the module Mod_likelihood_tests,f90 (instead of Mod_likkelihood.f90)
   !      Available tests: TEST_GAUSS (multidimensional Gaussian)
   !                       TEST_EGGBOX (eggbox style profile to test clustering)
-  !      Change of the outputs: nf_output_points.dat -> nf_output_points.dat, plus files nf_output_points.paramnames, 
+  !                       TEST_ROSENBROCK (Rosenbrock function to arbitrary dimension)
+  !      Change of the outputs: nf_output_points.dat -> nf_output_points.dat, plus files nf_output_points.paramnames,
   !      and nf_output_points.ranges to be compatible with GetDist Python package and Polychord
   ! 3.3  Modular version of likelihood function in preparation for handling more complex data (2D data, ...)
   ! 3.2  Pion mass function and laser interpolation taken out to avoid Numerical Recipes
@@ -257,7 +257,7 @@ PROGRAM NESTED_FIT
 
   ! Initiate random generator with a different seed each time
   CALL RANDOM_SEED(PUT=seed_array)
-  ! Other variants 
+  ! Other variants
   !CALL RANDOM_SEED()
   !CALL INIT_RANDOM_SEED()
 
@@ -479,7 +479,7 @@ PROGRAM NESTED_FIT
   !   WRITE(23,*) j, live_like_final(j), weight(j), live_final(j,:)
   !END DO
   !CLOSE(23)
-  
+
   ! Write files in the format for GetDist
   ! Data
   OPEN(23,FILE='nf_output_points.txt',STATUS= 'UNKNOWN')
@@ -500,7 +500,7 @@ PROGRAM NESTED_FIT
      WRITE(23,*) par_name(i), par_bnd1(i),par_bnd2(i)
   END DO
   CLOSE(23)
-  
+
 
   ! Calculate end time
   seconds_omp = omp_get_wtime( ) - seconds
