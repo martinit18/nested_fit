@@ -1,4 +1,4 @@
-c     Automatic Time-stamp: <Last changed by martino on Sunday 05 April 2020 at CEST 08:24:59>
+c     Automatic Time-stamp: <Last changed by martino on Wednesday 18 March 2020 at CET 11:56:40>
 c################################### USERFCN DEFINITION #####################################
 
 
@@ -43,7 +43,6 @@ c################################### USERFCN DEFINITION ########################
       REAL*8 SIX_VOIGT_SHIRLEYBG
       REAL*8 SIX_VOIGT_PARA_SHIRBG_SIG_PLEIADES
       REAL*8 ROCKING_CURVE,TWO_INTERP_VOIGT_POLY,THREE_INTERP_VOIGT_POLY
-      REAL*8 TWO_INTERP_VOIGT_POLY_X0
       REAL*8 x
       CHARACTER*64 funcname
 
@@ -128,8 +127,6 @@ c     Choose your model (see below for definition)
          USERFCN =SIX_VOIGT_EXPBG_WF(x,npar,val)
       ELSE IF(funcname.EQ.'TWO_INTERP_VOIGT_POLY') THEN
          USERFCN =TWO_INTERP_VOIGT_POLY(x,npar,val)
-      ELSE IF(funcname.EQ.'TWO_INTERP_VOIGT_POLY_X0') THEN
-         USERFCN =TWO_INTERP_VOIGT_POLY_X0(x,npar,val)
       ELSE IF(funcname.EQ.'THREE_INTERP_VOIGT_POLY') THEN
          USERFCN =THREE_INTERP_VOIGT_POLY(x,npar,val)
       ELSE IF(funcname.EQ.'WEIBULL') THEN
@@ -2821,81 +2818,7 @@ c     Save different components
 
       RETURN
       END
-c _______________________________________________________________________________________________
 
-
-      FUNCTION TWO_INTERP_VOIGT_POLY_X0(X,npar,val)
-c     Rocking curve with s and p polarization extracted from simulations
-      IMPLICIT NONE
-      INTEGER*4 npar
-      REAL*8 val(npar), valv(4), valp(8)
-      REAL*8 TWO_INTERP_VOIGT_POLY_X0, VOIGT, POLY, x, y_1, y_2
-      REAL*8 amp1, amp2, amp3, x01, x02, x03
-      REAL*8 sigma, gamma, a, b, c, d, e, x0
-c     Interpolation variables
-      INTEGER*4 k, nn_1, nn_2, ier_1,ier_2, nest
-      PARAMETER (nest=1000)
-      REAL*8 t_1(nest), c_1(nest), t_2(nest), c_2(nest)
-      COMMON /two_interp/ t_1, t_2, c_1, c_2, k, nn_1, nn_2
-      ! To plot the different components
-      LOGICAL plot
-      COMMON /func_plot/ plot
-
-      amp1  = val(1)
-      amp2  = val(2)
-      amp3  = val(3)
-      x01   = val(4)
-      x02   = val(5)
-      x03   = val(6)
-      sigma = val(7)
-      gamma = val(8)
-      gamma = val(8)
-      x0    = val(9)
-      a     = val(10)
-      b     = val(11)
-      c     = val(12)
-      d     = val(13)
-      e     = val(14)
-
-
-c     Voigt peak
-      valv(1) = x03
-      valv(2) = amp3
-      valv(3) = sigma
-      valv(4) = gamma
-
-c     Polynomial background
-      valp(1) = x0
-      valp(2) = a
-      valp(3) = b
-      valp(4) = c
-      valp(5) = d
-      valp(6) = e
-      valp(7) = 0.
-      valp(8) = 0.
-
-
-c     First peak
-      CALL SPLEV(t_1,nn_1,c_1,k,x-x01,y_1,1,1,ier_1)
-
-c     Second peak
-      CALL SPLEV(t_2,nn_2,c_2,k,x-x02,y_2,1,1,ier_2)
-
-      TWO_INTERP_VOIGT_POLY_X0 = amp1*y_1 + amp2*y_2 + VOIGT(x,4,valv) +
-     +     POLY(x,8,valp)
-
-
-c     Save different components
-      IF(plot) THEN
-         WRITE(40,*) x, TWO_INTERP_VOIGT_POLY_X0, amp1*y_1, amp2*y_2,
-     +        VOIGT(x,4,valv), POLY(x,8,valp)
-
-      ENDIF
-
-      RETURN
-      END
-
-      
 c _______________________________________________________________________________________________
 
 

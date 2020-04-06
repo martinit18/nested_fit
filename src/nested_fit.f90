@@ -1,5 +1,5 @@
 PROGRAM NESTED_FIT
-  ! Time-stamp: <Last changed by martino on Saturday 04 April 2020 at CEST 08:41:02>
+  ! Time-stamp: <Last changed by martino on Wednesday 25 March 2020 at CET 18:35:43>
   !
   ! Please read README and LICENSE files for more inforamtion
   !
@@ -9,8 +9,7 @@ PROGRAM NESTED_FIT
   !      via the module Mod_likelihood_tests,f90 (instead of Mod_likkelihood.f90)
   !      Available tests: TEST_GAUSS (multidimensional Gaussian)
   !                       TEST_EGGBOX (eggbox style profile to test clustering)
-  !                       TEST_ROSENBROCK (Rosenbrock function to arbitrary dimension)
-  !      Change of the outputs: nf_output_points.dat -> nf_output_points.txt, plus files nf_output_points.paramnames, 
+  !      Change of the outputs: nf_output_points.dat -> nf_output_points.dat, plus files nf_output_points.paramnames, 
   !      and nf_output_points.ranges to be compatible with GetDist Python package and Polychord
   ! 3.3  Modular version of likelihood function in preparation for handling more complex data (2D data, ...)
   ! 3.2  Pion mass function and laser interpolation taken out to avoid Numerical Recipes

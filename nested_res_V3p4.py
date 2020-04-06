@@ -138,7 +138,7 @@ class Analysis(object):
         # Program version
         input_data['version']= float(lines[0].split()[0])
         input_comment['version'] = lines[0][lines[0].find('#'):]
-        if input_data['version'] < int(current_version):
+        if (input_data['version'] < int(current_version) or input_data['version'] > current_version):
             sys.exit('Wrong input file version. Please check.')
         # Filename with the data to fit
         input_data['filename'] = lines[1].split()[0]
