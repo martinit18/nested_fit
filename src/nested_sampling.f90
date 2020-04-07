@@ -1,6 +1,6 @@
 SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,&
      live_final,live_like_max,live_max)
-  ! Time-stamp: <Last changed by martino on Wednesday 25 March 2020 at CET 19:17:52>
+  ! Time-stamp: <Last changed by martino on Tuesday 07 April 2020 at CEST 10:16:18>
   ! For parallel tests only
   !SUBROUTINE NESTED_SAMPLING(irnmax,rng,itry,ndata,x,nc,funcname,&
   !   npar,par_fix,par_step,par_in,par_bnd1,par_bnd2,nlive,evaccuracy,sdfraction,&
@@ -202,9 +202,12 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
      min_live_like = live_like(1)
 
      ! ##########################################################################
-     ! Find a new live point                                                    
+     ! Find a new live point
+     ! Parallelism not implemented, does not accelerate
+     !!!!OMP PARALLEL DEFAULT(NONE) SHARED(n,itry,min_live_like,live_like,live)
      CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
           live_like_new,live_new,icluster,ntries,too_many_tries)
+     !!!!OMP END PARALLEL
      IF (too_many_tries) THEN
         nstep_final = n - 1
         GOTO 601

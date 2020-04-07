@@ -1,4 +1,4 @@
-c     Automatic Time-stamp: <Last changed by martino on Sunday 05 April 2020 at CEST 08:24:59>
+c     Automatic Time-stamp: <Last changed by martino on Tuesday 07 April 2020 at CEST 18:34:52>
 c################################### USERFCN DEFINITION #####################################
 
 
@@ -2857,7 +2857,7 @@ c     Interpolation variables
       d     = val(13)
       e     = val(14)
 
-
+      
 c     Voigt peak
       valv(1) = x03
       valv(2) = amp3
@@ -2884,7 +2884,7 @@ c     Second peak
       TWO_INTERP_VOIGT_POLY_X0 = amp1*y_1 + amp2*y_2 + VOIGT(x,4,valv) +
      +     POLY(x,8,valp)
 
-
+      
 c     Save different components
       IF(plot) THEN
          WRITE(40,*) x, TWO_INTERP_VOIGT_POLY_X0, amp1*y_1, amp2*y_2,

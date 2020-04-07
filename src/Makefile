@@ -1,4 +1,4 @@
-#  Automatic Time-stamp: <Last changed by martino on Wednesday 25 March 2020 at CET 18:46:31>
+#  Automatic Time-stamp: <Last changed by martino on Tuesday 07 April 2020 at CEST 18:18:01>
 NAME    = nested_fit3.5.exe
 .SUFFIXES : .f90 .f .o .c .mod
 CFLAGS  =
@@ -28,12 +28,12 @@ F90FILES = Mod_parameters.f90 Mod_likelihood.f90 Mod_timestamp.f90 \
 	dlog_fac.f90 sortn_slatec.f90 meanvar.f90 randn.f90 shirley_fitpack.f90
 
 
-#OPT = -O2 -static
+OPT = -O2 -static
 #OPT = -g  -C -static
 #OPT = -O0 -g
 #OPT = -O0 -g  -fbounds-check -Wall  -ffpe-trap=invalid,zero,overflow,underflow -fbacktrace -ftrapv
 #OPT = -g -Wall -Wextra -Warray-temporaries -Wconversion -fimplicit-none -fbacktrace -ffree-line-length-0 -fcheck=all -ffpe-trap=zero,overflow,underflow -finit-real=nan
-OPT = -g -Wall -Wextra -Warray-temporaries -Wconversion -fbacktrace -ffree-line-length-0 -fcheck=all -ffpe-trap=zero,overflow -finit-real=nan
+#OPT = -g -Wall -Wextra -Warray-temporaries -Wconversion -fbacktrace -ffree-line-length-0 -fcheck=all -ffpe-trap=zero,overflow -finit-real=nan
 
 
 #LDFLAGS =  -framework veclib -L/Users/martino/lib -luserfcn
