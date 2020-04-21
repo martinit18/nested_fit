@@ -1,4 +1,4 @@
-#  Automatic Time-stamp: <Last changed by martino on Tuesday 21 April 2020 at CEST 14:06:37>
+#  Automatic Time-stamp: <Last changed by martino on Tuesday 21 April 2020 at CEST 18:06:21>
 NAME    = nested_fit3.5.1.exe
 .SUFFIXES : .f90 .f .o .c .mod
 CFLAGS  =
@@ -23,7 +23,7 @@ FFILES  =  USERFCN.f USERFCN_SET.f init_interpolation.f \
 # Change Mod_likelihood.f90 in Mod_likelihood_tests.f90 below for tests
 
 F90FILES = Mod_parameters.f90 Mod_likelihood.f90 Mod_timestamp.f90 \
-	Mod_mean_shift_cluster_analysis.f90 Mod_search_new_point.f90 \
+	Mod_cluster_analysis.f90 Mod_search_new_point.f90 \
 	nested_fit.f90 nested_sampling.f90 \
 	dlog_fac.f90 sortn_slatec.f90 meanvar.f90 randn.f90 shirley_fitpack.f90
 

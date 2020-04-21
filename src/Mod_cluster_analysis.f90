@@ -1,9 +1,9 @@
-MODULE MOD_MEAN_SHIFT_CLUSTER_ANALYSIS
-  ! Automatic Time-stamp: <Last changed by martino on Tuesday 21 April 2020 at CEST 11:35:08>
+MODULE MOD_CLUSTER_ANALYSIS
+  ! Automatic Time-stamp: <Last changed by martino on Tuesday 21 April 2020 at CEST 18:10:49>
   ! Module for cluster analysis for point in n dimensions
- 
-  ! Module for the input parameter definition
-  USE MOD_PARAMETERS
+  !
+  ! To eventually change to select and add other cluster analyses (eventually to be selected in the input file)
+
   
   IMPLICIT NONE
  
@@ -22,9 +22,12 @@ CONTAINS
 
   SUBROUTINE MAKE_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     ! From a group of np points p of dimension ndim, determine the clusters
+    ! using the mean shift algorithm
     ! using distance and bandwidth as parameters
     ! INPUTS
-    USE Mod_timestamp, only: timestamp
+    USE MOD_TIMESTAMP, ONLY: timestamp 
+    ! Module for the input parameter definition
+    USE MOD_PARAMETERS, ONLY: cluster_method, bandwidth, distance_limit
     INTEGER(4), INTENT(IN) :: np_in, ndim_in
     REAL(8), INTENT(IN), DIMENSION(np_in,ndim_in) :: p_in
     ! Other variables
@@ -317,4 +320,4 @@ CONTAINS
 
 !##################################################################################################################
 
-END MODULE MOD_MEAN_SHIFT_CLUSTER_ANALYSIS
+END MODULE MOD_CLUSTER_ANALYSIS

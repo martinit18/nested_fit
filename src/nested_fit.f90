@@ -1,5 +1,5 @@
 PROGRAM NESTED_FIT
-  ! Time-stamp: <Last changed by martino on Tuesday 21 April 2020 at CEST 14:14:14>
+  ! Time-stamp: <Last changed by martino on Tuesday 21 April 2020 at CEST 18:08:13>
   !
   ! Please read README and LICENSE files for more inforamtion
   !
@@ -63,8 +63,6 @@ PROGRAM NESTED_FIT
   USE MOD_PARAMETERS
   ! Module for likelihood for data analysis
   USE MOD_LIKELIHOOD
-  ! Module for cluster analysis
-  USE MOD_MEAN_SHIFT_CLUSTER_ANALYSIS
   !USE RNG
   !
   IMPLICIT NONE

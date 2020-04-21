@@ -1,5 +1,5 @@
 MODULE MOD_SEARCH_NEW_POINT
-  ! Automatic Time-stamp: <Last changed by martino on Tuesday 21 April 2020 at CEST 13:07:32>
+  ! Automatic Time-stamp: <Last changed by martino on Tuesday 21 April 2020 at CEST 18:07:30>
   ! Module for search of new points
   
   ! Module for the input parameter definition
@@ -8,7 +8,7 @@ MODULE MOD_SEARCH_NEW_POINT
   ! Module for likelihood
   USE MOD_LIKELIHOOD
   ! Module for cluster analysis
-  USE MOD_MEAN_SHIFT_CLUSTER_ANALYSIS 
+  USE MOD_CLUSTER_ANALYSIS 
 
   IMPLICIT NONE
   
