@@ -51,15 +51,17 @@ Additional information can be found in the reference articles.
 
 ## Present version and history of the past versions
 
-The present version is 3.4.\
+The present version is 3.5.1\
 New features:
-- Introduction of benchmark tests with synthetic likelihood function via the module Mod_likelihood_tests,f90 (instead of Mod_likelihood.f90).
-- Available tests: TEST_GAUSS (multidimensional Gaussian), TEST_GAUSSIAN_SHELLS (multidimensional Gaussian shells, worse case with available search and clustering methods),
-TEST_EGGBOX (eggbox style profile to test clustering), TEST_ROSENBROCK (Rosenbock function test for 2-n dimension).
-- Change of the outputs: nf_output_points.dat -> nf_output_points.txt, plus files nf_output_points.paramnames,  and nf_output_points.ranges to be compatible with GetDist Python package. New 'triangle plot' available now.
+- Modularization of the search and cluster recognition methods in preparation of implementation of new algorithms
+- New interpolation options for 1D and 2D histograms using GetDist Python package
 
 
 Previous versions are:
+ - Introduction of benchmark tests with synthetic likelihood function via the module Mod_likelihood_tests,f90 (instead of Mod_likelihood.f90).
+ Available tests: TEST_GAUSS (multidimensional Gaussian), TEST_GAUSSIAN_SHELLS (multidimensional Gaussian shells, worse case with available search and clustering methods),
+ TEST_EGGBOX (eggbox style profile to test clustering), TEST_ROSENBROCK (Rosenbock function test for 2-n dimension).\
+ Change of the outputs: nf_output_points.dat -> nf_output_points.txt, plus files nf_output_points.paramnames,  and nf_output_points.ranges to be compatible with GetDist Python package. New 'triangle plot' available now.
  - 3.3 Modular version of likelihood function in preparation for handling more complex data (2D data, ...).
  - 3.2  This is the first version with free sharing code only.
     Pion mass function and laser interpolation taken out to avoid Numerical Recipes.\
