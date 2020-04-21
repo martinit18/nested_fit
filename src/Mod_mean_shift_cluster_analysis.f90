@@ -1,5 +1,5 @@
 MODULE MOD_MEAN_SHIFT_CLUSTER_ANALYSIS
-  ! Automatic Time-stamp: <Last changed by martino on Tuesday 24 March 2020 at CET 11:02:49>
+  ! Automatic Time-stamp: <Last changed by martino on Tuesday 21 April 2020 at CEST 11:35:08>
   ! Module for cluster analysis for point in n dimensions
  
   ! Module for the input parameter definition
@@ -164,6 +164,12 @@ CONTAINS
        END DO
        IF(p_cluster(j).EQ.0) THEN
           ncluster = ncluster + 1
+          IF (ncluster.GT.ncluster_max) THEN
+             WRITE(*,*) '  '
+             WRITE(*,*) 'ERROR!!! Too many clusters more than ', ncluster_max
+             WRITE(*,*) 'Change cluster recognition parameters in mean-shift'
+             STOP
+          END IF
           mean_cluster(ncluster,:) = p_mean_shift(j,:)
           p_cluster(j) = ncluster
           !write(*,*) j, k, ncluster, NORM2(p_mean_shift(j,:)-mean_cluster(k,:)), 'new cluster'
@@ -172,10 +178,6 @@ CONTAINS
     END DO
     WRITE(*,*) 'Number of cluster found = ', ncluster, 'Minimal n. of neighbours = ', min_nn
 
-    IF(ncluster.EQ.ncluster_max) THEN
-       WRITE(*,*) 'Maximal number of clusters. Change something'
-       STOP
-    END IF
 
     ! Write file for further analysis and check of cluster recognition
     OPEN (UNIT=10, FILE='nf_meanshift_final_'//timestamp()//'.dat', STATUS='unknown')

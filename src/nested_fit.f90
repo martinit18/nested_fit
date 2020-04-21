@@ -1,5 +1,5 @@
 PROGRAM NESTED_FIT
-  ! Time-stamp: <Last changed by martino on Tuesday 07 April 2020 at CEST 18:40:43>
+  ! Time-stamp: <Last changed by martino on Tuesday 21 April 2020 at CEST 12:18:45>
   !
   ! Please read README and LICENSE files for more inforamtion
   !
@@ -7,6 +7,7 @@ PROGRAM NESTED_FIT
   ! 3.4  Introduction of benchmark tests with synthetic likelihood functions
   !      via the module Mod_likelihood_tests,f90 (instead of Mod_likkelihood.f90)
   !      Available tests: TEST_GAUSS (multidimensional Gaussian)
+  !                       TEST_GAUSSIAN_SHELLS (multidimensional Gaussian shells, worse case with available search and clustering methods)
   !                       TEST_EGGBOX (eggbox style profile to test clustering)
   !                       TEST_ROSENBROCK (Rosenbrock function to arbitrary dimension)
   !      Change of the outputs: nf_output_points.dat -> nf_output_points.dat, plus files nf_output_points.paramnames,

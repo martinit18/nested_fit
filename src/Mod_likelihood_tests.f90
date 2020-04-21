@@ -1,5 +1,5 @@
 MODULE MOD_LIKELIHOOD
-  ! Automatic Time-stamp: <Last changed by martino on Saturday 21 March 2020 at CET 17:11:12>
+  ! Automatic Time-stamp: <Last changed by martino on Monday 20 April 2020 at CEST 19:07:49>
   ! Module of likelihood test function, no real data are involved here
 
 
@@ -56,6 +56,8 @@ CONTAINS
        LOGLIKELIHOOD = TEST_SIMPLE_GAUSS(par)
     ELSE IF (funcname.eq.'TEST_GAUSS') THEN
        LOGLIKELIHOOD = TEST_GAUSS(par)
+    ELSE IF (funcname.eq.'TEST_GAUSSIAN_SHELLS') THEN
+       LOGLIKELIHOOD = TEST_GAUSSIAN_SHELLS(par)
     ELSE IF (funcname.eq.'TEST_EGGBOX') THEN
        LOGLIKELIHOOD = TEST_EGGBOX(par)
     ELSE IF (funcname.eq.'TEST_ROSENBROCK') THEN
@@ -79,6 +81,9 @@ CONTAINS
     WRITE(*,*) ' '
     WRITE(*,*) 'End of likelihood test'
     WRITE(*,*) 'Number of calls : ', ncall
+    OPEN(11,FILE='n_likelihood_calls.txt',STATUS= 'UNKNOWN')
+    WRITE(11,*) ncall
+    CLOSE(11)
 
   END SUBROUTINE FINAL_LIKELIHOOD
 
@@ -107,6 +112,8 @@ CONTAINS
 
   END FUNCTION TEST_SIMPLE_GAUSS
   
+  !#####################################################################################################################
+  
   REAL(8) FUNCTION TEST_GAUSS(par)
     !> Basic multidimensional Gaussian likelihood with mean mu(:) and an uncorrelated covariance sigma(:).
     !! Inspired from polychord code
@@ -131,11 +138,50 @@ CONTAINS
     ! Gaussian normalisation
     TEST_GAUSS = - SUM( LOG( sigma ) + LOG(2*pi)/2d0 ) 
 
-    ! theta dependence
+    ! x dependence
     TEST_GAUSS = TEST_GAUSS - SUM( ( ( x - mu ) / sigma ) ** 2d0 ) / 2d0
 
 
   END FUNCTION TEST_GAUSS
+
+  !#####################################################################################################################
+  
+  REAL(8) FUNCTION TEST_GAUSSIAN_SHELLS(par)
+    !> Basic multidimensional Gaussian shells likelihood with mean mu(:) and an uncorrelated covariance sigma(:).
+    !! Inspired from polychord and multinest codes
+
+    REAL(8), DIMENSION(:), INTENT(IN) :: par
+    REAL(8), PARAMETER :: pi=3.141592653589793d0
+    REAL(8) :: ADDLOG, radius, sigma, A_norm, value_shell_1, value_shell_2
+    REAL(8), DIMENSION(SIZE(par)) :: mu    ! Mean 
+    REAL(8), DIMENSION(SIZE(par)) :: x     ! Variable to explore
+
+    x = par
+
+    ! Initialise the mean and standard deviation
+    mu    = 0.d0  ! mean (to be changed after for the first dimension)
+    radius = 2d0  ! radius
+    sigma = 1d-2  ! all sigma set relatively small
+
+    ! Gaussian normalisation like Feroz 2009
+    A_norm = - ( LOG( sigma ) + LOG(2*pi)/2d0 ) 
+
+    ! First shell
+    ! Parameters
+    mu(1)  = -3.5
+    ! x dependence first shell
+    value_shell_1 = A_norm - ( (DSQRT( SUM( (mu-x)**2 ) ) - radius)**2 /(2d0*sigma**2) )
+
+    ! Second shell
+    ! Parameters
+    mu(1)  = +3.5
+    ! x dependence first shell
+    value_shell_2 = A_norm - ( (DSQRT( SUM( (mu-x)**2 ) ) - radius)**2 /(2d0*sigma**2) )
+
+    TEST_GAUSSIAN_SHELLS = ADDLOG(value_shell_1,value_shell_2)
+
+
+  END FUNCTION TEST_GAUSSIAN_SHELLS
 
   !#####################################################################################################################
 

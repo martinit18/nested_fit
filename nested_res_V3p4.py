@@ -295,7 +295,7 @@ class Analysis(object):
         The limit of the plot can be indicated. If not, the maximum and the minimum of the histogram are taken into account.
         If there is a set of profiles to fit, specify which one has to be visualized
         '''
-        
+
         linestyle = {"markeredgewidth":2, "elinewidth":2, "capsize":4,"markersize":3}
         linestyle2 = {"markeredgewidth":0, "elinewidth":2, "capsize":0,"markersize":0}
 
@@ -311,7 +311,7 @@ class Analysis(object):
 
         print nset, typeof
 
-        
+
 
 
         # Read the output file(s)
@@ -397,7 +397,7 @@ class Analysis(object):
         The limit of the plot can be indicated. If not, the maximum and the minimum of the histogram are taken into account.
         If there is a set of profiles to fit, specify which one has to be visualized
         '''
-        
+
         linestyle = {"markeredgewidth":2, "elinewidth":2, "capsize":4,"markersize":3}
         linestyle2 = {"markeredgewidth":0, "elinewidth":2, "capsize":0,"markersize":0}
 
@@ -468,7 +468,7 @@ class Analysis(object):
         plt.errorbar(x_fit,y_fit,yerr=None,xerr=None,fmt='-b',**linestyle2)
         #plt.plot(x_fit,y_fit,'-b',label='Fit')
 
-        
+
        # Plot the results in an inset
         # Inset
         inset=plt.axes([xinset_min,yinset_min,xinset_width,yinset_width])
@@ -662,11 +662,13 @@ class Analysis(object):
 
         # Read the data
         if label == None:
-            available_files = glob.glob('nf_meanshift_final_*.dat')
+            available_files = sorted(glob.glob('nf_meanshift_final_*.dat'))
             print 'Taking the last available file'
             label = available_files[-1][19:-4]
-            
+
+
         filename = 'nf_meanshift_final_' + label + '.dat'
+        print('Showing file ', filename)
         data = loadtxt(filename)
 
         ncl = int(max(data[:,0]))
@@ -782,7 +784,7 @@ class Analysis(object):
 
         # Find the good number of parameter from its number or name
         if type(par_number1) == str:
-            par_index1 = list(self.df.columns).index(par_number1) 
+            par_index1 = list(self.df.columns).index(par_number1)
             title1 = par_number1
             print "Set par_number %s to %s" % (par_number1, par_index1)
         else:
@@ -791,7 +793,7 @@ class Analysis(object):
             title1 = self.input_data['parameters'][par_number1-1][1]
 
         if type(par_number2) == str:
-            par_index2 = list(self.df.columns).index(par_number2) 
+            par_index2 = list(self.df.columns).index(par_number2)
             title2 = par_number2
             print "Set par_number %s to %s" % (par_number2, par_index2)
         else:
@@ -1126,8 +1128,42 @@ class Analysis(object):
         '''
 
 
-        ######################################################################################################## WORKING !!
+        ################################# GetDist functions ################################################################ !!
 
+    def histo_interp(self,par_name,path=currentpath):
+        '''
+        Interpolated histogram plot using GetDist package
+        '''
+        from getdist import plots
+
+        self.path = path
+
+        if type(par_name) <> str:
+            print('Use a parameter name and not a number')
+            return
+        
+        g = plots.get_single_plotter()
+        g.plot_1d(self.path+'/nf_output_points',par_name)
+
+        #---------------------------------------------------------------------------------------------------------------------
+
+    def histo2D_interp(self,par_name1,par_name2,path=currentpath):
+        '''
+        Interpolated histogram plot using GetDist package
+        '''
+        from getdist import plots
+
+        self.path = path
+
+        if type(par_name1) <> str or type(par_name2) <> str:
+            print('Use a parameter name and not a number')
+            return
+        
+        g = plots.get_single_plotter()
+        g.plot_2d(self.path+'/nf_output_points',par_name1,par_name2,filled=True)
+
+        #---------------------------------------------------------------------------------------------------------------------
+        
     def triangle_plot(self,path=currentpath):
         '''
         Triangle plot of all probability distributions using GetDist package
@@ -1143,7 +1179,7 @@ class Analysis(object):
 
 
 
-        
+
 #########################################################################################################################################
 class Summary(object):
     '''
