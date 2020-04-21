@@ -1,5 +1,5 @@
 MODULE MOD_SEARCH_NEW_POINT
-  ! Automatic Time-stamp: <Last changed by martino on Tuesday 24 March 2020 at CET 11:12:37>
+  ! Automatic Time-stamp: <Last changed by martino on Tuesday 21 April 2020 at CEST 13:07:32>
   ! Module for search of new points
   
   ! Module for the input parameter definition
@@ -97,7 +97,8 @@ CONTAINS
 400 IF (cluster_on) THEN
        ! Identify cluster appartenance
        icluster = p_cluster(istart)
-       ! Get for the specific cluster if the cluster analusis is on
+       ! Get for the specific cluster if the cluster analysis is on
+       ! Standard deviation
        live_sd(:) = cluster_std(icluster,:)
        IF(cluster_std(icluster,1).EQ.0.) THEN
           ! If the cluster is formed only from one point, take the standard standard deviation
@@ -112,6 +113,8 @@ CONTAINS
           !$OMP END PARALLEL DO
           live_sd = DSQRT(live_var)
        END IF
+       ! and mean
+       live_ave(:) = cluster_mean(icluster,:)
     ELSE
        !$OMP PARALLEL DO
        DO i=1,npar
@@ -211,7 +214,7 @@ CONTAINS
                 !END DO
                 !CLOSE(99)
 
-                ! Alternate the three techniques to find a new life point
+                ! Alternate the two techniques to find a new life point
                 CALL RANDOM_NUMBER(rn)
                 irn = FLOOR(2*rn+1)
                 IF(MOD(ntries,2).EQ.1) THEN
@@ -238,7 +241,7 @@ CONTAINS
                 END IF
                 !
 
-                IF (LOGLIKELIHOOD(start_jump).GT.min_live_like) THEN
+                IF (LOGLIKELIHOOD(new_jump).GT.min_live_like) THEN
                    start_jump = new_jump
                 ELSE
                    ! Choose a new random live point and restart all
@@ -249,10 +252,23 @@ CONTAINS
                 GOTO 500
              ELSE
                 ! If cluster analysis, do not mix the points!!
-                ! Choose a new random live point and restart all
-                CALL RANDOM_NUMBER(rn)
-                istart= FLOOR((nlive-1)*rn+1)
-                start_jump = live(istart,:)
+                ! Leo's technique only, go between the average and this point
+                !$OMP PARALLEL DO
+                DO l=1,npar
+                   IF (par_fix(l).NE.1) THEN
+                      CALL RANDOM_NUMBER(rn)
+                      new_jump(l) = live_ave(l) + (new_jump(l) - live_ave(l))*rn
+                   END IF
+                END DO
+                !$OMP END PARALLEL DO
+                IF (LOGLIKELIHOOD(new_jump).GT.min_live_like) THEN
+                   start_jump = new_jump
+                ELSE
+                   ! Choose a new random live point and restart all
+                   CALL RANDOM_NUMBER(rn)
+                   istart= FLOOR((nlive-1)*rn+1)
+                   start_jump = live(istart,:)
+                END IF
                 GOTO 400
              END IF
 

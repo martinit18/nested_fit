@@ -1,5 +1,5 @@
-#  Automatic Time-stamp: <Last changed by martino on Tuesday 21 April 2020 at CEST 12:20:46>
-NAME    = nested_fit3.5.exe
+#  Automatic Time-stamp: <Last changed by martino on Tuesday 21 April 2020 at CEST 14:06:37>
+NAME    = nested_fit3.5.1.exe
 .SUFFIXES : .f90 .f .o .c .mod
 CFLAGS  =
 FFLAGS  = -fopenmp
