@@ -17,11 +17,11 @@ a="""
 #                                                         #
 #                                                         #
 # Start with                                              #
-# 'an=nested_res_V3p4.Analysis()'                         #
+# 'an=nested_res_V3p4_py27.Analysis()'                         #
 # By default the current path is considered.              #
 #                                                         #
 # If you want analyze another path:                       #
-# 'an=nested_res_V3p4.Analysis(path="path")'              #
+# 'an=nested_res_V3p4_py27.Analysis(path="path")'              #
 #                                                         #
 # If you do not want to specify any path:                 #
 # 'an=nested_res.Analysis(path=None)'                     #
@@ -46,7 +46,7 @@ a="""
 """
 print(a)
 
-print('Present version '+str(current_version) + '\n')
+print 'Present version '+str(current_version) + '\n'
 
 
 class Analysis(object):
@@ -63,9 +63,9 @@ class Analysis(object):
     def load_data(self, path=currentpath, do_load_input=True, do_load_output_results=False, do_load_output_data=True):
         # Adjust the path first
         self.path = path
-        print('Current path = ', path)
+        print 'Current path = ', path
         if path is None:
-            print('Please indicate a path if needed')
+            print 'Please indicate a path if needed'
             return
         if do_load_input:
             self.load_input(path)
@@ -91,13 +91,13 @@ class Analysis(object):
 
     def load_output_data(self, path=currentpath):
         # Adjust the path first
-        if path[-1]!='/' and path != None:  path = path+'/'
+        if path[-1]<>'/' and path <> None:  path = path+'/'
         #
         self.path = path
         self.number_of_values = self.input_data['npar']
         # Check first if is there
         if not os.path.isfile(path+'nf_output_points.txt'):
-            print('Result file nf_output_points.txt not present\n Nothing to load')
+            print 'Result file nf_output_points.txt not present\n Nothing to load'
             return None
         self.df = pd.read_csv(path+'nf_output_points.txt', delim_whitespace=True, header=0,
                 names=["weight","lnlikelihood"] + ["val_%s" % d for d in range(1, self.number_of_values+1)])
@@ -108,7 +108,7 @@ class Analysis(object):
 #            if c in self.df.columns and c != "weight":
 #                self.df["w" + c] = self.df["weight"] * self.df[c]
 
-        print('Available parameters :', list(self.df.columns))
+        print 'Available parameters :', list(self.df.columns)
 
         self.df.head()
         self.data = self.df.values
@@ -123,7 +123,7 @@ class Analysis(object):
         input_data, input_comment
         '''
         # Adjust the path first
-        if path[-1]!='/' and path != None:  path = path+'/'
+        if path[-1]<>'/' and path <> None:  path = path+'/'
         #
         # Parametersof the dictionaries: values and comments
         # Initialization
@@ -215,7 +215,7 @@ class Analysis(object):
         from numpy import array
 
         # Adjust the path first
-        if path[-1]!='/' and path != None:  path = path+'/'
+        if path[-1]<>'/' and path <> None:  path = path+'/'
         #
 
         # Read parameters from input file
@@ -228,7 +228,7 @@ class Analysis(object):
         # Read the file and the different parameters
         # Check first if is there
         if not os.path.isfile(path + 'nf_output_res.dat'):
-            print('Result file nf_output_res.dat not present\n Nothing to load')
+            print 'Result file nf_output_res.dat not present\n Nothing to load'
             return None
         output_file = open(path + 'nf_output_res.dat')
         lines = output_file.readlines()
@@ -236,8 +236,8 @@ class Analysis(object):
 
         # Read number of tries
         output_data['ntry'] = int(lines[1].split()[1])
-        if input_data['ntry'] != output_data['ntry'] :
-            print('input ntry', input_data['ntry'], 'output ntry', output_data['ntry'])
+        if input_data['ntry'] <> output_data['ntry'] :
+            print 'input ntry', input_data['ntry'], 'output ntry', output_data['ntry']
             sys.exit('Check your input/output files')
 
         # Number of iteration
@@ -300,7 +300,7 @@ class Analysis(object):
         linestyle2 = {"markeredgewidth":0, "elinewidth":2, "capsize":0,"markersize":0}
 
         # Adjust the path first
-        if path[-1]!='/' and path != None:  path = path+'/'
+        if path[-1]<>'/' and path <> None:  path = path+'/'
         #
 
         self.path = path
@@ -309,17 +309,17 @@ class Analysis(object):
         import matplotlib.pyplot as plt
 
 
-        print(nset, typeof)
+        print nset, typeof
 
 
 
 
         # Read the output file(s)
         if nset < 1:
-            print('nf_output_data_'+ typeof + '.dat')
+            print 'nf_output_data_'+ typeof + '.dat'
             data = loadtxt(self.path+'nf_output_data_'+ typeof + '.dat')
         else:
-            print('nf_output_data_'+ typeof + '_' + str(nset) +'.dat')
+            print 'nf_output_data_'+ typeof + '_' + str(nset) +'.dat'
             data = loadtxt(self.path+'nf_output_data_'+ typeof + '_' + str(nset) +'.dat')
 
         # Assign variables
@@ -402,7 +402,7 @@ class Analysis(object):
         linestyle2 = {"markeredgewidth":0, "elinewidth":2, "capsize":0,"markersize":0}
 
         # Adjust the path first
-        if path[-1]!='/' and path != None:  path = path+'/'
+        if path[-1]<>'/' and path <> None:  path = path+'/'
         #
 
         self.path = path
@@ -411,15 +411,15 @@ class Analysis(object):
         import matplotlib.pyplot as plt
 
 
-        print(nset, typeof)
+        print nset, typeof
 
 
         # Read the output file(s)
         if nset < 1:
-            print('nf_output_data_'+ typeof + '.dat')
+            print 'nf_output_data_'+ typeof + '.dat'
             data = loadtxt(self.path+'nf_output_data_'+ typeof + '.dat')
         else:
-            print('nf_output_data_'+ typeof + '_' + str(nset) +'.dat')
+            print 'nf_output_data_'+ typeof + '_' + str(nset) +'.dat'
             data = loadtxt(self.path+'nf_output_data_'+ typeof + '_' + str(nset) +'.dat')
 
         # Assign variables
@@ -507,10 +507,10 @@ class Analysis(object):
         if type(par_number) == str:
             par_index = list(self.df.columns).index(par_number)
             title = par_number
-            print("Set par_number %s to %s" % (par_number, par_index))
+            print "Set par_number %s to %s" % (par_number, par_index)
         else:
             par_index = par_number + 1
-            print("Set par_number %s to %s" % (par_number, par_index))
+            print "Set par_number %s to %s" % (par_number, par_index)
             title = self.input_data['parameters'][par_number-1][1]
 
         if bins<10:
@@ -529,14 +529,14 @@ class Analysis(object):
             plt.hist(data[:,par_index],bins=bins,weights=data[:,2])
         elif plotmode == 'log':
             plt.hist(log(data[:,par_index])+50.,bins=bins,weights=data[:,2])
-            print('not working I do not why')
+            print 'not working I do not why'
         else:
             # Make histogram with differnet colors for different confidence levels
             histo, edges = histogram(data[:,par_index],bins=bins,weights=data[:,0])\
 
             # Make array with histogram values, position, and order
             pos = zeros((bins))
-            ipos = list(range(bins))
+            ipos = range(bins)
             histo_sum = histo.sum()
             for i in ipos: pos[i] = (edges[i]+edges[i+1])/2
             width = edges[1]-edges[0]
@@ -609,12 +609,12 @@ class Analysis(object):
         if type(par_number) == str:
             par_index = list(self.df.columns).index(par_number)
             title = par_number
-            print("Set par_number %s to %s" % (par_number, par_index))
+            print "Set par_number %s to %s" % (par_number, par_index)
         else:
             par_index = par_number + 1
-            print("Set par_number %s to %s" % (par_number, par_index))
+            print "Set par_number %s to %s" % (par_number, par_index)
             title = self.input_data['parameters'][par_number-1][1]
-            print("Selected parameter = ", title)
+            print "Selected parameter = ", title
 
         # Read the data
         data = self.df.values
@@ -644,38 +644,38 @@ class Analysis(object):
         if type(par_number1) == str:
             par_index1 = list(self.df.columns).index(par_number1) - 1
             title1 = par_number1
-            print("Set par_number %s to %s" % (par_number1, par_index1))
+            print "Set par_number %s to %s" % (par_number1, par_index1)
         else:
             par_index1 = par_number1
-            print("Set par_number %s to %s" % (par_number1, par_index1))
+            print "Set par_number %s to %s" % (par_number1, par_index1)
             title1 = self.input_data['parameters'][par_number1-1][1]
 
         if type(par_number2) == str:
             par_index2 = list(self.df.columns).index(par_number2) - 1
             title2 = par_number2
-            print("Set par_number %s to %s" % (par_number2, par_index2))
+            print "Set par_number %s to %s" % (par_number2, par_index2)
         else:
             par_index2 = par_number2
-            print("Set par_number %s to %s" % (par_number2, par_index2))
+            print "Set par_number %s to %s" % (par_number2, par_index2)
             title2 = self.input_data['parameters'][par_number2-1][1]
 
 
         # Read the data
         if label == None:
             available_files = sorted(glob.glob('nf_meanshift_final_*.dat'))
-            print('Taking the last available file')
+            print 'Taking the last available file'
             label = available_files[-1][19:-4]
 
 
         filename = 'nf_meanshift_final_' + label + '.dat'
-        print(('Showing file ', filename))
+        print('Showing file ', filename)
         data = loadtxt(filename)
 
         ncl = int(max(data[:,0]))
 
 
 
-        print('Number of clusters:', ncl)
+        print 'Number of clusters:', ncl
 
         # Select the data
         if xmin == None: xmin = data[:,par_index1].min()
@@ -713,28 +713,28 @@ class Analysis(object):
         if type(par_number1) == str:
             par_index1 = list(self.df.columns).index(par_number1) - 2
             title1 = par_number1
-            print("Set par_number %s to %s" % (par_number1, par_index1))
+            print "Set par_number %s to %s" % (par_number1, par_index1)
         else:
             par_index1 = par_number1
-            print("Set par_number %s to %s" % (par_number1, par_index1))
+            print "Set par_number %s to %s" % (par_number1, par_index1)
             title1 = self.input_data['parameters'][par_number1-1][1]
 
         if type(par_number2) == str:
             par_index2 = list(self.df.columns).index(par_number2) - 2
             title2 = par_number2
-            print("Set par_number %s to %s" % (par_number2, par_index2))
+            print "Set par_number %s to %s" % (par_number2, par_index2)
         else:
             par_index2 = par_number2
-            print("Set par_number %s to %s" % (par_number2, par_index2))
+            print "Set par_number %s to %s" % (par_number2, par_index2)
             title2 = self.input_data['parameters'][par_number2-1][1]
 
         if type(par_number3) == str:
             par_index3 = list(self.df.columns).index(par_number3) - 2
             title3 = par_number3
-            print("Set par_number %s to %s" % (par_number3, par_index3))
+            print "Set par_number %s to %s" % (par_number3, par_index3)
         else:
             par_index3 = par_number3
-            print("Set par_number %s to %s" % (par_number3, par_index3))
+            print "Set par_number %s to %s" % (par_number3, par_index3)
             title3 = self.input_data['parameters'][par_number3-1][1]
 
 
@@ -747,7 +747,7 @@ class Analysis(object):
 
 
 
-        print('Number of clusters:', ncl)
+        print 'Number of clusters:', ncl
 
         # Select the data
         if xmin == None: xmin = data[:,par_index1].min()
@@ -786,19 +786,19 @@ class Analysis(object):
         if type(par_number1) == str:
             par_index1 = list(self.df.columns).index(par_number1)
             title1 = par_number1
-            print("Set par_number %s to %s" % (par_number1, par_index1))
+            print "Set par_number %s to %s" % (par_number1, par_index1)
         else:
             par_index1 = par_number1 + 1
-            print("Set par_number %s to %s" % (par_number1, par_index1))
+            print "Set par_number %s to %s" % (par_number1, par_index1)
             title1 = self.input_data['parameters'][par_number1-1][1]
 
         if type(par_number2) == str:
             par_index2 = list(self.df.columns).index(par_number2)
             title2 = par_number2
-            print("Set par_number %s to %s" % (par_number2, par_index2))
+            print "Set par_number %s to %s" % (par_number2, par_index2)
         else:
             par_index2 = par_number2 + 1
-            print("Set par_number %s to %s" % (par_number2, par_index2))
+            print "Set par_number %s to %s" % (par_number2, par_index2)
             title2 = self.input_data['parameters'][par_number2-1][1]
 
 
@@ -853,19 +853,19 @@ class Analysis(object):
         if type(par_number1) == str:
             par_index1 = list(self.df.columns).index(par_number1)
             title1 = par_number1
-            print("Set par_number %s to %s" % (par_number1, par_index1))
+            print "Set par_number %s to %s" % (par_number1, par_index1)
         else:
             par_index1 = par_number1 + 1
-            print("Set par_number %s to %s" % (par_number1, par_index1))
+            print "Set par_number %s to %s" % (par_number1, par_index1)
             title1 = self.input_data['parameters'][par_number1-1][1]
 
         if type(par_number2) == str:
             par_index2 = list(self.df.columns).index(par_number2)
             title2 = par_number2
-            print("Set par_number %s to %s" % (par_number2, par_index2))
+            print "Set par_number %s to %s" % (par_number2, par_index2)
         else:
             par_index2 = par_number2 + 1
-            print("Set par_number %s to %s" % (par_number2, par_index2))
+            print "Set par_number %s to %s" % (par_number2, par_index2)
             title2 = self.input_data['parameters'][par_number2-1][1]
 
         # Read the data
@@ -1029,19 +1029,19 @@ class Analysis(object):
         if type(par_number1) == str:
             par_index1 = list(self.df.columns).index(par_number1)
             title1 = par_number1
-            print("Set par_number %s to %s" % (par_number1, par_index1))
+            print "Set par_number %s to %s" % (par_number1, par_index1)
         else:
             par_index1 = par_number1 + 1
-            print("Set par_number %s to %s" % (par_number1, par_index1))
+            print "Set par_number %s to %s" % (par_number1, par_index1)
             title1 = self.input_data['parameters'][par_number1-1][1]
 
         if type(par_number2) == str:
             par_index2 = list(self.df.columns).index(par_number2)
             title2 = par_number2
-            print("Set par_number %s to %s" % (par_number2, par_index2))
+            print "Set par_number %s to %s" % (par_number2, par_index2)
         else:
             par_index2 = par_number2 + 1
-            print("Set par_number %s to %s" % (par_number2, par_index2))
+            print "Set par_number %s to %s" % (par_number2, par_index2)
             title2 = self.input_data['parameters'][par_number2-1][1]
 
         # Read the data
@@ -1064,7 +1064,7 @@ class Analysis(object):
 
         # Make interpolation
         # Fix the limits and the steps of the histogram
-        ipos = list(range(bins))
+        ipos = range(bins)
         x = zeros(bins)
         y = zeros(bins)
         for i in ipos: x[i] = (xedges[i]+xedges[i+1])/2
@@ -1138,7 +1138,7 @@ class Analysis(object):
 
         self.path = path
 
-        if type(par_name) != str:
+        if type(par_name) <> str:
             print('Use a parameter name and not a number')
             return
         
@@ -1155,7 +1155,7 @@ class Analysis(object):
 
         self.path = path
 
-        if type(par_name1) != str or type(par_name2) != str:
+        if type(par_name1) <> str or type(par_name2) <> str:
             print('Use a parameter name and not a number')
             return
         
@@ -1215,24 +1215,24 @@ class Summary(object):
                 dirname =  dir
             else:
                 dirname = dir+'/'
-            print('Loading directory ', dir)
+            print 'Loading directory ', dir
             # Start analysis in this directory if the analysis is done
             if not os.path.isfile(dirname+'nf_output_points.txt'):
-                print('Result file nf_output_points.txt not present\n Nothing to load')
+                print 'Result file nf_output_points.txt not present\n Nothing to load'
                 continue
             an = Analysis(path=dirname)
-            print('Analysis in ' + dirname)
+            print 'Analysis in ' + dirname
             #
             # Read results input and output types
-            input_types = list(an.load_input(dirname).keys())
-            output_types = list(an.load_output_results(dirname).keys())
+            input_types = an.load_input(dirname).keys()
+            output_types = an.load_output_results(dirname).keys()
             #
             input_par = an.load_input(dirname)
             par_tmp = par_tmp + [p[1].replace("'", "") for p in input_par['parameters']]
             #print par_tmp
         parameters = []
         [parameters.append(x) for x in par_tmp if x not in parameters]
-        print("Parameters  found ", parameters)
+        print "Parameters  found ", parameters
 
 
         # Exceptions that have to be expanded with the parameter name
@@ -1242,27 +1242,27 @@ class Summary(object):
         #  Define the labels expanding lables that depend on the different parameters
         summary = {"labels": []}
 
-        print('\n #### Available input keys ###')
+        print '\n #### Available input keys ###'
         for k  in input_types:
             if k != 'parameters':
                 summary[k] = []
-                print(k)
+                print k
         for i in inputs_par:
-             print(i)
+             print i
              for p in parameters:
                     summary[i+'_'+p] = []
 
         #print(len(summary))
 
-        print('\n #### Available output keys ###')
+        print '\n #### Available output keys ###'
         for k  in output_types:
             if k in outputs_par:
-                print(k)
+                print k
                 for p in parameters:
                     summary[k+'_'+p] = []
             elif k != 'ntry':
                 summary[k] = []
-                print(k)
+                print k
 
         # Fill the labels
         for dir in directories:
@@ -1272,7 +1272,7 @@ class Summary(object):
                 dirname = dir+'/'
             # Check if the analysis is done in the directory
             if not os.path.isfile(dirname+'nf_output_points.txt'):
-                print('Result file nf_output_points.txt not present\n Nothing to load')
+                print 'Result file nf_output_points.txt not present\n Nothing to load'
                 continue
             input = an.load_input(dirname)
             output = an.load_output_results(dirname)
@@ -1282,7 +1282,7 @@ class Summary(object):
             # Read and fill the different information
 
             # From inputs
-            for k, v  in input.items():
+            for k, v  in input.iteritems():
                 if  k != 'parameters':
                     summary[k].append(v)
                     #print k, v
@@ -1300,7 +1300,7 @@ class Summary(object):
 
 
             # From outputs
-            for k, v  in output.items():
+            for k, v  in output.iteritems():
                 if k in outputs_par:
                     for pn, p in enumerate(an.parameters):
                         dir_output[k+'_'+p] = v[pn]
