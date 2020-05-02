@@ -1,5 +1,5 @@
 MODULE MOD_SEARCH_NEW_POINT
-  ! Automatic Time-stamp: <Last changed by martino on Tuesday 21 April 2020 at CEST 18:07:30>
+  ! Automatic Time-stamp: <Last changed by martino on Saturday 02 May 2020 at CEST 13:40:47>
   ! Module for search of new points
   
   ! Module for the input parameter definition
@@ -49,8 +49,8 @@ CONTAINS
        live_like_new,live_new,icluster,ntries,too_many_tries)
   ! SUBROUTINE LAWN_MOWER_ROBOT(min_ll,nlive,live_like,live,new_live_like,new_live)
   
-    USE MOD_PARAMETERS, ONLY: sdfraction, njump, maxtries, maxntries, &
-         cluster_yn, cluster_method, distance_limit, bandwidth
+    USE MOD_PARAMETERS, ONLY: nlive, sdfraction, njump, maxtries, maxntries, &
+         cluster_yn, cluster_method, distance_limit, bandwidth, par_in
     
     ! MCMC search function from Leo's ideas and mine
     INTEGER(4), INTENT(IN) :: n, itry

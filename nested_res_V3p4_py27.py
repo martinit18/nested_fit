@@ -17,11 +17,11 @@ a="""
 #                                                         #
 #                                                         #
 # Start with                                              #
-# 'an=nested_res_V3p4_py27.Analysis()'                         #
+# 'an=nested_res_V3p4_py27.Analysis()'                    #
 # By default the current path is considered.              #
 #                                                         #
 # If you want analyze another path:                       #
-# 'an=nested_res_V3p4_py27.Analysis(path="path")'              #
+# 'an=nested_res_V3p4_py27.Analysis(path="path")'         #
 #                                                         #
 # If you do not want to specify any path:                 #
 # 'an=nested_res.Analysis(path=None)'                     #

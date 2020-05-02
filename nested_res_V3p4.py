@@ -356,7 +356,7 @@ class Analysis(object):
         plt.title('Residual')
         plt.xlabel('Channel')
         plt.ylabel('Counts')
-        #plt.tight_layout()
+        plt.tight_layout()
         # Border of the graph
         if xmin==0 and xmax==0:
             plt.xlim([minx,maxx])
@@ -584,7 +584,7 @@ class Analysis(object):
                 plt.bar(edges[:-1],log(histo_data95)+50.,width=width,color='yellow',edgecolor="yellow", linewidth=0.0)
                 plt.bar(edges[:-1],log(histo_data68)+50.,width=width,color='red',edgecolor="red", linewidth=0.0)
 
-            #plt.tight_layout()
+            plt.tight_layout()
 
         if savedata:
             data = zeros(shape(histo_data))
@@ -629,7 +629,7 @@ class Analysis(object):
         plt.scatter(ix,data[:,par_index],c=data[:,0],linewidth=0.,cmap=cmap)
         cbar = plt.colorbar()
         cbar.set_label('Weight')
-        #plt.tight_layout()
+        plt.tight_layout()
 
 ############################################################################################
     def plot_clusters(self,par_number1,par_number2,label=None,xmin=None,xmax=None,ymin=None,ymax=None,path=currentpath):
@@ -694,7 +694,7 @@ class Analysis(object):
         #plt.ylabel('Value of parameter ' + title)
         #cmap=plt.cm.get_cmap('jet')
         for i in range(ncl): plt.plot(data[data[:,0]==i][:,par_index1],data[data[:,0]==i][:,par_index2],'o')
-        #plt.tight_layout()
+        plt.tight_layout()
 
 
 ############################################################################################
@@ -772,7 +772,7 @@ class Analysis(object):
         for i in range(ncl):
             ax.scatter(data[data[:,0]==i][:,par_index1],data[data[:,0]==i][:,par_index2],data[data[:,0]==i][:,par_index3])
         #ax.scatter(data[:,3],data[:,4],data[:,5])
-        #plt.tight_layout()
+        plt.tight_layout()
 
 ############################################################################################
     def plot_live(self,par_number1,par_number2,path=currentpath,typeof='final'):
@@ -820,7 +820,7 @@ class Analysis(object):
         #plt.ylabel('Value of parameter ' + title)
         #cmap=plt.cm.get_cmap('jet')
         plt.plot(data[:,par_index1],data[:,par_index2],'ob')
-        #plt.tight_layout()
+        plt.tight_layout()
 
 #####################################################################################################################3
     def histo2D(self,par_number1,par_number2,path=currentpath,bins=100,xmin=None,xmax=None,ymin=None,ymax=None,plotmode='sigma',cmap='normal',interp=False,grid_steps=4,s=1E-5):
@@ -966,7 +966,7 @@ class Analysis(object):
         # Plot the contourns
         if interp: self.interp2D(par_number1,par_number2,bins=bins,xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax,grid_steps=grid_steps,s=s,cmap='k',levels=True,clear=False)
 
-        #plt.tight_layout()
+        plt.tight_layout()
 
 ########################################################################################################
     def plot_like(self,path=currentpath):
@@ -986,7 +986,7 @@ class Analysis(object):
         plt.xlabel('Sort number')
         plt.ylabel('Log(likelihood)')
         plt.plot(ix,data[:,1])
-        #plt.tight_layout()
+        plt.tight_layout()
 
 ########################################################################################################
     def plot_weights(self,path=currentpath):
@@ -1006,7 +1006,7 @@ class Analysis(object):
         plt.xlabel('Sort number')
         plt.ylabel('Nested sampling weights')
         plt.plot(ix,data[:,0])
-        #plt.tight_layout()
+        plt.tight_layout()
 
 ######################################################################################################## WORKING !!
 
