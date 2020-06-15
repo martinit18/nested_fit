@@ -1,4 +1,4 @@
-3.4				# Program version
+3.5				# Program version
 gauss_bg-x0_300-sigma_20-A_300-p_to_bg_20-bin_1.dat	# Name of the (first) data file
 n				# Set of files (y/n)
 n				# Errorbars present or not (y/n)

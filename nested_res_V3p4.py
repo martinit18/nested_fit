@@ -348,23 +348,7 @@ class Analysis(object):
         maxy = y.max()*1.3
 
 
-        # Plot the residual
-        plt.figure()
-        plt.clf()
-        linestyle = {"markeredgewidth":2, "elinewidth":2, "capsize":4,"markersize":3}
-        linestyle2 = {"markeredgewidth":0, "elinewidth":2, "capsize":0,"markersize":0}
-        plt.title('Residual')
-        plt.xlabel('Channel')
-        plt.ylabel('Counts')
-        plt.tight_layout()
-        # Border of the graph
-        if xmin==0 and xmax==0:
-            plt.xlim([minx,maxx])
-        else:
-            plt.xlim([xmin,xmax])
-        plt.errorbar(x,r,yerr=sy,xerr=None,fmt='ob',ecolor='blue',mec='blue',**linestyle)
-        plt.errorbar([minx,maxx],[0.,0.],yerr=None,xerr=None,fmt='-k',**linestyle2)
-        #plt.axhline(linewidth=2,color='k')
+
 
         # Plot the results
         plt.figure()
@@ -386,6 +370,24 @@ class Analysis(object):
         plt.errorbar(x_fit,y_fit,yerr=None,xerr=None,fmt='-b',**linestyle2)
         #plt.plot(x_fit,y_fit,'-b',label='Fit')
 
+        # Plot the residual
+        plt.figure()
+        plt.clf()
+        linestyle = {"markeredgewidth":2, "elinewidth":2, "capsize":4,"markersize":3}
+        linestyle2 = {"markeredgewidth":0, "elinewidth":2, "capsize":0,"markersize":0}
+        plt.title('Residual')
+        plt.xlabel('Channel')
+        plt.ylabel('Counts')
+        plt.tight_layout()
+        # Border of the graph
+        if xmin==0 and xmax==0:
+            plt.xlim([minx,maxx])
+        else:
+            plt.xlim([xmin,xmax])
+        plt.errorbar(x,r,yerr=sy,xerr=None,fmt='ob',ecolor='blue',mec='blue',**linestyle)
+        plt.errorbar([minx,maxx],[0.,0.],yerr=None,xerr=None,fmt='-k',**linestyle2)
+        #plt.axhline(linewidth=2,color='k')
+        plt.tight_layout()      
 
         plt.show()
 
@@ -487,7 +489,7 @@ class Analysis(object):
         plt.errorbar(x,r,yerr=sy,xerr=None,fmt='ob',ecolor='blue',mec='blue',**linestyle)
         plt.errorbar([minx,maxx],[0.,0.],yerr=None,xerr=None,fmt='-k',**linestyle2)
         #plt.plot(x_fit,y_fit,'-b',label='Fit')
-
+        plt.tight_layout()      
 
         plt.show()
 
@@ -593,6 +595,9 @@ class Analysis(object):
             savetxt(self.path + 'histo.dat',data)
 
         # TO DO INTERPOLATION WITH scipy.interpolate.UnivariateSpline
+        plt.tight_layout()      
+
+        plt.show()
 
 ############################################################################################
     def plot_par(self,par_number,path=currentpath):
@@ -629,7 +634,9 @@ class Analysis(object):
         plt.scatter(ix,data[:,par_index],c=data[:,0],linewidth=0.,cmap=cmap)
         cbar = plt.colorbar()
         cbar.set_label('Weight')
-        plt.tight_layout()
+        plt.tight_layout()      
+
+        plt.show()
 
 ############################################################################################
     def plot_clusters(self,par_number1,par_number2,label=None,xmin=None,xmax=None,ymin=None,ymax=None,path=currentpath):
@@ -695,6 +702,8 @@ class Analysis(object):
         #cmap=plt.cm.get_cmap('jet')
         for i in range(ncl): plt.plot(data[data[:,0]==i][:,par_index1],data[data[:,0]==i][:,par_index2],'o')
         plt.tight_layout()
+
+        plt.show()
 
 
 ############################################################################################
@@ -774,6 +783,8 @@ class Analysis(object):
         #ax.scatter(data[:,3],data[:,4],data[:,5])
         plt.tight_layout()
 
+        plt.show()
+
 ############################################################################################
     def plot_live(self,par_number1,par_number2,path=currentpath,typeof='final'):
         '''Plot the live points (final, intermediate or initial)'''
@@ -821,6 +832,8 @@ class Analysis(object):
         #cmap=plt.cm.get_cmap('jet')
         plt.plot(data[:,par_index1],data[:,par_index2],'ob')
         plt.tight_layout()
+
+        plt.show()
 
 #####################################################################################################################3
     def histo2D(self,par_number1,par_number2,path=currentpath,bins=100,xmin=None,xmax=None,ymin=None,ymax=None,plotmode='sigma',cmap='normal',interp=False,grid_steps=4,s=1E-5):
@@ -968,6 +981,8 @@ class Analysis(object):
 
         plt.tight_layout()
 
+        plt.show()
+
 ########################################################################################################
     def plot_like(self,path=currentpath):
         ''' Plot the likelihood of the nested sampling points '''
@@ -987,7 +1002,9 @@ class Analysis(object):
         plt.ylabel('Log(likelihood)')
         plt.plot(ix,data[:,1])
         plt.tight_layout()
+        plt.tight_layout()
 
+        plt.show()
 ########################################################################################################
     def plot_weights(self,path=currentpath):
         ''' Plot the likelihood of the nested sampling points '''
@@ -1002,11 +1019,14 @@ class Analysis(object):
 
 
         # Plot
+        plt.figure()
         plt.clf()
         plt.xlabel('Sort number')
         plt.ylabel('Nested sampling weights')
         plt.plot(ix,data[:,0])
         plt.tight_layout()
+
+        plt.show()
 
 ######################################################################################################## WORKING !!
 
@@ -1110,22 +1130,9 @@ class Analysis(object):
         #plt.imshow(histo2D[::-1,],interpolation='nearest',extent=extent,aspect='auto',cmap=cmap)
         cbar = plt.colorbar()
         cbar.set_label('Probability')
-        plt.tight_layout()
-        '''
-        # method with griddata not so good #################################################
-        data = zeros((nix*niy,3))
-        for ii in range(nix*niy):
-            data[ii,:] = [xmin+int(ii/nix)*xstep,
-                            ymin +mod(ii,nix)*ystep,
-                            histo2D[mod(ii,nix),int(ii/nix)]]
-        # Generate a regular grid to interpolate the data.
-        f= 10
-        xi = linspace(xmin, xmax, f*nix)
-        yi = linspace(ymin, ymax, f*niy)
-        xi, yi = meshgrid(xi, yi)
-        # Interpolate using delaunay triangularization
-        zi = mlab.griddata(data[:,0],data[:,1],data[:,2],xi,yi)
-        '''
+        plt.tight_layout()      
+
+        plt.show()
 
 
         ################################# GetDist functions ################################################################ !!
@@ -1161,6 +1168,9 @@ class Analysis(object):
         
         g = plots.get_single_plotter()
         g.plot_2d(self.path+'/nf_output_points',par_name1,par_name2,filled=True)
+        plt.tight_layout()      
+
+        plt.show()
 
         #---------------------------------------------------------------------------------------------------------------------
         
@@ -1175,6 +1185,9 @@ class Analysis(object):
 
         g = plots.get_subplot_plotter()
         g.triangle_plot(self.path+'/nf_output_points',filled=True)
+        plt.tight_layout()      
+
+        plt.show()
 
 
 
