@@ -1,0 +1,30 @@
+3.5				# Program version
+piN-sum.dat			# Name of the (first) data file
+n				# Set of files (y/n)
+y				# Errorbars present or not (y/n)
+100				# Number of live points				
+1.E-02		  		# Evidence final accuracy
+0.1	10	100	10	# Fraction of st. dev., n of jumps, max n. tries, max of max tries
+n	f	0.5	0.2	# cluster anaylis or not (y/n), method (f/g), distance, bandwidth
+1	50000			# Number of tries and maximum of steps
+SIX_VOIGT_BG 	  		# Name of the function
+L               		# Additional data: left/right (l/r)
+500     20      		# Additional data:  npoint, nwidth for convolution
+180   350   			# xmin, xmax    
+15               		# number of parameters
+# npar  name    value   step    min     max     fixed
+1	'x01'	250	-1	240	260	0
+2	'x02'	290	-1	280	310	0
+3	'x03'	0	-1	0	1	1
+4	'x04'	0	-1	0	1	1
+5	'x05'	0	-1	0	1	1
+6	'x06'	0	-1	0	1	1
+7	'amp1'	10000	-1	0	100000	0
+8	'amp2'	100	-1	0	10000	0
+9	'amp3'	0	-1	0	1000	1
+10	'amp4'	0	-1	0	1	1
+11	'amp5'	0	-1	0	1	1
+12	'amp6'	0	-1	0	1	1
+13	'sigma'	1.0	-1	0	50	0
+14	'gamma'	1.0	-1	0	50	0
+15	'bg'	1	-1	0	50	0

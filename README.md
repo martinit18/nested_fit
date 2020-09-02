@@ -23,6 +23,17 @@ CNRS, Institute of NanoSciences of Paris\
 email: trassinelli AT insp.jussieu.fr\
 email: m.trassinelli AT gmail.com
 
+## Installation instructions ##
+**Prerequisite**:
+- Fortran compiler (gfortran by default)
+- Python 3 with numpy, scipy, matplotlib, pandas, getdist
+
+**Instruction**:
+1. Download the latest version or clone the repository
+2. Go to the source directory *src*
+3. Edit the makefile (change the compiler name, the *bin* directory)
+4. Run *make*  
+5. For the python libraries: put in a directory listed in the *PYTHONPATH* or in the directory of the input files
 
 ## Basic instructions
 
@@ -51,14 +62,18 @@ Additional information can be found in the reference articles.
 
 ## Present version and history of the past versions
 
-The present version is 3.5.1\
+The present version is 3.5.2\
 New features:
 - Modularization of the search and cluster recognition methods in preparation of implementation of new algorithms
 - New interpolation options for 1D and 2D histograms using GetDist Python package
+- Correction of some bugs in the python library
+- Additional folder with exercises is now available
+- Installation instructions now available
+
 
 
 Previous versions are:
- - Introduction of benchmark tests with synthetic likelihood function via the module Mod_likelihood_tests,f90 (instead of Mod_likelihood.f90).
+ - 3.4 Introduction of benchmark tests with synthetic likelihood function via the module Mod_likelihood_tests,f90 (instead of Mod_likelihood.f90).
  Available tests: TEST_GAUSS (multidimensional Gaussian), TEST_GAUSSIAN_SHELLS (multidimensional Gaussian shells, worse case with available search and clustering methods),
  TEST_EGGBOX (eggbox style profile to test clustering), TEST_ROSENBROCK (Rosenbock function test for 2-n dimension).\
  Change of the outputs: nf_output_points.dat -> nf_output_points.txt, plus files nf_output_points.paramnames,  and nf_output_points.ranges to be compatible with GetDist Python package. New 'triangle plot' available now.

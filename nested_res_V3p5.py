@@ -6,7 +6,7 @@ import sys
 import matplotlib.pyplot as plt
 import os
 
-current_version=3.3 
+current_version=3.5 # and beyond
 
 
 
@@ -17,11 +17,11 @@ a="""
 #                                                         #
 #                                                         #
 # Start with                                              #
-# 'an=nested_res_V3.Analysis()'                           #
+# 'an=nested_res_V3p5.Analysis()'                         #
 # By default the current path is considered.              #
 #                                                         #
 # If you want analyze another path:                       #
-# 'an=nested_res_V3.Analysis(path="path")'                #
+# 'an=nested_res_V3p4.Analysis(path="path")'              #
 #                                                         #
 # If you do not want to specify any path:                 #
 # 'an=nested_res.Analysis(path=None)'                     #
@@ -46,7 +46,7 @@ a="""
 """
 print(a)
 
-print 'Present version '+str(current_version) + ' compatible down to v3.0\n'
+print('Present version '+str(current_version) + '\n')
 
 
 class Analysis(object):
@@ -63,9 +63,9 @@ class Analysis(object):
     def load_data(self, path=currentpath, do_load_input=True, do_load_output_results=False, do_load_output_data=True):
         # Adjust the path first
         self.path = path
-        print 'Current path = ', path
+        print('Current path = ', path)
         if path is None:
-            print 'Please indicate a path if needed'
+            print('Please indicate a path if needed')
             return
         if do_load_input:
             self.load_input(path)
@@ -91,16 +91,16 @@ class Analysis(object):
 
     def load_output_data(self, path=currentpath):
         # Adjust the path first
-        if path[-1]<>'/' and path <> None:  path = path+'/'
+        if path[-1]!='/' and path != None:  path = path+'/'
         #
         self.path = path
         self.number_of_values = self.input_data['npar']
         # Check first if is there
-        if not os.path.isfile(path+'nf_output_points.dat'):
-            print 'Result file nf_output_points.dat not present\n Nothing to load'
+        if not os.path.isfile(path+'nf_output_points.txt'):
+            print('Result file nf_output_points.txt not present\n Nothing to load')
             return None
-        self.df = pd.read_csv(path+'nf_output_points.dat', delim_whitespace=True, header=0,
-                names=["n", "lnlikelihood", "weight"] + ["val_%s" % d for d in range(1, self.number_of_values+1)])
+        self.df = pd.read_csv(path+'nf_output_points.txt', delim_whitespace=True, header=0,
+                names=["weight","lnlikelihood"] + ["val_%s" % d for d in range(1, self.number_of_values+1)])
 
         self.df = self.df.rename(columns={'val_%d' % p[0] : p[1].replace("'", "") for p in self.input_data['parameters']})
 
@@ -108,7 +108,7 @@ class Analysis(object):
 #            if c in self.df.columns and c != "weight":
 #                self.df["w" + c] = self.df["weight"] * self.df[c]
 
-        print 'Available parameters :', list(self.df.columns)
+        print('Available parameters :', list(self.df.columns))
 
         self.df.head()
         self.data = self.df.values
@@ -123,7 +123,7 @@ class Analysis(object):
         input_data, input_comment
         '''
         # Adjust the path first
-        if path[-1]<>'/' and path <> None:  path = path+'/'
+        if path[-1]!='/' and path != None:  path = path+'/'
         #
         # Parametersof the dictionaries: values and comments
         # Initialization
@@ -138,7 +138,7 @@ class Analysis(object):
         # Program version
         input_data['version']= float(lines[0].split()[0])
         input_comment['version'] = lines[0][lines[0].find('#'):]
-        if (input_data['version'] < int(current_version) or input_data['version'] > current_version):
+        if input_data['version'] < int(current_version):
             sys.exit('Wrong input file version. Please check.')
         # Filename with the data to fit
         input_data['filename'] = lines[1].split()[0]
@@ -215,7 +215,7 @@ class Analysis(object):
         from numpy import array
 
         # Adjust the path first
-        if path[-1]<>'/' and path <> None:  path = path+'/'
+        if path[-1]!='/' and path != None:  path = path+'/'
         #
 
         # Read parameters from input file
@@ -228,7 +228,7 @@ class Analysis(object):
         # Read the file and the different parameters
         # Check first if is there
         if not os.path.isfile(path + 'nf_output_res.dat'):
-            print 'Result file nf_output_res.dat not present\n Nothing to load'
+            print('Result file nf_output_res.dat not present\n Nothing to load')
             return None
         output_file = open(path + 'nf_output_res.dat')
         lines = output_file.readlines()
@@ -236,8 +236,8 @@ class Analysis(object):
 
         # Read number of tries
         output_data['ntry'] = int(lines[1].split()[1])
-        if input_data['ntry'] <> output_data['ntry'] :
-            print 'input ntry', input_data['ntry'], 'output ntry', output_data['ntry']
+        if input_data['ntry'] != output_data['ntry'] :
+            print('input ntry', input_data['ntry'], 'output ntry', output_data['ntry'])
             sys.exit('Check your input/output files')
 
         # Number of iteration
@@ -295,12 +295,12 @@ class Analysis(object):
         The limit of the plot can be indicated. If not, the maximum and the minimum of the histogram are taken into account.
         If there is a set of profiles to fit, specify which one has to be visualized
         '''
-        
+
         linestyle = {"markeredgewidth":2, "elinewidth":2, "capsize":4,"markersize":3}
         linestyle2 = {"markeredgewidth":0, "elinewidth":2, "capsize":0,"markersize":0}
 
         # Adjust the path first
-        if path[-1]<>'/' and path <> None:  path = path+'/'
+        if path[-1]!='/' and path != None:  path = path+'/'
         #
 
         self.path = path
@@ -309,17 +309,17 @@ class Analysis(object):
         import matplotlib.pyplot as plt
 
 
-        print nset, typeof
+        print(nset, typeof)
 
-        
+
 
 
         # Read the output file(s)
         if nset < 1:
-            print 'nf_output_data_'+ typeof + '.dat'
+            print('nf_output_data_'+ typeof + '.dat')
             data = loadtxt(self.path+'nf_output_data_'+ typeof + '.dat')
         else:
-            print 'nf_output_data_'+ typeof + '_' + str(nset) +'.dat'
+            print('nf_output_data_'+ typeof + '_' + str(nset) +'.dat')
             data = loadtxt(self.path+'nf_output_data_'+ typeof + '_' + str(nset) +'.dat')
 
         # Assign variables
@@ -348,23 +348,7 @@ class Analysis(object):
         maxy = y.max()*1.3
 
 
-        # Plot the residual
-        plt.figure()
-        plt.clf()
-        linestyle = {"markeredgewidth":2, "elinewidth":2, "capsize":4,"markersize":3}
-        linestyle2 = {"markeredgewidth":0, "elinewidth":2, "capsize":0,"markersize":0}
-        plt.title('Residual')
-        plt.xlabel('Channel')
-        plt.ylabel('Counts')
-        #plt.tight_layout()
-        # Border of the graph
-        if xmin==0 and xmax==0:
-            plt.xlim([minx,maxx])
-        else:
-            plt.xlim([xmin,xmax])
-        plt.errorbar(x,r,yerr=sy,xerr=None,fmt='ob',ecolor='blue',mec='blue',**linestyle)
-        plt.errorbar([minx,maxx],[0.,0.],yerr=None,xerr=None,fmt='-k',**linestyle2)
-        #plt.axhline(linewidth=2,color='k')
+
 
         # Plot the results
         plt.figure()
@@ -386,6 +370,24 @@ class Analysis(object):
         plt.errorbar(x_fit,y_fit,yerr=None,xerr=None,fmt='-b',**linestyle2)
         #plt.plot(x_fit,y_fit,'-b',label='Fit')
 
+        # Plot the residual
+        plt.figure()
+        plt.clf()
+        linestyle = {"markeredgewidth":2, "elinewidth":2, "capsize":4,"markersize":3}
+        linestyle2 = {"markeredgewidth":0, "elinewidth":2, "capsize":0,"markersize":0}
+        plt.title('Residual')
+        plt.xlabel('Channel')
+        plt.ylabel('Counts')
+        plt.tight_layout()
+        # Border of the graph
+        if xmin==0 and xmax==0:
+            plt.xlim([minx,maxx])
+        else:
+            plt.xlim([xmin,xmax])
+        plt.errorbar(x,r,yerr=sy,xerr=None,fmt='ob',ecolor='blue',mec='blue',**linestyle)
+        plt.errorbar([minx,maxx],[0.,0.],yerr=None,xerr=None,fmt='-k',**linestyle2)
+        #plt.axhline(linewidth=2,color='k')
+        plt.tight_layout()      
 
         plt.show()
 
@@ -397,12 +399,12 @@ class Analysis(object):
         The limit of the plot can be indicated. If not, the maximum and the minimum of the histogram are taken into account.
         If there is a set of profiles to fit, specify which one has to be visualized
         '''
-        
+
         linestyle = {"markeredgewidth":2, "elinewidth":2, "capsize":4,"markersize":3}
         linestyle2 = {"markeredgewidth":0, "elinewidth":2, "capsize":0,"markersize":0}
 
         # Adjust the path first
-        if path[-1]<>'/' and path <> None:  path = path+'/'
+        if path[-1]!='/' and path != None:  path = path+'/'
         #
 
         self.path = path
@@ -411,15 +413,15 @@ class Analysis(object):
         import matplotlib.pyplot as plt
 
 
-        print nset, typeof
+        print(nset, typeof)
 
 
         # Read the output file(s)
         if nset < 1:
-            print 'nf_output_data_'+ typeof + '.dat'
+            print('nf_output_data_'+ typeof + '.dat')
             data = loadtxt(self.path+'nf_output_data_'+ typeof + '.dat')
         else:
-            print 'nf_output_data_'+ typeof + '_' + str(nset) +'.dat'
+            print('nf_output_data_'+ typeof + '_' + str(nset) +'.dat')
             data = loadtxt(self.path+'nf_output_data_'+ typeof + '_' + str(nset) +'.dat')
 
         # Assign variables
@@ -468,7 +470,7 @@ class Analysis(object):
         plt.errorbar(x_fit,y_fit,yerr=None,xerr=None,fmt='-b',**linestyle2)
         #plt.plot(x_fit,y_fit,'-b',label='Fit')
 
-        
+
        # Plot the results in an inset
         # Inset
         inset=plt.axes([xinset_min,yinset_min,xinset_width,yinset_width])
@@ -487,12 +489,12 @@ class Analysis(object):
         plt.errorbar(x,r,yerr=sy,xerr=None,fmt='ob',ecolor='blue',mec='blue',**linestyle)
         plt.errorbar([minx,maxx],[0.,0.],yerr=None,xerr=None,fmt='-k',**linestyle2)
         #plt.plot(x_fit,y_fit,'-b',label='Fit')
-
+        plt.tight_layout()      
 
         plt.show()
 
 #################################################################################################################
-    def histo(self,par_number,path=currentpath,bins=200,plotmode='sigma',xmin=None,xmax=None,savedata=False,alpha=1.,clear=True):
+    def histo(self,par_number,path=currentpath,bins=50,plotmode='sigma',xmin=None,xmax=None,savedata=False,alpha=1.,clear=True):
 
         '''Plot histogram relative to one parameter and calculate the different confidence levels.
         If plotmode = 'sigmalog', plot in logarithmic mode.
@@ -507,17 +509,17 @@ class Analysis(object):
         if type(par_number) == str:
             par_index = list(self.df.columns).index(par_number)
             title = par_number
-            print "Set par_number %s to %s" % (par_number, par_index)
+            print("Set par_number %s to %s" % (par_number, par_index))
         else:
-            par_index = par_number + 2
-            print "Set par_number %s to %s" % (par_number, par_index)
+            par_index = par_number + 1
+            print("Set par_number %s to %s" % (par_number, par_index))
             title = self.input_data['parameters'][par_number-1][1]
 
         if bins<10:
             sys.exit('Attention! too fews bins')
 
         # Read the data
-        data = self.df.values
+        data = self.data
 
         # Select range
         if xmin == None: xmin = data[:,par_index].min()
@@ -529,14 +531,14 @@ class Analysis(object):
             plt.hist(data[:,par_index],bins=bins,weights=data[:,2])
         elif plotmode == 'log':
             plt.hist(log(data[:,par_index])+50.,bins=bins,weights=data[:,2])
-            print 'not working I do not why'
+            print('not working I do not why')
         else:
             # Make histogram with differnet colors for different confidence levels
-            histo, edges = histogram(data[:,par_index],bins=bins,weights=data[:,2])
+            histo, edges = histogram(data[:,par_index],bins=bins,weights=data[:,0])\
 
             # Make array with histogram values, position, and order
             pos = zeros((bins))
-            ipos = range(bins)
+            ipos = list(range(bins))
             histo_sum = histo.sum()
             for i in ipos: pos[i] = (edges[i]+edges[i+1])/2
             width = edges[1]-edges[0]
@@ -584,7 +586,7 @@ class Analysis(object):
                 plt.bar(edges[:-1],log(histo_data95)+50.,width=width,color='yellow',edgecolor="yellow", linewidth=0.0)
                 plt.bar(edges[:-1],log(histo_data68)+50.,width=width,color='red',edgecolor="red", linewidth=0.0)
 
-            #plt.tight_layout()
+            plt.tight_layout()
 
         if savedata:
             data = zeros(shape(histo_data))
@@ -593,13 +595,16 @@ class Analysis(object):
             savetxt(self.path + 'histo.dat',data)
 
         # TO DO INTERPOLATION WITH scipy.interpolate.UnivariateSpline
+        plt.tight_layout()      
+
+        plt.show()
 
 ############################################################################################
     def plot_par(self,par_number,path=currentpath):
         '''Plot parameter evolution during the nested sampling as
         function of the corresponding value of likelihood (order, xaxis)
         and weight (color)'''
-        from numpy import loadtxt, max, log
+        from numpy import loadtxt, max, log, arange
         import matplotlib.pyplot as plt
 
         self.path = path
@@ -609,26 +614,29 @@ class Analysis(object):
         if type(par_number) == str:
             par_index = list(self.df.columns).index(par_number)
             title = par_number
-            print "Set par_number %s to %s" % (par_number, par_index)
+            print("Set par_number %s to %s" % (par_number, par_index))
         else:
-            par_index = par_number + 2
-            print "Set par_number %s to %s" % (par_number, par_index)
+            par_index = par_number + 1
+            print("Set par_number %s to %s" % (par_number, par_index))
             title = self.input_data['parameters'][par_number-1][1]
-            print "Selected parameter = ", title
+            print("Selected parameter = ", title)
 
         # Read the data
         data = self.df.values
+        ix = arange(shape(data)[0])
 
         # Plot of one parameter
         plt.clf()
-        plt.xlim(0,max(data[:,0])*1.1)
+        plt.xlim(0,shape(data)[0]*1.1)
         plt.xlabel('Sort number')
         plt.ylabel('Value of parameter ' + title)
         cmap=plt.cm.get_cmap('jet')
-        plt.scatter(data[:,0],data[:,par_index],c=data[:,2],linewidth=0.,cmap=cmap)
+        plt.scatter(ix,data[:,par_index],c=data[:,0],linewidth=0.,cmap=cmap)
         cbar = plt.colorbar()
         cbar.set_label('Weight')
-        #plt.tight_layout()
+        plt.tight_layout()      
+
+        plt.show()
 
 ############################################################################################
     def plot_clusters(self,par_number1,par_number2,label=None,xmin=None,xmax=None,ymin=None,ymax=None,path=currentpath):
@@ -641,38 +649,40 @@ class Analysis(object):
 
         # Find the good number of parameter from its number or name
         if type(par_number1) == str:
-            par_index1 = list(self.df.columns).index(par_number1) - 2
+            par_index1 = list(self.df.columns).index(par_number1) - 1
             title1 = par_number1
-            print "Set par_number %s to %s" % (par_number1, par_index1)
+            print("Set par_number %s to %s" % (par_number1, par_index1))
         else:
             par_index1 = par_number1
-            print "Set par_number %s to %s" % (par_number1, par_index1)
+            print("Set par_number %s to %s" % (par_number1, par_index1))
             title1 = self.input_data['parameters'][par_number1-1][1]
 
         if type(par_number2) == str:
-            par_index2 = list(self.df.columns).index(par_number2) - 2
+            par_index2 = list(self.df.columns).index(par_number2) - 1
             title2 = par_number2
-            print "Set par_number %s to %s" % (par_number2, par_index2)
+            print("Set par_number %s to %s" % (par_number2, par_index2))
         else:
             par_index2 = par_number2
-            print "Set par_number %s to %s" % (par_number2, par_index2)
+            print("Set par_number %s to %s" % (par_number2, par_index2))
             title2 = self.input_data['parameters'][par_number2-1][1]
 
 
         # Read the data
         if label == None:
-            available_files = glob.glob('nf_meanshift_final_*.dat')
-            print 'Taking the last available file'
+            available_files = sorted(glob.glob('nf_meanshift_final_*.dat'))
+            print('Taking the last available file')
             label = available_files[-1][19:-4]
-            
+
+
         filename = 'nf_meanshift_final_' + label + '.dat'
+        print('Showing file ', filename)
         data = loadtxt(filename)
 
         ncl = int(max(data[:,0]))
 
 
 
-        print 'Number of clusters:', ncl
+        print('Number of clusters:', ncl)
 
         # Select the data
         if xmin == None: xmin = data[:,par_index1].min()
@@ -691,60 +701,69 @@ class Analysis(object):
         #plt.ylabel('Value of parameter ' + title)
         #cmap=plt.cm.get_cmap('jet')
         for i in range(ncl): plt.plot(data[data[:,0]==i][:,par_index1],data[data[:,0]==i][:,par_index2],'o')
-        #plt.tight_layout()
+        plt.tight_layout()
+
+        plt.show()
 
 
 ############################################################################################
-    def plot_clusters3D(self,par_number1,par_number2,par_number3,
+    def plot_clusters3D(self,par_number1,par_number2,par_number3,label=None,
                             xmin=None,xmax=None,ymin=None,ymax=None,zmin=None,zmax=None,azm=None,ele=None,
-                            figsize=None,label='',filename=None,path=currentpath):
+                            figsize=None,filename=None,path=currentpath):
         '''Plot the clusters if cluster analysis is on in 3D.
         'label' is the timestamp of the file to analyse'''
         from mpl_toolkits.mplot3d import Axes3D
         from numpy import loadtxt, max, log, shape
         import matplotlib.pyplot as plt
+        import glob
 
         self.path = path
 
         # Find the good number of parameter from its number or name
         if type(par_number1) == str:
-            par_index1 = list(self.df.columns).index(par_number1) - 2
+            par_index1 = list(self.df.columns).index(par_number1) - 1
             title1 = par_number1
-            print "Set par_number %s to %s" % (par_number1, par_index1)
+            print("Set par_number %s to %s" % (par_number1, par_index1))
         else:
             par_index1 = par_number1
-            print "Set par_number %s to %s" % (par_number1, par_index1)
+            print("Set par_number %s to %s" % (par_number1, par_index1))
             title1 = self.input_data['parameters'][par_number1-1][1]
 
         if type(par_number2) == str:
-            par_index2 = list(self.df.columns).index(par_number2) - 2
+            par_index2 = list(self.df.columns).index(par_number2) - 1
             title2 = par_number2
-            print "Set par_number %s to %s" % (par_number2, par_index2)
+            print("Set par_number %s to %s" % (par_number2, par_index2))
         else:
             par_index2 = par_number2
-            print "Set par_number %s to %s" % (par_number2, par_index2)
+            print("Set par_number %s to %s" % (par_number2, par_index2))
             title2 = self.input_data['parameters'][par_number2-1][1]
 
         if type(par_number3) == str:
-            par_index3 = list(self.df.columns).index(par_number3) - 2
+            par_index3 = list(self.df.columns).index(par_number3) - 1
             title3 = par_number3
-            print "Set par_number %s to %s" % (par_number3, par_index3)
+            print("Set par_number %s to %s" % (par_number3, par_index3))
         else:
             par_index3 = par_number3
-            print "Set par_number %s to %s" % (par_number3, par_index3)
+            print("Set par_number %s to %s" % (par_number3, par_index3))
             title3 = self.input_data['parameters'][par_number3-1][1]
 
 
         # Read the data
-        if filename == None:
-            filename = 'nf_meanshift_final_' + label + '.dat'
+        if label == None:
+            available_files = sorted(glob.glob('nf_meanshift_final_*.dat'))
+            print('Taking the last available file')
+            label = available_files[-1][19:-4]
+
+
+        filename = 'nf_meanshift_final_' + label + '.dat'
+        print('Showing file ', filename)
         data = loadtxt(filename)
 
         ncl = int(max(data[:,0]))
 
 
 
-        print 'Number of clusters:', ncl
+        print('Number of clusters:', ncl)
 
         # Select the data
         if xmin == None: xmin = data[:,par_index1].min()
@@ -769,7 +788,9 @@ class Analysis(object):
         for i in range(ncl):
             ax.scatter(data[data[:,0]==i][:,par_index1],data[data[:,0]==i][:,par_index2],data[data[:,0]==i][:,par_index3])
         #ax.scatter(data[:,3],data[:,4],data[:,5])
-        #plt.tight_layout()
+        plt.tight_layout()
+
+        plt.show()
 
 ############################################################################################
     def plot_live(self,par_number1,par_number2,path=currentpath,typeof='final'):
@@ -781,31 +802,33 @@ class Analysis(object):
 
         # Find the good number of parameter from its number or name
         if type(par_number1) == str:
-            par_index1 = list(self.df.columns).index(par_number1) - 1
+            par_index1 = list(self.df.columns).index(par_number1)
             title1 = par_number1
-            print "Set par_number %s to %s" % (par_number1, par_index1)
+            print("Set par_number %s to %s" % (par_number1, par_index1))
         else:
             par_index1 = par_number1 + 1
-            print "Set par_number %s to %s" % (par_number1, par_index1)
+            print("Set par_number %s to %s" % (par_number1, par_index1))
             title1 = self.input_data['parameters'][par_number1-1][1]
 
         if type(par_number2) == str:
-            par_index2 = list(self.df.columns).index(par_number2) - 1
+            par_index2 = list(self.df.columns).index(par_number2)
             title2 = par_number2
-            print "Set par_number %s to %s" % (par_number2, par_index2)
+            print("Set par_number %s to %s" % (par_number2, par_index2))
         else:
             par_index2 = par_number2 + 1
-            print "Set par_number %s to %s" % (par_number2, par_index2)
+            print("Set par_number %s to %s" % (par_number2, par_index2))
             title2 = self.input_data['parameters'][par_number2-1][1]
 
 
         # Read the data
         if typeof=='final':
             data = loadtxt('nf_output_last_live_points.dat')
-        elif typeof=='inital':
+        elif typeof=='initial':
             data = loadtxt('nf_initial_live_points.dat')
         elif typeof=='intermediate':
             data = loadtxt('nf_intermediate_live_points.dat')
+        else:
+            print('Choose between final, initial or intermediate')
 
         # Plot of one parameter
         plt.clf()
@@ -815,10 +838,12 @@ class Analysis(object):
         #plt.ylabel('Value of parameter ' + title)
         #cmap=plt.cm.get_cmap('jet')
         plt.plot(data[:,par_index1],data[:,par_index2],'ob')
-        #plt.tight_layout()
+        plt.tight_layout()
+
+        plt.show()
 
 #####################################################################################################################3
-    def histo2D(self,par_number1,par_number2,path=currentpath,bins=100,xmin=None,xmax=None,ymin=None,ymax=None,plotmode='sigma',cmap='normal',interp=False,grid_steps=4,s=1E-5):
+    def histo2D(self,par_number1,par_number2,path=currentpath,bins=50,xmin=None,xmax=None,ymin=None,ymax=None,plotmode='sigma',cmap='normal',interp=False,grid_steps=4,s=1E-5):
         '''Plot histogram relative to two parameter values.
         If plotmode='normal' or 'log', colors are proportional to the probability (or log(p)).
         In this case, different cmaps cand be choosen:
@@ -848,19 +873,19 @@ class Analysis(object):
         if type(par_number1) == str:
             par_index1 = list(self.df.columns).index(par_number1)
             title1 = par_number1
-            print "Set par_number %s to %s" % (par_number1, par_index1)
+            print("Set par_number %s to %s" % (par_number1, par_index1))
         else:
-            par_index1 = par_number1 + 2
-            print "Set par_number %s to %s" % (par_number1, par_index1)
+            par_index1 = par_number1 + 1
+            print("Set par_number %s to %s" % (par_number1, par_index1))
             title1 = self.input_data['parameters'][par_number1-1][1]
 
         if type(par_number2) == str:
             par_index2 = list(self.df.columns).index(par_number2)
             title2 = par_number2
-            print "Set par_number %s to %s" % (par_number2, par_index2)
+            print("Set par_number %s to %s" % (par_number2, par_index2))
         else:
-            par_index2 = par_number2 + 2
-            print "Set par_number %s to %s" % (par_number2, par_index2)
+            par_index2 = par_number2 + 1
+            print("Set par_number %s to %s" % (par_number2, par_index2))
             title2 = self.input_data['parameters'][par_number2-1][1]
 
         # Read the data
@@ -874,7 +899,7 @@ class Analysis(object):
         data = data[(data[:,par_index1] < xmax) & (data[:,par_index1] > xmin) & (data[:,par_index2] < ymax) & (data[:,par_index2] > ymin)]
 
         # Make histogram
-        histo2D, yedges, xedges = histogram2d(data[:,par_index2],data[:,par_index1],bins=bins,weights=data[:,2])
+        histo2D, yedges, xedges = histogram2d(data[:,par_index2],data[:,par_index1],bins=bins,weights=data[:,0])
         extent = [ xedges[0], xedges[-1],yedges[0], yedges[-1]]
 
         '''
@@ -894,7 +919,7 @@ class Analysis(object):
         if cmap == 'normal':
             cmap=plt.cm.get_cmap('jet')
         elif cmap == 'accurate':
-            cmap=plt.cm.get_cmap('spectral')
+            cmap=plt.cm.get_cmap('gist_ncar')
         elif cmap == 'moreaccurate':
             cmap=plt.cm.get_cmap('prism')
 
@@ -961,12 +986,14 @@ class Analysis(object):
         # Plot the contourns
         if interp: self.interp2D(par_number1,par_number2,bins=bins,xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax,grid_steps=grid_steps,s=s,cmap='k',levels=True,clear=False)
 
-        #plt.tight_layout()
+        plt.tight_layout()
+
+        plt.show()
 
 ########################################################################################################
     def plot_like(self,path=currentpath):
         ''' Plot the likelihood of the nested sampling points '''
-        from numpy import loadtxt, exp
+        from numpy import arange, shape
         import matplotlib.pyplot as plt
 
         self.path = path
@@ -974,36 +1001,43 @@ class Analysis(object):
 
         # Read the data
         data = self.df.values
+        ix = arange(shape(data)[0])
 
         # Plot
         plt.clf()
         plt.xlabel('Sort number')
         plt.ylabel('Log(likelihood)')
-        plt.plot(data[:,0],data[:,1])
-        #plt.tight_layout()
+        plt.plot(ix,data[:,1])
+        plt.tight_layout()
+        plt.tight_layout()
 
+        plt.show()
 ########################################################################################################
     def plot_weights(self,path=currentpath):
         ''' Plot the likelihood of the nested sampling points '''
-        from numpy import loadtxt, exp
+        from numpy import arange, shape
         import matplotlib.pyplot as plt
 
         # Read the data
         data = self.df.values
+        ix = arange(shape(data)[0])
 
         self.path = path
 
 
         # Plot
+        plt.figure()
         plt.clf()
         plt.xlabel('Sort number')
         plt.ylabel('Nested sampling weights')
-        plt.plot(data[:,0],data[:,2])
-        #plt.tight_layout()
+        plt.plot(ix,data[:,0])
+        plt.tight_layout()
+
+        plt.show()
 
 ######################################################################################################## WORKING !!
 
-    def interp2D(self,par_number1,par_number2,path=currentpath,bins=100,xmin=None,xmax=None,ymin=None,ymax=None,grid_steps=4,s=1E-5,cmap='normal',levels=False,clear=True):
+    def interp2D(self,par_number1,par_number2,path=currentpath,bins=50,xmin=None,xmax=None,ymin=None,ymax=None,grid_steps=4,s=1E-5,cmap='normal',levels=False,clear=True):
         '''
         grid_steps: number of intermediate steps between bins
         s: smooth factor to play with
@@ -1022,19 +1056,19 @@ class Analysis(object):
         if type(par_number1) == str:
             par_index1 = list(self.df.columns).index(par_number1)
             title1 = par_number1
-            print "Set par_number %s to %s" % (par_number1, par_index1)
+            print("Set par_number %s to %s" % (par_number1, par_index1))
         else:
-            par_index1 = par_number1+2
-            print "Set par_number %s to %s" % (par_number1, par_index1)
+            par_index1 = par_number1 + 1
+            print("Set par_number %s to %s" % (par_number1, par_index1))
             title1 = self.input_data['parameters'][par_number1-1][1]
 
         if type(par_number2) == str:
             par_index2 = list(self.df.columns).index(par_number2)
             title2 = par_number2
-            print "Set par_number %s to %s" % (par_number2, par_index2)
+            print("Set par_number %s to %s" % (par_number2, par_index2))
         else:
-            par_index2 = par_number2+2
-            print "Set par_number %s to %s" % (par_number2, par_index2)
+            par_index2 = par_number2 + 1
+            print("Set par_number %s to %s" % (par_number2, par_index2))
             title2 = self.input_data['parameters'][par_number2-1][1]
 
         # Read the data
@@ -1057,7 +1091,7 @@ class Analysis(object):
 
         # Make interpolation
         # Fix the limits and the steps of the histogram
-        ipos = range(bins)
+        ipos = list(range(bins))
         x = zeros(bins)
         y = zeros(bins)
         for i in ipos: x[i] = (xedges[i]+xedges[i+1])/2
@@ -1103,22 +1137,81 @@ class Analysis(object):
         #plt.imshow(histo2D[::-1,],interpolation='nearest',extent=extent,aspect='auto',cmap=cmap)
         cbar = plt.colorbar()
         cbar.set_label('Probability')
-        plt.tight_layout()
+        plt.tight_layout()      
+
+        plt.show()
+
+
+        ################################# GetDist functions ################################################################ !!
+
+    def histo_interp(self,par_name,path=currentpath):
         '''
-        # method with griddata not so good #################################################
-        data = zeros((nix*niy,3))
-        for ii in range(nix*niy):
-            data[ii,:] = [xmin+int(ii/nix)*xstep,
-                            ymin +mod(ii,nix)*ystep,
-                            histo2D[mod(ii,nix),int(ii/nix)]]
-        # Generate a regular grid to interpolate the data.
-        f= 10
-        xi = linspace(xmin, xmax, f*nix)
-        yi = linspace(ymin, ymax, f*niy)
-        xi, yi = meshgrid(xi, yi)
-        # Interpolate using delaunay triangularization
-        zi = mlab.griddata(data[:,0],data[:,1],data[:,2],xi,yi)
+        Interpolated histogram plot using GetDist package
         '''
+        from getdist import plots
+
+        self.path = path
+
+        if type(par_name) != str:
+            print('Use a parameter name and not a number')
+            return
+        
+        g = plots.get_single_plotter()
+        g.plot_1d(self.path+'/nf_output_points',par_name)
+
+        #---------------------------------------------------------------------------------------------------------------------
+
+    def histo2D_interp(self,par_name1,par_name2,path=currentpath):
+        '''
+        Interpolated histogram plot using GetDist package
+        '''
+        from getdist import plots
+
+        self.path = path
+
+        if type(par_name1) != str or type(par_name2) != str:
+            print('Use a parameter name and not a number')
+            return
+        
+        g = plots.get_single_plotter()
+        g.plot_2d(self.path+'/nf_output_points',par_name1,par_name2,filled=True)
+        plt.tight_layout()      
+
+        plt.show()
+
+        #---------------------------------------------------------------------------------------------------------------------
+        
+    def triangle_plot(self,path=currentpath):
+        '''
+        Triangle plot of all probability distributions using GetDist package
+        '''
+        from getdist import plots
+
+        self.path = path
+
+
+        g = plots.get_subplot_plotter()
+        g.triangle_plot(self.path+'/nf_output_points',filled=True)
+        plt.tight_layout()      
+
+        plt.show()
+
+
+
+        #---------------------------------------------------------------------------------------------------------------------
+    def get_cov(self,path=currentpath):
+        '''
+        Covariance matrix using GetDist package
+        '''
+        from getdist import mcsamples
+
+        self.path = path
+
+
+        g = mcsamples.loadMCSamples(self.path+'/nf_output_points')
+        return g.getCov()
+
+
 #########################################################################################################################################
 class Summary(object):
     '''
@@ -1142,24 +1235,24 @@ class Summary(object):
                 dirname =  dir
             else:
                 dirname = dir+'/'
-            print 'Loading directory ', dir
+            print('Loading directory ', dir)
             # Start analysis in this directory if the analysis is done
-            if not os.path.isfile(dirname+'nf_output_points.dat'):
-                print 'Result file nf_output_points.dat not present\n Nothing to load'
+            if not os.path.isfile(dirname+'nf_output_points.txt'):
+                print('Result file nf_output_points.txt not present\n Nothing to load')
                 continue
             an = Analysis(path=dirname)
-            print 'Analysis in ' + dirname
+            print('Analysis in ' + dirname)
             #
             # Read results input and output types
-            input_types = an.load_input(dirname).keys()
-            output_types = an.load_output_results(dirname).keys()
+            input_types = list(an.load_input(dirname).keys())
+            output_types = list(an.load_output_results(dirname).keys())
             #
             input_par = an.load_input(dirname)
             par_tmp = par_tmp + [p[1].replace("'", "") for p in input_par['parameters']]
             #print par_tmp
         parameters = []
         [parameters.append(x) for x in par_tmp if x not in parameters]
-        print "Parameters  found ", parameters
+        print("Parameters  found ", parameters)
 
 
         # Exceptions that have to be expanded with the parameter name
@@ -1169,27 +1262,27 @@ class Summary(object):
         #  Define the labels expanding lables that depend on the different parameters
         summary = {"labels": []}
 
-        print '\n #### Available input keys ###'
+        print('\n #### Available input keys ###')
         for k  in input_types:
             if k != 'parameters':
                 summary[k] = []
-                print k
+                print(k)
         for i in inputs_par:
-             print i
+             print(i)
              for p in parameters:
                     summary[i+'_'+p] = []
 
         #print(len(summary))
 
-        print '\n #### Available output keys ###'
+        print('\n #### Available output keys ###')
         for k  in output_types:
             if k in outputs_par:
-                print k
+                print(k)
                 for p in parameters:
                     summary[k+'_'+p] = []
             elif k != 'ntry':
                 summary[k] = []
-                print k
+                print(k)
 
         # Fill the labels
         for dir in directories:
@@ -1198,8 +1291,8 @@ class Summary(object):
             else:
                 dirname = dir+'/'
             # Check if the analysis is done in the directory
-            if not os.path.isfile(dirname+'nf_output_points.dat'):
-                print 'Result file nf_output_points.dat not present\n Nothing to load'
+            if not os.path.isfile(dirname+'nf_output_points.txt'):
+                print('Result file nf_output_points.txt not present\n Nothing to load')
                 continue
             input = an.load_input(dirname)
             output = an.load_output_results(dirname)
@@ -1209,7 +1302,7 @@ class Summary(object):
             # Read and fill the different information
 
             # From inputs
-            for k, v  in input.iteritems():
+            for k, v  in input.items():
                 if  k != 'parameters':
                     summary[k].append(v)
                     #print k, v
@@ -1227,7 +1320,7 @@ class Summary(object):
 
 
             # From outputs
-            for k, v  in output.iteritems():
+            for k, v  in output.items():
                 if k in outputs_par:
                     for pn, p in enumerate(an.parameters):
                         dir_output[k+'_'+p] = v[pn]

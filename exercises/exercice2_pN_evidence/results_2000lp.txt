@@ -1,0 +1,4 @@
+Results (2000 lp x 8 tries):
+	- no satellite:		-443.51 +- 0.56
+	- sat. small range:	-447.54 +- 0.49
+	- sat. large range:	-442.86 +- 1.04
