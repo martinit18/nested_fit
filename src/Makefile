@@ -1,8 +1,19 @@
 #  Automatic Time-stamp: <Last changed by martino on Saturday 02 May 2020 at CEST 13:47:23>
-NAME    = nested_fit3.5.1.exe
+NAME    = nested_fit3.5.2.exe
 .SUFFIXES : .f90 .f .o .c .mod
 CFLAGS  =
-FFLAGS  = -fopenmp
+############## FLAG TO COSTUMIZE #############################
+#### Uncomment next line to run in parallel in LINUX
+#FFLAGS  = -fopenmp
+#### Uncomment next line to optimize in MAC
+#FFLAGS   = -framework accelerate
+#### Uncomment next line to run in parallel and optimize in MAC
+#FFLAGS   = -framework accelerate -fopenmp
+###############################################################
+### ATTENTION!!!!
+### If you do not want to run in parallel,
+### modify the variable "parallel_on" in nested fit file
+###############################################################
 
 CFILES =
 
@@ -36,11 +47,10 @@ OPT = -O2 -static
 #OPT = -g -Wall -Wextra -Warray-temporaries -Wconversion -fbacktrace -ffree-line-length-0 -fcheck=all -ffpe-trap=zero,overflow -finit-real=nan
 
 
-#LDFLAGS =  -framework veclib -L/Users/martino/lib -luserfcn
-#LDFLAGS =  -framework veclib
+#LDFLAGS = $(FFLAGS)
+#LDFLAGS = -fopenmp
 #LDFLAGS = -framework accelerate
-LDFLAGS = -framework accelerate -fopenmp
-#-L/System/Library/Frameworks/Accelerate.framework/Frameworks/vecLib.framework/Versions/A -lBLAS -lLAPACK
+#LDFLAGS = -framework accelerate -fopenmp
 
 # Rules...
 FC  = gfortran

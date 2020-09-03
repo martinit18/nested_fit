@@ -88,7 +88,7 @@ PROGRAM NESTED_FIT
   REAL(8) :: live_like_mean=0., info=0., comp=0.
   INTEGER(8) :: nexp=0
   ! Parallelization variables
-  INTEGER(4) :: itry=1, nth
+  INTEGER(4) :: itry=1, nth=1
   INTEGER(4), DIMENSION(1) :: itrymax
   INTEGER(4), ALLOCATABLE, DIMENSION(:) :: nall_try
   REAL(8), ALLOCATABLE, DIMENSION(:) :: evsum_final_try, live_like_max_try
@@ -108,9 +108,17 @@ PROGRAM NESTED_FIT
   INTEGER(4) :: seed_array(33) = 1
 
 
-  ! Calculate time elapsed
-  ! Parallel real time
-  seconds = omp_get_wtime( )
+  ! PARALLEL VARIABLE: PUT ".TRUE." IF YOU WANT TO RUN IN PARALLEL
+  ! CHANGE ALSO THE FFLAGS IN THE MAKEFILE
+  LOGICAL, PARAMETER :: parallel_on = .FALSE.
+
+
+  ! Calculate time elapsed !!!!!!!!!!!!!!!!!!!!
+  ! Parallel real time (and number of threads)
+  IF (parallel_on) THEN
+    seconds = omp_get_wtime( )
+    nth = omp_get_max_threads()
+  END IF
   ! Absolute time
   CALL CPU_TIME(startt)
 
@@ -502,10 +510,11 @@ PROGRAM NESTED_FIT
 
 
   ! Calculate end time
-  seconds_omp = omp_get_wtime( ) - seconds
+  ! Parallel time
+  IF (parallel_on) seconds_omp = omp_get_wtime( ) - seconds
+  ! Normal time
   CALL CPU_TIME(stopt)
   seconds  = stopt - startt
-  nth = omp_get_max_threads()
 
   !IF(arg.EQ. ' ') THEN
   OPEN(22,FILE='nf_output_res.dat',STATUS= 'UNKNOWN')

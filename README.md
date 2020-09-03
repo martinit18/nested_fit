@@ -31,9 +31,11 @@ email: m.trassinelli AT gmail.com
 **Instruction**:
 1. Download the latest version or clone the repository
 2. Go to the source directory *src*
-3. Edit the makefile (change the compiler name, the *bin* directory)
+3. Edit the Makefile (change the compiler name, the *bin* directory if needed). If you want to run in parallel mode, \
+  a. Uncomment *FFLAGS  = -fopenmp* in the Makefile\
+  b. Put the variable *parallel_on = .TRUE.* in nested_fit.f
 4. Run *make*  
-5. For the python libraries: put in a directory listed in the *PYTHONPATH* or in the directory of the input files
+5. For the python libraries: put in a directory listed in the *PYTHONPATH* in the .bashrc file (or similar) or in the directory of the input files
 
 ## Basic instructions
 
