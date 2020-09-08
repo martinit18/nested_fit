@@ -3,8 +3,12 @@ import pandas as pd
 import numpy as np
 from numpy import log, histogram, zeros, savetxt, shape
 import sys
-import matplotlib.pyplot as plt
 import os
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+
+
 
 current_version=3.5 # and beyond
 
@@ -369,6 +373,7 @@ class Analysis(object):
         plt.errorbar(x,y,yerr=sy,xerr=None,fmt='or',ecolor='red',mec='red',**linestyle)
         plt.errorbar(x_fit,y_fit,yerr=None,xerr=None,fmt='-b',**linestyle2)
         #plt.plot(x_fit,y_fit,'-b',label='Fit')
+        plt.tight_layout()      
 
         # Plot the residual
         plt.figure()
@@ -387,7 +392,7 @@ class Analysis(object):
         plt.errorbar(x,r,yerr=sy,xerr=None,fmt='ob',ecolor='blue',mec='blue',**linestyle)
         plt.errorbar([minx,maxx],[0.,0.],yerr=None,xerr=None,fmt='-k',**linestyle2)
         #plt.axhline(linewidth=2,color='k')
-        plt.tight_layout()      
+        plt.tight_layout()
 
         plt.show()
 
@@ -489,7 +494,7 @@ class Analysis(object):
         plt.errorbar(x,r,yerr=sy,xerr=None,fmt='ob',ecolor='blue',mec='blue',**linestyle)
         plt.errorbar([minx,maxx],[0.,0.],yerr=None,xerr=None,fmt='-k',**linestyle2)
         #plt.plot(x_fit,y_fit,'-b',label='Fit')
-        plt.tight_layout()      
+        plt.tight_layout()
 
         plt.show()
 
@@ -595,7 +600,7 @@ class Analysis(object):
             savetxt(self.path + 'histo.dat',data)
 
         # TO DO INTERPOLATION WITH scipy.interpolate.UnivariateSpline
-        plt.tight_layout()      
+        plt.tight_layout()
 
         plt.show()
 
@@ -634,7 +639,7 @@ class Analysis(object):
         plt.scatter(ix,data[:,par_index],c=data[:,0],linewidth=0.,cmap=cmap)
         cbar = plt.colorbar()
         cbar.set_label('Weight')
-        plt.tight_layout()      
+        plt.tight_layout()
 
         plt.show()
 
@@ -1137,7 +1142,7 @@ class Analysis(object):
         #plt.imshow(histo2D[::-1,],interpolation='nearest',extent=extent,aspect='auto',cmap=cmap)
         cbar = plt.colorbar()
         cbar.set_label('Probability')
-        plt.tight_layout()      
+        plt.tight_layout()
 
         plt.show()
 
@@ -1155,7 +1160,7 @@ class Analysis(object):
         if type(par_name) != str:
             print('Use a parameter name and not a number')
             return
-        
+
         g = plots.get_single_plotter()
         g.plot_1d(self.path+'/nf_output_points',par_name)
 
@@ -1172,15 +1177,15 @@ class Analysis(object):
         if type(par_name1) != str or type(par_name2) != str:
             print('Use a parameter name and not a number')
             return
-        
+
         g = plots.get_single_plotter()
         g.plot_2d(self.path+'/nf_output_points',par_name1,par_name2,filled=True)
-        plt.tight_layout()      
+        plt.tight_layout()
 
         plt.show()
 
         #---------------------------------------------------------------------------------------------------------------------
-        
+
     def triangle_plot(self,path=currentpath):
         '''
         Triangle plot of all probability distributions using GetDist package
@@ -1192,7 +1197,7 @@ class Analysis(object):
 
         g = plots.get_subplot_plotter()
         g.triangle_plot(self.path+'/nf_output_points',filled=True)
-        plt.tight_layout()      
+        plt.tight_layout()
 
         plt.show()
 

@@ -5,9 +5,9 @@ The evidence calculation is based on the nested algorithm from Skilling 2004 [1,
 It is written in Fortran with some Python complementary routines for visualizing the output results and for doing automatic analyses of series of data.
 More information on the program can be found in Refs. [A,B,C] here above.
 
-### Licence
+### License
 
-Users are required to accept the licence agreement given in LICENCE file. Nested Fit is free for academic usage.
+Users are required to accept the license agreement given in LICENSE file. Nested Fit is free for academic usage.
 
 Users are also required to cite the Nested Fit papers here below in their publications (at least (A) and (B)) and their authors.
 
@@ -30,34 +30,38 @@ email: m.trassinelli AT gmail.com
 
 **Instruction**:
 1. Download the latest version or clone the repository
-2. Go to the source directory *src*
-3. Edit the Makefile (change the compiler name, the *bin* directory if needed). If you want to run in parallel mode, \
-  a. Uncomment *FFLAGS  = -fopenmp* in the Makefile\
-  b. Put the variable *parallel_on = .TRUE.* in nested_fit.f
-4. Run *make*  
-5. For the python libraries: put in a directory listed in the *PYTHONPATH* in the .bashrc file (or similar) or in the directory of the input files
+2. Go to the source directory `src`
+3. Edit the Makefile (change the compiler name, the `bin` directory if needed). If you want to run in parallel mode, \
+  a. Uncomment `FFLAGS  = -fopenmp` in the Makefile\
+  b. Put the variable `parallel_on = .TRUE.` in nested_fit.f
+4. Run `make`  
+5. For the python libraries: put in a directory listed in the `PYTHONPATH` in the .bashrc file (or similar) or in the directory of the input files
+
+NOTE for getdist function in the python library:\
+To make it work, change the file  xxx/pythonxx/site-packages/getdist/plots.py
+`matplotlib.use('Agg')` to `matplotlib.use('TkAgg')`.
 
 ## Basic instructions
 
 **Input files**:
-- '*nf_input.dat*': Main input file of the program with all user parameter definition.
-About the model parameter, use the same order than that one you can find in 'USERFCN.f' or 'USERFCN_SET.f' files.
-- *datafile* to analyze indicated in 'nf_input.dat'.
+- `nf_input.dat`: Main input file of the program with all user parameter definition.
+About the model parameter, use the same order than that one you can find in `USERFCN.f` or `USERFCN_SET.f` files.
+- `datafile` to analyze indicated in 'nf_input.dat'.
 
 If set of data files are analyzed, also
-- '*nf_input_set.dat*': additional input relative to the other datafiles (name and fit limits).
-- additional *datafiles* to analyze.
+- `nf_input_set.dat`: additional input relative to the other datafiles (name and fit limits).
+- additional `datafiles` to analyze.
 
 **Main output files**:
-- '*nf_output_res.dat*': main output with the results.
+- `nf_output_res.dat`: main output with the results.
 It contains the details of the computation (n. of live points trials, n. of total iteration), the final evidence value and its uncertainty, the parameter values corresponding to the maximum of the likelihood function, the mean, the median, the standard deviation and the confidence intervals (credible intervals) (68%, 95% and 99%) of the posterior probability distribution of each parameter.
 The corresponding information gain and the Bayesian complexity are also provided.
-- '*nf_output_data_ .dat*': original input data together with the model function values corresponding to the parameters with the highest likelihood function value ('max') to the mean value ('mean') or median ('median'), the residuals and the uncertainty associated to the data.
-- '*nf_output_fit_ .dat*': Model function values with higher density sampling that the data (for plot purpose). In addition, different components of the model are given
-- '*nf_output_tries.dat*': For each live points trial, it contains the final evidence, the number of iterations and the maximum value of the likelihood function.
-- '*nf_output_points.txt*': contains all discarded and final live points values, their associated likelihood values and posterior probabilities. From them, the different parameter probability distributions can be built.
-For this purpose, the python function in '*nested_res_ .py*' can be used.
-Together with this file, also the files '*nf_output_points.paramnames*' and '*nf_output_points.ranges*' are created for the use of GetDist python library.
+- `nf_output_data_ .dat`: original input data together with the model function values corresponding to the parameters with the highest likelihood function value ('max') to the mean value ('mean') or median ('median'), the residuals and the uncertainty associated to the data.
+- `nf_output_fit_ .dat`: Model function values with higher density sampling that the data (for plot purpose). In addition, different components of the model are given
+- `nf_output_tries.dat`: For each live points trial, it contains the final evidence, the number of iterations and the maximum value of the likelihood function.
+- `nf_output_points.txt`: contains all discarded and final live points values, their associated likelihood values and posterior probabilities. From them, the different parameter probability distributions can be built.
+For this purpose, the python function in `nested_res_ .py` can be used.
+Together with this file, also the files `nf_output_points.paramnames` and `nf_output_points.ranges` are created for the use of GetDist python library.
 
 
 Additional information can be found in the reference articles.
@@ -132,9 +136,9 @@ Previous versions are:
  Developer,
    - Address: Paul Dierckx, Department of Computer Science, K.U. Leuven, Celestijnenlaan 200 A, B-3001, Heverlee, Belgium, Paul.Dierckx@cs.kuleuven.ac.be
    - [http://nalag.cs.kuleuven.be/research/topics/fitpack.shtml](http://nalag.cs.kuleuven.be/research/topics/fitpack.shtml)
- - '*dpsort.f*' + dependencies from SLATEC library (no license) for sorting arrays with respect another array
- - '*WOFZ.f*'' for the complex error function from TOMS algorithm n. 680 (included in Fortran 2008)
- - '*rinteg.f*' to calculate the integral of a function using a nq points quadrature ( nq is any integer between 1 and 14 ). Written by C. C. J. Roothaan (no license)
+ - `dpsort.f` + dependencies from SLATEC library (no license) for sorting arrays with respect another array
+ - `WOFZ.f`' for the complex error function from TOMS algorithm n. 680 (included in Fortran 2008)
+ - `rinteg.f` to calculate the integral of a function using a nq points quadrature ( nq is any integer between 1 and 14 ). Written by C. C. J. Roothaan (no license)
 
 ## Other resources
 
