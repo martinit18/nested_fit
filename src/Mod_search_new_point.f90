@@ -1,21 +1,21 @@
 MODULE MOD_SEARCH_NEW_POINT
   ! Automatic Time-stamp: <Last changed by martino on Saturday 02 May 2020 at CEST 13:40:47>
   ! Module for search of new points
-  
+
   ! Module for the input parameter definition
   !USE MOD_PARAMETERS, ONLY: search_type ???? TO IMPLEMENT
   USE MOD_PARAMETERS, ONLY:  npar, par_step, par_bnd1, par_bnd2, par_fix
   ! Module for likelihood
   USE MOD_LIKELIHOOD
   ! Module for cluster analysis
-  USE MOD_CLUSTER_ANALYSIS 
+  USE MOD_CLUSTER_ANALYSIS
 
   IMPLICIT NONE
-  
+
 CONTAINS
 
-  
-! Prepared for the option of several search modes 
+
+! Prepared for the option of several search modes
 !!$  !#####################################################################################################################
 !!$
 !!$  SUBROUTINE SEARCH_NEW_POINT(min_ll,nlive,live_like,live,new_live_like,new_live)
@@ -42,16 +42,16 @@ CONTAINS
 !!$
 !!$
 !!$  END SUBROUTINE SEARCH_NEW_POINT
-  
+
   !#####################################################################################################################
-  
+
   SUBROUTINE SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
        live_like_new,live_new,icluster,ntries,too_many_tries)
   ! SUBROUTINE LAWN_MOWER_ROBOT(min_ll,nlive,live_like,live,new_live_like,new_live)
-  
+
     USE MOD_PARAMETERS, ONLY: nlive, sdfraction, njump, maxtries, maxntries, &
          cluster_yn, cluster_method, distance_limit, bandwidth, par_in
-    
+
     ! MCMC search function from Leo's ideas and mine
     INTEGER(4), INTENT(IN) :: n, itry
     REAL(8), INTENT(IN) :: min_live_like
@@ -69,7 +69,7 @@ CONTAINS
     ! Other variables
     INTEGER(4) :: i=0, l=0, irn=0
     REAL(8) :: rn
-    
+
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
     new_jump = par_in
@@ -80,7 +80,7 @@ CONTAINS
     live_sd  = 0.
     ntries   = 0
     n_ntries = 0
-    too_many_tries = .false. 
+    too_many_tries = .false.
 
 
     ! Select a live point as starting point
@@ -166,6 +166,11 @@ CONTAINS
              ! If nothing is found, restart from a livepoint
              ntries = 0
 
+             !
+             WRITE(*,*) 'Too many tries to find new live points for try n.', &
+             itry,'!!!! More than',maxtries,&
+             'n_ntries =',n_ntries,' over ', maxntries, 'n. step =', n
+
              ! If you already did too much tries, gave up or start a cluster analysis
              IF (n_ntries.GE.maxntries) THEN
                 IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
@@ -188,12 +193,10 @@ CONTAINS
                 ELSE
                    WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries*maxntries
                    WRITE(*,*) 'We take the data as they are :-~'
-                   too_many_tries = .true. 
+                   too_many_tries = .true.
+                   RETURN
                 END IF
              END IF
-             !
-             WRITE(*,*) 'Too many tries to find new live points for try n.',itry,'!!!! More than',maxtries,'n_ntries =',n_ntries, &
-                  'n. step =', n
              ! Some test for desesperate seeking (for presence of several maxima)
 
 
@@ -304,12 +307,12 @@ CONTAINS
 
 
     ! ------------------------------------------------------------------------------------
-    
+
 
   END SUBROUTINE SEARCH_NEW_POINT
 
-  
+
   !#####################################################################################################################
 
-  
+
 END MODULE MOD_SEARCH_NEW_POINT

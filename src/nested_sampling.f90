@@ -16,7 +16,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   USE MOD_SEARCH_NEW_POINT
   ! Module for cluster analysis
   USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_on
-  
+
   !
   IMPLICIT NONE
   INTEGER(4), INTENT(IN) :: itry, maxstep
@@ -41,8 +41,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   REAL(8) :: evsum = 0., evrestest = 0., evtotest = 0.
   ! Search variable
   INTEGER(4) :: icluster=0, icluster_old=0, ntries=0
-  LOGICAL :: too_many_tries = .false. 
-  ! Live points variables 
+  LOGICAL :: too_many_tries = .false.
+  ! Live points variables
   REAL(8) :: min_live_like = 0.
   REAL(8), DIMENSION(nlive) :: live_like
   REAL(8), DIMENSION(nlive,npar) :: live
@@ -228,7 +228,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
      ! Store old values
      live_like_old(n) = live_like(1)
      live_old(n,:) = live(1,:)
-     
+
      IF (jlim.LT.1.OR.jlim.GT.nlive) THEN
         WRITE(*,*) 'Problem in the search method, or in the calculations'
         WRITE(*,*) 'No improvement in the likelihood value after finding the new point'
