@@ -305,7 +305,7 @@ CONTAINS
     live_new = new_jump
     live_like_new = LOGLIKELIHOOD(new_jump)
 
-
+    RETURN  
     ! ------------------------------------------------------------------------------------
 
 

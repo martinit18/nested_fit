@@ -5,7 +5,7 @@ from numpy import log, histogram, zeros, savetxt, shape
 import sys
 import os
 import matplotlib
-matplotlib.use('TkAgg')
+#matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 
@@ -373,7 +373,7 @@ class Analysis(object):
         plt.errorbar(x,y,yerr=sy,xerr=None,fmt='or',ecolor='red',mec='red',**linestyle)
         plt.errorbar(x_fit,y_fit,yerr=None,xerr=None,fmt='-b',**linestyle2)
         #plt.plot(x_fit,y_fit,'-b',label='Fit')
-        plt.tight_layout()      
+        plt.tight_layout()
 
         # Plot the residual
         plt.figure()
