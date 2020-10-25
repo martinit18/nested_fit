@@ -2660,9 +2660,9 @@ c     Parameters for the Weibull distribution
       valw(4) = kappa
 c     Mean and standard deviation of Weibull distribution (Wikipedia or other books)
 c     Gamma function is written as function of its logarithm
-      mean_wb = lambda*(DGAMMA(1+1/kappa))
+      mean_wb = lambda*(GAMMA(1+1/kappa))
       !sigma_wb = dsqrt(lambda**2*(dexp(dgamln(1+2/kappa)))-mean_wb**2)
-      sigma_wb = dsqrt(lambda**2*(DGAMMA(1+2/kappa))-mean_wb**2) ! Martino's change 07/01/2020
+      sigma_wb = dsqrt(lambda**2*(GAMMA(1+2/kappa))-mean_wb**2) ! Martino's change 07/01/2020
 
 c     Calculation of the "erf" background as cumulative function of Gaussian with
       x0_erf = mean_wb + dx0_erf
@@ -2857,7 +2857,7 @@ c     Interpolation variables
       d     = val(13)
       e     = val(14)
 
-      
+
 c     Voigt peak
       valv(1) = x03
       valv(2) = amp3
@@ -2884,7 +2884,7 @@ c     Second peak
       TWO_INTERP_VOIGT_POLY_X0 = amp1*y_1 + amp2*y_2 + VOIGT(x,4,valv) +
      +     POLY(x,8,valp)
 
-      
+
 c     Save different components
       IF(plot) THEN
          WRITE(40,*) x, TWO_INTERP_VOIGT_POLY_X0, amp1*y_1, amp2*y_2,
@@ -2895,7 +2895,7 @@ c     Save different components
       RETURN
       END
 
-      
+
 c _______________________________________________________________________________________________
 
 
@@ -2957,7 +2957,7 @@ c     Third peak
 
 c     Save different components
             IF(plot) THEN
-               WRITE(40,*) x, THREE_INTERP_VOIGT_POLY, 
+               WRITE(40,*) x, THREE_INTERP_VOIGT_POLY,
      +              amp1*y_1, amp2*y_2, amp3*y_3, POLY(x,8,valp)
 
             ENDIF

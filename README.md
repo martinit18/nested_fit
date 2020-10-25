@@ -75,6 +75,7 @@ New features:
 - Correction of some bugs in the python library
 - Additional folder with exercises is now available
 - Installation instructions now available
+- Compatible now with intel fortran (options to change in Makefile)
 
 
 

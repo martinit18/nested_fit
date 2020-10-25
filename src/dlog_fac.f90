@@ -13,9 +13,9 @@ FUNCTION DLOG_FAC(n)
      ! 0!=1 so log(0!) = 0
      DLOG_FAC = 0.
   ELSE IF(n.GT.0) THEN
-     DLOG_FAC = DLGAMA(n+1.D0)
+     DLOG_FAC = LOG_GAMMA(n+1.D0)
   END IF
-  
+
   RETURN
-  
+
 END FUNCTION DLOG_FAC

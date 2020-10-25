@@ -38,8 +38,12 @@ F90FILES = Mod_parameters.f90 Mod_likelihood.f90 Mod_timestamp.f90 \
 	nested_fit.f90 nested_sampling.f90 \
 	dlog_fac.f90 sortn_slatec.f90 meanvar.f90 randn.f90 shirley_fitpack.f90
 
-
+# for gfortran
 OPT = -O2 -static
+# For Intel fortran
+#OPT = -O2 -no-wrap-margin
+
+# other options
 #OPT = -g  -C -static
 #OPT = -O0 -g
 #OPT = -O0 -g  -fbounds-check -Wall  -ffpe-trap=invalid,zero,overflow,underflow -fbacktrace -ftrapv
@@ -54,8 +58,9 @@ OPT = -O2 -static
 
 # Rules...
 FC  = gfortran
+#FC  = ifort
 CC  = gcc
-FC90= gfortran
+FC90= $(FC)
 SRCFILES =  $(FFILES)
 OBJFILES = $(CFILES:.c=.o) $(FFILES:.f=.o) $(F90FILES:.f90=.o)
 

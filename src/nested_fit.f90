@@ -113,6 +113,24 @@ PROGRAM NESTED_FIT
   LOGICAL, PARAMETER :: parallel_on = .FALSE.
 
 
+
+  !!!!!!!! Initiate random generator with a different seed each time !!!!!!!!!!!
+  CALL RANDOM_SEED(PUT=seed_array)
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  ! Other variants
+  !CALL RANDOM_SEED()
+  !CALL INIT_RANDOM_SEED()
+
+  ! Other tries
+  !CALL RANDOM_NUMBER(rng)
+  !DO itry=1,ntry
+  !   CALL RNG_SEED(rng(itry), 932117 + 10*itry)
+  !   write(*,*) rng(1:5,itry)
+  !END DO
+
+
+
   ! Calculate time elapsed !!!!!!!!!!!!!!!!!!!!
   ! Parallel real time (and number of threads)
   IF (parallel_on) THEN
@@ -261,22 +279,6 @@ PROGRAM NESTED_FIT
 
   !
   ! Run the Nested sampling
-
-  ! Initiate random generator with a different seed each time
-  !CALL RANDOM_SEED(PUT=seed_array)
-  ! Other variants
-  !CALL RANDOM_SEED()
-  !CALL INIT_RANDOM_SEED()
-
-  ! To start always with the same random seeds for tests propose
-  !CALL RANDOM_SEED(PUT=seed_array)
-
-  ! Other tries
-  !CALL RANDOM_NUMBER(rng)
-  !DO itry=1,ntry
-  !   CALL RNG_SEED(rng(itry), 932117 + 10*itry)
-  !   write(*,*) rng(1:5,itry)
-  !END DO
 
 
   !!!$OMP PARALLEL DO

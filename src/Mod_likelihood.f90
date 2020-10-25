@@ -1,19 +1,19 @@
 MODULE MOD_LIKELIHOOD
   ! Automatic Time-stamp: <Last changed by martino on Tuesday 07 April 2020 at CEST 18:34:18>
   ! Module of the likelihood function for data analysis
-  
-  
+
+
   !#####################################################################################################################
-  
+
   ! IMPORTANT: to switch between likelihood types for test and others,
   ! change the name of the file to compile in the Makefile,
   ! Mod_likeihood.f90 or Mod_likeihood_tests.f90
-  
+
   !#####################################################################################################################
-  
+
 
   ! Module for the input parameter definition
-  USE MOD_PARAMETERS,
+  USE MOD_PARAMETERS
   !ONLY: maxdata, nsetmax, filename, errorbars_yn, set_yn, nset, funcname, &
   !     xmin, xmax, npar, par_in
 
