@@ -1,10 +1,10 @@
 #  Automatic Time-stamp: <Last changed by martino on Saturday 02 May 2020 at CEST 13:47:23>
-NAME    = nested_fit3.5.2.exe
+NAME    = nested_fit3.5.2_luis.exe
 .SUFFIXES : .f90 .f .o .c .mod
 CFLAGS  =
 ############## FLAG TO COSTUMIZE #############################
 #### Uncomment next line to run in parallel in LINUX
-#FFLAGS  = -fopenmp
+FFLAGS  = -fopenmp
 #### Uncomment next line to optimize in MAC
 #FFLAGS   = -framework accelerate
 #### Uncomment next line to run in parallel and optimize in MAC
