@@ -1,5 +1,5 @@
 MODULE MOD_LIKELIHOOD
-  ! Automatic Time-stamp: <Last changed by martino on Tuesday 07 April 2020 at CEST 18:34:18>
+  ! Automatic Time-stamp: <Last changed by martino on Monday 01 March 2021 at CET 19:53:35>
   ! Module of the likelihood function for data analysis
 
 
@@ -184,6 +184,8 @@ CONTAINS
              WRITE(*,*) 'Check our data or do not use errorbars'
              STOP
           END IF
+          ! Calculation of the constant part of the likelihood with Gaussian distribution
+          const_ll = const_ll -DLOG(nc_err_raw(i))
        END IF
     ENDDO
 
