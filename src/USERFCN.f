@@ -44,7 +44,6 @@ c################################### USERFCN DEFINITION ########################
       REAL*8 SIX_VOIGT_PARA_SHIRBG_SIG_PLEIADES
       REAL*8 ROCKING_CURVE,TWO_INTERP_VOIGT_POLY,THREE_INTERP_VOIGT_POLY
       REAL*8 TWO_INTERP_VOIGT_POLY_X0
-      REAL*8 STEP_POWER
       REAL*8 x
       CHARACTER*64 funcname
 
@@ -211,8 +210,6 @@ c     Choose your model (see below for definition)
          USERFCN = ROCKING_CURVE(x,npar,val)
       ELSE IF(funcname.EQ.'SIX_VOIGT_PARA_POLY_SIG_PLEIADES') THEN
          USERFCN = SIX_VOIGT_PARA_POLY_SIG_PLEIADES(x,npar,val)
-      ELSE IF(funcname.EQ.'STEP_POWER') THEN
-         USERFCN = STEP_POWER(x,npar,val)
       ELSE
          WRITE(*,*) 'Error in the function name def. in USERFCN'
          WRITE(*,*) 'Check in the manual and in the input.dat file'
@@ -5493,40 +5490,6 @@ c     Save the different components
 
       RETURN
       END
-c_______________________________________________________________________________________________
 
-      FUNCTION STEP_POWER(X,npar,val)
-c     y=ax^b curve for y<y0. Otherwise, 0
-      IMPLICIT NONE
-      INTEGER*4 npar
-      REAL*8 val(npar), val1(3)
-      REAL*8 STEP_POWER, x
-      REAL*8 x0, xc, N, p, bg
-      LOGICAL plot
-      COMMON /func_plot/ plot
-
-      bg    = val(1)
-      x0    = val(2)
-      N     = val(3)
-      p     = val(4)
-
-      xc=x-x0
-      
-      IF(xc.LE.0) THEN
-         STEP_POWER=N*(-xc)**p+bg      
-      ELSE
-         STEP_POWER=bg
-      ENDIF
-
-
-      IF(plot) THEN
-         WRITE(40,*) x, STEP_POWER
-      END IF
-
-      RETURN
-      END
-
-
-c
 
 c ##############################################################################################
