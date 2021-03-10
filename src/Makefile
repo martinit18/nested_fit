@@ -1,5 +1,5 @@
 #  Automatic Time-stamp: <Last changed by martino on Saturday 02 May 2020 at CEST 13:47:23>
-NAME    = nested_fit3.5.2_luis.exe
+NAME    = nested_fit3.5.2_2D.exe
 .SUFFIXES : .f90 .f .o .c .mod
 CFLAGS  =
 ############## FLAG TO COSTUMIZE #############################
@@ -18,7 +18,7 @@ FFLAGS  = -fopenmp
 CFILES =
 
 # In the order: my stuff, Num. Rec., SLATEC, FITPACK, others stuff
-FFILES  =  USERFCN_2D.f USERFCN_SET.f init_interpolation.f \
+FFILES  =  USERFCN_2D.f USERFCN_SET_2D.f init_interpolation.f \
 	\
 	dpsort.f \
 	xermsg.f fdump.f j4save.f xercnt.f \
