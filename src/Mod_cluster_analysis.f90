@@ -4,9 +4,9 @@ MODULE MOD_CLUSTER_ANALYSIS
   !
   ! To eventually change to select and add other cluster analyses (eventually to be selected in the input file)
 
-  
+
   IMPLICIT NONE
- 
+
   LOGICAL :: cluster_on = .false.
   INTEGER(4) :: np=0, ndim=0, ncluster=0
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: cluster_std, cluster_mean
@@ -25,7 +25,7 @@ CONTAINS
     ! using the mean shift algorithm
     ! using distance and bandwidth as parameters
     ! INPUTS
-    USE MOD_TIMESTAMP, ONLY: timestamp 
+    USE MOD_TIMESTAMP, ONLY: timestamp
     ! Module for the input parameter definition
     USE MOD_PARAMETERS, ONLY: cluster_method, bandwidth, distance_limit
     INTEGER(4), INTENT(IN) :: np_in, ndim_in
@@ -39,6 +39,7 @@ CONTAINS
     INTEGER(4) :: i, j, k, l, nn, min_nn
     REAL(8), DIMENSION(ncluster_max,ndim_in) :: mean_cluster
     LOGICAL :: accuracy_reached
+    LOGICAL, DIMENSION(ndim_in) :: p_fix
 
     np = np_in
     ndim = ndim_in
@@ -47,6 +48,7 @@ CONTAINS
     p = 0.
     p_mean_shift = 0.
     p_mean_old = 0.
+    p_fix = .FALSE.
 
     ! Allocate the variables if needed
     IF(.NOT.cluster_on) ALLOCATE(p_cluster(np))
@@ -57,7 +59,11 @@ CONTAINS
     DO l=1,ndim
        val_max = maxval(p_in(:,l))
        val_min = minval(p_in(:,l))
-       p(:,l) = (p_in(:,l)-val_min)/(val_max-val_min)
+       IF (val_max.NE.val_min) THEN
+         p(:,l) = (p_in(:,l)-val_min)/(val_max-val_min)
+       ELSE !If it is a fixed parameter, just ignore it
+         p(:,l) = 0.
+       ENDIF
     END DO
 
 
@@ -84,7 +90,7 @@ CONTAINS
        DO j=1,np
           ! Scan all other points for calculating the mean....
           num = 0.
-          dem = 0.
+          dem = 1.
           nn = 0
           DO k=1,np
              IF (j.NE.k) THEN
@@ -96,15 +102,19 @@ CONTAINS
                       ! Calculate the baricenter for any dimension with gaussian kernel
                       weight = GAUSSIAN_KERNEL(dist,bandwidth)
                       DO l=1,ndim
-                         num(l) = num(l) + p(k,l)*weight
-                         dem(l) = dem(l) + weight
-                         !write(*,*) i,j,k,l, nn, num(l), dem(l)
+                        IF (val_max.NE.val_min) THEN
+                          num(l) = num(l) + p(k,l)*weight
+                          dem(l) = dem(l) + weight
+                          !write(*,*) i,j,k,l, nn, num(l), dem(l)
+                        ENDIF
                       END DO
                       ! Caluclate baricenter with flat kernel
                    ELSEIF(cluster_method.EQ.'f'.OR.cluster_method.EQ.'F') THEN
                       DO l=1,ndim
-                         num(l) = num(l) + p(k,l)
-                         dem(l) = dem(l) + 1
+                        IF (val_max.NE.val_min) THEN
+                          num(l) = num(l) + p(k,l)
+                          dem(l) = dem(l) + 1
+                        ENDIF
                       END DO
                    END IF
                 END IF
@@ -259,12 +269,12 @@ CONTAINS
        cluster_std(icl,:) = 0.
     ELSE
        DO l=1,ndim
-          cluster_mean(icl,l) = 0.
-          cluster_std(icl,l) = 0.
-          cluster_mean(icl,l) = SUM(p_cl(1:cluster_np(icl),l))/cluster_np(icl)
-          cluster_std(icl,l) =  &
-               DSQRT(SUM((p_cl(1:cluster_np(icl),l)-cluster_mean(icl,l))**2)/ &
-               (cluster_np(icl)-1))
+         cluster_mean(icl,l) = 0.
+         cluster_std(icl,l) = 0.
+         cluster_mean(icl,l) = SUM(p_cl(1:cluster_np(icl),l))/cluster_np(icl)
+         cluster_std(icl,l) =  &
+         DSQRT(SUM((p_cl(1:cluster_np(icl),l)-cluster_mean(icl,l))**2)/ &
+                (cluster_np(icl)-1))
        END DO
     END IF
 
