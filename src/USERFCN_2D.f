@@ -284,16 +284,20 @@ c     One minimum for yc>thr and 2 (or more if p>1) for yc<thr
       bg    = val(7)
       N0    = val(8)
 
+
       yc     = y-y0
       amp1   = N
       amp2   = N
-      x0     = a*SQRT(-yc**r)
 
       IF(yc.LE.0) THEN
-         FABIAN_2D=amp1*((x-x0)*(x+x0))**(2*q)+bg
+        x0 = a*(-yc)**(r/2)
+        FABIAN_2D=amp1*((((x-x0)*(x+x0))**2)**q)+bg
       ELSE
-         FABIAN_2D=amp2*(x**2)**(2*q)+bg
+        FABIAN_2D=amp2*(((x**2)**2)**q)+bg
       END IF
+
+      !write(*,*) q, x0, (x-x0)*(x+x0), ((((x-x0)*(x+x0))**2)**q)
+      !pause
 
 
 c     Save the different components
