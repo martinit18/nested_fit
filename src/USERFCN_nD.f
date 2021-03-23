@@ -5535,8 +5535,7 @@ c     Test of under of underflow first
       ELSE
          GAUSS_3D = 0.d0
       END IF      
-
-
+      
  
       RETURN
       END

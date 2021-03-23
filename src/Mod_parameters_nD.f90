@@ -5,7 +5,7 @@ MODULE MOD_PARAMETERS
   IMPLICIT NONE
   
   ! General parameters
-  INTEGER(4), PARAMETER :: maxdata=1000000, nsetmax=10, maxdim=10 !nD: Added dimdata
+  INTEGER(4), PARAMETER :: maxdata=10000, nsetmax=10, maxdim=10 !nD: Added dimdata
   ! Input variables
   CHARACTER, DIMENSION(nsetmax) :: filename*64
   CHARACTER :: set_yn*1= 'n',errorbars_yn*1= 'n'
