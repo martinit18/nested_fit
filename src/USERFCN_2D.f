@@ -9,7 +9,7 @@ c################################### USERFCN_2D DEFINITION #####################
       REAL*8 val(npar)
       REAL*8 USERFCN_2D, GAUSS_2D, GAUSS_BG_2D
       REAL*8 SOMBRERO_2D, SOMBRERO_BG_2D, LANDAU_2D, POLY_EVENX_2D
-      REAL*8 FABIAN_2D
+      REAL*8 FABIAN_2D, MOD_FABIAN_2D
       REAL*8 x, y
       CHARACTER*64 funcname
 
@@ -28,6 +28,9 @@ c     Choose your model (see below for definition)
          USERFCN_2D = POLY_EVENX_2D(x,y,npar,val)
       ELSE IF(funcname.EQ.'FABIAN_2D') THEN
          USERFCN_2D = FABIAN_2D(x,y,npar,val)
+      ELSE IF(funcname.EQ.'MOD_FABIAN_2D') THEN
+         USERFCN_2D = MOD_FABIAN_2D(x,y,npar,val)
+
       ELSE
          WRITE(*,*) 'Error in the function name def. in USERFCN_2D'
          WRITE(*,*) 'Check in the manual and in the input.dat file'
@@ -259,7 +262,6 @@ c     Save the different components
 
 
 
-
 c _______________________________________________________________________________________________
 
       FUNCTION FABIAN_2D(X,Y,npar,val)
@@ -268,9 +270,9 @@ c     One minimum for yc>thr and 2 (or more if p>1) for yc<thr
       INTEGER*4 npar
       REAL*8 val(npar)
       REAL*8 FABIAN_2D, x, y
-      REAL*8 amp1,amp2, x0, yc
+      REAL*8 amp1,amp2, x0, yc,morse, q2
       REAL*8 y0, q, a
-      REAL*8 r, N, s, bg, N0
+      REAL*8 r, N, s, bg, N0,D,m0,qamp,lda
       LOGICAL plot
       COMMON /func_plot/ plot
 
@@ -283,18 +285,25 @@ c     One minimum for yc>thr and 2 (or more if p>1) for yc<thr
       s     = val(6)
       bg    = val(7)
       N0    = val(8)
-
+      D     = val(9)
+      m0    = val(10)
+      qamp  = val(11)
+      lda   = val(12)
 
       yc     = y-y0
       amp1   = N
-      amp2   = N
+      amp2   = N+N0*yc
+      morse  = D*(1-EXP(-(y-m0)/lda))**2
+
 
       IF(yc.LE.0) THEN
         x0 = a*(-yc)**(r/2)
-        FABIAN_2D=amp1*((((x-x0)*(x+x0))**2)**q)+bg
+        FABIAN_2D=amp1*((((x-x0)*(x+x0))**2)**q)+bg + morse
       ELSE
-        FABIAN_2D=amp2*(((x**2)**2)**q)+bg
+        q2=qamp*yc+q
+        FABIAN_2D=amp2*(((x**2)**2)**q2)+bg + morse
       END IF
+
 
       !write(*,*) q, x0, (x-x0)*(x+x0), ((((x-x0)*(x+x0))**2)**q)
       !pause
@@ -303,6 +312,64 @@ c     One minimum for yc>thr and 2 (or more if p>1) for yc<thr
 c     Save the different components
       IF(plot) THEN
          WRITE(40,*) x, y, FABIAN_2D
+      END IF
+
+      
+      RETURN
+      END
+
+c _______________________________________________________________________________________________
+
+      FUNCTION MOD_FABIAN_2D(X,Y,npar,val)
+c     One minimum for yc>thr and 2 (or more if p>1) for yc<thr
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 MOD_FABIAN_2D, x, y
+      REAL*8 amp1,amp2, x0, yc, morse, q2, f
+      REAL*8 y0, x0amp, x0exp, N0, N1, N2
+      REAL*8 q1, q2amp, q20, D, m0, bg
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      y0    = val(1)
+      x0amp = val(2)
+      x0exp = val(3)
+      N0    = val(4)
+      N1    = val(5)
+      N2    = val(6)
+      q1    = val(7)
+      q2amp = val(8)
+      q20   = val(9)
+      D     = val(10)
+      m0    = val(11)
+      bg    = val(12)
+
+
+      yc     = y-y0
+      morse  = D*(1-EXP(-(y-m0)/2))**2
+
+
+      IF(yc.LE.0) THEN
+        x0        = x0amp*ABS(yc)**(x0exp/2)
+        amp1      = N1*yc + N0
+        f         = amp1*((((x-x0)*(x+x0))**2)**q1)
+      ELSE
+        q2        = q2amp*yc**(1/2) + q20
+        amp2      = N2*yc+N0
+        f         = amp2*(((x**2)**2)**q2)
+      END IF
+
+      MOD_FABIAN_2D = f + morse + bg
+
+      !write(*,*) q, x0, (x-x0)*(x+x0), ((((x-x0)*(x+x0))**2)**q)
+      !pause
+
+
+c     Save the different components
+      IF(plot) THEN
+         WRITE(40,*) x, y, MOD_FABIAN_2D
       END IF
 
 
