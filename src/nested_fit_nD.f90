@@ -168,8 +168,11 @@ PROGRAM NESTED_FIT
   READ(77,*) funcname, string
   READ(77,*) lr, string
   READ(77,*) npoint, nwidth, string
-  READ(77,*) xmin(1), xmax(1), string
-  READ(77,*) ymin(1), ymax(1), string
+  READ(77,*) dimen, string
+  ALLOCATE(xmin(dimen,nsetmax),xmax(dimen,nsetmax))
+  DO i=1, dimen
+     READ(77,*) xmin(i,1), xmax(i,1), string   !nD: Allocating the correct dimension
+  END DO
   READ(77,*) npar, string
 
 
@@ -216,7 +219,9 @@ PROGRAM NESTED_FIT
      OPEN (UNIT=88, FILE='nf_input_set.dat', STATUS='old')
      READ(88,*,ERR=11,END=11) nset
      DO k = 2, nset
-        READ(88,*,ERR=11,END=11) xmin(k), xmax(k), string
+        DO i = 1, dimen
+           READ(88,*,ERR=11,END=11) xmin(i,k), xmax(i,k), string
+        END DO
      END DO
      DO k = 2, nset
         READ(88,*,ERR=11,END=11) filename(k)
