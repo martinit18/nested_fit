@@ -5530,8 +5530,8 @@ c     Test of under of underflow first
       expy = -(x(2)-y0)**2/(2*sigmay**2)
       expz = -(x(3)-z0)**2/(2*sigmaz**2)
       IF(ABS(expx + expy + expz).LT.700) THEN
-         !pref = amp/(dsqrt((2*pi)**3)*sigmax*sigmay*sigmaz)
-         GAUSS_3D = amp*exp(expx+expy+expz)
+         pref = amp/(dsqrt((2*pi)**3)*sigmax*sigmay*sigmaz)
+         GAUSS_3D = pref*exp(expx+expy+expz)
       ELSE
          GAUSS_3D = 0.d0
       END IF      
