@@ -1,5 +1,5 @@
 MODULE MOD_LIKELIHOOD
-  ! Automatic Time-stamp: <Last changed by martino on Monday 01 March 2021 at CET 19:53:35>
+  ! Automatic Time-stamp: <Last changed by martino on Tuesday 23 March 2021 at CET 16:03:18>
   ! Module of the likelihood function for data analysis
 
 
@@ -14,8 +14,6 @@ MODULE MOD_LIKELIHOOD
 
   ! Module for the input parameter definition
   USE MOD_PARAMETERS
-  !ONLY: maxdata, nsetmax, filename, errorbars_yn, set_yn, nset, funcname, &
-  !     xmin, xmax, npar, par_in
 
   IMPLICIT NONE
 
@@ -54,8 +52,8 @@ CONTAINS
     ndata_set = 0
     const_ll = 0.
 
-    IF (errorbars_yn.EQ.'n'.OR.errorbars_yn.EQ.'N') THEN
-       ! Case with counts ----------------------------------------------------------------
+    IF (data_type.EQ.'1c') THEN
+       ! Case 1D with counts ----------------------------------------------------------------
        DO k=1,nset
           CALL READ_FILE_COUNTS(filename(k),xmin(k),xmax(k),ndata_set(k), &
                x_tmp(:,k),nc_tmp(:,k))
@@ -74,8 +72,8 @@ CONTAINS
           x(1:ndata_set(k),k)  = x_tmp(1:ndata_set(k),k)
           nc(1:ndata_set(k),k) = nc_tmp(1:ndata_set(k),k)
        END DO
-    ELSE
-       ! Case with errorbars -------------------------------------------------------------------
+    ELSE IF (data_type.EQ.'1e') THEN
+       ! Case 1D with errorbars -------------------------------------------------------------------
        DO k=1,nset
           CALL READ_FILE_ERRORBARS(filename(k),xmin(k),xmax(k),ndata_set(k), &
                x_tmp(:,k),nc_tmp(:,k),nc_err_tmp(:,k))
@@ -95,6 +93,9 @@ CONTAINS
           nc(1:ndata_set(k),k) = nc_tmp(1:ndata_set(k),k)
           nc_err(1:ndata_set(k),k) = nc_err_tmp(1:ndata_set(k),k)
        END DO
+    ELSE
+       WRITE(*,*) 'Data type ', data_type, ' not available. Please change your input file'
+       STOP
     END IF
 
 
@@ -257,7 +258,7 @@ CONTAINS
     IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
        ! No set --------------------------------------------------------------------------------------------------------
        k=1
-       IF (errorbars_yn.EQ.'n'.OR.errorbars_yn.EQ.'N') THEN
+       IF (data_type.EQ.'1c') THEN
           !$OMP PARALLEL DO PRIVATE(enc) REDUCTION(+:ll_tmp)
           DO i=1, ndata_set(k)
              ! Poisson distribution calculation --------------------------------------------------
@@ -274,7 +275,7 @@ CONTAINS
              END IF
           END DO
           !$OMP END PARALLEL DO
-       ELSE
+       ELSE IF (data_type.EQ.'1c') THEN
           !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
           DO i=1, ndata_set(k)
              ! Normal (Gaussian) distribution calculation --------------------------------------
@@ -286,7 +287,7 @@ CONTAINS
     ELSE
        ! Set ----------------------------------------------------------------------------------------------------------
        DO k=1,nset
-          IF (errorbars_yn.EQ.'n'.OR.errorbars_yn.EQ.'N') THEN
+          IF (data_type.EQ.'1c') THEN
              !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
              DO i=1, ndata_set(k)
                 ! Poisson distribution calculation --------------------------------------------------
@@ -368,9 +369,9 @@ CONTAINS
        WRITE(20,*)'# x    y data    y theory      y diff    y err'
        DO i=1, ndata
           enc = USERFCN(x(i,k),npar,live_max,funcname)
-          IF (errorbars_yn.EQ.'y'.OR.errorbars_yn.EQ.'Y') THEN
+          IF (data_type.EQ.'1e') THEN
              WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)
-          ELSE
+          ELSE IF (data_type.EQ.'1c') THEN
              WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', sqrt(nc(i,k))
           END IF
        END DO
@@ -380,9 +381,9 @@ CONTAINS
        WRITE(20,*)'# x    y data    y theory      y diff    y err'
        DO i=1, ndata
           enc = USERFCN(x(i,k),npar,par_mean,funcname)
-          IF (errorbars_yn.EQ.'y'.OR.errorbars_yn.EQ.'Y') THEN
+          IF (data_type.EQ.'1e') THEN
              WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)
-          ELSE
+          ELSE IF (data_type.EQ.'1c') THEN
              WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', sqrt(nc(i,k))
           END IF
        END DO
@@ -392,9 +393,9 @@ CONTAINS
        WRITE(20,*)'# x    y data    y theory      y diff    y err'
        DO i=1, ndata
           enc = USERFCN(x(i,k),npar,par_median_w,funcname)
-          IF (errorbars_yn.EQ.'y'.OR.errorbars_yn.EQ.'Y') THEN
+          IF (data_type.EQ.'1e') THEN
              WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)
-          ELSE
+          ELSE IF (data_type.EQ.'1c') THEN
              WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', sqrt(nc(i,k))
           END IF
        END DO
@@ -409,9 +410,9 @@ CONTAINS
           WRITE(30,*)'# x    y data    y theory      y diff    y err'
           DO i=1, ndata_set(k)
              enc = USERFCN_SET(x(i,k),npar,live_max,funcname,k)
-             IF (errorbars_yn.EQ.'y'.OR.errorbars_yn.EQ.'Y') THEN
+             IF (data_type.EQ.'1e') THEN
                 WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ',  nc_err(i,k)
-             ELSE
+             ELSE IF (data_type.EQ.'1c') THEN
                 WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', sqrt(nc(i,k))
              END IF
           END DO
@@ -422,9 +423,9 @@ CONTAINS
           WRITE(30,*)'# x    y data    y theory      y diff    y err'
           DO i=1, ndata_set(k)
              enc = USERFCN_SET(x(i,k),npar,live_max,funcname,k)
-             IF (errorbars_yn.EQ.'y'.OR.errorbars_yn.EQ.'Y') THEN
+             IF (data_type.EQ.'1e') THEN
                 WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ',  nc_err(i,k)
-             ELSE
+             ELSE IF (data_type.EQ.'1c') THEN
                 WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', sqrt(nc(i,k))
              END IF
           END DO
@@ -435,9 +436,9 @@ CONTAINS
           WRITE(30,*)'# x    y data    y theory      y diff    y err'
           DO i=1, ndata_set(k)
              enc = USERFCN_SET(x(i,k),npar,live_max,funcname,k)
-             IF (errorbars_yn.EQ.'y'.OR.errorbars_yn.EQ.'Y') THEN
+             IF (data_type.EQ.'1e') THEN
                 WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ',  nc_err(i,k)
-             ELSE
+             ELSE IF (data_type.EQ.'1c') THEN
                 WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', sqrt(nc(i,k))
              END IF
           END DO
@@ -537,9 +538,9 @@ CONTAINS
 
   SUBROUTINE DEALLOCATE_DATA()
 
-    IF (errorbars_yn.EQ.'n'.OR.errorbars_yn.EQ.'N') THEN
+    IF (data_type.EQ.'1c') THEN
        DEALLOCATE(x,nc)
-    ELSE
+    ELSE IF (data_type.EQ.'1e')
        DEALLOCATE(x,nc,nc_err)
     END IF
 

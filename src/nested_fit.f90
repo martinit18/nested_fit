@@ -1,9 +1,15 @@
 PROGRAM NESTED_FIT
-  ! Time-stamp: <Last changed by martino on Tuesday 21 April 2020 at CEST 18:08:13>
+  ! Time-stamp: <Last changed by martino on Tuesday 23 March 2021 at CET 13:58:34>
   !
   ! Please read README and LICENSE files for more inforamtion
   !
-  ! 3.5 Modularization of the search algorithm (in preparation of new algorithms implementation)
+  ! 4.0  2D data analysis available, new input and output files for future developments
+  ! 3.5  Modularization of the search algorithm (in preparation of new algorithms implementation)
+  !      New interpolation options for 1D and 2D histograms using GetDist Python package
+  !      Correction of some bugs in the python library
+  !      Additional folder with exercises is now available
+  !      Installation instructions now available
+  !      Compatible now with intel fortran (options to change in Makefile)
   ! 3.4  Introduction of benchmark tests with synthetic likelihood functions
   !      via the module Mod_likelihood_tests,f90 (instead of Mod_likkelihood.f90)
   !      Available tests: TEST_GAUSS (multidimensional Gaussian)
@@ -71,7 +77,9 @@ PROGRAM NESTED_FIT
   ! Parameters values and co.
   CHARACTER :: string*128
   REAL(4) :: version_file
-  REAL(4), PARAMETER :: version = 3.5
+  REAL(4), PARAMETER :: version = 4.0
+  REAL(8) :: search_par1 = 0.0
+  REAL(8) :: search_par2 = 0.0
   ! Results from Nested sampling
   INTEGER(4) :: nall=0
   REAL(8) :: evsum_final=0., live_like_max=0.
@@ -159,16 +167,17 @@ PROGRAM NESTED_FIT
   END IF
   READ(77,*) filename(1), string
   READ(77,*) set_yn, string
-  READ(77,*) errorbars_yn, string
+  READ(77,*) data_type, string
   READ(77,*) nlive, string
   READ(77,*) evaccuracy, string
-  READ(77,*) sdfraction, njump, maxtries, maxntries, string
+  READ(77,*) search_type, string
+  READ(77,*) search_par1, search_par2, maxntries, string
   READ(77,*) cluster_yn, cluster_method, distance_limit, bandwidth, string
   READ(77,*) ntry, maxstep_try, string
   READ(77,*) funcname, string
   READ(77,*) lr, string
   READ(77,*) npoint, nwidth, string
-  READ(77,*) xmin(1), xmax(1), string
+  READ(77,*) xmin(1), xmax(1), ymin(1), ymax(1), string
   READ(77,*) npar, string
   !
   ! Allocate space for parameters and initialize
@@ -222,6 +231,14 @@ PROGRAM NESTED_FIT
 11   CONTINUE
      CLOSE(88)
   ENDIF
+
+  ! Adapt serach parameters to the search algorithm
+  IF (search_type.EQ.'RANDOM_WALK') THEN
+     sdfraction = search_par1
+     njump      = INT(search_par2)
+  END IF
+
+  
   ! ----------------------------------------------------------------------------------------------------------------------------------
 
 

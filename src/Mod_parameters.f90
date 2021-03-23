@@ -1,5 +1,5 @@
 MODULE MOD_PARAMETERS
-  ! Automatic Time-stamp: <Last changed by martino on Wednesday 26 February 2020 at CET 15:07:03>
+  ! Automatic Time-stamp: <Last changed by martino on Tuesday 23 March 2021 at CET 13:51:50>
   ! Module for input parameters definitions
 
   IMPLICIT NONE
@@ -7,8 +7,8 @@ MODULE MOD_PARAMETERS
   ! General parameters
   INTEGER(4), PARAMETER :: maxdata=10000, nsetmax=10
   ! Input variables
-  CHARACTER, DIMENSION(nsetmax) :: filename*64
-  CHARACTER :: set_yn*1= 'n',errorbars_yn*1= 'n'
+  CHARACTER, DIMENSION(nsetmax) :: filename*64, search_type*64
+  CHARACTER :: set_yn*1= 'n', data_type*2= '1c'
   INTEGER(4) :: nset=1
   INTEGER(4) :: nlive=0
   REAL(8) :: evaccuracy=0., sdfraction=0.
@@ -20,7 +20,7 @@ MODULE MOD_PARAMETERS
   CHARACTER :: funcname*64
   CHARACTER :: lr*1= 'r'
   INTEGER(4) :: npoint=0, nwidth=0
-  REAL(8), DIMENSION(nsetmax) :: xmin=0., xmax=0.
+  REAL(8), DIMENSION(nsetmax) :: xmin=0., xmax=0., ymin=0., ymax=0.
   INTEGER(4) :: npar=0
   INTEGER(4), ALLOCATABLE,  DIMENSION(:) :: par_num, par_fix
   CHARACTER,  ALLOCATABLE, DIMENSION(:) :: par_name*10

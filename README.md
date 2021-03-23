@@ -23,6 +23,9 @@ CNRS, Institute of NanoSciences of Paris\
 email: trassinelli AT insp.jussieu.fr\
 email: m.trassinelli AT gmail.com
 
+### Other contributors:
+L. Gonzalez
+
 ## Installation instructions ##
 **Prerequisite**:
 - Fortran compiler (gfortran by default)
@@ -68,18 +71,19 @@ Additional information can be found in the reference articles.
 
 ## Present version and history of the past versions
 
-The present version is 3.5.2\
+The present version is 4.0.0
 New features:
-- Modularization of the search and cluster recognition methods in preparation of implementation of new algorithms
-- New interpolation options for 1D and 2D histograms using GetDist Python package
-- Correction of some bugs in the python library
-- Additional folder with exercises is now available
-- Installation instructions now available
-- Compatible now with intel fortran (options to change in Makefile)
+- 2D data analysis
 
 
 
 Previous versions are:
+ - 3.5 Modularization of the search and cluster recognition methods in preparation of implementation of new algorithms \
+ New interpolation options for 1D and 2D histograms using GetDist Python package \
+ Correction of some bugs in the python library \
+ Additional folder with exercises is now available \
+ Installation instructions now available \
+ Compatible now with intel fortran (options to change in Makefile)
  - 3.4 Introduction of benchmark tests with synthetic likelihood function via the module Mod_likelihood_tests,f90 (instead of Mod_likelihood.f90).
  Available tests: TEST_GAUSS (multidimensional Gaussian), TEST_GAUSSIAN_SHELLS (multidimensional Gaussian shells, worse case with available search and clustering methods),
  TEST_EGGBOX (eggbox style profile to test clustering), TEST_ROSENBROCK (Rosenbock function test for 2-n dimension).\
