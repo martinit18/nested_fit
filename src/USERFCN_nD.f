@@ -45,7 +45,7 @@ c################################### USERFCN DEFINITION ########################
       REAL*8 ROCKING_CURVE,TWO_INTERP_VOIGT_POLY,THREE_INTERP_VOIGT_POLY
       REAL*8 TWO_INTERP_VOIGT_POLY_X0
       REAL*8 GAUSS_3D
-      REAL*8, ALLOCATABLE, DIMENSION(:) ::  x
+      REAL*8, DIMENSION (3) :: x
       CHARACTER*64 funcname
 
 c     Choose your model (see below for definition)
@@ -5502,19 +5502,19 @@ c     Normalized Gaussian distribution plus background
 c     The value of 'amp' is the value of the surface below the curve
       IMPLICIT NONE
       INTEGER*4 npar
-      REAL*8 val(npar), val1(3)
+      REAL*8 val(npar)
       REAL*8 x(3)
       REAL*8 GAUSS_3D 
       REAL*8 pi
       PARAMETER(pi=3.141592653589793d0)
       REAL*8 x0, y0, z0, amp, sigmax, sigmay, sigmaz, bg
-      REAL*8  x_, y_, z_, expx, expy, expz
+      REAL*8  x_, y_, z_, expx, expy, expz,pref
       LOGICAL plot
       COMMON /func_plot/ plot
 
-      x(1) = x_
-      x(2) = y_
-      x(3) = z_
+      !x(1) = x_
+      !x(2) = y_
+      !x(3) = z_
 
       bg    = val(1)
       x0    = val(2)
@@ -5526,17 +5526,18 @@ c     The value of 'amp' is the value of the surface below the curve
       sigmaz= val(8)
 
 c     Test of under of underflow first
-      expx = -(x_-x0)**2/(2*sigmax**2)
-      expy = -(y_-y0)**2/(2*sigmay**2)
-      expz = -(z_-z0)**2/(2*sigmaz**2)
-      IF(DABS(expx + expy + expz).LT.700) THEN
-         GAUSS_3D = amp/(dsqrt((2*pi)**3)*sigmax*sigmay*sigmaz)*
-     +        dexp(expx + expy + expz)
+      expx = -(x(1)-x0)**2/(2*sigmax**2)
+      expy = -(x(2)-y0)**2/(2*sigmay**2)
+      expz = -(x(3)-z0)**2/(2*sigmaz**2)
+      IF(ABS(expx + expy + expz).LT.700) THEN
+         !pref = amp/(dsqrt((2*pi)**3)*sigmax*sigmay*sigmaz)
+         GAUSS_3D = amp*exp(expx+expy+expz)
       ELSE
          GAUSS_3D = 0.d0
       END IF      
 
 
+ 
       RETURN
       END
 
