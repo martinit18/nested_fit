@@ -6,6 +6,7 @@ c################################### USERFCN DEFINITION ########################
       FUNCTION USERFCN(x,npar,val,funcname)
       IMPLICIT NONE
       INTEGER*4 npar
+      INTEGER*4 dimen
       REAL*8 val(npar)
       REAL*8 USERFCN, GAUSS, GAUSS_BG, DOUBLE_GAUSS_BG, DOUBLET_GAUSS_BG
       REAL*8 TRIPLE_GAUSS_BG,QUAD_GAUSS_BG,QUINT_GAUSS_BG,SIX_GAUSS_BG
@@ -45,7 +46,7 @@ c################################### USERFCN DEFINITION ########################
       REAL*8 ROCKING_CURVE,TWO_INTERP_VOIGT_POLY,THREE_INTERP_VOIGT_POLY
       REAL*8 TWO_INTERP_VOIGT_POLY_X0
       REAL*8 GAUSS_3D
-      REAL*8, DIMENSION (3) :: x
+      REAL*8 x(dimen)
       CHARACTER*64 funcname
 
 c     Choose your model (see below for definition)
