@@ -3,15 +3,16 @@ MODULE MOD_PARAMETERS
   ! Module for input parameters definitions
 
   IMPLICIT NONE
-  
+
   ! General parameters
   INTEGER(4), PARAMETER :: maxdata=10000, nsetmax=10
   ! Input variables
-  CHARACTER, DIMENSION(nsetmax) :: filename*64, search_type*64
+  CHARACTER, DIMENSION(nsetmax) :: filename*64
   CHARACTER :: set_yn*1= 'n', data_type*2= '1c'
   INTEGER(4) :: nset=1
   INTEGER(4) :: nlive=0
   REAL(8) :: evaccuracy=0., sdfraction=0.
+  CHARACTER :: search_type*64
   INTEGER(4) :: njump=20, maxtries=1000, maxntries=10
   CHARACTER :: cluster_yn*1= 'n'
   CHARACTER :: cluster_method*1= 'f'
@@ -26,11 +27,11 @@ MODULE MOD_PARAMETERS
   CHARACTER,  ALLOCATABLE, DIMENSION(:) :: par_name*10
   REAL(8), ALLOCATABLE, DIMENSION(:) :: par_step, par_in, par_bnd1, par_bnd2
 
-  
+
   COMMON /func_exp/ lr
   COMMON /func_conv/ npoint, nwidth
   !
-  
+
 
 
 END MODULE MOD_PARAMETERS

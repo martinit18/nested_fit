@@ -92,7 +92,7 @@ PROGRAM NESTED_FIT
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: weight_par
   REAL(8) :: mean_tmp=0., mean2_tmp=0., weight_tot=0., weight_int=0., weight_int_next=0.
   REAL(8) :: evsum_err=0.
-  !REAL(8) :: evsum_err_est=0.
+  REAL(8) :: evsum_err_est=0.
   REAL(8) :: live_like_mean=0., info=0., comp=0.
   INTEGER(8) :: nexp=0
   ! Parallelization variables
@@ -122,7 +122,7 @@ PROGRAM NESTED_FIT
 
 
 
-  !!!!!!!! Initiate random generator with a different seed each time !!!!!!!!!!!
+  !!!!!!!! Initiate random generator with the same seed each time !!!!!!!!!!!
   CALL RANDOM_SEED(PUT=seed_array)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -238,7 +238,7 @@ PROGRAM NESTED_FIT
      njump      = INT(search_par2)
   END IF
 
-  
+
   ! ----------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -340,15 +340,15 @@ PROGRAM NESTED_FIT
 
 
      !IF(arg.EQ. ' ') THEN
-     OPEN(22,FILE='nf_output_tries.dat',STATUS= 'UNKNOWN')
-     WRITE(22,*) 'Number_of_tries ', ntry
-     WRITE(22,*) 'Evidence_average:', evsum_final
-     WRITE(22,*) 'Evidence_standard_deviation:', evsum_err
-     WRITE(22,*) '# N. try   n. steps    Final evidence   Max loglikelihood'
+     OPEN(23,FILE='nf_output_tries.dat',STATUS= 'UNKNOWN')
+     WRITE(23,*) 'Number_of_tries ', ntry
+     WRITE(23,*) 'Evidence_average:', evsum_final
+     WRITE(23,*) 'Evidence_standard_deviation:', evsum_err
+     WRITE(23,*) '# N. try   n. steps    Final evidence   Max loglikelihood'
      DO itry=1,ntry
-        WRITE(22,*)  itry , nall_try(itry), evsum_final_try(itry), live_like_max_try(itry)
+        WRITE(23,*)  itry , nall_try(itry), evsum_final_try(itry), live_like_max_try(itry)
      END DO
-     CLOSE(22)
+     CLOSE(23)
      !END IF
 
      ! Assemble all points and weights
@@ -384,7 +384,7 @@ PROGRAM NESTED_FIT
 
   ! Calculate the uncertanity of the evidence calculation
   ! (See J. Veitch and A. Vecchio, Phys. Rev. D 81, 062003 (2010))
-  !evsum_err_est = DSQRT(DBLE(nall))/(nlive*ntry)
+  evsum_err_est = DSQRT(DBLE(nall))/(nlive*ntry)
 
   ! Calculate the mean and the standard deviation for each parameter
 
@@ -538,11 +538,12 @@ PROGRAM NESTED_FIT
   !IF(arg.EQ. ' ') THEN
   OPEN(22,FILE='nf_output_res.dat',STATUS= 'UNKNOWN')
   WRITE(22,*) '#############_FINAL_RESULTS_#####################################################################################'
-  WRITE(22,*) 'N._of_trials:            ', ntry
-  WRITE(22,*) 'N._of_total_iteration:   ', nall
-  WRITE(22,*) 'Final_evidence_(log):    ', evsum_final
-  WRITE(22,*) 'Evidence_dispersion(log):', evsum_err
-  !WRITE(22,*) 'Estimate_evidence_error(log):', evsum_err_est
+  WRITE(22,*) 'N._of_trials:                          ', ntry
+  WRITE(22,*) 'N._of_total_iteration:                 ', nall
+  WRITE(22,*) 'N._of_used_livepoints:                 ', nlive
+  WRITE(22,*) 'Final evidence (log):                  ', evsum_final
+  WRITE(22,*) 'Evidence estimated uncertainty (log):  ', evsum_err_est
+  WRITE(22,*) 'Evidence standard deviation (log):     ', evsum_err
   WRITE(22,*) '------------------------------------------------------------------------------------------------------------------'
   WRITE(22,*) 'Max_likelihood_(log):', live_like_max
   WRITE(22,*) 'Max_parameter_set: '
@@ -573,11 +574,12 @@ PROGRAM NESTED_FIT
   WRITE(*,*) ' '
   WRITE(*,*) ' '
   WRITE(*,*) '############## FINAL RESULTS #####################################################################################'
-  WRITE(*,*) 'N. of trials:             ', ntry
-  WRITE(*,*) 'N. of total iteration:    ', nall
-  WRITE(*,*) 'Final evidence (log):     ', evsum_final
-  WRITE(*,*) 'Evidence dispersion (log):', evsum_err
-  !WRITE(*,*) 'Estimate evidence_error (log):', evsum_err_est
+  WRITE(*,*) 'N. of trials:                         ', ntry
+  WRITE(*,*) 'N. of total iteration:                ', nall
+  WRITE(*,*) 'N._of_used_livepoints:               ', nlive
+  WRITE(*,*) 'Final evidence (log):                 ', evsum_final
+  WRITE(*,*) 'Evidence estimated uncertainty (log): ', evsum_err_est
+  WRITE(*,*) 'Evidence standard deviation (log):    ', evsum_err
 
   WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
   WRITE(*,*) 'Max likelihood (log):', live_like_max

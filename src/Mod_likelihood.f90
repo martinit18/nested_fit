@@ -540,7 +540,7 @@ CONTAINS
 
     IF (data_type.EQ.'1c') THEN
        DEALLOCATE(x,nc)
-    ELSE IF (data_type.EQ.'1e')
+    ELSE IF (data_type.EQ.'1e') THEN
        DEALLOCATE(x,nc,nc_err)
     END IF
 
