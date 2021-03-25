@@ -218,7 +218,7 @@ CONTAINS
 
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
     !
-    REAL(8) :: LOGLIKELIHOOD, USERFCN, USERFCN_SET  !2D: USERFCN--> 2D
+    REAL(8) :: LOGLIKELIHOOD, USERFCN_nD, USERFCN_SET  !2D: USERFCN--> 2D
     REAL(8) :: ll_tmp, enc
     INTEGER(4) :: i=0, k=0
 
@@ -235,7 +235,7 @@ CONTAINS
           !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
           DO i=1, ndata_set(k)
              ! Normal (Gaussian) distribution calculation --------------------------------------
-             enc = USERFCN(x(:,i,k),npar,par,funcname)      !added dim
+             enc = USERFCN_nD(x(:,i,k),npar,par,funcname)      !added dim
              ll_tmp = ll_tmp - (nc(i,k) - enc)**2/(2*nc_err(i,k)**2)
           ENDDO
           !$OMP END PARALLEL DO

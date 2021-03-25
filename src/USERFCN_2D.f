@@ -9,7 +9,7 @@ c################################### USERFCN_2D DEFINITION #####################
       REAL*8 val(npar)
       REAL*8 USERFCN_2D, GAUSS_2D, GAUSS_BG_2D
       REAL*8 SOMBRERO_2D, SOMBRERO_BG_2D, LANDAU_2D, POLY_EVENX_2D
-      REAL*8 FABIAN_2D, MOD_FABIAN_2D
+      REAL*8 FABIAN_2D, MOD_FABIAN_2D, POLY_2D
       REAL*8 x, y
       CHARACTER*64 funcname
 
@@ -30,6 +30,8 @@ c     Choose your model (see below for definition)
          USERFCN_2D = FABIAN_2D(x,y,npar,val)
       ELSE IF(funcname.EQ.'MOD_FABIAN_2D') THEN
          USERFCN_2D = MOD_FABIAN_2D(x,y,npar,val)
+      ELSE IF(funcname.EQ.'POLY_2D') THEN
+         USERFCN_2D = POLY_2D(x,y,npar,val)
 
       ELSE
          WRITE(*,*) 'Error in the function name def. in USERFCN_2D'
@@ -196,6 +198,49 @@ c     for the pure sombrero
 
 
       SOMBRERO_BG_2D = SOMBRERO_2D(x,y,5,val1)+bg
+
+
+      RETURN
+      END
+
+c _______________________________________________________________________________________________
+
+      FUNCTION POLY_2D(X,Y,npar,val)
+c     
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 POLY_2D, x, y
+      REAL*8 x0, y0
+      REAL*8 xc, yc, t0, t1, t2
+      REAL*8 c20, c11, c10, c02, c01, c00
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      x0    = val(1)
+      y0    = val(2)
+      c00   = val(3)
+      c10   = val(4)
+      c01   = val(5)
+      c20   = val(6)
+      c11   = val(7)
+      c02   = val(8)
+
+      yc = y-y0
+      xc = x-x0
+      t0 = c00
+      t1 = c10*xc+c01*yc
+      t2 = c20*xc**2+c11*xc*yc+c02*yc**2
+
+
+      POLY_2D =t0 + t1+ t2
+
+c     Save the different components
+      IF(plot) THEN
+         WRITE(40,*) x, y, POLY_2D
+      END IF
+
 
 
       RETURN
