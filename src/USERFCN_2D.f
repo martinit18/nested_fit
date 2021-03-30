@@ -9,7 +9,8 @@ c################################### USERFCN_2D DEFINITION #####################
       REAL*8 val(npar)
       REAL*8 USERFCN_2D, GAUSS_2D, GAUSS_BG_2D
       REAL*8 SOMBRERO_2D, SOMBRERO_BG_2D, LANDAU_2D, POLY_EVENX_2D
-      REAL*8 FABIAN_2D, MOD_FABIAN_2D, POLY_2D
+      REAL*8 FABIAN_2D, MOD_FABIAN_2D, POLY_2D, POLY_MORE_2D
+      REAL*8 HAMILTONIAN_XY_2D, HAMILTONIAN_XQ_2D
       REAL*8 x, y
       CHARACTER*64 funcname
 
@@ -32,6 +33,14 @@ c     Choose your model (see below for definition)
          USERFCN_2D = MOD_FABIAN_2D(x,y,npar,val)
       ELSE IF(funcname.EQ.'POLY_2D') THEN
          USERFCN_2D = POLY_2D(x,y,npar,val)
+      ELSE IF(funcname.EQ.'POLY_MORE_2D') THEN
+         USERFCN_2D = POLY_MORE_2D(x,y,npar,val)
+      ELSE IF(funcname.EQ.'HAMILTONIAN_XY_2D') THEN
+         USERFCN_2D = HAMILTONIAN_XY_2D(x,y,npar,val)
+      ELSE IF(funcname.EQ.'HAMILTONIAN_XQ_2D') THEN
+         USERFCN_2D = HAMILTONIAN_XQ_2D(x,y,npar,val)
+
+
 
       ELSE
          WRITE(*,*) 'Error in the function name def. in USERFCN_2D'
@@ -246,6 +255,164 @@ c     Save the different components
       RETURN
       END
 
+c _______________________________________________________________________________________________
+
+      FUNCTION POLY_MORE_2D(X,Y,npar,val)
+c     
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 POLY_MORE_2D, x, y
+      REAL*8 x0, y0
+      REAL*8 xc, yc, t0, t1, t2, t3, t4
+      REAL*8 c20, c11, c10, c02, c01, c00
+      REAL*8 c22, c12, c40, c04
+
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      x0    = val(1)
+      y0    = val(2)
+      c00   = val(3)
+      c10   = val(4)
+      c01   = val(5)
+      c20   = val(6)
+      c11   = val(7)
+      c02   = val(8)
+      c12   = val(9)
+      c22   = val(10)
+      c40   = val(11)
+      c04   = val(12)
+
+      yc = y-y0
+      xc = x-x0
+      t0 = c00
+      t1 = c10*xc+c01*yc
+      t2 = c20*xc**2+c11*xc*yc+c02*yc**2
+      t3 = c12*xc*yc**2
+      t4 = c22*xc**2*yc**2 + c40*xc**4 + c04*yc**4
+
+
+
+      POLY_MORE_2D =t0 + t1 + t2 + t4
+
+c     Save the different components
+      IF(plot) THEN
+         WRITE(40,*) x, y, POLY_MORE_2D
+      END IF
+
+
+
+      RETURN
+      END
+
+
+c _______________________________________________________________________________________________
+
+      FUNCTION HAMILTONIAN_XY_2D(X,Y,npar,val)
+c     
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 HAMILTONIAN_XY_2D, x, y
+      REAL*8 x0, y0, om, bg, alp, bet, q
+      REAL*8 xc, yc, xy_int, alpha, beta, x2, x4
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      x0    = val(1)
+      y0    = val(2)
+      om    = val(3)
+      alp   = val(4)
+      bet   = val(5)
+
+
+      yc = y-y0
+      xc = x-x0
+      
+      alpha = alp
+      beta  = bet
+      
+      xy_int = om**2/2*(xc+yc)**2
+      x2     = alpha*x**2
+      x4     = beta*x**4
+
+
+      HAMILTONIAN_XY_2D = xy_int + x2 + x4 + bg
+
+c     Save the different components
+      IF(plot) THEN
+         WRITE(40,*) x, y, HAMILTONIAN_XY_2D
+      END IF
+
+
+
+      RETURN
+      END
+
+
+
+c _______________________________________________________________________________________________
+
+      FUNCTION HAMILTONIAN_XQ_2D(X,Y,npar,val)
+c     
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 HAMILTONIAN_XQ_2D, x, y
+
+      REAL*8 x0, y0, om1, om2, bg, alp, bet, q2, amp
+      REAL*8 xc, yc, xy_int, alpha, beta
+      REAL*8 q0,q0amp, q0exp, qharm, dq, x2, x4
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      x0    = val(1)
+      y0    = val(2)
+      om1   = val(3)
+      q2    = val(4)
+      om2   = val(5)
+      alp   = val(6)
+      bet   = val(7)
+      q0amp = val(8)
+      q0exp = val(9)
+
+      yc = y-y0
+      xc = x-x0
+      
+      IF(yc.LE.0) THEN
+         q0 = q0amp*(ABS(yc))**(q0exp/2)
+      ELSE
+         q0  = 0
+      END IF
+
+      
+      dq    = yc-q0
+      alpha = alp
+      beta  = bet
+      
+      xy_int = om1**2/2*(xc+q2)**2
+      qharm  = om2**2/2*yc**2
+      x2     = alpha*xc**2*dq
+      x4     = beta*xc**4*dq**2
+
+
+      HAMILTONIAN_XQ_2D = xy_int + qharm + x2 + x4 + bg
+
+c     Save the different components
+      IF(plot) THEN
+         WRITE(40,*) x, y, HAMILTONIAN_XQ_2D
+      END IF
+
+
+
+      RETURN
+      END
+
+
 
 c _______________________________________________________________________________________________
 
@@ -371,42 +538,42 @@ c     One minimum for yc>thr and 2 (or more if p>1) for yc<thr
       INTEGER*4 npar
       REAL*8 val(npar)
       REAL*8 MOD_FABIAN_2D, x, y
-      REAL*8 amp1,amp2, x0, yc, morse, q2, f
-      REAL*8 y0, x0amp, x0exp, N0, N1, N2
-      REAL*8 q1, q2amp, q20, D, m0, bg
+      REAL*8 amp1,amp2, x0, yc,morse, q2,x2,x4
+      REAL*8 y0, q, a
+      REAL*8 r, alp, bet, bg, N0,D,m0,qamp,lda
       LOGICAL plot
       COMMON /func_plot/ plot
 
 
       y0    = val(1)
-      x0amp = val(2)
-      x0exp = val(3)
-      N0    = val(4)
-      N1    = val(5)
-      N2    = val(6)
-      q1    = val(7)
-      q2amp = val(8)
-      q20   = val(9)
-      D     = val(10)
-      m0    = val(11)
-      bg    = val(12)
-
+      q     = val(2)
+      a     = val(3)
+      r     = val(4)
+      alp   = val(5)
+      bet    = val(6)
+      bg    = val(7)
+      N0    = val(8)
+      D     = val(9)
+      m0    = val(10)
+      qamp  = val(11)
+      lda   = val(12)
 
       yc     = y-y0
-      morse  = D*(1-EXP(-(y-m0)/2))**2
+      amp1   = alp
+      amp2   = bet
+      morse  = D*(1-EXP(-(y-m0)/lda))**2
 
 
       IF(yc.LE.0) THEN
-        x0        = x0amp*ABS(yc)**(x0exp/2)
-        amp1      = N1*yc + N0
-        f         = amp1*((((x-x0)*(x+x0))**2)**q1)
+        x0 = a*(-yc)**(r/2)
+        x2 = amp1*(ABS(x)-x0)**2
+        x4 = amp2*(ABS(x)-x0)**4
+        MOD_FABIAN_2D = x2 + x4 + bg + morse
       ELSE
-        q2        = q2amp*yc**(1/2) + q20
-        amp2      = N2*yc+N0
-        f         = amp2*(((x**2)**2)**q2)
+        q2=qamp*yc+q
+        MOD_FABIAN_2D=amp1*(x**2)+amp2*(x**4) + bg + morse
       END IF
 
-      MOD_FABIAN_2D = f + morse + bg
 
       !write(*,*) q, x0, (x-x0)*(x+x0), ((((x-x0)*(x+x0))**2)**q)
       !pause
@@ -417,8 +584,7 @@ c     Save the different components
          WRITE(40,*) x, y, MOD_FABIAN_2D
       END IF
 
-
-
+      
       RETURN
       END
 
