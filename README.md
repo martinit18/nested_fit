@@ -26,6 +26,7 @@ email: m.trassinelli AT gmail.com
 ### Other contributors:
 L. Gonzalez
 
+
 ## Installation instructions ##
 **Prerequisite**:
 - Fortran compiler (gfortran by default)
@@ -44,7 +45,7 @@ NOTE for getdist function in the python library:\
 To make it work, change the file  xxx/pythonxx/site-packages/getdist/plots.py
 `matplotlib.use('Agg')` to `matplotlib.use('TkAgg')`.
 
-## Basic instructions
+## File descriptions
 
 **Input files**:
 - `nf_input.dat`: Main input file of the program with all user parameter definition.
@@ -66,6 +67,55 @@ The corresponding information gain and the Bayesian complexity are also provided
 For this purpose, the python function in `nested_res_ .py` can be used.
 Together with this file, also the files `nf_output_points.paramnames` and `nf_output_points.ranges` are created for the use of GetDist python library.
 
+**Details of the input file line by line**
+```
+4.0           # Program version
+he-histo.dat  # Name of the (first) data file
+n             # Set of files (y/n)
+1c            # Type of data: error bars or not and dimensions (1c,1e,2c,2s,2e)
+```
+- `1c`: one dimensional spectrum with counts. \
+Input: (x, n. counts)
+- `1e`: one dimensional spectrum with error bars. \
+Input:  (x, y, error y)
+- `2c`: two dimensional spectrum with counts. \
+Input: xy matrix with number of counts
+- `2s`: two dimensional spectrum with counts. \
+Input: (x, y, n. counts) TO BE IMPLEMENTED
+- `2e`: two dimensional spectrum with counts. \
+Input: (x, y, z, error z) TO BE IMPLEMENTED
+
+```
+200                      # Number of live points
+1.E-05                   # Evidence final accuracy
+RANDOM_WALK              # Type of search of live points
+0.1	20	100	10   # Param. of the search algo.(2), max n. tries, max of max tries
+```
+For the moment only a random walk (and some additional features) is implemented. The first two parameters of the above line are specific to the search algorithm.
+
+
+```
+y	f	0.5	0.2     # cluster analysis or not (y/n), method (f/g), distance, bandwidth
+```
+
+For the moment only the mean shift algorithm is implemented. The two parameters are specific to the method
+For the second option:
+- `f`: flat kernel (par. 1: distance)
+- `g`: gaussian kernel (par. 1: distance, par. 2: bandwidth)
+
+```
+1	100000			  # Number of runs and maximum of steps
+GAUSS_BG 	  		  # Name of the function
+L               		 # Additional data: left/right (l/r)
+500     20      		 # Additional data:  npoint, nwidth for convolution
+1   1024  1 1024   	  # xmin, xmax, ymin, ymax
+4               		 # number of parameters
+# npar  name    value   step    min     max     fixed
+1	'bg'	0.11	-1	0.	0.5	0
+2	'x0'	454.6	-1	400	600	0
+3	'amp'	296	-1	20	1000	0
+4	'sigma'	20.0	-1	0	100	0
+```
 
 Additional information can be found in the reference articles.
 

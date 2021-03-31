@@ -1,5 +1,5 @@
 PROGRAM NESTED_FIT
-  ! Time-stamp: <Last changed by martino on Tuesday 23 March 2021 at CET 13:58:34>
+  ! Time-stamp: <Last changed by martino on Monday 29 March 2021 at CEST 17:43:13>
   !
   ! Please read README and LICENSE files for more inforamtion
   !
@@ -170,7 +170,7 @@ PROGRAM NESTED_FIT
   READ(77,*) data_type, string
   READ(77,*) nlive, string
   READ(77,*) evaccuracy, string
-  READ(77,*) search_type, string
+  READ(77,*) search_method, string
   READ(77,*) search_par1, search_par2, maxntries, string
   READ(77,*) cluster_yn, cluster_method, distance_limit, bandwidth, string
   READ(77,*) ntry, maxstep_try, string
@@ -233,7 +233,7 @@ PROGRAM NESTED_FIT
   ENDIF
 
   ! Adapt serach parameters to the search algorithm
-  IF (search_type.EQ.'RANDOM_WALK') THEN
+  IF (search_method.EQ.'RANDOM_WALK') THEN
      sdfraction = search_par1
      njump      = INT(search_par2)
   END IF
@@ -246,6 +246,15 @@ PROGRAM NESTED_FIT
   WRITE(*,*) 'Parameter file read'
   WRITE(*,*) 'Filenames = ', filename(1:nset)
   WRITE(*,*) 'Funcname = ', funcname
+
+  ! Not implemented combination of inputs
+  IF (data_type(1:1).EQ.'2'.AND.set_yn.EQ.'y') THEN
+     WRITE(*,*)
+     WRITE(*,*) 'ERROR'
+     WRITE(*,*) 'Set of 2D files not yet implemented. Change your input file.'
+     STOP
+  END IF
+
 
 
   ! Initialize likelihood function
@@ -541,9 +550,9 @@ PROGRAM NESTED_FIT
   WRITE(22,*) 'N._of_trials:                          ', ntry
   WRITE(22,*) 'N._of_total_iteration:                 ', nall
   WRITE(22,*) 'N._of_used_livepoints:                 ', nlive
-  WRITE(22,*) 'Final evidence (log):                  ', evsum_final
-  WRITE(22,*) 'Evidence estimated uncertainty (log):  ', evsum_err_est
-  WRITE(22,*) 'Evidence standard deviation (log):     ', evsum_err
+  WRITE(22,*) 'Final_evidence_(log):                  ', evsum_final
+  WRITE(22,*) 'Evidence_estimated_uncertainty_(log):  ', evsum_err_est
+  WRITE(22,*) 'Evidence_standard_deviation_(log):     ', evsum_err
   WRITE(22,*) '------------------------------------------------------------------------------------------------------------------'
   WRITE(22,*) 'Max_likelihood_(log):', live_like_max
   WRITE(22,*) 'Max_parameter_set: '

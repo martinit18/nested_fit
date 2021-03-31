@@ -1,5 +1,5 @@
 MODULE MOD_PARAMETERS
-  ! Automatic Time-stamp: <Last changed by martino on Tuesday 23 March 2021 at CET 13:51:50>
+  ! Automatic Time-stamp: <Last changed by martino on Monday 29 March 2021 at CEST 16:55:25>
   ! Module for input parameters definitions
 
   IMPLICIT NONE
@@ -8,11 +8,11 @@ MODULE MOD_PARAMETERS
   INTEGER(4), PARAMETER :: maxdata=10000, nsetmax=10
   ! Input variables
   CHARACTER, DIMENSION(nsetmax) :: filename*64
-  CHARACTER :: set_yn*1= 'n', data_type*2= '1c'
+  CHARACTER :: set_yn*1= 'n', data_type*3= '1c'
   INTEGER(4) :: nset=1
   INTEGER(4) :: nlive=0
   REAL(8) :: evaccuracy=0., sdfraction=0.
-  CHARACTER :: search_type*64
+  CHARACTER :: search_method*64
   INTEGER(4) :: njump=20, maxtries=1000, maxntries=10
   CHARACTER :: cluster_yn*1= 'n'
   CHARACTER :: cluster_method*1= 'f'

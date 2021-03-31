@@ -1,4 +1,4 @@
-#  Automatic Time-stamp: <Last changed by martino on Tuesday 23 March 2021 at CET 13:45:46>
+#  Automatic Time-stamp: <Last changed by martino on Sunday 28 March 2021 at CEST 19:20:02>
 NAME    = nested_fit4.0alpha.exe
 .SUFFIXES : .f90 .f .o .c .mod
 CFLAGS  =
@@ -36,7 +36,9 @@ FFILES  =  USERFCN.f USERFCN_SET.f init_interpolation.f \
 F90FILES = Mod_parameters.f90 Mod_likelihood.f90 Mod_timestamp.f90 \
 	Mod_cluster_analysis.f90 Mod_search_new_point.f90 \
 	nested_fit.f90 nested_sampling.f90 \
+	USERFCN_2D.f90 \
 	dlog_fac.f90 sortn_slatec.f90 meanvar.f90 randn.f90 shirley_fitpack.f90
+
 
 # for gfortran
 OPT = -O2 -static
