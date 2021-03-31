@@ -10,7 +10,7 @@ c################################### USERFCN_2D DEFINITION #####################
       REAL*8 USERFCN_2D, GAUSS_2D, GAUSS_BG_2D
       REAL*8 SOMBRERO_2D, SOMBRERO_BG_2D, LANDAU_2D, POLY_EVENX_2D
       REAL*8 FABIAN_2D, MOD_FABIAN_2D, POLY_2D, POLY_MORE_2D
-      REAL*8 HAMILTONIAN_XY_2D, HAMILTONIAN_XQ_2D
+      REAL*8 HAMILTONIAN_XY_2D, HAMILTONIAN_XQ_2D, R_POT_2D
       REAL*8 x, y
       CHARACTER*64 funcname
 
@@ -39,6 +39,8 @@ c     Choose your model (see below for definition)
          USERFCN_2D = HAMILTONIAN_XY_2D(x,y,npar,val)
       ELSE IF(funcname.EQ.'HAMILTONIAN_XQ_2D') THEN
          USERFCN_2D = HAMILTONIAN_XQ_2D(x,y,npar,val)
+      ELSE IF(funcname.EQ.'R_POT_2D') THEN
+         USERFCN_2D = R_POT_2D(x,y,npar,val)
 
 
 
@@ -264,9 +266,9 @@ c
       REAL*8 val(npar)
       REAL*8 POLY_MORE_2D, x, y
       REAL*8 x0, y0
-      REAL*8 xc, yc, t0, t1, t2, t3, t4
-      REAL*8 c20, c11, c10, c02, c01, c00
-      REAL*8 c22, c12, c40, c04
+      REAL*8 xc, yc, t0, t1, t2, t3, t4, t5
+      REAL*8 c20, c11, c10, c02, c01, c00, c41
+      REAL*8 c22, c12, c40, c04, c31, c32, c23
 
       LOGICAL plot
       COMMON /func_plot/ plot
@@ -284,6 +286,10 @@ c
       c22   = val(10)
       c40   = val(11)
       c04   = val(12)
+      c31   = val(13)
+      c41   = val(14)
+      c32   = val(15)
+      c23   = val(16)
 
       yc = y-y0
       xc = x-x0
@@ -291,11 +297,12 @@ c
       t1 = c10*xc+c01*yc
       t2 = c20*xc**2+c11*xc*yc+c02*yc**2
       t3 = c12*xc*yc**2
-      t4 = c22*xc**2*yc**2 + c40*xc**4 + c04*yc**4
+      t4 = c22*xc**2*yc**2 + c40*xc**4 + c04*yc**4 + c31*xc**3*yc
+      t5 = c41*xc**4*yc + c32*xc**3*yc**2 + c23*xc**2*yc**3
 
 
 
-      POLY_MORE_2D =t0 + t1 + t2 + t4
+      POLY_MORE_2D =t0 + t1 + t2 + t4 +t5
 
 c     Save the different components
       IF(plot) THEN
@@ -538,9 +545,9 @@ c     One minimum for yc>thr and 2 (or more if p>1) for yc<thr
       INTEGER*4 npar
       REAL*8 val(npar)
       REAL*8 MOD_FABIAN_2D, x, y
-      REAL*8 amp1,amp2, x0, yc,morse, q2,x2,x4
-      REAL*8 y0, q, a
-      REAL*8 r, alp, bet, bg, N0,D,m0,qamp,lda
+      REAL*8 amp1,amp2, x0, yc,morse, q2,x2,x4, hx, hy
+      REAL*8 y0, q, a, stuf, exp1, exp2, exp10, exp20
+      REAL*8 r, alp, bet, bg, s,D,m0,qamp,lda,omx, omy
       LOGICAL plot
       COMMON /func_plot/ plot
 
@@ -550,28 +557,37 @@ c     One minimum for yc>thr and 2 (or more if p>1) for yc<thr
       a     = val(3)
       r     = val(4)
       alp   = val(5)
-      bet    = val(6)
+      bet   = val(6)
       bg    = val(7)
-      N0    = val(8)
+      s     = val(8)
       D     = val(9)
       m0    = val(10)
       qamp  = val(11)
       lda   = val(12)
-
+      omx   = val(13)
+      omy   = val(14)
+      exp1  = val(15)
+      exp2  = val(16)
+      exp10 = val(17)
+      exp20 = val(18)
+      
+      
       yc     = y-y0
-      amp1   = alp
-      amp2   = bet
+      amp2   = bet*ABS(yc)**exp2
       morse  = D*(1-EXP(-(y-m0)/lda))**2
+      hx     = 1/2*omx**2*x**2
+      hy     = 1/2*omy**2*yc**2
+      amp1   = alp*yc**exp1
 
 
       IF(yc.LE.0) THEN
-        x0 = a*(-yc)**(r/2)
-        x2 = amp1*(ABS(x)-x0)**2
-        x4 = amp2*(ABS(x)-x0)**4
-        MOD_FABIAN_2D = x2 + x4 + bg + morse
+        x0 = a*(-yc)**(r/2)      
+        x2 = amp1*ABS((ABS(x)-x0))**exp10
+        x4 = amp2*ABS((ABS(x)-x0))**exp20
+        MOD_FABIAN_2D = x2 + x4 + hx+ hy + bg + morse
       ELSE
-        q2=qamp*yc+q
-        MOD_FABIAN_2D=amp1*(x**2)+amp2*(x**4) + bg + morse
+        stuf = hx+hy+bg+morse
+        MOD_FABIAN_2D=amp1*((ABS(x))**exp10)+amp2*((ABS(x))**exp20)+stuf
       END IF
 
 
@@ -589,6 +605,40 @@ c     Save the different components
       END
 
 
+c _______________________________________________________________________________________________
+
+      FUNCTION R_POT_2D(X,Y,npar,val)
+      
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 R_POT_2D, x, y
+      REAL*8 potential, r, D, lda, m0, bg
+      REAL*8 harm, om
+      LOGICAL plot
+      COMMON /func_plot/ plot
+      
+      D   = val(1)
+      lda = val(2)
+      m0  = val(3)
+      bg  = val(4)
+      om  = val(5) 
+      
+      r  = SQRT(x**2+y**2)
+      potential= D*(1-EXP(-(r-m0)/lda))**2
+      harm = 0.5*om*(r**2)
+      
+      
+      R_POT_2D = potential + bg + harm
+      
+      
+      
+      IF(plot) THEN
+         WRITE(40,*) x, y, R_POT_2D
+      END IF      
+      
+      RETURN
+      END
 
 
 
