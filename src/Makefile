@@ -1,4 +1,4 @@
-#  Automatic Time-stamp: <Last changed by martino on Friday 02 April 2021 at CEST 19:19:06>
+#  Automatic Time-stamp: <Last changed by martino on Saturday 03 April 2021 at CEST 18:02:17>
 NAME    = nested_fit4.0alpha.exe
 .SUFFIXES : .f90 .f .o .c .mod
 CFLAGS  =
@@ -6,9 +6,9 @@ CFLAGS  =
 #### Uncomment next line to run in parallel in LINUX
 #FFLAGS  = -fopenmp
 #### Uncomment next line to optimize in MAC
-FFLAGS   = -framework accelerate
+#FFLAGS   = -framework accelerate
 #### Uncomment next line to run in parallel and optimize in MAC
-#FFLAGS   = -framework accelerate -fopenmp
+FFLAGS   = -framework accelerate -fopenmp
 ###############################################################
 ### ATTENTION!!!!
 ### If you do not want to run in parallel,
@@ -41,9 +41,9 @@ F90FILES = Mod_parameters.f90 Mod_likelihood.f90 Mod_timestamp.f90 \
 
 
 # for gfortran
-OPT = -O2 -static
+#OPT = -O2 -static
 # For Intel fortran
-#OPT = -O2 -no-wrap-margin
+OPT = -O2 -no-wrap-margin
 
 # other options
 #OPT = -g  -C -static
@@ -59,8 +59,8 @@ OPT = -O2 -static
 #LDFLAGS = -framework accelerate -fopenmp
 
 # Rules...
-FC  = gfortran
-#FC  = ifort
+#FC  = gfortran
+FC  = ifort
 CC  = gcc
 FC90= $(FC)
 SRCFILES =  $(FFILES)

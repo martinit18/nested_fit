@@ -1,5 +1,5 @@
 MODULE MOD_LIKELIHOOD
-  ! Automatic Time-stamp: <Last changed by martino on Friday 02 April 2021 at CEST 18:17:45>
+  ! Automatic Time-stamp: <Last changed by martino on Saturday 03 April 2021 at CEST 19:12:21>
   ! Module of the likelihood function for data analysis
 
 
@@ -24,6 +24,7 @@ MODULE MOD_LIKELIHOOD
   ! Data variable for 2D images
   INTEGER(4) :: nx=0, ny=0
   INTEGER(4), ALLOCATABLE, DIMENSION(:,:) :: adata
+  INTEGER(1), ALLOCATABLE, DIMENSION(:,:) :: adata_mask
   ! Likelihood variables
   REAL(8) :: const_ll = 0.
 
@@ -235,7 +236,7 @@ CONTAINS
     OPEN(10,file=namefile,status='old')
     READ(10,*) string
     READ(10,*) nx, ny
-    ALLOCATE(adata(nx,ny))
+    ALLOCATE(adata(nx,ny),adata_mask(nx,ny))
     ALLOCATE(adata_tmp(ny,nx))
     READ(10,*) adata_tmp
     CLOSE(10)
@@ -266,7 +267,6 @@ CONTAINS
 
     
     adata = INT(TRANSPOSE(adata_tmp))
-
     
     DEALLOCATE(adata_tmp)
 
@@ -274,14 +274,18 @@ CONTAINS
     !datan = COUNT(ieee_is_finite(adata)) 
 
     ! Calculation of the constant part of the likelihood with Poisson distribution
+    adata_mask = 0
     DO i=1,nx
        DO j=1,ny
           IF (adata(i,j).GT.0) THEN
+             adata_mask(i,j) = 1
              datan = datan + 1
              const_ll = const_ll - DLOG_FAC(adata(i,j))
           ELSE IF(adata(i,j).EQ.0) THEN
+             adata_mask(i,j) = 1
              datan = datan + 1
           END IF
+          ! And the rest are bad pixels
        END DO
     END DO
   
@@ -345,6 +349,60 @@ CONTAINS
 
 
   END FUNCTION LOGLIKELIHOOD
+
+  !#####################################################################################################################
+
+  REAL(8) FUNCTION LOGLIKELIHOOD_WITH_TEST(par)
+    ! Main likelihood function with a preliminary test for Poisson
+    ! This allows for avoid this test in the main loop calculation to speed the parallel computation
+
+    REAL(8), DIMENSION(npar), INTENT(IN) :: par
+    !
+    REAL(8) :: enc
+    INTEGER(4) :: i, j, k
+    REAL(8) :: USERFCN, USERFCN_SET, USERFCN_2D, xx, yy
+
+
+    IF (data_type(1:1).EQ.'1') THEN
+       ! Check if the choosen function assumes zero or negative values
+       DO k=1,nset
+          DO i=1, ndata_set(k)
+             ! Poisson distribution calculation --------------------------------------------------
+             IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
+                enc = USERFCN(x(i,k),npar,par,funcname)
+             ELSE
+                enc = USERFCN_SET(x(i,k),npar,par,funcname,k)
+             END IF
+             IF (enc.LE.0) THEN
+                WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
+                WRITE(*,*) 'number of counts different from 0, model prediction equal 0 or less'
+                WRITE(*,*) 'Function value = ', enc, ' n. counts = ', nc(i,k)
+                STOP
+             END IF
+          END DO
+       END DO
+       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_1D(par)
+    ELSE IF (data_type(1:1).EQ.'2') THEN
+       ! Check if the choosen function assumes zero or negative values
+       DO i=1, nx
+          DO j=1, ny
+             xx = i + 0.5
+             yy = j + 0.5
+             enc = USERFCN_2D(xx,yy,npar,par,funcname)
+             IF (enc.LE.0) THEN
+                WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
+                WRITE(*,*) 'number of counts different from 0, model prediction equal 0 or less'
+                WRITE(*,*) 'Function value = ', enc, ' n. counts = ', adata(i,j)
+                STOP
+             END IF
+          END DO
+       END DO       
+       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_2D(par)
+    END IF
+
+
+
+  END FUNCTION LOGLIKELIHOOD_WITH_TEST
 
   !#####################################################################################################################
 
@@ -444,37 +502,21 @@ CONTAINS
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
     !
     REAL(8) :: USERFCN_2D
-    REAL(8) :: ll_tmp, enc, x, y
+    REAL(8) :: ll_tmp, enc, xx, yy
     INTEGER(4) :: i=0, j=0
     
-
-
-    
-    !$OMP parallel private(i,j,x,y,ll_tmp)
     
     ! Calculate LIKELIHOOD
     ll_tmp = 0.
 
-    !$OMP PARALLEL DO PRIVATE(i,j,x,y,enc) REDUCTION(+:ll_tmp)
+    !$OMP PARALLEL DO PRIVATE(i,j,xx,yy,enc) REDUCTION(+:ll_tmp)
     DO i=1, nx
        DO j=1, ny
           ! Poisson distribution calculation --------------------------------------------------
-          x = i - 0.5 ! Real coordinates are given by the bins, the center of the bin.
-          y = j - 0.5 
-          enc = USERFCN_2D(x,y,npar,par,funcname)
-          IF (adata(i,j).LT.0) THEN
-             CYCLE
-          ELSE IF (adata(i,j).EQ.0.AND.enc.GT.0.) THEN
-             ll_tmp = ll_tmp - enc
-          ELSE IF(adata(i,j).GT.0.AND.enc.GT.0.) THEN
-             ll_tmp = ll_tmp + adata(i,j)*DLOG(enc) - enc
-          ELSE IF(adata(i,j).GT.0.AND.enc.LE.0.) THEN
-             WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
-             WRITE(*,*) 'number of counts different from 0, model prediction equal 0 or less'
-             WRITE(*,*) 'Function value = ', enc, ' n. counts = ', adata(i,j)
-             STOP
-          END IF
-          
+          xx = i - 0.5 ! Real coordinates are given by the bins, the center of the bin.
+          yy = j - 0.5 
+          enc = USERFCN_2D(xx,yy,npar,par,funcname)
+          ll_tmp = ll_tmp + adata_mask(i,j)*(adata(i,j)*DLOG(enc) - enc)
        END DO
     END DO
     !$OMP END PARALLEL DO
@@ -482,8 +524,6 @@ CONTAINS
     ! Sum all together
     LOGLIKELIHOOD_2D = ll_tmp + const_ll
 
-    
-    !$OMP end parallel
 
   END FUNCTION LOGLIKELIHOOD_2D
 
