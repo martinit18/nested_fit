@@ -5,10 +5,8 @@ from numpy import log, histogram, zeros, savetxt, shape
 import sys
 import os
 import matplotlib
-#matplotlib.use('TkAgg')
+# matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
-
-
 
 current_version=4.0 # and beyond
 
@@ -540,36 +538,102 @@ class Analysis(object):
         afit  = genfromtxt(self.path+'nf_output_fit_'+ typeof + '_2D.dat',skip_header=1)
         ares  = genfromtxt(self.path+'nf_output_fitres_'+ typeof + '_2D.dat',skip_header=1)
 
+        if (not flat) and (size(adata) > 10000):
+            print('Too many points to show, switching to the flat mode plot')
+            flat = True
 
         # Plot the results
-        plt.figure()
-        plt.clf()
-        plt.title('Data')
-        plt.xlabel('X')
-        plt.ylabel('Y')
+        fig_d = plt.figure()
         if flat:
             plt.pcolor(adata.T, cmap='jet')
-            plt.colorbar()
-        # Plot the fit
-        plt.figure()
-        plt.clf()
-        plt.title('Fit')
+            cbar = plt.colorbar()
+            cbar.set_label('Counts')
+        else:
+            # Reshape data
+            x = np.arange(shape(adata)[0])
+            y = np.arange(shape(adata)[1])
+            zzz=adata.T.flatten()
+            xx, yy = np.meshgrid(x, y)
+            xxx=xx.flatten()
+            yyy=yy.flatten()
+            bottom=np.zeros_like(zzz)
+            # Substitute NaN to zero
+            zzz=np.nan_to_num(zzz)
+            width = depth = 1
+            # Plot
+            ax_d = fig_d.add_subplot(111, projection='3d')
+            cmap = plt.cm.get_cmap('jet') # Get desired colormap - you can change this!
+            max_height = np.max(zzz)   # get range of colorbars so we can normalize
+            min_height = 0.
+            # scale each z to [0,1], and get their rgb values
+            rgba = [cmap((k-min_height)/max_height) for k in zzz]
+            ax_d.bar3d(xxx, yyy, bottom, width, depth, zzz,color=rgba, shade=True)
+            ax_d.set_zlabel('Counts')
         plt.xlabel('X')
         plt.ylabel('Y')
+        plt.title('Data')
+
+        # Plot the fit
+        fig_f = plt.figure()
         if flat:
             plt.pcolor(afit.T, cmap='jet')
-            plt.colorbar()
-        # Plot the residuals
-        plt.figure()
-        plt.clf()
-        plt.title('Residuals')
+            cbar = plt.colorbar()
+            cbar.set_label('Counts')
+        else:
+            # Reshape data
+            x = np.arange(shape(afit)[0])
+            y = np.arange(shape(afit)[1])
+            zzz=afit.T.flatten()
+            xx, yy = np.meshgrid(x, y)
+            xxx=xx.flatten()
+            yyy=yy.flatten()
+            bottom=np.zeros_like(zzz)
+            # Substitute NaN to zero
+            zzz=np.nan_to_num(zzz)
+            width = depth = 1
+            # Plot
+            ax_f = fig_f.add_subplot(111, projection='3d')
+            cmap = plt.cm.get_cmap('jet') # Get desired colormap - you can change this!
+            max_height = np.max(zzz)   # get range of colorbars so we can normalize
+            min_height = 0.
+            # scale each z to [0,1], and get their rgb values
+            rgba = [cmap((k-min_height)/max_height) for k in zzz]
+            ax_f.bar3d(xxx, yyy, bottom, width, depth, zzz,color=rgba, shade=True)
+            ax_f.set_zlabel('Counts')
         plt.xlabel('X')
         plt.ylabel('Y')
+        plt.title('Fit')
+
+        # Plot the residuals
+        fig_r = plt.figure()
         if flat:
             plt.pcolor(ares.T, cmap='jet')
-            plt.colorbar()
-
-
+            cbar = plt.colorbar()
+            cbar.set_label('Counts')
+        else:
+            # Reshape data
+            x = np.arange(shape(ares)[0])
+            y = np.arange(shape(ares)[1])
+            zzz=ares.T.flatten()
+            xx, yy = np.meshgrid(x, y)
+            xxx=xx.flatten()
+            yyy=yy.flatten()
+            bottom=np.zeros_like(zzz)
+            # Substitute NaN to zero
+            zzz=np.nan_to_num(zzz)
+            width = depth = 1
+            # Plot
+            ax_r = fig_r.add_subplot(111, projection='3d')
+            #cmap = plt.cm.get_cmap('jet') # Get desired colormap - you can change this!
+            #max_height = np.max(zzz)   # get range of colorbars so we can normalize
+            #min_height = 0.
+            # scale each z to [0,1], and get their rgb values
+            #rgba = [cmap((k-min_height)/max_height) for k in zzz]
+            ax_r.bar3d(xxx, yyy, bottom, width, depth, zzz, shade=True)
+            ax_r.set_zlabel('Counts')
+        plt.xlabel('X')
+        plt.ylabel('Y')
+        plt.title('Residuals')
 
         plt.show()
 

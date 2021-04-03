@@ -1,5 +1,5 @@
 MODULE MOD_LIKELIHOOD
-  ! Automatic Time-stamp: <Last changed by martino on Wednesday 31 March 2021 at CEST 00:13:00>
+  ! Automatic Time-stamp: <Last changed by martino on Friday 02 April 2021 at CEST 18:17:45>
   ! Module of the likelihood function for data analysis
 
 
@@ -23,7 +23,7 @@ MODULE MOD_LIKELIHOOD
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: x, nc, nc_err
   ! Data variable for 2D images
   INTEGER(4) :: nx=0, ny=0
-  REAL(8), ALLOCATABLE, DIMENSION(:,:) :: adata
+  INTEGER(4), ALLOCATABLE, DIMENSION(:,:) :: adata
   ! Likelihood variables
   REAL(8) :: const_ll = 0.
 
@@ -108,6 +108,9 @@ CONTAINS
        WRITE(*,*) 'Data type ', data_type, ' not available. Please change your input file'
        STOP
     END IF
+
+    
+    WRITE(*,*) 'Final constant in evidence calc. = ', const_ll
 
 
   END SUBROUTINE READ_DATA
@@ -220,36 +223,52 @@ CONTAINS
     REAL(8), INTENT(IN) :: minx, maxx, miny, maxy
     INTEGER(4), INTENT(OUT) :: datan
     !
-    REAL(8) :: DLOG_FAC, nan
+    REAL(8) :: DLOG_FAC
     INTEGER(4) :: i, j
     REAL(8), ALLOCATABLE, DIMENSION(:,:) :: adata_tmp
+    CHARACTER :: string*128
 
     ! Initialize
     datan = 0
-    nan = IEEE_VALUE(nan, IEEE_QUIET_NAN)
-
+    
     ! Open file and read
     OPEN(10,file=namefile,status='old')
+    READ(10,*) string
     READ(10,*) nx, ny
     ALLOCATE(adata(nx,ny))
     ALLOCATE(adata_tmp(ny,nx))
     READ(10,*) adata_tmp
     CLOSE(10)
-    adata = TRANSPOSE(adata_tmp)
-    DEALLOCATE(adata_tmp)
 
+    ! Check if counts are negative
+    IF (ANY(adata_tmp.LT.0.AND.IEEE_IS_FINITE(adata_tmp))) THEN
+       WRITE(*,*) 'Negative counts are not accepted. Change input file'
+       STOP
+    END IF
     
-    !write(*,*) adata(1,:)
-    !write(*,*) adata(2,:)
-    !write(*,*) adata(3,:)
+    !write(*,*) adata_tmp(:,1)
+    !write(*,*) adata_tmp(:,2)
+    !write(*,*) adata_tmp(:,3)
     !pause
-
-    ! Substitute infinite values with NaNs
-    WHERE (.NOT.ieee_is_finite(adata))
-       adata = nan
+    
+    ! Substitute infinites and nan with negative counts
+    WHERE (.NOT.IEEE_IS_FINITE(adata_tmp))
+       adata_tmp = -1
+    END WHERE
+    WHERE (IEEE_IS_NAN(adata_tmp))
+       adata_tmp = -1
     END WHERE
 
+    !write(*,*) adata_tmp(:,1)
+    !write(*,*) adata_tmp(:,2)
+    !write(*,*) adata_tmp(:,3)
+    !pause
 
+    
+    adata = INT(TRANSPOSE(adata_tmp))
+
+    
+    DEALLOCATE(adata_tmp)
 
     ! Count the available data
     !datan = COUNT(ieee_is_finite(adata)) 
@@ -257,9 +276,11 @@ CONTAINS
     ! Calculation of the constant part of the likelihood with Poisson distribution
     DO i=1,nx
        DO j=1,ny
-          IF (.NOT.isnan(adata(i,j))) THEN
+          IF (adata(i,j).GT.0) THEN
              datan = datan + 1
-             const_ll = const_ll - DLOG_FAC(INT(adata(i,j)))
+             const_ll = const_ll - DLOG_FAC(adata(i,j))
+          ELSE IF(adata(i,j).EQ.0) THEN
+             datan = datan + 1
           END IF
        END DO
     END DO
@@ -362,7 +383,7 @@ CONTAINS
              END IF
           END DO
           !$OMP END PARALLEL DO
-       ELSE IF (data_type.EQ.'1c') THEN
+       ELSE IF (data_type.EQ.'1e') THEN
           !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
           DO i=1, ndata_set(k)
              ! Normal (Gaussian) distribution calculation --------------------------------------
@@ -387,6 +408,9 @@ CONTAINS
                 ELSE IF(nc(i,k).GT.0..AND.enc.LE.0.) THEN
                    WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
                    WRITE(*,*) 'number of counts different from 0, model prediction equal 0 or less'
+                   STOP
+                ELSE IF(nc(i,k).LT.0) THEN
+                   WRITE(*,*) 'LIKELIHOOD ERROR: Negative counts are not accepted. Change input file'
                    STOP
                 END IF
              END DO
@@ -424,23 +448,27 @@ CONTAINS
     INTEGER(4) :: i=0, j=0
     
 
+
+    
+    !$OMP parallel private(i,j,x,y,ll_tmp)
+    
     ! Calculate LIKELIHOOD
     ll_tmp = 0.
 
-    !$OMP PARALLEL DO PRIVATE(enc) REDUCTION(+:ll_tmp)
+    !$OMP PARALLEL DO PRIVATE(i,j,x,y,enc) REDUCTION(+:ll_tmp)
     DO i=1, nx
        DO j=1, ny
           ! Poisson distribution calculation --------------------------------------------------
           x = i - 0.5 ! Real coordinates are given by the bins, the center of the bin.
           y = j - 0.5 
           enc = USERFCN_2D(x,y,npar,par,funcname)
-          IF (isnan(adata(i,j))) THEN
+          IF (adata(i,j).LT.0) THEN
              CYCLE
-          ELSE IF (adata(i,j).EQ.0..AND.enc.GT.0.) THEN
+          ELSE IF (adata(i,j).EQ.0.AND.enc.GT.0.) THEN
              ll_tmp = ll_tmp - enc
-          ELSE IF(adata(i,j).GT.0..AND.enc.GT.0.) THEN
+          ELSE IF(adata(i,j).GT.0.AND.enc.GT.0.) THEN
              ll_tmp = ll_tmp + adata(i,j)*DLOG(enc) - enc
-          ELSE IF(adata(i,j).GT.0..AND.enc.LE.0.) THEN
+          ELSE IF(adata(i,j).GT.0.AND.enc.LE.0.) THEN
              WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
              WRITE(*,*) 'number of counts different from 0, model prediction equal 0 or less'
              WRITE(*,*) 'Function value = ', enc, ' n. counts = ', adata(i,j)
@@ -454,7 +482,8 @@ CONTAINS
     ! Sum all together
     LOGLIKELIHOOD_2D = ll_tmp + const_ll
 
-    !write(*,*)  LOGLIKELIHOOD_2D
+    
+    !$OMP end parallel
 
   END FUNCTION LOGLIKELIHOOD_2D
 
@@ -489,7 +518,7 @@ CONTAINS
     REAL(8) :: minx=0., maxx=0., xfit=0., dx=0., enc = 0.
     INTEGER(4) :: i=0, k=0
     ! Stuff to save separate components
-    LOGICAL :: plot = .false.
+    LOGICAL :: plot = .FALSE.
     REAL(8) :: yfit
     CHARACTER :: out_filename*64
 
@@ -509,7 +538,7 @@ CONTAINS
           IF (data_type.EQ.'1e') THEN
              WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)
           ELSE IF (data_type.EQ.'1c') THEN
-             WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', sqrt(nc(i,k))
+             WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', SQRT(nc(i,k))
           END IF
        END DO
        CLOSE(20)
@@ -521,7 +550,7 @@ CONTAINS
           IF (data_type.EQ.'1e') THEN
              WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)
           ELSE IF (data_type.EQ.'1c') THEN
-             WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', sqrt(nc(i,k))
+             WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', SQRT(nc(i,k))
           END IF
        END DO
        CLOSE(20)
@@ -533,7 +562,7 @@ CONTAINS
           IF (data_type.EQ.'1e') THEN
              WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)
           ELSE IF (data_type.EQ.'1c') THEN
-             WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', sqrt(nc(i,k))
+             WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', SQRT(nc(i,k))
           END IF
        END DO
        CLOSE(20)
@@ -550,7 +579,7 @@ CONTAINS
              IF (data_type.EQ.'1e') THEN
                 WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ',  nc_err(i,k)
              ELSE IF (data_type.EQ.'1c') THEN
-                WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', sqrt(nc(i,k))
+                WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', SQRT(nc(i,k))
              END IF
           END DO
           CLOSE(30)
@@ -563,7 +592,7 @@ CONTAINS
              IF (data_type.EQ.'1e') THEN
                 WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ',  nc_err(i,k)
              ELSE IF (data_type.EQ.'1c') THEN
-                WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', sqrt(nc(i,k))
+                WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', SQRT(nc(i,k))
              END IF
           END DO
           CLOSE(30)
@@ -576,7 +605,7 @@ CONTAINS
              IF (data_type.EQ.'1e') THEN
                 WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ',  nc_err(i,k)
              ELSE IF (data_type.EQ.'1c') THEN
-                WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', sqrt(nc(i,k))
+                WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', SQRT(nc(i,k))
              END IF
           END DO
           CLOSE(30)
@@ -589,7 +618,7 @@ CONTAINS
     IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
        maxx = xmax(1)
        minx = xmin(1)
-       plot = .true.
+       plot = .TRUE.
        xfit = 0.
        dx=(maxx-minx)/(maxfit-1)
 
@@ -623,7 +652,7 @@ CONTAINS
        DO k=1, nset
           maxx = xmax(k)
           minx = xmin(k)
-          plot = .true.
+          plot = .TRUE.
           xfit = 0.
           dx=(maxx-minx)/(maxfit-1)
 
@@ -683,7 +712,7 @@ CONTAINS
     REAL(8) :: minx=0., maxx=0., enc = 0.
     INTEGER(4) :: i=0, j=0, k=0
     ! Stuff to save separate components
-    LOGICAL :: plot = .false.
+    LOGICAL :: plot = .FALSE.
     CHARACTER :: out_filename*64
     REAL(8), DIMENSION(nx,ny) :: aenc, ares
     REAL(8) :: x, y, nan
@@ -709,7 +738,7 @@ CONTAINS
        ! Write function and residuals -------------------------------------------------------------
        DO i=1, nx
           DO j=1, ny
-             IF (.NOT.isnan(adata(i,j))) THEN
+             IF (adata(i,j).GE.0) THEN
                 ! Poisson distribution calculation --------------------------------------------------
                 x = i - 0.5 ! Real coordinates are given by the bins, the center of the bin.
                 y = j - 0.5 
@@ -725,6 +754,7 @@ CONTAINS
        OPEN (UNIT=20, FILE='nf_output_fit_max_2D.dat', STATUS='unknown')
        OPEN (UNIT=30, FILE='nf_output_fitres_max_2D.dat', STATUS='unknown')
        WRITE(20,*)'# matrix dimensions: ', nx, ny
+       WRITE(30,*)'# matrix dimensions: ', nx, ny
        IF (data_type.EQ.'2c') THEN
           DO i=1,nx
              WRITE(20,*) aenc(i,:)

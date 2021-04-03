@@ -1,4 +1,4 @@
-#  Automatic Time-stamp: <Last changed by martino on Sunday 28 March 2021 at CEST 19:20:02>
+#  Automatic Time-stamp: <Last changed by martino on Friday 02 April 2021 at CEST 19:19:06>
 NAME    = nested_fit4.0alpha.exe
 .SUFFIXES : .f90 .f .o .c .mod
 CFLAGS  =
@@ -6,7 +6,7 @@ CFLAGS  =
 #### Uncomment next line to run in parallel in LINUX
 #FFLAGS  = -fopenmp
 #### Uncomment next line to optimize in MAC
-#FFLAGS   = -framework accelerate
+FFLAGS   = -framework accelerate
 #### Uncomment next line to run in parallel and optimize in MAC
 #FFLAGS   = -framework accelerate -fopenmp
 ###############################################################

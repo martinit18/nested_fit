@@ -1,5 +1,5 @@
 PROGRAM NESTED_FIT
-  ! Time-stamp: <Last changed by martino on Monday 29 March 2021 at CEST 17:43:13>
+  ! Time-stamp: <Last changed by martino on Friday 02 April 2021 at CEST 19:37:59>
   !
   ! Please read README and LICENSE files for more inforamtion
   !
@@ -141,10 +141,10 @@ PROGRAM NESTED_FIT
 
   ! Calculate time elapsed !!!!!!!!!!!!!!!!!!!!
   ! Parallel real time (and number of threads)
-  IF (parallel_on) THEN
-    seconds = omp_get_wtime( )
-    nth = omp_get_max_threads()
-  END IF
+  !IF (parallel_on) THEN
+  !  seconds = omp_get_wtime( )
+  !  nth = omp_get_max_threads()
+  !END IF
   ! Absolute time
   CALL CPU_TIME(startt)
 
@@ -539,7 +539,7 @@ PROGRAM NESTED_FIT
 
   ! Calculate end time
   ! Parallel time
-  IF (parallel_on) seconds_omp = omp_get_wtime( ) - seconds
+  !IF (parallel_on) seconds_omp = omp_get_wtime( ) - seconds
   ! Normal time
   CALL CPU_TIME(stopt)
   seconds  = stopt - startt
