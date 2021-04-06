@@ -474,11 +474,11 @@ class Analysis(object):
         plt.xlabel('Channel')
         plt.ylabel('Counts')
         # Border of the graph
-        if xmin==0 and xmax==0:
+        if xmin == 0 and xmax == 0:
             plt.xlim([minx,maxx])
         else:
             plt.xlim([xmin,xmax])
-        if ymin==0 and ymax==0:
+        if ymin == 0 and ymax == 0:
             plt.ylim(miny,maxy)
         else:
             plt.ylim(ymin,ymax)
@@ -494,7 +494,7 @@ class Analysis(object):
         #plt.xlabel('Channel')
         #plt.ylabel('Counts')
         # Border of the graph
-        if xmin==0 and xmax==0:
+        if xmin == 0 and xmax == 0:
             plt.xlim([minx,maxx])
         else:
             plt.xlim([xmin,xmax])
@@ -528,15 +528,22 @@ class Analysis(object):
         from numpy import genfromtxt, size
         import matplotlib.pyplot as plt
 
+        # Read parameters from input file
+        input_data, input_comment = self.read_input(path=path)
+        xmin = input_data['xmin']
+        xmax = input_data['xmax']
+        ymin = input_data['ymin']
+        ymax = input_data['ymax']
+
 
         print(nset, typeof)
 
 
         # Read data file
-        print('nf_output_data_'+ typeof + '_2D.dat')
+        print('nf_output_data_'+typeof+'_2D.dat')
         adata = genfromtxt(self.path+'nf_output_data_2D.dat',skip_header=1)
-        afit  = genfromtxt(self.path+'nf_output_fit_'+ typeof + '_2D.dat',skip_header=1)
-        ares  = genfromtxt(self.path+'nf_output_fitres_'+ typeof + '_2D.dat',skip_header=1)
+        afit  = genfromtxt(self.path+'nf_output_fit_'+typeof+'_2D.dat',skip_header=1)
+        ares  = genfromtxt(self.path+'nf_output_fitres_'+typeof+'_2D.dat',skip_header=1)
 
         if (not flat) and (size(adata) > 10000):
             print('Too many points to show, switching to the flat mode plot')
@@ -545,20 +552,23 @@ class Analysis(object):
         # Plot the results
         fig_d = plt.figure()
         if flat:
-            plt.pcolor(adata.T, cmap='jet')
+            x = np.arange(shape(adata)[0]+1) + xmin
+            y = np.arange(shape(adata)[1]+1) + ymin
+            xx, yy = np.meshgrid(x, y)
+            plt.pcolor(xx.T, yy.T, adata, cmap='jet')
             cbar = plt.colorbar()
             cbar.set_label('Counts')
         else:
             # Reshape data
-            x = np.arange(shape(adata)[0])
-            y = np.arange(shape(adata)[1])
-            zzz=adata.T.flatten()
+            x = np.arange(shape(adata)[0]) + xmin
+            y = np.arange(shape(adata)[1]) + ymin
             xx, yy = np.meshgrid(x, y)
-            xxx=xx.flatten()
-            yyy=yy.flatten()
-            bottom=np.zeros_like(zzz)
+            xxx = xx.flatten()
+            yyy = yy.flatten()
+            zzz = adata.T.flatten()
+            bottom = np.zeros_like(zzz)
             # Substitute NaN to zero
-            zzz=np.nan_to_num(zzz)
+            zzz = np.nan_to_num(zzz)
             width = depth = 1
             # Plot
             ax_d = fig_d.add_subplot(111, projection='3d')
@@ -576,20 +586,23 @@ class Analysis(object):
         # Plot the fit
         fig_f = plt.figure()
         if flat:
-            plt.pcolor(afit.T, cmap='jet')
+            x = np.arange(shape(afit)[0]+1) + xmin
+            y = np.arange(shape(afit)[1]+1) + ymin
+            xx, yy = np.meshgrid(x, y)
+            plt.pcolor(xx.T, yy.T, afit, cmap='jet')
             cbar = plt.colorbar()
             cbar.set_label('Counts')
         else:
             # Reshape data
             x = np.arange(shape(afit)[0])
             y = np.arange(shape(afit)[1])
-            zzz=afit.T.flatten()
+            zzz = afit.T.flatten()
             xx, yy = np.meshgrid(x, y)
-            xxx=xx.flatten()
-            yyy=yy.flatten()
-            bottom=np.zeros_like(zzz)
+            xxx = xx.flatten()
+            yyy = yy.flatten()
+            bottom = np.zeros_like(zzz)
             # Substitute NaN to zero
-            zzz=np.nan_to_num(zzz)
+            zzz = np.nan_to_num(zzz)
             width = depth = 1
             # Plot
             ax_f = fig_f.add_subplot(111, projection='3d')
@@ -607,7 +620,10 @@ class Analysis(object):
         # Plot the residuals
         fig_r = plt.figure()
         if flat:
-            plt.pcolor(ares.T, cmap='jet')
+            x = np.arange(shape(ares)[0]+1) + xmin
+            y = np.arange(shape(ares)[1]+1) + ymin
+            xx, yy = np.meshgrid(x, y)
+            plt.pcolor(xx.T, yy.T, ares, cmap='jet')
             cbar = plt.colorbar()
             cbar.set_label('Counts')
         else:

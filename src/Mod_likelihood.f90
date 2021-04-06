@@ -1,5 +1,5 @@
 MODULE MOD_LIKELIHOOD
-  ! Automatic Time-stamp: <Last changed by martino on Saturday 03 April 2021 at CEST 19:12:21>
+  ! Automatic Time-stamp: <Last changed by martino on Monday 05 April 2021 at CEST 16:22:57>
   ! Module of the likelihood function for data analysis
 
 
@@ -225,7 +225,7 @@ CONTAINS
     INTEGER(4), INTENT(OUT) :: datan
     !
     REAL(8) :: DLOG_FAC
-    INTEGER(4) :: i, j
+    INTEGER(4) :: i, j, sx, sy, imin, imax, jmin, jmax
     REAL(8), ALLOCATABLE, DIMENSION(:,:) :: adata_tmp
     CHARACTER :: string*128
 
@@ -235,9 +235,8 @@ CONTAINS
     ! Open file and read
     OPEN(10,file=namefile,status='old')
     READ(10,*) string
-    READ(10,*) nx, ny
-    ALLOCATE(adata(nx,ny),adata_mask(nx,ny))
-    ALLOCATE(adata_tmp(ny,nx))
+    READ(10,*) sx, sy
+    ALLOCATE(adata_tmp(sy,sx))
     READ(10,*) adata_tmp
     CLOSE(10)
 
@@ -246,11 +245,6 @@ CONTAINS
        WRITE(*,*) 'Negative counts are not accepted. Change input file'
        STOP
     END IF
-    
-    !write(*,*) adata_tmp(:,1)
-    !write(*,*) adata_tmp(:,2)
-    !write(*,*) adata_tmp(:,3)
-    !pause
     
     ! Substitute infinites and nan with negative counts
     WHERE (.NOT.IEEE_IS_FINITE(adata_tmp))
@@ -265,10 +259,26 @@ CONTAINS
     !write(*,*) adata_tmp(:,3)
     !pause
 
-    
-    adata = INT(TRANSPOSE(adata_tmp))
+    imin = INT(minx+1)
+    imax = INT(maxx)
+    jmin = INT(miny+1)
+    jmax = INT(maxy)
+    nx = imax - imin + 1
+    ny = jmax - jmin + 1
+
+    write(*,*) imin, imax, jmin, jmax
+
+
+    ALLOCATE(adata(nx,ny),adata_mask(nx,ny))
+    adata = INT(TRANSPOSE(adata_tmp(jmin:jmax,imin:imax)))
     
     DEALLOCATE(adata_tmp)
+
+
+    !write(*,*) adata(1,:)
+    !write(*,*) adata(2,:)
+    !write(*,*) adata(3,:)
+    !pause
 
     ! Count the available data
     !datan = COUNT(ieee_is_finite(adata)) 
@@ -359,7 +369,7 @@ CONTAINS
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
     !
     REAL(8) :: enc
-    INTEGER(4) :: i, j, k
+    INTEGER(4) :: i, j, k=1
     REAL(8) :: USERFCN, USERFCN_SET, USERFCN_2D, xx, yy
 
 
@@ -386,8 +396,8 @@ CONTAINS
        ! Check if the choosen function assumes zero or negative values
        DO i=1, nx
           DO j=1, ny
-             xx = i + 0.5
-             yy = j + 0.5
+             xx = i - 0.5 + xmin(k) ! Real coordinates are given by the bins, the center of the bin.
+             yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin 
              enc = USERFCN_2D(xx,yy,npar,par,funcname)
              IF (enc.LE.0) THEN
                 WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
@@ -503,7 +513,7 @@ CONTAINS
     !
     REAL(8) :: USERFCN_2D
     REAL(8) :: ll_tmp, enc, xx, yy
-    INTEGER(4) :: i=0, j=0
+    INTEGER(4) :: i=0, j=0, k=1
     
     
     ! Calculate LIKELIHOOD
@@ -513,8 +523,8 @@ CONTAINS
     DO i=1, nx
        DO j=1, ny
           ! Poisson distribution calculation --------------------------------------------------
-          xx = i - 0.5 ! Real coordinates are given by the bins, the center of the bin.
-          yy = j - 0.5 
+          xx = i - 0.5 + xmin(k) ! Real coordinates are given by the bins, the center of the bin.
+          yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin 
           enc = USERFCN_2D(xx,yy,npar,par,funcname)
           ll_tmp = ll_tmp + adata_mask(i,j)*(adata(i,j)*DLOG(enc) - enc)
        END DO
@@ -755,7 +765,7 @@ CONTAINS
     LOGICAL :: plot = .FALSE.
     CHARACTER :: out_filename*64
     REAL(8), DIMENSION(nx,ny) :: aenc, ares
-    REAL(8) :: x, y, nan
+    REAL(8) :: xx, yy, nan
 
     COMMON /func_plot/ plot
 
@@ -780,9 +790,9 @@ CONTAINS
           DO j=1, ny
              IF (adata(i,j).GE.0) THEN
                 ! Poisson distribution calculation --------------------------------------------------
-                x = i - 0.5 ! Real coordinates are given by the bins, the center of the bin.
-                y = j - 0.5 
-                aenc(i,j) = USERFCN_2D(x,y,npar,live_max,funcname)
+                xx = i - 0.5 + xmin(k) ! Real coordinates are given by the bins, the center of the bin.
+                yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin 
+                aenc(i,j) = USERFCN_2D(xx,yy,npar,live_max,funcname)
                 ares(i,j) = adata(i,j) - aenc(i,j)
              ELSE
                 aenc(i,j) = nan
