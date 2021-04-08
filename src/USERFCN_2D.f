@@ -11,6 +11,7 @@ c################################### USERFCN_2D DEFINITION #####################
       REAL*8 SOMBRERO_2D, SOMBRERO_BG_2D, LANDAU_2D, POLY_EVENX_2D
       REAL*8 FABIAN_2D, MOD_FABIAN_2D, POLY_2D, POLY_MORE_2D
       REAL*8 HAMILTONIAN_XY_2D, HAMILTONIAN_XQ_2D, R_POT_2D
+      REAL*8 R_LJ_2D, POWER_FRAC_2D
       REAL*8 x, y
       CHARACTER*64 funcname
 
@@ -41,6 +42,12 @@ c     Choose your model (see below for definition)
          USERFCN_2D = HAMILTONIAN_XQ_2D(x,y,npar,val)
       ELSE IF(funcname.EQ.'R_POT_2D') THEN
          USERFCN_2D = R_POT_2D(x,y,npar,val)
+      ELSE IF(funcname.EQ.'R_LJ_2D') THEN
+         USERFCN_2D = R_LJ_2D(x,y,npar,val)
+      ELSE IF(funcname.EQ.'POWER_FRAC_2D') THEN
+         USERFCN_2D = POWER_FRAC_2D(x,y,npar,val)
+
+
 
 
 
@@ -268,7 +275,7 @@ c
       REAL*8 x0, y0
       REAL*8 xc, yc, t0, t1, t2, t3, t4, t5
       REAL*8 c20, c11, c10, c02, c01, c00, c41
-      REAL*8 c22, c12, c40, c04, c31, c32, c23
+      REAL*8 c22, c12, c21, c40, c04, c31, c32, c23
 
       LOGICAL plot
       COMMON /func_plot/ plot
@@ -283,20 +290,21 @@ c
       c11   = val(7)
       c02   = val(8)
       c12   = val(9)
-      c22   = val(10)
-      c40   = val(11)
-      c04   = val(12)
-      c31   = val(13)
-      c41   = val(14)
-      c32   = val(15)
-      c23   = val(16)
+      c21   = val(10)
+      c22   = val(11)
+      c40   = val(12)
+      c04   = val(13)
+      c31   = val(14)
+      c41   = val(15)
+      c32   = val(16)
+      c23   = val(17)
 
       yc = y-y0
       xc = x-x0
       t0 = c00
       t1 = c10*xc+c01*yc
       t2 = c20*xc**2+c11*xc*yc+c02*yc**2
-      t3 = c12*xc*yc**2
+      t3 = c12*xc*yc**2 + c21*xc**2*yc
       t4 = c22*xc**2*yc**2 + c40*xc**4 + c04*yc**4 + c31*xc**3*yc
       t5 = c41*xc**4*yc + c32*xc**3*yc**2 + c23*xc**2*yc**3
 
@@ -313,6 +321,7 @@ c     Save the different components
 
       RETURN
       END
+
 
 
 c _______________________________________________________________________________________________
@@ -577,15 +586,17 @@ c     One minimum for yc>thr and 2 (or more if p>1) for yc<thr
       morse  = D*(1-EXP(-(y-m0)/lda))**2
       hx     = 1/2*omx**2*x**2
       hy     = 1/2*omy**2*yc**2
-      amp1   = alp*yc**exp1
+      
 
 
       IF(yc.LE.0) THEN
+        amp1 = -alp*(ABS(yc))**exp1
         x0 = a*(-yc)**(r/2)      
         x2 = amp1*ABS((ABS(x)-x0))**exp10
         x4 = amp2*ABS((ABS(x)-x0))**exp20
         MOD_FABIAN_2D = x2 + x4 + hx+ hy + bg + morse
       ELSE
+        amp1   = alp*(ABS(yc))**exp1
         stuf = hx+hy+bg+morse
         MOD_FABIAN_2D=amp1*((ABS(x))**exp10)+amp2*((ABS(x))**exp20)+stuf
       END IF
@@ -613,8 +624,10 @@ c ______________________________________________________________________________
       INTEGER*4 npar
       REAL*8 val(npar)
       REAL*8 R_POT_2D, x, y
-      REAL*8 potential, r, D, lda, m0, bg
-      REAL*8 harm, om
+      REAL*8 potential, r, D, lda, m0, bg, q1
+      REAL*8 harm1, harm2,harmr1 ,om1, om2, q2, cul
+      REAL*8 ct, r0, qr1, q3, om3, k, omr1, harm3, harm
+      REAL*8 harmr2, omr2, qr2
       LOGICAL plot
       COMMON /func_plot/ plot
       
@@ -622,23 +635,178 @@ c ______________________________________________________________________________
       lda = val(2)
       m0  = val(3)
       bg  = val(4)
-      om  = val(5) 
+      om1 = val(5)
+      q1  = val(6) 
+      om2 = val(7)
+      q2  = val(8)
+      om3 = val(9)
+      q3  = val(10)
+      r0  = val(11)
+      omr1= val(12)
+      qr1 = val(13)
+      omr2= val(14)
+      qr2 = val(15)
+      k   = val(16)
+
       
       r  = SQRT(x**2+y**2)
       potential= D*(1-EXP(-(r-m0)/lda))**2
-      harm = 0.5*om*(r**2)
+      harm1 = 0.5*om1*(ABS(y)**q1)
+      harm2 = 0.5*om2*(ABS(y)**q2)
+      harm3 = 0.5*om3*(ABS(y)**q3)
+      harmr1= 0.5*omr1*(ABS(r)**qr1)
+      harmr2= 0.5*omr2*(ABS(r)**qr2)
+
+
+      harm = harm1 + harm2 + harm3 + harmr1 + harmr2
       
+      cul   = -k/r
       
-      R_POT_2D = potential + bg + harm
+      IF(r.LE.r0) THEN
+         R_POT_2D = potential + bg + harm
+      ELSE
+         R_POT_2D = cul + bg + harm
+      END IF
+
       
       
       
       IF(plot) THEN
          WRITE(40,*) x, y, R_POT_2D
       END IF      
+
       
       RETURN
       END
+
+
+
+c _______________________________________________________________________________________________
+
+      FUNCTION R_LJ_2D(X,Y,npar,val)
+      
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 R_LJ_2D, x, y
+      REAL*8 lj, r, eps, sigma, bg, coef
+      LOGICAL plot
+      COMMON /func_plot/ plot
+      
+      eps   = val(1)
+      sigma = val(2)
+      bg    = val(3) 
+      
+      r     = SQRT(x**2+y**2)
+      coef  = sigma/r
+
+      lj= 4*eps*(coef**12-coef**6)
+      !harm = 0.5*om*(r**2)
+      
+      
+      R_LJ_2D = lj + bg 
+      
+      
+      
+      IF(plot) THEN
+         WRITE(40,*) x, y, R_LJ_2D
+      END IF      
+      
+      RETURN
+      END
+
+
+
+c _______________________________________________________________________________________________
+
+      FUNCTION POWER_FRAC_2D(X,Y,npar,val)
+c     
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 POWER_FRAC_2D, x, y
+      REAL*8 x0, y0
+      REAL*8 xc, yc, t0, t1, t2, t3, t4, t5
+      REAL*8 c20, c11, c10, c02, c01, c00, c41
+      REAL*8 c22, c12, c21, c40, c04, c31, c32, c23
+      REAL*8 td0, td1, td2, td3, td4, td5
+      REAL*8 d20, d11, d10, d02, d01, d00, d41
+      REAL*8 d22, d12, d21, d40, d04, d31, d32, d23
+      REAL*8 expn, expd
+
+
+
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      x0    = val(1)
+      y0    = val(2)
+      c00   = val(3)
+      c10   = val(4)
+      c01   = val(5)
+      c20   = val(6)
+      c11   = val(7)
+      c02   = val(8)
+      c12   = val(9)
+      c21   = val(10)
+      c22   = val(11)
+      c40   = val(12)
+      c04   = val(13)
+      c31   = val(14)
+      c41   = val(15)
+      c32   = val(16)
+      c23   = val(17)
+      d00   = val(18)
+      d10   = val(19)
+      d01   = val(20)
+      d20   = val(21)
+      d11   = val(22)
+      d02   = val(23)
+      d12   = val(24)
+      d21   = val(25)
+      d22   = val(26)
+      d40   = val(27)
+      d04   = val(28)
+      d31   = val(29)
+      d41   = val(30)
+      d32   = val(31)
+      d23   = val(32)
+      expn  = val(33)
+      expd  = val(34)
+
+
+
+      yc = y-y0
+      xc = x-x0
+      t0 = c00
+      t1 = c10*xc+c01*yc
+      t2 = c20*xc**2+c11*xc*yc+c02*yc**2
+      t3 = c12*xc*yc**2 + c21*xc**2*yc
+      t4 = c22*xc**2*yc**2 + c40*xc**4 + c04*yc**4 + c31*xc**3*yc
+      t5 = c41*xc**4*yc + c32*xc**3*yc**2 + c23*xc**2*yc**3
+      td0= d00
+      td1= d10*xc+d01*yc
+      td2= d20*xc**2+d11*xc*yc+d02*yc**2
+      td3= d12*xc*yc**2 + d21*xc**2*yc
+      td4= d22*xc**2*yc**2 + d40*xc**4 + d04*yc**4 + d31*xc**3*yc
+      td5= d41*xc**4*yc + d32*xc**3*yc**2 + d23*xc**2*yc**3
+
+
+
+
+      POWER_FRAC_2D =(t0+t1+t2+t4+t5)**expn/(td0+td1+td2+td4+td5)**expd
+
+c     Save the different components
+      IF(plot) THEN
+         WRITE(40,*) x, y, POWER_FRAC_2D
+      END IF
+
+
+
+      RETURN
+      END
+
 
 
 
