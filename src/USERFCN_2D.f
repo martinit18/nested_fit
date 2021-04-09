@@ -11,7 +11,7 @@ c################################### USERFCN_2D DEFINITION #####################
       REAL*8 SOMBRERO_2D, SOMBRERO_BG_2D, LANDAU_2D, POLY_EVENX_2D
       REAL*8 FABIAN_2D, MOD_FABIAN_2D, POLY_2D, POLY_MORE_2D
       REAL*8 HAMILTONIAN_XY_2D, HAMILTONIAN_XQ_2D, R_POT_2D
-      REAL*8 R_LJ_2D, POWER_FRAC_2D
+      REAL*8 R_LJ_2D, POWER_FRAC_2D, DOUBLE_MORSE_2D, QT_2D
       REAL*8 x, y
       CHARACTER*64 funcname
 
@@ -46,6 +46,10 @@ c     Choose your model (see below for definition)
          USERFCN_2D = R_LJ_2D(x,y,npar,val)
       ELSE IF(funcname.EQ.'POWER_FRAC_2D') THEN
          USERFCN_2D = POWER_FRAC_2D(x,y,npar,val)
+      ELSE IF(funcname.EQ.'DOUBLE_MORSE_2D') THEN
+         USERFCN_2D = DOUBLE_MORSE_2D(x,y,npar,val)
+      ELSE IF(funcname.EQ.'QT_2D') THEN
+         USERFCN_2D = QT_2D(x,y,npar,val)
 
 
 
@@ -808,6 +812,108 @@ c     Save the different components
       END
 
 
+c _______________________________________________________________________________________________
+
+      FUNCTION DOUBLE_MORSE_2D(X,Y,npar,val)
+      
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 DOUBLE_MORSE_2D, x, y
+      REAL*8 r1, D1, lda1, m01, x01, y01
+      REAL*8 r2, D2, lda2, m02, x02, y02
+      REAL*8 morse1, morse2, bg
+      REAL*8 harm, om, q
+      LOGICAL plot
+      COMMON /func_plot/ plot
+      
+      x01  = val(1)
+      y01  = val(2)
+      D1   = val(3)
+      lda1 = val(4)
+      m01  = val(5)
+      x02  = val(6)
+      y02  = val(7)
+      D2   = val(8)
+      lda2 = val(9)
+      m02  = val(10)            
+      bg   = val(11)
+      om   = val(12)
+      q    = val(13)
+
+
+      
+      r1  = SQRT((x-x01)**2+(y-y01)**2)
+      r2  = SQRT((x-x02)**2+(y-y02)**2)
+      harm = 0.5*om*y**q
+      
+      morse1 = D1*(1-EXP(-(r1-m01)/lda1))**2
+      morse2 = D2*(1-EXP(-(r2-m02)/lda2))**2
+
+
+      DOUBLE_MORSE_2D = morse1 + morse2 + bg + harm
+
+      
+      
+      
+      IF(plot) THEN
+         WRITE(40,*) x, y, DOUBLE_MORSE_2D
+      END IF      
+
+      
+      RETURN
+      END
+
+
+
+c _______________________________________________________________________________________________
+
+      FUNCTION QT_2D(X,Y,npar,val)
+      
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 QT_2D, x, y
+      REAL*8 x0, c, y0, bg,om1, om2, om3
+      REAL*8 exp1, exp2, exp3, var, t1, t2, t3
+      REAL*8 amp, k, texp
+      LOGICAL plot
+      COMMON /func_plot/ plot
+      
+      x0  = val(1)
+      y0  = val(2)
+      c   = val(3)
+      om1 = val(4)
+      exp1= val(5)
+      om2 = val(6)
+      exp2= val(7)
+      om3 = val(8)
+      exp3= val(9)
+      amp = val(10)
+      k   = val(11)
+      bg  = val(12)
+
+      
+      var = x-x0-c*(y-y0)
+      
+      t1   = 0.5*om1*var**exp1
+      t2   = 0.5*om2*var**exp2
+      t3   = 0.5*om3*var**exp3
+      texp = amp*EXP(k*var)
+
+
+      QT_2D = t1 + t2 + t3 + texp + bg
+
+      
+      
+      
+      IF(plot) THEN
+         WRITE(40,*) x, y, QT_2D
+      END IF      
+
+      
+      RETURN
+      END
 
 
 c ##############################################################################################
