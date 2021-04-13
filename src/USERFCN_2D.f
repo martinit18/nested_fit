@@ -12,6 +12,7 @@ c################################### USERFCN_2D DEFINITION #####################
       REAL*8 FABIAN_2D, MOD_FABIAN_2D, POLY_2D, POLY_MORE_2D
       REAL*8 HAMILTONIAN_XY_2D, HAMILTONIAN_XQ_2D, R_POT_2D
       REAL*8 R_LJ_2D, POWER_FRAC_2D, DOUBLE_MORSE_2D, QT_2D
+      REAL*8 REAL_ENERGY_XY_2D
       REAL*8 x, y
       CHARACTER*64 funcname
 
@@ -50,6 +51,8 @@ c     Choose your model (see below for definition)
          USERFCN_2D = DOUBLE_MORSE_2D(x,y,npar,val)
       ELSE IF(funcname.EQ.'QT_2D') THEN
          USERFCN_2D = QT_2D(x,y,npar,val)
+      ELSE IF(funcname.EQ.'REAL_ENERGY_XY_2D') THEN
+         USERFCN_2D = REAL_ENERGY_XY_2D(x,y,npar,val)
 
 
 
@@ -914,6 +917,70 @@ c ______________________________________________________________________________
       
       RETURN
       END
+
+
+
+c _______________________________________________________________________________________________
+
+      FUNCTION REAL_ENERGY_XY_2D(X,Y,npar,val)
+      
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 REAL_ENERGY_XY_2D, x, y
+      REAL(8) :: kappa_b, y0   ! the proton, along y (bending)
+      REAL(8) :: kappa_o, q0, alpha   ! O-O potential 
+      REAL(8) :: q, morse, qmod                               ! the proton
+      REAL(8) :: r,en0,en1
+      REAL(8) :: dd, r0, lam
+      REAL(8) :: arg1, arg2, f1, f2 
+      REAL(8) :: temp  ! temperature      
+      LOGICAL plot
+      COMMON /func_plot/ plot
+      
+      q         = val(1)
+      temp      = val(2)
+      kappa_b   = val(3)
+      kappa_o   = val(4)
+      y0        = val(5)
+      q0        = val(6)
+      alpha     = val(7)
+      dd        = val(8)
+      r0        = val(9)
+      lam       = val(10)
+
+     
+      !Defining distance
+      r = SQRT(x*x+y*y)
+      
+      !double morse part
+      arg1 = (r-r0)/lam
+      f1   = (1-exp(-arg1))**2
+
+      arg2 = (q-(r-r0))/lam
+      f2   = (1-exp(-arg2))**2
+
+      morse= dd*(f1 + f2)
+
+      !q (an)harmonic part
+
+      qmod = q + alpha*temp
+      en0 = kappa_o*(qmod-q0)**2 + kappa_o*(qmod-q0)**4/q0**2 
+      en1 = kappa_b*(y-y0)**2
+
+      REAL_ENERGY_XY_2D = en0 + en1 + morse 
+      
+      
+      
+      IF(plot) THEN
+         WRITE(40,*) x, y, REAL_ENERGY_XY_2D
+      END IF      
+
+      
+      RETURN
+      END
+
+
 
 
 c ##############################################################################################
