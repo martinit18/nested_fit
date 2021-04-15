@@ -5,14 +5,12 @@ from numpy import log, histogram, zeros, savetxt, shape
 import sys
 import os
 import matplotlib
-# matplotlib.use('TkAgg')
+#matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
-current_version=4.0 # and beyond
 
 
-linestyle = {"markeredgewidth":2, "elinewidth":2, "capsize":4,"markersize":3}
-linestyle2 = {"markeredgewidth":0, "elinewidth":2, "capsize":0,"markersize":0}
+current_version=3.5 # and beyond
 
 
 
@@ -23,11 +21,11 @@ a="""
 #                                                         #
 #                                                         #
 # Start with                                              #
-# 'an=nested_res_V4p0.Analysis()'                         #
+# 'an=nested_res_V3p5.Analysis()'                         #
 # By default the current path is considered.              #
 #                                                         #
 # If you want analyze another path:                       #
-# 'an=nested_res_V4p0.Analysis(path="path")'              #
+# 'an=nested_res_V3p4.Analysis(path="path")'              #
 #                                                         #
 # If you do not want to specify any path:                 #
 # 'an=nested_res.Analysis(path=None)'                     #
@@ -149,68 +147,63 @@ class Analysis(object):
         # Filename with the data to fit
         input_data['filename'] = lines[1].split()[0]
         input_comment['filename'] = lines[1][lines[1].find('#'):]
-        # Set of files or not
-        input_data['set_yn'] = lines[2].split()[0]
-        input_comment['set_yn'] = lines[2][lines[2].find('#'):]
         # Errorbars present or not
-        input_data['data_type'] = lines[3].split()[0]
-        input_comment['data_type'] = lines[3][lines[3].find('#'):]
+        input_data['errorbars_yn'] = lines[2].split()[0]
+        input_comment['errorbars_yn'] = lines[2][lines[2].find('#'):]
+        # Set of files or not
+        input_data['set_yn'] = lines[3].split()[0]
+        input_comment['set_yn'] = lines[3][lines[3].find('#'):]
         # Number of live points
         input_data['nlive'] = int(lines[4].split()[0])
         input_comment['nlive'] = lines[4][lines[4].find('#'):]
         # Evidence final accuracy
         input_data['evaccuracy'] = float(lines[5].split()[0])
         input_comment['evaccuracy'] = lines[5][lines[5].find('#'):]
-        # Filename with the data to fit
-        input_data['search_method'] = lines[6].split()[0]
-        input_comment['search_method'] = lines[6][lines[6].find('#'):]
         # Fraction of parameter standard deviation and n of jumps, max iterations and groups of iterations
-        input_data['search_par1'] = float(lines[7].split()[0])
-        input_data['search_par2'] = float(lines[7].split()[1])
-        input_data['maxtries'] = int(lines[7].split()[2])
-        input_data['maxntries'] = int(lines[7].split()[3])
-        input_comment['search_algotithm'] = lines[7][lines[7].find('#'):]
+        input_data['sdfraction'] = float(lines[6].split()[0])
+        input_data['njump'] = int(lines[6].split()[1])
+        input_data['maxtries'] = int(lines[6].split()[2])
+        input_data['maxntries'] = int(lines[6].split()[3])
+        input_comment['search_algotithm'] = lines[6][lines[6].find('#'):]
         # Cluster analysis: if it is active and its parameters
-        input_data['cluster_yn'] = lines[8].split()[0]
-        input_data['cluster_method'] = lines[8].split()[1]
-        input_data['distance_limit'] = float(lines[8].split()[2])
-        input_data['bandwidth'] = float(lines[8].split()[3])
-        input_comment['cluster_algotithm'] = lines[8][lines[8].find('#'):]
+        input_data['cluster_yn'] = lines[7].split()[0]
+        input_data['cluster_method'] = lines[7].split()[1]
+        input_data['distance_limit'] = float(lines[7].split()[2])
+        input_data['bandwidth'] = float(lines[7].split()[3])
+        input_comment['cluster_algotithm'] = lines[7][lines[7].find('#'):]
         # Number of tries and maximuma number of steps per tries
-        input_data['ntry'] = int(lines[9].split()[0])
-        input_data['maxstep_try'] = int(lines[9].split()[1])
-        input_comment['ntry_maxstep'] = lines[9][lines[9].find('#'):]
+        input_data['ntry'] = int(lines[8].split()[0])
+        input_data['maxstep_try'] = int(lines[8].split()[1])
+        input_comment['ntry_maxstep'] = lines[8][lines[8].find('#'):]
         # Name of the function choosen for the fit
-        input_data['function_name'] = lines[10].split()[0]
-        input_comment['function_name'] = lines[10][lines[10].find('#'):]
+        input_data['function_name'] = lines[9].split()[0]
+        input_comment['function_name'] = lines[9][lines[9].find('#'):]
         # Left-Right asymmetry parameter
-        input_data['lr'] = lines[11][:1].split()[0]
-        input_comment['lr'] = lines[11][lines[11].find('#'):]
+        input_data['lr'] = lines[10][:1].split()[0]
+        input_comment['lr'] = lines[10][lines[10].find('#'):]
         # Additional data for convolution
-        input_data['npoint'] = int(int(lines[12].split()[0]))
-        input_data['nwidth'] = int(int(lines[12].split()[1]))
-        input_comment['additional data'] = lines[12][lines[12].find('#'):]
+        input_data['npoint'] = int(int(lines[11].split()[0]))
+        input_data['nwidth'] = int(int(lines[11].split()[1]))
+        input_comment['additional data'] = lines[11][lines[11].find('#'):]
         # Limit of the spectra used for the fit
-        input_data['xmin'] = float(lines[13].split()[0])
-        input_data['xmax'] = float(lines[13].split()[1])
-        input_data['ymin'] = float(lines[13].split()[2])
-        input_data['ymax'] = float(lines[13].split()[3])
-        input_comment['min_max'] = lines[13][lines[13].find('#'):]
+        input_data['xmin'] = float(lines[12].split()[0])
+        input_data['xmax'] = float(lines[12].split()[1])
+        input_comment['xmin_xmax'] = lines[12][lines[12].find('#'):]
         # Number of parameter used for the fit
-        npar = int(lines[14].split()[0])
+        npar = int(lines[13].split()[0])
         input_data['npar'] = npar
-        input_comment['npar'] = lines[14][lines[14].find('#'):]
+        input_comment['npar'] = lines[13][lines[13].find('#'):]
         # Parameter of the fit, names, limits and "fix" flag
-        input_comment['parameters'] = lines[15]
+        input_comment['parameters'] = lines[14]
         parameters = []
         for index in range(npar):
-            parameters.append([int(lines[16+index].split()[0]),
-                lines[16+index].split()[1],
-                float(lines[16+index].split()[2]),
-                float(lines[16+index].split()[3]),
-                float(lines[16+index].split()[4]),
-                float(lines[16+index].split()[5]),
-                int(lines[16+index].split()[6])])
+            parameters.append([int(lines[15+index].split()[0]),
+                lines[15+index].split()[1],
+                float(lines[15+index].split()[2]),
+                float(lines[15+index].split()[3]),
+                float(lines[15+index].split()[4]),
+                float(lines[15+index].split()[5]),
+                int(lines[15+index].split()[6])])
         input_data['parameters'] = parameters
 
 
@@ -254,54 +247,45 @@ class Analysis(object):
         # Number of iteration
         output_data['niter'] = int(lines[2].split()[1])
 
-        # Number of live points
-        output_data['nlive_out'] = int(lines[3].split()[1])
-        if input_data['nlive'] != output_data['nlive_out'] :
-            print('input nlive', input_data['nlive'], 'output nlive', output_data['nlive'])
-            sys.exit('Check your input/output files')
-
         # Final evidence
-        output_data['evidence'] = float(lines[4].split()[1])
+        output_data['evidence'] = float(lines[3].split()[1])
 
-        # Evidence estimated error
-        output_data['evidence_err_est'] = float(lines[5].split()[1])
-
-        # Evidence evaluated errors
-        output_data['evidence_err'] = float(lines[6].split()[1])
+        # Evidence dispersion
+        output_data['evidence_sd'] = float(lines[4].split()[1])
 
         # Max likelihood
-        output_data['like_max'] = float(lines[8].split()[1])
+        output_data['like_max'] = float(lines[6].split()[1])
 
         # Max parameter set
-        output_data['max'] = [float(lines[10+index].split()[1]) for index in range(npar)]
+        output_data['max'] = [float(lines[8+index].split()[1]) for index in range(npar)]
 
         # Average and standard deviation of parameters
         #output_data['mean']= [[float(lines[10+npar+index].split()[1]),float(lines[10+npar+index].split()[3])] for index in range(npar)]
-        output_data['mean'] = [float(lines[12+npar+index].split()[1]) for index in range(npar)]
-        output_data['sd']   = [float(lines[12+npar+index].split()[3]) for index in range(npar)]
+        output_data['mean'] = [float(lines[10+npar+index].split()[1]) for index in range(npar)]
+        output_data['sd']   = [float(lines[10+npar+index].split()[3]) for index in range(npar)]
 
         # Confidence levels of parameters
         #output_data['conf_level'] = [[float(lines[12+2*npar+index].split()[1]),float(lines[12+2*npar+index].split()[2]),float(lines[12+2*npar+index].split()[3]),float(lines[12+2*npar+index].split()[5]),float(lines[12+2*npar+index].split()[6]),float(lines[12+2*npar+index].split()[7])] for index in range(npar)]
-        output_data['conf_level_m99'] = [float(lines[14+2*npar+index].split()[1]) for index in range(npar)]
-        output_data['conf_level_m95'] = [float(lines[14+2*npar+index].split()[2]) for index in range(npar)]
-        output_data['conf_level_m68'] = [float(lines[14+2*npar+index].split()[3]) for index in range(npar)]
-        output_data['conf_level_p68'] = [float(lines[14+2*npar+index].split()[5]) for index in range(npar)]
-        output_data['conf_level_p95'] = [float(lines[14+2*npar+index].split()[6]) for index in range(npar)]
-        output_data['conf_level_p99'] = [float(lines[14+2*npar+index].split()[7]) for index in range(npar)]
+        output_data['conf_level_m99'] = [float(lines[12+2*npar+index].split()[1]) for index in range(npar)]
+        output_data['conf_level_m95'] = [float(lines[12+2*npar+index].split()[2]) for index in range(npar)]
+        output_data['conf_level_m68'] = [float(lines[12+2*npar+index].split()[3]) for index in range(npar)]
+        output_data['conf_level_p68'] = [float(lines[12+2*npar+index].split()[5]) for index in range(npar)]
+        output_data['conf_level_p95'] = [float(lines[12+2*npar+index].split()[6]) for index in range(npar)]
+        output_data['conf_level_p99'] = [float(lines[12+2*npar+index].split()[7]) for index in range(npar)]
 
         # Median of parameters
-        output_data['median'] = [float(lines[14+2*npar+index].split()[4]) for index in range(npar)]
+        output_data['median'] = [float(lines[12+2*npar+index].split()[4]) for index in range(npar)]
 
         # Information
-        output_data['information'] =  float(lines[16+3*npar].split()[1])
+        output_data['information'] =  float(lines[14+3*npar].split()[1])
 
         # Complexity
-        output_data['complexity'] =  float(lines[18+3*npar].split()[1])
+        output_data['complexity'] =  float(lines[16+3*npar].split()[1])
 
         # Calculation information
-        output_data['n_cores'] =  int(lines[20+3*npar].split()[1])
-        output_data['cpu_computation_time'] =  float(lines[21+3*npar].split()[1])
-        output_data['real_computation_time'] =  float(lines[21+3*npar].split()[2])
+        output_data['n_cores'] =  int(lines[18+3*npar].split()[1])
+        output_data['cpu_computation_time'] =  float(lines[19+3*npar].split()[1])
+        output_data['real_computation_time'] =  float(lines[19+3*npar].split()[2])
 
         return output_data
 
@@ -316,6 +300,8 @@ class Analysis(object):
         If there is a set of profiles to fit, specify which one has to be visualized
         '''
 
+        linestyle = {"markeredgewidth":2, "elinewidth":2, "capsize":4,"markersize":3}
+        linestyle2 = {"markeredgewidth":0, "elinewidth":2, "capsize":0,"markersize":0}
 
         # Adjust the path first
         if path[-1]!='/' and path != None:  path = path+'/'
@@ -476,11 +462,11 @@ class Analysis(object):
         plt.xlabel('Channel')
         plt.ylabel('Counts')
         # Border of the graph
-        if xmin == 0 and xmax == 0:
+        if xmin==0 and xmax==0:
             plt.xlim([minx,maxx])
         else:
             plt.xlim([xmin,xmax])
-        if ymin == 0 and ymax == 0:
+        if ymin==0 and ymax==0:
             plt.ylim(miny,maxy)
         else:
             plt.ylim(ymin,ymax)
@@ -496,7 +482,7 @@ class Analysis(object):
         #plt.xlabel('Channel')
         #plt.ylabel('Counts')
         # Border of the graph
-        if xmin == 0 and xmax == 0:
+        if xmin==0 and xmax==0:
             plt.xlim([minx,maxx])
         else:
             plt.xlim([xmin,xmax])
@@ -511,232 +497,6 @@ class Analysis(object):
         plt.tight_layout()
 
         plt.show()
-
-####################################################################################################################################
-    def plot2D(self,path=currentpath,xmin=0,xmax=0,ymin=0,ymax=0,zmin=0,zmax=0,typeof='max',
-                 flat=True,logscale=False,nset=0):
-        '''
-        Plot the fit results present in the file nf_output_data_*.dat and nf_output_fit_*.dat.
-        The limit of the plot can be indicated. If not, the maximum and the minimum of the histogram are taken into account.
-        If there is a set of profiles to fit, specify which one has to be visualized
-        '''
-
-        # Adjust the path first
-        if path[-1]!='/' and path != None:  path = path+'/'
-        #
-
-        self.path = path
-
-        from numpy import genfromtxt, size
-        import matplotlib.pyplot as plt
-
-        # Read parameters from input file
-        input_data, input_comment = self.read_input(path=path)
-        xmin = input_data['xmin']
-        xmax = input_data['xmax']
-        ymin = input_data['ymin']
-        ymax = input_data['ymax']
-
-
-        print(nset, typeof)
-
-
-        # Read data file
-        print('nf_output_data_'+typeof+'_2D.dat')
-        adata = genfromtxt(self.path+'nf_output_data_2D.dat',skip_header=1)
-        afit  = genfromtxt(self.path+'nf_output_fit_'+typeof+'_2D.dat',skip_header=1)
-        ares  = genfromtxt(self.path+'nf_output_fitres_'+typeof+'_2D.dat',skip_header=1)
-
-        if (not flat) and (size(adata) > 10000):
-            print('Too many points to show, switching to the flat mode plot')
-            flat = True
-
-        # Plot the results
-        fig_d = plt.figure()
-        if flat:
-            x = np.arange(shape(adata)[0]+1) + xmin
-            y = np.arange(shape(adata)[1]+1) + ymin
-            xx, yy = np.meshgrid(x, y)
-            plt.pcolor(xx.T, yy.T, adata, cmap='jet')
-            cbar = plt.colorbar()
-            cbar.set_label('Counts')
-        else:
-            # Reshape data
-            x = np.arange(shape(adata)[0]) + xmin
-            y = np.arange(shape(adata)[1]) + ymin
-            xx, yy = np.meshgrid(x, y)
-            xxx = xx.flatten()
-            yyy = yy.flatten()
-            zzz = adata.T.flatten()
-            bottom = np.zeros_like(zzz)
-            # Substitute NaN to zero
-            zzz = np.nan_to_num(zzz)
-            width = depth = 1
-            # Plot
-            ax_d = fig_d.add_subplot(111, projection='3d')
-            cmap = plt.cm.get_cmap('jet') # Get desired colormap - you can change this!
-            max_height = np.max(zzz)   # get range of colorbars so we can normalize
-            min_height = 0.
-            # scale each z to [0,1], and get their rgb values
-            rgba = [cmap((k-min_height)/max_height) for k in zzz]
-            ax_d.bar3d(xxx, yyy, bottom, width, depth, zzz,color=rgba, shade=True)
-            ax_d.set_zlabel('Counts')
-        plt.xlabel('X')
-        plt.ylabel('Y')
-        plt.title('Data')
-
-        # Plot the fit
-        fig_f = plt.figure()
-        if flat:
-            x = np.arange(shape(afit)[0]+1) + xmin
-            y = np.arange(shape(afit)[1]+1) + ymin
-            xx, yy = np.meshgrid(x, y)
-            plt.pcolor(xx.T, yy.T, afit, cmap='jet')
-            cbar = plt.colorbar()
-            cbar.set_label('Counts')
-        else:
-            # Reshape data
-            x = np.arange(shape(afit)[0])
-            y = np.arange(shape(afit)[1])
-            zzz = afit.T.flatten()
-            xx, yy = np.meshgrid(x, y)
-            xxx = xx.flatten()
-            yyy = yy.flatten()
-            bottom = np.zeros_like(zzz)
-            # Substitute NaN to zero
-            zzz = np.nan_to_num(zzz)
-            width = depth = 1
-            # Plot
-            ax_f = fig_f.add_subplot(111, projection='3d')
-            cmap = plt.cm.get_cmap('jet') # Get desired colormap - you can change this!
-            max_height = np.max(zzz)   # get range of colorbars so we can normalize
-            min_height = 0.
-            # scale each z to [0,1], and get their rgb values
-            rgba = [cmap((k-min_height)/max_height) for k in zzz]
-            ax_f.bar3d(xxx, yyy, bottom, width, depth, zzz,color=rgba, shade=True)
-            ax_f.set_zlabel('Counts')
-        plt.xlabel('X')
-        plt.ylabel('Y')
-        plt.title('Fit')
-
-        # Plot the residuals
-        fig_r = plt.figure()
-        if flat:
-            x = np.arange(shape(ares)[0]+1) + xmin
-            y = np.arange(shape(ares)[1]+1) + ymin
-            xx, yy = np.meshgrid(x, y)
-            plt.pcolor(xx.T, yy.T, ares, cmap='jet')
-            cbar = plt.colorbar()
-            cbar.set_label('Counts')
-        else:
-            # Reshape data
-            x = np.arange(shape(ares)[0])
-            y = np.arange(shape(ares)[1])
-            zzz=ares.T.flatten()
-            xx, yy = np.meshgrid(x, y)
-            xxx=xx.flatten()
-            yyy=yy.flatten()
-            bottom=np.zeros_like(zzz)
-            # Substitute NaN to zero
-            zzz=np.nan_to_num(zzz)
-            width = depth = 1
-            # Plot
-            ax_r = fig_r.add_subplot(111, projection='3d')
-            #cmap = plt.cm.get_cmap('jet') # Get desired colormap - you can change this!
-            #max_height = np.max(zzz)   # get range of colorbars so we can normalize
-            #min_height = 0.
-            # scale each z to [0,1], and get their rgb values
-            #rgba = [cmap((k-min_height)/max_height) for k in zzz]
-            ax_r.bar3d(xxx, yyy, bottom, width, depth, zzz, shade=True)
-            ax_r.set_zlabel('Counts')
-        plt.xlabel('X')
-        plt.ylabel('Y')
-        plt.title('Residuals')
-
-        plt.show()
-
-####################################################################################################################################
-    def plot2D_line_proj(self,path=currentpath,xmin=0,xmax=0,ymin=0,ymax=0,zmin=0,zmax=0,typeof='max',
-                 flat=True,logscale=False,nset=0):
-        '''
-        Plot of the 2D spectral line projection on the dispersion axis (x-axis).
-        The line slope is corrected and re-binned in the pixel of the camera with respect to
-        the plane chosen from the fit (via the variable y0).
-        '''
-
-        # Adjust the path first
-        if path[-1]!='/' and path != None:  path = path+'/'
-        #
-
-        self.path = path
-
-        from numpy import genfromtxt, size, arange, sqrt
-        import matplotlib.pyplot as plt
-
-        # Read parameters from input file
-        input_data, input_comment = self.read_input(path=path)
-        xmin = input_data['xmin']
-        xmax = input_data['xmax']
-        ymin = input_data['ymin']
-        ymax = input_data['ymax']
-        # Read parameters from output file
-        output_data = self.read_output(path=path)
-
-
-        bins = arange(xmin,xmax+1)
-
-
-        # Read data file
-        print('nf_output_data_'+typeof+'_2D.dat')
-        adata = genfromtxt(self.path+'nf_output_data_2D.dat',skip_header=1)
-        afit  = genfromtxt(self.path+'nf_output_fit_'+typeof+'_2D.dat',skip_header=1)
-        ares  = genfromtxt(self.path+'nf_output_fitres_'+typeof+'_2D.dat',skip_header=1)
-
-        a, b, c, y0, Dy = output_data['max'][0:5]
-
-        # Reshape data
-        x = np.arange(shape(adata)[0]) + xmin
-        y = np.arange(shape(adata)[1]) + ymin
-        xx, yy = np.meshgrid(x, y)
-        xxx = xx.flatten()
-        yyy = yy.flatten()
-        # Adjust the slope
-        #print('Check: ',y[int(y0)], y0,yy[int(y0),int(y0)],yyy[int(y0)])
-        xxxx = xxx - b*(yyy - y[int(y0)]) - c*(yyy - y[int(y0)])**2
-        zzz = adata.T.flatten()
-        # Built histogram
-        h, edges = histogram(xxxx[(zzz>0) & (xxx >= xmin) & (xxx <= xmax)],
-            weights=zzz[(zzz>0) & (xxx >= xmin) & (xxx <= xmax)],bins=bins)
-        # Extract data for plotting the corrected projection
-        pos = edges[:-1] + (edges[1] - edges[0])/2
-        nc_fit = afit[:,int(y0)]*Dy
-        nc_res = h - nc_fit
-
-        # Plot the projection and fit results
-        plt.figure()
-        plt.clf()
-        plt.title('Fit result in the projection')
-        plt.xlabel('Channel')
-        plt.ylabel('Counts')
-        plt.errorbar(pos,h,yerr=sqrt(h),xerr=None,fmt='or',ecolor='red',mec='red',**linestyle)
-        plt.errorbar(pos,nc_fit,yerr=None,xerr=None,fmt='-b',**linestyle2)
-        plt.tight_layout()
-
-
-        # Plot the projection and fit results
-        plt.figure()
-        plt.clf()
-        plt.title('Residuals in the projection')
-        plt.xlabel('Channel')
-        plt.ylabel('Counts')
-        plt.errorbar(pos,nc_res,yerr=sqrt(h),xerr=None,fmt='ob',ecolor='blue',mec='blue',**linestyle)
-        plt.errorbar([xmin,xmax],[0.,0.],yerr=None,xerr=None,fmt='-k',**linestyle2)
-        plt.tight_layout()
-
-
-
-        plt.show()
-
 
 #################################################################################################################
     def histo(self,par_number,path=currentpath,bins=50,plotmode='sigma',xmin=None,xmax=None,savedata=False,alpha=1.,clear=True):
@@ -1561,6 +1321,9 @@ class Summary(object):
                                 #print inputs_par[l]+'_'+p,  v[d][l+2]
 
 
+
+
+
             # From outputs
             for k, v  in output.items():
                 if k in outputs_par:
@@ -1580,15 +1343,14 @@ class Summary(object):
             # Save label of the directory
             summary["labels"].append(labels[directories.index(dir)])
 
-#       del summary["maxl_sigma"]
+#        del summary["maxl_sigma"]
         #print '\n#### Available keys input ####'
         #for k, v in summary.iteritems():
-        #   print k #, len(v)
-        # summary = pd.DataFrame(summary).set_index("labels") # Old working
-        sum =  pd.DataFrame(dict([ (k,pd.Series(v)) for k,v in summary.items() ])).set_index("labels")
-        #summary = summary.rename(columns = {c: prefix + c for c in summary.columns})
+         #   print k #, len(v)
+        summary = pd.DataFrame(summary).set_index("labels")
+        summary = summary.rename(columns = {c: prefix + c for c in summary.columns})
 
-        return sum
+        return summary
 
     def merge_columns(self,df,par1,par2):
         '''
