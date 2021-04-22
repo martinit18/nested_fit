@@ -4,11 +4,11 @@ NAME    = nested_fit4.0alpha.exe
 CFLAGS  =
 ############## FLAG TO COSTUMIZE #############################
 #### Uncomment next line to run in parallel in LINUX
-#FFLAGS  = -fopenmp
+FFLAGS  = -fopenmp
 #### Uncomment next line to optimize in MAC
 #FFLAGS   = -framework accelerate
 #### Uncomment next line to run in parallel and optimize in MAC
-FFLAGS   = -framework accelerate -fopenmp
+#FFLAGS   = -framework accelerate -fopenmp
 ###############################################################
 ### ATTENTION!!!!
 ### If you do not want to run in parallel,
@@ -41,17 +41,26 @@ F90FILES = Mod_parameters.f90 Mod_likelihood.f90 Mod_timestamp.f90 \
 
 
 # for gfortran
-OPT = -O2 -static
+#OPT = -O2 -static
 # For Intel fortran
 #OPT = -O2 -no-wrap-margin
+OPT = -O2 -heap-arrays -no-wrap-margin
+#OPT = -O2 -no-wrap-margin
+#OPT = -fast -heap-arrays -no-wrap-margin
+#OPT = -Ofast -g -xHost -heap-arrays -no-wrap-margin
 
-# other options
+# other debug options for gfortran
 #OPT = -g  -C -static
 #OPT = -O0 -g
 #OPT = -O0 -g  -fbounds-check -Wall  -ffpe-trap=invalid,zero,overflow,underflow -fbacktrace -ftrapv
 #OPT = -g -Wall -Wextra -Warray-temporaries -Wconversion -fimplicit-none -fbacktrace -ffree-line-length-0 -fcheck=all -ffpe-trap=zero,overflow,underflow -finit-real=nan
 #OPT = -g -Wall -Wextra -Warray-temporaries -Wconversion -fbacktrace -ffree-line-length-0 -fcheck=all -ffpe-trap=zero,overflow -finit-real=nan
 
+# other debug options for ifort
+#OPT = -O0 -g -debug all -check bounds -traceback -check all -check uninit -ftrapuv -gen-interfaces -no-wrap-margin
+#OPT = -O0 -g -check all -fpe0 -warn -traceback -debug extended -no-wrap-margin
+#OPT = -O0 -g -xHost -heap-arrays -check uninit -check bounds -traceback -stand f08 -no-wrap-margin
+#OPT = -O0 -heap-arrays -no-wrap-margin -g -check uninit -check bounds -traceback
 
 #LDFLAGS = $(FFLAGS)
 #LDFLAGS = -fopenmp
@@ -59,8 +68,8 @@ OPT = -O2 -static
 #LDFLAGS = -framework accelerate -fopenmp
 
 # Rules...
-FC  = gfortran
-#FC  = ifort
+#FC  = gfortran
+FC  = ifort
 CC  = gcc
 FC90= $(FC)
 SRCFILES =  $(FFILES)

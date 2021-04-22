@@ -54,6 +54,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   REAL(8) :: ADDLOG, RANDN, rn
   CHARACTER :: out_filename*64
 
+  EXTERNAL :: SORTN
+
   ! This is very important
   !!$OMP THREADPRIVATE(evsum)
   ! With these nothing change
@@ -62,7 +64,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   ! Error: DUMMY attribute conflicts with THREADPRIVATE attribute in 'live_max' at (1)
 
   !!th_num = omp_get_thread_num()
-
 
   ! Initialize variables (with different seeds for different processors)
  !irn = 1

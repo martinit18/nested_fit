@@ -104,21 +104,16 @@ PROGRAM NESTED_FIT
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_like_final_try, weight_try, live_max_try
   ! Time measurement variables
   REAL(8) :: seconds, seconds_omp, startt, stopt
-  ! Argument staff
-  !CHARACTER(len=32) :: arg
-  !INTEGER(4) :: iproc
-  !CHARACTER(len=2) :: proc
+
   ! Random number variables
-  !INTEGER, PARAMETER :: ntrymax = 10, irnmax = 100000
-  !REAL(8), DIMENSION(irnmax,ntrymax) :: rng
-  !INTEGER :: irn
-  !REAL(8) ::rn
-  INTEGER(4) :: seed_array(33) = 1
+  !INTEGER(4) :: seed_array(33) = 1
 
 
   ! PARALLEL VARIABLE: PUT ".TRUE." IF YOU WANT TO RUN IN PARALLEL
   ! CHANGE ALSO THE FFLAGS IN THE MAKEFILE
   LOGICAL, PARAMETER :: parallel_on = .TRUE.
+
+  EXTERNAL :: NESTED_SAMPLING, SORTN, MEANVAR
 
 
 
