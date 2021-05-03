@@ -1,5 +1,5 @@
 MODULE MOD_LIKELIHOOD
-  ! Automatic Time-stamp: <Last changed by martino on Monday 20 April 2020 at CEST 19:07:49>
+  ! Automatic Time-stamp: <Last changed by martino on Monday 03 May 2021 at CEST 13:23:14>
   ! Module of likelihood test function, no real data are involved here
 
 
@@ -44,6 +44,20 @@ CONTAINS
 
   !#####################################################################################################################
 
+
+  REAL(8) FUNCTION LOGLIKELIHOOD_WITH_TEST(par)
+    ! Make some tests first if required
+
+    REAL(8), DIMENSION(npar), INTENT(IN) :: par
+
+
+    LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD(par)
+
+  END FUNCTION LOGLIKELIHOOD_WITH_TEST
+  
+  !------------------------------------------------------------------------------------------------------------------------
+
+  
   REAL(8) FUNCTION LOGLIKELIHOOD(par)
     ! Main likelihood function
 
@@ -70,6 +84,7 @@ CONTAINS
 
 
   END FUNCTION LOGLIKELIHOOD
+
 
   !#####################################################################################################################
 

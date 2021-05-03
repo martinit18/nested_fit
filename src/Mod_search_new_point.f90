@@ -1,5 +1,5 @@
 MODULE MOD_SEARCH_NEW_POINT
-  ! Automatic Time-stamp: <Last changed by martino on Saturday 02 May 2020 at CEST 13:40:47>
+  ! Automatic Time-stamp: <Last changed by martino on Monday 03 May 2021 at CEST 12:14:44>
   ! Module for search of new points
 
   ! Module for the input parameter definition
@@ -13,14 +13,14 @@ MODULE MOD_SEARCH_NEW_POINT
   IMPLICIT NONE
 
 CONTAINS
-
-
-! Prepared for the option of several search modes
+  
+  
+!!$  ! Select option of several search modes
 !!$  !#####################################################################################################################
-!!$
+!!$  
 !!$  SUBROUTINE SEARCH_NEW_POINT(min_ll,nlive,live_like,live,new_live_like,new_live)
 !!$    ! Main search function
-!!$    USE PARAMETERS, ONLY: search_type
+!!$    USE MOD_PARAMETERS, ONLY: search_method
 !!$
 !!$    REAL(8), INTENT(IN) :: min_ll
 !!$    INTEGER(4), INTENT(IN) :: nlive
@@ -29,11 +29,9 @@ CONTAINS
 !!$    REAL(8), INTENT(OUT) :: new_live_like
 !!$    REAL(8), DIMENSION(npar), INTENT(OUT) :: new_live
 !!$
-!!$    ncall = ncall + 1
-!!$
-!!$    ! Select the test function
-!!$    IF (search_type.eq.'MCMC') THEN ????? TO IMPLEMENT
-!!$    CALL SEARCH_NEW_POINT(min_ll,nlive,live_like,live)
+!!$    ! Select the search method
+!!$    IF (search_method.eq.'RANDOM_WALK') THEN
+!!$    CALL LAWN_MOWER_ROBOT(min_ll,nlive,live_like,live)
 !!$    ELSE
 !!$       WRITE(*,*) 'Error of the search type name in Mod_search_new_point module'
 !!$       WRITE(*,*) 'Check the manual and the input file'
@@ -173,6 +171,8 @@ CONTAINS
 
              ! If you already did too much tries, gave up or start a cluster analysis
              IF (n_ntries.GE.maxntries) THEN
+
+                   
                 IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
                    WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
                    !
@@ -182,6 +182,7 @@ CONTAINS
                    ! outputs: p_cluster ! flag of number of appartenance cluster for each live point
                    cluster_on = .true.
                    n_ntries = 0
+
 
                    ! Choose a new random live point and restart all
                    CALL RANDOM_NUMBER(rn)

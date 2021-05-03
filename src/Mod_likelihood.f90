@@ -1,5 +1,5 @@
 MODULE MOD_LIKELIHOOD
-  ! Automatic Time-stamp: <Last changed by martino on Monday 05 April 2021 at CEST 16:22:57>
+  ! Automatic Time-stamp: <Last changed by martino on Monday 03 May 2021 at CEST 13:06:01>
   ! Module of the likelihood function for data analysis
 
 
@@ -728,8 +728,8 @@ CONTAINS
           CLOSE(40)
 
           WRITE(out_filename,3001) 'nf_output_fit_median_',k,'.dat'
-          WRITE(40,*)'# x    y fit'
           OPEN (UNIT=40, FILE=out_filename, STATUS='unknown')
+          WRITE(40,*)'# x    y fit'
           DO i=1, maxfit
              xfit = minx + (i-1)*dx
              !WRITE(30, *) xfit, USERFCN_SET(xfit,npar,live_max,funcname,k)

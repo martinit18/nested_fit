@@ -1,6 +1,6 @@
 SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,&
      live_final,live_like_max,live_max)
-  ! Time-stamp: <Last changed by martino on Saturday 03 April 2021 at CEST 12:20:37>
+  ! Time-stamp: <Last changed by martino on Monday 03 May 2021 at CEST 11:56:05>
   ! For parallel tests only
   !SUBROUTINE NESTED_SAMPLING(irnmax,rng,itry,ndata,x,nc,funcname,&
   !   npar,par_fix,par_step,par_in,par_bnd1,par_bnd2,nlive,evaccuracy,sdfraction,&
@@ -129,7 +129,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   ! Order livepoints
   CALL SORTN(nlive,npar,live_like,live)
   ! Store in a file
-  OPEN(11,FILE='nf_initial_live_points.dat',STATUS= 'UNKNOWN')
+  OPEN(11,FILE='nf_output_initial_live_points.dat',STATUS= 'UNKNOWN')
   WRITE(11,*) '# n     lnlikelihood     parameters'
   DO j=1,nlive
      WRITE(11,*) j, live_like(j), live(j,:)

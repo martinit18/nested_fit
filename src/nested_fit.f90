@@ -1,5 +1,5 @@
 PROGRAM NESTED_FIT
-  ! Time-stamp: <Last changed by martino on Monday 05 April 2021 at CEST 16:22:25>
+  ! Time-stamp: <Last changed by martino on Monday 03 May 2021 at CEST 12:14:24>
   !
   ! Please read README and LICENSE files for more inforamtion
   !
@@ -166,7 +166,7 @@ PROGRAM NESTED_FIT
   READ(77,*) nlive, string
   READ(77,*) evaccuracy, string
   READ(77,*) search_method, string
-  READ(77,*) search_par1, search_par2, maxntries, string
+  READ(77,*) search_par1, search_par2, maxtries, maxntries, string
   READ(77,*) cluster_yn, cluster_method, distance_limit, bandwidth, string
   READ(77,*) ntry, maxstep_try, string
   READ(77,*) funcname, string

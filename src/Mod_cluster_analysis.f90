@@ -1,5 +1,5 @@
 MODULE MOD_CLUSTER_ANALYSIS
-  ! Automatic Time-stamp: <Last changed by martino on Tuesday 21 April 2020 at CEST 18:10:49>
+  ! Automatic Time-stamp: <Last changed by martino on Monday 03 May 2021 at CEST 12:08:59>
   ! Module for cluster analysis for point in n dimensions
   !
   ! To eventually change to select and add other cluster analyses (eventually to be selected in the input file)
@@ -16,11 +16,35 @@ MODULE MOD_CLUSTER_ANALYSIS
 
 CONTAINS
 
-  !--------------------------------------------------------------------------------------------------------------
 
-
+  ! Select option of several cluster analyses
+  !####################################################################################################################
 
   SUBROUTINE MAKE_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
+
+    USE MOD_PARAMETERS, ONLY: cluster_method
+
+    INTEGER(4), INTENT(IN) :: np_in, ndim_in
+    REAL(8), INTENT(IN), DIMENSION(np_in,ndim_in) :: p_in
+    
+    ! Select the search method
+    IF (cluster_method.EQ.'f'.OR.cluster_method.EQ.'g') THEN 
+       CALL MEANSHIFT_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
+    ELSE
+       WRITE(*,*) 'Error of the cluster analysis method name in Mod_cluster_analaysis module'
+       WRITE(*,*) 'Check the manual and the input file'
+       STOP
+    END IF
+    
+
+  END SUBROUTINE MAKE_CLUSTER_ANALYSIS
+
+  
+
+  !####################################################################################################################  
+
+
+  SUBROUTINE MEANSHIFT_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     ! From a group of np points p of dimension ndim, determine the clusters
     ! using the mean shift algorithm
     ! using distance and bandwidth as parameters
@@ -139,7 +163,7 @@ CONTAINS
 
        WRITE(*,*) 'n_iteration = ', i, 'present accuracy = ', max_accuracy
 
-       OPEN (UNIT=10, FILE='nf_meanshift_check.dat', STATUS='unknown')
+       OPEN (UNIT=10, FILE='nf_output_meanshift_check.dat', STATUS='unknown')
        DO l=1,np
           WRITE(10,*) p_mean_shift(l,:)
        END DO
@@ -193,7 +217,7 @@ CONTAINS
 
 
     ! Write file for further analysis and check of cluster recognition
-    OPEN (UNIT=10, FILE='nf_meanshift_final_'//timestamp()//'.dat', STATUS='unknown')
+    OPEN (UNIT=10, FILE='nf_output_meanshift_final_'//timestamp()//'.dat', STATUS='unknown')
     DO l=1,np
        WRITE(10,*) p_cluster(l), p_in(l,:)
     END DO
@@ -215,7 +239,7 @@ CONTAINS
     END DO
     !!$OMP END PARALLEL DO
 
-    OPEN (UNIT=10, FILE='nf_meanshift_mean_std.dat', STATUS='unknown')
+    OPEN (UNIT=10, FILE='nf_output_meanshift_mean_std.dat', STATUS='unknown')
     DO k=1,ncluster
        DO l=1,ndim
           WRITE(10,*) k, cluster_np(k), l, cluster_mean(k,l), cluster_std(k,l)
@@ -224,7 +248,7 @@ CONTAINS
     CLOSE(10)
 
 
-  END SUBROUTINE MAKE_CLUSTER_ANALYSIS
+  END SUBROUTINE MEANSHIFT_CLUSTER_ANALYSIS
 
 
   !--------------------------------------------------------------------------------------------------------------
