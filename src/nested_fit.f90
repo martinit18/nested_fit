@@ -117,13 +117,8 @@ PROGRAM NESTED_FIT
 
 
 
-<<<<<<< HEAD
-  !!!!!!!! Initiate random generator the same  seed each time !!!!!!!!!!!!!!!!!!
-  CALL RANDOM_SEED(PUT=seed_array)
-=======
   !!!!!!!! Initiate random generator with the same seed each time !!!!!!!!!!!
   !CALL RANDOM_SEED(PUT=seed_array)
->>>>>>> v4
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ! Other variants
