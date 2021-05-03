@@ -1,5 +1,5 @@
 MODULE MOD_LIKELIHOOD
-  ! Automatic Time-stamp: <Last changed by martino on Monday 01 March 2021 at CET 19:53:35>
+  ! Automatic Time-stamp: <Last changed by martino on Monday 03 May 2021 at CEST 13:06:01>
   ! Module of the likelihood function for data analysis
 
 
@@ -14,8 +14,6 @@ MODULE MOD_LIKELIHOOD
 
   ! Module for the input parameter definition
   USE MOD_PARAMETERS
-  !ONLY: maxdata, nsetmax, filename, errorbars_yn, set_yn, nset, funcname, &
-  !     xmin, xmax, npar, par_in
 
   IMPLICIT NONE
 
@@ -23,6 +21,10 @@ MODULE MOD_LIKELIHOOD
   INTEGER(4) :: ndata
   INTEGER(4), DIMENSION(nsetmax) :: ndata_set=0
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: x, nc, nc_err
+  ! Data variable for 2D images
+  INTEGER(4) :: nx=0, ny=0
+  INTEGER(4), ALLOCATABLE, DIMENSION(:,:) :: adata
+  INTEGER(1), ALLOCATABLE, DIMENSION(:,:) :: adata_mask
   ! Likelihood variables
   REAL(8) :: const_ll = 0.
 
@@ -46,7 +48,7 @@ CONTAINS
   SUBROUTINE READ_DATA()
     ! Subroutine to read data files
     INTEGER(4) :: k=0
-    REAL(8), DIMENSION(maxdata,nsetmax) :: x_tmp=0, nc_tmp=0, nc_err_tmp=0
+    REAL(8), DIMENSION(maxdata,nsetmax) :: x_tmp=0, y_tmp=0, nc_tmp=0, nc_err_tmp=0
 
     ! READ DATA, calculate the constants for the likelihood function
     ! Initialize
@@ -54,12 +56,11 @@ CONTAINS
     ndata_set = 0
     const_ll = 0.
 
-    IF (errorbars_yn.EQ.'n'.OR.errorbars_yn.EQ.'N') THEN
-       ! Case with counts ----------------------------------------------------------------
+    IF (data_type.EQ.'1c') THEN
+       ! Case 1D with counts ----------------------------------------------------------------
        DO k=1,nset
           CALL READ_FILE_COUNTS(filename(k),xmin(k),xmax(k),ndata_set(k), &
                x_tmp(:,k),nc_tmp(:,k))
-
           WRITE(*,*) 'Number of file = ', k, ' of ', nset
           WRITE(*,*) 'Read data file ', TRIM(filename(k))
           WRITE(*,*) 'ndata = ', ndata_set(k)
@@ -74,8 +75,8 @@ CONTAINS
           x(1:ndata_set(k),k)  = x_tmp(1:ndata_set(k),k)
           nc(1:ndata_set(k),k) = nc_tmp(1:ndata_set(k),k)
        END DO
-    ELSE
-       ! Case with errorbars -------------------------------------------------------------------
+    ELSE IF (data_type.EQ.'1e') THEN
+       ! Case 1D with errorbars -------------------------------------------------------------------
        DO k=1,nset
           CALL READ_FILE_ERRORBARS(filename(k),xmin(k),xmax(k),ndata_set(k), &
                x_tmp(:,k),nc_tmp(:,k),nc_err_tmp(:,k))
@@ -95,7 +96,22 @@ CONTAINS
           nc(1:ndata_set(k),k) = nc_tmp(1:ndata_set(k),k)
           nc_err(1:ndata_set(k),k) = nc_err_tmp(1:ndata_set(k),k)
        END DO
+    ELSE IF (data_type.EQ.'2c') THEN
+       ! Case 2D with counts in a matrix -------------------------------------------------------------------
+       DO k=1,nset
+          CALL READ_FILE_COUNTS_2D(filename(k),xmin(k),xmax(k),ymin(k),ymax(k),ndata_set(k))
+          WRITE(*,*) 'Number of file = ', k, ' of ', nset
+          WRITE(*,*) 'Read data file ', TRIM(filename(k))
+          WRITE(*,*) 'ndata = ', ndata_set(k)
+          WRITE(*,*) 'constant in evidence calc. = ', const_ll
+       END DO
+    ELSE
+       WRITE(*,*) 'Data type ', data_type, ' not available. Please change your input file'
+       STOP
     END IF
+
+    
+    WRITE(*,*) 'Final constant in evidence calc. = ', const_ll
 
 
   END SUBROUTINE READ_DATA
@@ -158,7 +174,7 @@ CONTAINS
     INTEGER(4), INTENT(OUT) :: datan
     REAL(8), DIMENSION(maxdata), INTENT(OUT) :: x_tmp, nc_tmp, nc_err_tmp
     !
-    INTEGER(4) :: i=0, nd =0
+    INTEGER(4) :: i=0, nd = 0
     REAL(8), DIMENSION(maxdata) :: x_raw=0, nc_raw=0, nc_err_raw=0
     REAL(8), PARAMETER :: pi=3.141592653589793d0
 
@@ -197,8 +213,97 @@ CONTAINS
 
   END SUBROUTINE READ_FILE_ERRORBARS
 
+    !#####################################################################################################################
+
+  SUBROUTINE READ_FILE_COUNTS_2D(namefile,minx,maxx,miny,maxy,datan)
+    ! Read one file of data
+    
+    USE, INTRINSIC :: IEEE_ARITHMETIC
+    
+    CHARACTER, INTENT(IN) :: namefile*64
+    REAL(8), INTENT(IN) :: minx, maxx, miny, maxy
+    INTEGER(4), INTENT(OUT) :: datan
+    !
+    REAL(8) :: DLOG_FAC
+    INTEGER(4) :: i, j, sx, sy, imin, imax, jmin, jmax
+    REAL(8), ALLOCATABLE, DIMENSION(:,:) :: adata_tmp
+    CHARACTER :: string*128
+
+    ! Initialize
+    datan = 0
+    
+    ! Open file and read
+    OPEN(10,file=namefile,status='old')
+    READ(10,*) string
+    READ(10,*) sx, sy
+    ALLOCATE(adata_tmp(sy,sx))
+    READ(10,*) adata_tmp
+    CLOSE(10)
+
+    ! Check if counts are negative
+    IF (ANY(adata_tmp.LT.0.AND.IEEE_IS_FINITE(adata_tmp))) THEN
+       WRITE(*,*) 'Negative counts are not accepted. Change input file'
+       STOP
+    END IF
+    
+    ! Substitute infinites and nan with negative counts
+    WHERE (.NOT.IEEE_IS_FINITE(adata_tmp))
+       adata_tmp = -1
+    END WHERE
+    WHERE (IEEE_IS_NAN(adata_tmp))
+       adata_tmp = -1
+    END WHERE
+
+    !write(*,*) adata_tmp(:,1)
+    !write(*,*) adata_tmp(:,2)
+    !write(*,*) adata_tmp(:,3)
+    !pause
+
+    imin = INT(minx+1)
+    imax = INT(maxx)
+    jmin = INT(miny+1)
+    jmax = INT(maxy)
+    nx = imax - imin + 1
+    ny = jmax - jmin + 1
+
+    write(*,*) imin, imax, jmin, jmax
+
+
+    ALLOCATE(adata(nx,ny),adata_mask(nx,ny))
+    adata = INT(TRANSPOSE(adata_tmp(jmin:jmax,imin:imax)))
+    
+    DEALLOCATE(adata_tmp)
+
+
+    !write(*,*) adata(1,:)
+    !write(*,*) adata(2,:)
+    !write(*,*) adata(3,:)
+    !pause
+
+    ! Count the available data
+    !datan = COUNT(ieee_is_finite(adata)) 
+
+    ! Calculation of the constant part of the likelihood with Poisson distribution
+    adata_mask = 0
+    DO i=1,nx
+       DO j=1,ny
+          IF (adata(i,j).GT.0) THEN
+             adata_mask(i,j) = 1
+             datan = datan + 1
+             const_ll = const_ll - DLOG_FAC(adata(i,j))
+          ELSE IF(adata(i,j).EQ.0) THEN
+             adata_mask(i,j) = 1
+             datan = datan + 1
+          END IF
+          ! And the rest are bad pixels
+       END DO
+    END DO
+  
+  END SUBROUTINE READ_FILE_COUNTS_2D
+
   !#####################################################################################################################
 
+  
 
   SUBROUTINE INIT_FUNCTIONS()
     ! Subroutine to initialize the user functions if needed
@@ -237,16 +342,88 @@ CONTAINS
     END IF
 
   END SUBROUTINE INIT_FUNCTIONS
+  
+!#####################################################################################################################
+
+  REAL(8) FUNCTION LOGLIKELIHOOD(par)
+    ! Main likelihood function
+
+    REAL(8), DIMENSION(npar), INTENT(IN) :: par
+
+    IF (data_type(1:1).EQ.'1') THEN
+       LOGLIKELIHOOD = LOGLIKELIHOOD_1D(par)
+    ELSE IF (data_type(1:1).EQ.'2') THEN
+       LOGLIKELIHOOD = LOGLIKELIHOOD_2D(par)
+    END IF
 
 
-  FUNCTION LOGLIKELIHOOD(par)
+
+  END FUNCTION LOGLIKELIHOOD
+
+  !#####################################################################################################################
+
+  REAL(8) FUNCTION LOGLIKELIHOOD_WITH_TEST(par)
+    ! Main likelihood function with a preliminary test for Poisson
+    ! This allows for avoid this test in the main loop calculation to speed the parallel computation
+
+    REAL(8), DIMENSION(npar), INTENT(IN) :: par
+    !
+    REAL(8) :: enc
+    INTEGER(4) :: i, j, k=1
+    REAL(8) :: USERFCN, USERFCN_SET, USERFCN_2D, xx, yy
+
+
+    IF (data_type(1:1).EQ.'1') THEN
+       ! Check if the choosen function assumes zero or negative values
+       DO k=1,nset
+          DO i=1, ndata_set(k)
+             ! Poisson distribution calculation --------------------------------------------------
+             IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
+                enc = USERFCN(x(i,k),npar,par,funcname)
+             ELSE
+                enc = USERFCN_SET(x(i,k),npar,par,funcname,k)
+             END IF
+             IF (enc.LE.0) THEN
+                WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
+                WRITE(*,*) 'number of counts different from 0, model prediction equal 0 or less'
+                WRITE(*,*) 'Function value = ', enc, ' n. counts = ', nc(i,k)
+                STOP
+             END IF
+          END DO
+       END DO
+       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_1D(par)
+    ELSE IF (data_type(1:1).EQ.'2') THEN
+       ! Check if the choosen function assumes zero or negative values
+       DO i=1, nx
+          DO j=1, ny
+             xx = i - 0.5 + xmin(k) ! Real coordinates are given by the bins, the center of the bin.
+             yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin 
+             enc = USERFCN_2D(xx,yy,npar,par,funcname)
+             IF (enc.LE.0) THEN
+                WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
+                WRITE(*,*) 'number of counts different from 0, model prediction equal 0 or less'
+                WRITE(*,*) 'Function value = ', enc, ' n. counts = ', adata(i,j)
+                STOP
+             END IF
+          END DO
+       END DO       
+       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_2D(par)
+    END IF
+
+
+
+  END FUNCTION LOGLIKELIHOOD_WITH_TEST
+
+  !#####################################################################################################################
+
+  REAL(8) FUNCTION LOGLIKELIHOOD_1D(par)
 
     ! Main likelihood function
     ! Type: Poisson , Gaussian , .... soon 2D I hope
 
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
     !
-    REAL(8) :: LOGLIKELIHOOD, USERFCN, USERFCN_SET
+    REAL(8) :: USERFCN, USERFCN_SET
     REAL(8) :: ll_tmp, enc
     INTEGER(4) :: i=0, k=0
 
@@ -257,7 +434,7 @@ CONTAINS
     IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
        ! No set --------------------------------------------------------------------------------------------------------
        k=1
-       IF (errorbars_yn.EQ.'n'.OR.errorbars_yn.EQ.'N') THEN
+       IF (data_type.EQ.'1c') THEN
           !$OMP PARALLEL DO PRIVATE(enc) REDUCTION(+:ll_tmp)
           DO i=1, ndata_set(k)
              ! Poisson distribution calculation --------------------------------------------------
@@ -269,12 +446,12 @@ CONTAINS
                 ll_tmp = ll_tmp + nc(i,k)*DLOG(enc) - enc
              ELSE IF(nc(i,k).GT.0..AND.enc.LE.0.) THEN
                 WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
-                WRITE(*,*) 'nuber of counts different from 0, model prediction equal 0 or less'
+                WRITE(*,*) 'number of counts different from 0, model prediction equal 0 or less'
                 STOP
              END IF
           END DO
           !$OMP END PARALLEL DO
-       ELSE
+       ELSE IF (data_type.EQ.'1e') THEN
           !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
           DO i=1, ndata_set(k)
              ! Normal (Gaussian) distribution calculation --------------------------------------
@@ -286,7 +463,7 @@ CONTAINS
     ELSE
        ! Set ----------------------------------------------------------------------------------------------------------
        DO k=1,nset
-          IF (errorbars_yn.EQ.'n'.OR.errorbars_yn.EQ.'N') THEN
+          IF (data_type.EQ.'1c') THEN
              !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
              DO i=1, ndata_set(k)
                 ! Poisson distribution calculation --------------------------------------------------
@@ -298,7 +475,10 @@ CONTAINS
                    ll_tmp = ll_tmp + nc(i,k)*DLOG(enc) - enc
                 ELSE IF(nc(i,k).GT.0..AND.enc.LE.0.) THEN
                    WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
-                   WRITE(*,*) 'nuber of counts different from 0, model prediction equal 0 or less'
+                   WRITE(*,*) 'number of counts different from 0, model prediction equal 0 or less'
+                   STOP
+                ELSE IF(nc(i,k).LT.0) THEN
+                   WRITE(*,*) 'LIKELIHOOD ERROR: Negative counts are not accepted. Change input file'
                    STOP
                 END IF
              END DO
@@ -317,10 +497,45 @@ CONTAINS
     END IF
     !
     ! Sum all together
-    LOGLIKELIHOOD = ll_tmp + const_ll
+    LOGLIKELIHOOD_1D = ll_tmp + const_ll
 
 
-  END FUNCTION LOGLIKELIHOOD
+  END FUNCTION LOGLIKELIHOOD_1D
+
+  !###################################################################################################
+
+  REAL(8) FUNCTION LOGLIKELIHOOD_2D(par)
+    
+    ! Main likelihood function for 2D data
+    ! Type: Poisson only for the moment
+
+    REAL(8), DIMENSION(npar), INTENT(IN) :: par
+    !
+    REAL(8) :: USERFCN_2D
+    REAL(8) :: ll_tmp, enc, xx, yy
+    INTEGER(4) :: i=0, j=0, k=1
+    
+    
+    ! Calculate LIKELIHOOD
+    ll_tmp = 0.
+
+    !$OMP PARALLEL DO PRIVATE(i,j,xx,yy,enc) REDUCTION(+:ll_tmp)
+    DO i=1, nx
+       DO j=1, ny
+          ! Poisson distribution calculation --------------------------------------------------
+          xx = i - 0.5 + xmin(k) ! Real coordinates are given by the bins, the center of the bin.
+          yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin 
+          enc = USERFCN_2D(xx,yy,npar,par,funcname)
+          ll_tmp = ll_tmp + adata_mask(i,j)*(adata(i,j)*DLOG(enc) - enc)
+       END DO
+    END DO
+    !$OMP END PARALLEL DO
+    
+    ! Sum all together
+    LOGLIKELIHOOD_2D = ll_tmp + const_ll
+
+
+  END FUNCTION LOGLIKELIHOOD_2D
 
   !#####################################################################################################################
 
@@ -330,7 +545,11 @@ CONTAINS
     REAL(8), DIMENSION(npar), INTENT(IN) :: live_max, par_mean, par_median_w
 
     ! Write auxiliar files for plots
-    CALL WRITE_EXPECTED_VALUES(live_max,par_mean,par_median_w)
+    IF (data_type(1:1).EQ.'1') THEN
+       CALL WRITE_EXPECTED_VALUES(live_max,par_mean,par_median_w)
+    ELSE IF (data_type(1:1).EQ.'2') THEN
+       CALL WRITE_EXPECTED_VALUES_2D(live_max,par_mean,par_median_w)
+    END IF
 
     ! Deallocate variables
     CALL DEALLOCATE_DATA()
@@ -349,7 +568,7 @@ CONTAINS
     REAL(8) :: minx=0., maxx=0., xfit=0., dx=0., enc = 0.
     INTEGER(4) :: i=0, k=0
     ! Stuff to save separate components
-    LOGICAL :: plot = .false.
+    LOGICAL :: plot = .FALSE.
     REAL(8) :: yfit
     CHARACTER :: out_filename*64
 
@@ -358,8 +577,6 @@ CONTAINS
     !-----------------------Calculate the expected function values -------------------------
 
     ! Calculate the expected function value and residual for max likelihood
-    ! New from version 1.0: save three pairs of files with values from max likelihood, mean and median of the parameters
-    !IF(arg.EQ. ' ') THEN
     IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
        k=1
        enc = 0.
@@ -368,10 +585,10 @@ CONTAINS
        WRITE(20,*)'# x    y data    y theory      y diff    y err'
        DO i=1, ndata
           enc = USERFCN(x(i,k),npar,live_max,funcname)
-          IF (errorbars_yn.EQ.'y'.OR.errorbars_yn.EQ.'Y') THEN
+          IF (data_type.EQ.'1e') THEN
              WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)
-          ELSE
-             WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', sqrt(nc(i,k))
+          ELSE IF (data_type.EQ.'1c') THEN
+             WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', SQRT(nc(i,k))
           END IF
        END DO
        CLOSE(20)
@@ -380,10 +597,10 @@ CONTAINS
        WRITE(20,*)'# x    y data    y theory      y diff    y err'
        DO i=1, ndata
           enc = USERFCN(x(i,k),npar,par_mean,funcname)
-          IF (errorbars_yn.EQ.'y'.OR.errorbars_yn.EQ.'Y') THEN
+          IF (data_type.EQ.'1e') THEN
              WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)
-          ELSE
-             WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', sqrt(nc(i,k))
+          ELSE IF (data_type.EQ.'1c') THEN
+             WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', SQRT(nc(i,k))
           END IF
        END DO
        CLOSE(20)
@@ -392,10 +609,10 @@ CONTAINS
        WRITE(20,*)'# x    y data    y theory      y diff    y err'
        DO i=1, ndata
           enc = USERFCN(x(i,k),npar,par_median_w,funcname)
-          IF (errorbars_yn.EQ.'y'.OR.errorbars_yn.EQ.'Y') THEN
+          IF (data_type.EQ.'1e') THEN
              WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)
-          ELSE
-             WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', sqrt(nc(i,k))
+          ELSE IF (data_type.EQ.'1c') THEN
+             WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', SQRT(nc(i,k))
           END IF
        END DO
        CLOSE(20)
@@ -409,10 +626,10 @@ CONTAINS
           WRITE(30,*)'# x    y data    y theory      y diff    y err'
           DO i=1, ndata_set(k)
              enc = USERFCN_SET(x(i,k),npar,live_max,funcname,k)
-             IF (errorbars_yn.EQ.'y'.OR.errorbars_yn.EQ.'Y') THEN
+             IF (data_type.EQ.'1e') THEN
                 WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ',  nc_err(i,k)
-             ELSE
-                WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', sqrt(nc(i,k))
+             ELSE IF (data_type.EQ.'1c') THEN
+                WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', SQRT(nc(i,k))
              END IF
           END DO
           CLOSE(30)
@@ -422,10 +639,10 @@ CONTAINS
           WRITE(30,*)'# x    y data    y theory      y diff    y err'
           DO i=1, ndata_set(k)
              enc = USERFCN_SET(x(i,k),npar,live_max,funcname,k)
-             IF (errorbars_yn.EQ.'y'.OR.errorbars_yn.EQ.'Y') THEN
+             IF (data_type.EQ.'1e') THEN
                 WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ',  nc_err(i,k)
-             ELSE
-                WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', sqrt(nc(i,k))
+             ELSE IF (data_type.EQ.'1c') THEN
+                WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', SQRT(nc(i,k))
              END IF
           END DO
           CLOSE(30)
@@ -435,10 +652,10 @@ CONTAINS
           WRITE(30,*)'# x    y data    y theory      y diff    y err'
           DO i=1, ndata_set(k)
              enc = USERFCN_SET(x(i,k),npar,live_max,funcname,k)
-             IF (errorbars_yn.EQ.'y'.OR.errorbars_yn.EQ.'Y') THEN
+             IF (data_type.EQ.'1e') THEN
                 WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ',  nc_err(i,k)
-             ELSE
-                WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', sqrt(nc(i,k))
+             ELSE IF (data_type.EQ.'1c') THEN
+                WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', SQRT(nc(i,k))
              END IF
           END DO
           CLOSE(30)
@@ -451,7 +668,7 @@ CONTAINS
     IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
        maxx = xmax(1)
        minx = xmin(1)
-       plot = .true.
+       plot = .TRUE.
        xfit = 0.
        dx=(maxx-minx)/(maxfit-1)
 
@@ -485,7 +702,7 @@ CONTAINS
        DO k=1, nset
           maxx = xmax(k)
           minx = xmin(k)
-          plot = .true.
+          plot = .TRUE.
           xfit = 0.
           dx=(maxx-minx)/(maxfit-1)
 
@@ -511,8 +728,8 @@ CONTAINS
           CLOSE(40)
 
           WRITE(out_filename,3001) 'nf_output_fit_median_',k,'.dat'
-          WRITE(40,*)'# x    y fit'
           OPEN (UNIT=40, FILE=out_filename, STATUS='unknown')
+          WRITE(40,*)'# x    y fit'
           DO i=1, maxfit
              xfit = minx + (i-1)*dx
              !WRITE(30, *) xfit, USERFCN_SET(xfit,npar,live_max,funcname,k)
@@ -532,15 +749,85 @@ CONTAINS
 
   END SUBROUTINE WRITE_EXPECTED_VALUES
 
+    !#####################################################################################################################
+  SUBROUTINE WRITE_EXPECTED_VALUES_2D(live_max,par_mean,par_median_w)
+    ! Write all auxiliar files for plots and co. in 2D
+    
+    USE, INTRINSIC :: IEEE_ARITHMETIC
+
+    REAL(8), DIMENSION(npar), INTENT(IN) :: live_max, par_mean, par_median_w
+    !
+    INTEGER(8), PARAMETER :: maxfit = 10000
+    REAL(8) :: USERFCN_2D
+    REAL(8) :: minx=0., maxx=0., enc = 0.
+    INTEGER(4) :: i=0, j=0, k=0
+    ! Stuff to save separate components
+    LOGICAL :: plot = .FALSE.
+    CHARACTER :: out_filename*64
+    REAL(8), DIMENSION(nx,ny) :: aenc, ares
+    REAL(8) :: xx, yy, nan
+
+    COMMON /func_plot/ plot
+
+    nan = IEEE_VALUE(nan, IEEE_QUIET_NAN)
+    aenc = 0.
+    ares = 0.
+
+
+    IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
+       k=1
+       ! Rewrite data only -------------------------------------------------------------
+       OPEN (UNIT=20, FILE='nf_output_data_2D.dat', STATUS='unknown')
+       WRITE(20,*)'# matrix dimensions: ', nx, ny
+       IF (data_type.EQ.'2c') THEN
+          DO i=1,nx
+             WRITE(20,*) adata(i,:)
+          END DO
+       END IF
+       CLOSE(20)
+       ! Write function and residuals -------------------------------------------------------------
+       DO i=1, nx
+          DO j=1, ny
+             IF (adata(i,j).GE.0) THEN
+                ! Poisson distribution calculation --------------------------------------------------
+                xx = i - 0.5 + xmin(k) ! Real coordinates are given by the bins, the center of the bin.
+                yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin 
+                aenc(i,j) = USERFCN_2D(xx,yy,npar,live_max,funcname)
+                ares(i,j) = adata(i,j) - aenc(i,j)
+             ELSE
+                aenc(i,j) = nan
+                ares(i,j) = nan
+             END IF
+          END DO
+       END DO
+       
+       OPEN (UNIT=20, FILE='nf_output_fit_max_2D.dat', STATUS='unknown')
+       OPEN (UNIT=30, FILE='nf_output_fitres_max_2D.dat', STATUS='unknown')
+       WRITE(20,*)'# matrix dimensions: ', nx, ny
+       WRITE(30,*)'# matrix dimensions: ', nx, ny
+       IF (data_type.EQ.'2c') THEN
+          DO i=1,nx
+             WRITE(20,*) aenc(i,:)
+             WRITE(30,*) ares(i,:)
+          END DO
+       END IF
+       CLOSE(20)
+       CLOSE(30)
+    END IF
+
+  END SUBROUTINE WRITE_EXPECTED_VALUES_2D
+
 
   !#####################################################################################################################
 
   SUBROUTINE DEALLOCATE_DATA()
 
-    IF (errorbars_yn.EQ.'n'.OR.errorbars_yn.EQ.'N') THEN
+    IF (data_type.EQ.'1c') THEN
        DEALLOCATE(x,nc)
-    ELSE
+    ELSE IF (data_type.EQ.'1e') THEN
        DEALLOCATE(x,nc,nc_err)
+    ELSE IF (data_type.EQ.'2c') THEN
+       DEALLOCATE(adata)
     END IF
 
   END SUBROUTINE DEALLOCATE_DATA

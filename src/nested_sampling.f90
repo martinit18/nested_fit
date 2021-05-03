@@ -1,6 +1,6 @@
 SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,&
      live_final,live_like_max,live_max)
-  ! Time-stamp: <Last changed by martino on Saturday 02 May 2020 at CEST 13:42:51>
+  ! Time-stamp: <Last changed by martino on Monday 03 May 2021 at CEST 11:56:05>
   ! For parallel tests only
   !SUBROUTINE NESTED_SAMPLING(irnmax,rng,itry,ndata,x,nc,funcname,&
   !   npar,par_fix,par_step,par_in,par_bnd1,par_bnd2,nlive,evaccuracy,sdfraction,&
@@ -54,6 +54,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   REAL(8) :: ADDLOG, RANDN, rn
   CHARACTER :: out_filename*64
 
+  EXTERNAL :: SORTN
+
   ! This is very important
   !!$OMP THREADPRIVATE(evsum)
   ! With these nothing change
@@ -62,7 +64,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   ! Error: DUMMY attribute conflicts with THREADPRIVATE attribute in 'live_max' at (1)
 
   !!th_num = omp_get_thread_num()
-
 
   ! Initialize variables (with different seeds for different processors)
  !irn = 1
@@ -113,10 +114,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
      END DO
      ! If it is good, take it
      live(j,:) = par_prior(:)
-     live_like(j) = LOGLIKELIHOOD(par_prior)
+     live_like(j) = LOGLIKELIHOOD_WITH_TEST(par_prior)
      !IF (live_like(j).GT.0) THEN
      !   WRITE(*,*) 'Attention!! Log(likelihood) strangely large (',live_like(j),'). Change the parameters bouduaries'
-     !   WRITE(*,*) 'Live point number:',j, 'Log(likelihood):', live_like(j), 'Parameters:', live(j,:)
+     !WRITE(*,*) 'Live point number:',j, 'Log(likelihood):', live_like(j), 'Parameters:', live(j,:)
      !   STOP
      !END IF
   END DO
@@ -128,7 +129,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   ! Order livepoints
   CALL SORTN(nlive,npar,live_like,live)
   ! Store in a file
-  OPEN(11,FILE='nf_initial_live_points.dat',STATUS= 'UNKNOWN')
+  OPEN(11,FILE='nf_output_initial_live_points.dat',STATUS= 'UNKNOWN')
   WRITE(11,*) '# n     lnlikelihood     parameters'
   DO j=1,nlive
      WRITE(11,*) j, live_like(j), live(j,:)

@@ -1,4 +1,4 @@
-c     Automatic Time-stamp: <Last changed by martino on Tuesday 07 April 2020 at CEST 18:34:52>
+c     Automatic Time-stamp: <Last changed by martino on Tuesday 13 April 2021 at CEST 19:12:05>
 c################################### USERFCN DEFINITION #####################################
 
 
@@ -7,7 +7,9 @@ c################################### USERFCN DEFINITION ########################
       IMPLICIT NONE
       INTEGER*4 npar
       REAL*8 val(npar)
-      REAL*8 USERFCN, GAUSS, GAUSS_BG, DOUBLE_GAUSS_BG, DOUBLET_GAUSS_BG
+      REAL*8 USERFCN
+      REAL*8 GAUSS, SUPERGAUSS, ERFPEAK, GAUSS_BG
+      REAL*8 DOUBLE_GAUSS_BG, DOUBLET_GAUSS_BG
       REAL*8 TRIPLE_GAUSS_BG,QUAD_GAUSS_BG,QUINT_GAUSS_BG,SIX_GAUSS_BG
       REAL*8 SIX_GAUSS_EXPBG_WF, SIX_GAUSS_DBEXPBG_WF
       REAL*8 LORE, LORENORM, LORE_BG, CONS
@@ -50,6 +52,11 @@ c################################### USERFCN DEFINITION ########################
 c     Choose your model (see below for definition)
       IF(funcname.EQ.'GAUSS') THEN
          USERFCN = GAUSS(x,npar,val)
+      ELSE IF(funcname.EQ.'SUPERGAUSS') THEN
+         USERFCN = SUPERGAUSS(x,npar,val)
+         USERFCN = GAUSS(x,npar,val)
+      ELSE IF(funcname.EQ.'ERFPEAK') THEN
+         USERFCN = ERFPEAK(x,npar,val)
       ELSE IF(funcname.EQ.'GAUSS_BG') THEN
          USERFCN = GAUSS_BG(x,npar,val)
       ELSE IF(funcname.EQ.'LORE') THEN
@@ -238,15 +245,73 @@ c     The value of 'amp' is the value of the surface below the curve
       sigma = val(3)
 
 c     Test of under of underflow first
-      IF(DABS(-(x-x0)**2/(2*sigma**2)).LT.700) THEN
-         GAUSS = amp/(dsqrt(2*pi)*sigma)*
-     +        dexp(-(x-x0)**2/(2*sigma**2))
+      IF(DABS((x-x0)**2/(2*sigma**2)).LT.700) THEN
+         GAUSS = amp/(DSQRT(2*pi)*sigma)*
+     +        DEXP(-(x-x0)**2/(2*sigma**2))
       ELSE
          GAUSS = 0.d0
       END IF
 
       RETURN
       END
+
+
+c     _______________________________________________________________________________________________
+
+      FUNCTION SUPERGAUSS(X,npar,val)
+c     Normalized Supergaussian distribution
+c     The value of 'amp' is the value of the surface below the curve
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 SUPERGAUSS, x
+      REAL*8 pi
+      PARAMETER(pi=3.141592653589793d0)
+      REAL*8 x0, amp, sigma
+
+      x0    = val(1)
+      amp   = val(2)
+      sigma = val(3)
+
+c     Test of under of underflow first
+      IF(DABS((x-x0)**4/(4*sigma**4)).LT.700) THEN
+         SUPERGAUSS = amp*DSQRT(2D0)/(sigma*GAMMA(0.25D0))*
+     +        DEXP(-(x-x0)**4/(4*sigma**4))
+      ELSE
+         SUPERGAUSS = 0.d0
+      END IF
+
+      RETURN
+      END
+
+
+c     _______________________________________________________________________________________________
+
+      FUNCTION ERFPEAK(X,npar,val)
+c     Normalized Supergaussian distribution
+c     The value of 'amp' is the value of the surface below the curve
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 ERFPEAK, x
+      REAL*8 pi
+      PARAMETER(pi=3.141592653589793d0)
+      REAL*8 x0, amp, sigma, w
+
+      x0    = val(1)
+      amp   = val(2)
+      sigma = val(3)
+      w     = val(4)
+
+      ERFPEAK = amp*(0.5 - DERF((-w + ABS(x - x0))/sigma)/2.)/
+     +     (sigma/(DEXP(w**2/sigma**2)*SQRT(pi)) + w + w*DERF(w/sigma))
+
+
+
+      RETURN
+      END
+
+
 
 
 c _______________________________________________________________________________________________

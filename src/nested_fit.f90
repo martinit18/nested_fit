@@ -1,9 +1,15 @@
 PROGRAM NESTED_FIT
-  ! Time-stamp: <Last changed by martino on Tuesday 21 April 2020 at CEST 18:08:13>
+  ! Time-stamp: <Last changed by martino on Monday 03 May 2021 at CEST 12:14:24>
   !
   ! Please read README and LICENSE files for more inforamtion
   !
-  ! 3.5 Modularization of the search algorithm (in preparation of new algorithms implementation)
+  ! 4.0  2D data analysis available, new input and output files for future developments
+  ! 3.5  Modularization of the search algorithm (in preparation of new algorithms implementation)
+  !      New interpolation options for 1D and 2D histograms using GetDist Python package
+  !      Correction of some bugs in the python library
+  !      Additional folder with exercises is now available
+  !      Installation instructions now available
+  !      Compatible now with intel fortran (options to change in Makefile)
   ! 3.4  Introduction of benchmark tests with synthetic likelihood functions
   !      via the module Mod_likelihood_tests,f90 (instead of Mod_likkelihood.f90)
   !      Available tests: TEST_GAUSS (multidimensional Gaussian)
@@ -71,7 +77,9 @@ PROGRAM NESTED_FIT
   ! Parameters values and co.
   CHARACTER :: string*128
   REAL(4) :: version_file
-  REAL(4), PARAMETER :: version = 3.5
+  REAL(4), PARAMETER :: version = 4.0
+  REAL(8) :: search_par1 = 0.0
+  REAL(8) :: search_par2 = 0.0
   ! Results from Nested sampling
   INTEGER(4) :: nall=0
   REAL(8) :: evsum_final=0., live_like_max=0.
@@ -84,7 +92,7 @@ PROGRAM NESTED_FIT
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: weight_par
   REAL(8) :: mean_tmp=0., mean2_tmp=0., weight_tot=0., weight_int=0., weight_int_next=0.
   REAL(8) :: evsum_err=0.
-  !REAL(8) :: evsum_err_est=0.
+  REAL(8) :: evsum_err_est=0.
   REAL(8) :: live_like_mean=0., info=0., comp=0.
   INTEGER(8) :: nexp=0
   ! Parallelization variables
@@ -96,26 +104,26 @@ PROGRAM NESTED_FIT
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_like_final_try, weight_try, live_max_try
   ! Time measurement variables
   REAL(8) :: seconds, seconds_omp, startt, stopt
-  ! Argument staff
-  !CHARACTER(len=32) :: arg
-  !INTEGER(4) :: iproc
-  !CHARACTER(len=2) :: proc
+
   ! Random number variables
-  !INTEGER, PARAMETER :: ntrymax = 10, irnmax = 100000
-  !REAL(8), DIMENSION(irnmax,ntrymax) :: rng
-  !INTEGER :: irn
-  !REAL(8) ::rn
-  INTEGER(4) :: seed_array(33) = 1
+  !INTEGER(4) :: seed_array(33) = 1
 
 
   ! PARALLEL VARIABLE: PUT ".TRUE." IF YOU WANT TO RUN IN PARALLEL
   ! CHANGE ALSO THE FFLAGS IN THE MAKEFILE
-  LOGICAL, PARAMETER :: parallel_on = .FALSE.
+  LOGICAL, PARAMETER :: parallel_on = .TRUE.
+
+  EXTERNAL :: NESTED_SAMPLING, SORTN, MEANVAR
 
 
 
+<<<<<<< HEAD
   !!!!!!!! Initiate random generator the same  seed each time !!!!!!!!!!!!!!!!!!
   CALL RANDOM_SEED(PUT=seed_array)
+=======
+  !!!!!!!! Initiate random generator with the same seed each time !!!!!!!!!!!
+  !CALL RANDOM_SEED(PUT=seed_array)
+>>>>>>> v4
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ! Other variants
@@ -159,16 +167,17 @@ PROGRAM NESTED_FIT
   END IF
   READ(77,*) filename(1), string
   READ(77,*) set_yn, string
-  READ(77,*) errorbars_yn, string
+  READ(77,*) data_type, string
   READ(77,*) nlive, string
   READ(77,*) evaccuracy, string
-  READ(77,*) sdfraction, njump, maxtries, maxntries, string
+  READ(77,*) search_method, string
+  READ(77,*) search_par1, search_par2, maxtries, maxntries, string
   READ(77,*) cluster_yn, cluster_method, distance_limit, bandwidth, string
   READ(77,*) ntry, maxstep_try, string
   READ(77,*) funcname, string
   READ(77,*) lr, string
   READ(77,*) npoint, nwidth, string
-  READ(77,*) xmin(1), xmax(1), string
+  READ(77,*) xmin(1), xmax(1), ymin(1), ymax(1), string
   READ(77,*) npar, string
   !
   ! Allocate space for parameters and initialize
@@ -222,6 +231,14 @@ PROGRAM NESTED_FIT
 11   CONTINUE
      CLOSE(88)
   ENDIF
+
+  ! Adapt serach parameters to the search algorithm
+  IF (search_method.EQ.'RANDOM_WALK') THEN
+     sdfraction = search_par1
+     njump      = INT(search_par2)
+  END IF
+
+
   ! ----------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -229,6 +246,15 @@ PROGRAM NESTED_FIT
   WRITE(*,*) 'Parameter file read'
   WRITE(*,*) 'Filenames = ', filename(1:nset)
   WRITE(*,*) 'Funcname = ', funcname
+
+  ! Not implemented combination of inputs
+  IF (data_type(1:1).EQ.'2'.AND.set_yn.EQ.'y') THEN
+     WRITE(*,*)
+     WRITE(*,*) 'ERROR'
+     WRITE(*,*) 'Set of 2D files not yet implemented. Change your input file.'
+     STOP
+  END IF
+
 
 
   ! Initialize likelihood function
@@ -323,15 +349,15 @@ PROGRAM NESTED_FIT
 
 
      !IF(arg.EQ. ' ') THEN
-     OPEN(22,FILE='nf_output_tries.dat',STATUS= 'UNKNOWN')
-     WRITE(22,*) 'Number_of_tries ', ntry
-     WRITE(22,*) 'Evidence_average:', evsum_final
-     WRITE(22,*) 'Evidence_standard_deviation:', evsum_err
-     WRITE(22,*) '# N. try   n. steps    Final evidence   Max loglikelihood'
+     OPEN(23,FILE='nf_output_tries.dat',STATUS= 'UNKNOWN')
+     WRITE(23,*) 'Number_of_tries ', ntry
+     WRITE(23,*) 'Evidence_average:', evsum_final
+     WRITE(23,*) 'Evidence_standard_deviation:', evsum_err
+     WRITE(23,*) '# N. try   n. steps    Final evidence   Max loglikelihood'
      DO itry=1,ntry
-        WRITE(22,*)  itry , nall_try(itry), evsum_final_try(itry), live_like_max_try(itry)
+        WRITE(23,*)  itry , nall_try(itry), evsum_final_try(itry), live_like_max_try(itry)
      END DO
-     CLOSE(22)
+     CLOSE(23)
      !END IF
 
      ! Assemble all points and weights
@@ -367,7 +393,7 @@ PROGRAM NESTED_FIT
 
   ! Calculate the uncertanity of the evidence calculation
   ! (See J. Veitch and A. Vecchio, Phys. Rev. D 81, 062003 (2010))
-  !evsum_err_est = DSQRT(DBLE(nall))/(nlive*ntry)
+  evsum_err_est = DSQRT(DBLE(nall))/(nlive*ntry)
 
   ! Calculate the mean and the standard deviation for each parameter
 
@@ -521,11 +547,12 @@ PROGRAM NESTED_FIT
   !IF(arg.EQ. ' ') THEN
   OPEN(22,FILE='nf_output_res.dat',STATUS= 'UNKNOWN')
   WRITE(22,*) '#############_FINAL_RESULTS_#####################################################################################'
-  WRITE(22,*) 'N._of_trials:            ', ntry
-  WRITE(22,*) 'N._of_total_iteration:   ', nall
-  WRITE(22,*) 'Final_evidence_(log):    ', evsum_final
-  WRITE(22,*) 'Evidence_dispersion(log):', evsum_err
-  !WRITE(22,*) 'Estimate_evidence_error(log):', evsum_err_est
+  WRITE(22,*) 'N._of_trials:                          ', ntry
+  WRITE(22,*) 'N._of_total_iteration:                 ', nall
+  WRITE(22,*) 'N._of_used_livepoints:                 ', nlive
+  WRITE(22,*) 'Final_evidence_(log):                  ', evsum_final
+  WRITE(22,*) 'Evidence_estimated_uncertainty_(log):  ', evsum_err_est
+  WRITE(22,*) 'Evidence_standard_deviation_(log):     ', evsum_err
   WRITE(22,*) '------------------------------------------------------------------------------------------------------------------'
   WRITE(22,*) 'Max_likelihood_(log):', live_like_max
   WRITE(22,*) 'Max_parameter_set: '
@@ -556,11 +583,12 @@ PROGRAM NESTED_FIT
   WRITE(*,*) ' '
   WRITE(*,*) ' '
   WRITE(*,*) '############## FINAL RESULTS #####################################################################################'
-  WRITE(*,*) 'N. of trials:             ', ntry
-  WRITE(*,*) 'N. of total iteration:    ', nall
-  WRITE(*,*) 'Final evidence (log):     ', evsum_final
-  WRITE(*,*) 'Evidence dispersion (log):', evsum_err
-  !WRITE(*,*) 'Estimate evidence_error (log):', evsum_err_est
+  WRITE(*,*) 'N. of trials:                         ', ntry
+  WRITE(*,*) 'N. of total iteration:                ', nall
+  WRITE(*,*) 'N._of_used_livepoints:               ', nlive
+  WRITE(*,*) 'Final evidence (log):                 ', evsum_final
+  WRITE(*,*) 'Evidence estimated uncertainty (log): ', evsum_err_est
+  WRITE(*,*) 'Evidence standard deviation (log):    ', evsum_err
 
   WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
   WRITE(*,*) 'Max likelihood (log):', live_like_max

@@ -23,6 +23,10 @@ CNRS, Institute of NanoSciences of Paris\
 email: trassinelli AT insp.jussieu.fr\
 email: m.trassinelli AT gmail.com
 
+### Other contributors:
+L. Gonzalez
+
+
 ## Installation instructions ##
 **Prerequisite**:
 - Fortran compiler (gfortran by default)
@@ -41,7 +45,7 @@ NOTE for getdist function in the python library:\
 To make it work, change the file  xxx/pythonxx/site-packages/getdist/plots.py
 `matplotlib.use('Agg')` to `matplotlib.use('TkAgg')`.
 
-## Basic instructions
+## File descriptions
 
 **Input files**:
 - `nf_input.dat`: Main input file of the program with all user parameter definition.
@@ -63,23 +67,73 @@ The corresponding information gain and the Bayesian complexity are also provided
 For this purpose, the python function in `nested_res_ .py` can be used.
 Together with this file, also the files `nf_output_points.paramnames` and `nf_output_points.ranges` are created for the use of GetDist python library.
 
+**Details of the input file line by line**
+```
+4.0           # Program version
+he-histo.dat  # Name of the (first) data file
+n             # Set of files (y/n)
+1c            # Type of data: error bars or not and dimensions (1c,1e,2c,2s,2e)
+```
+- `1c`: one dimensional spectrum with counts. \
+Input: (x, n. counts)
+- `1e`: one dimensional spectrum with error bars. \
+Input:  (x, y, error y)
+- `2c`: two dimensional spectrum with counts. \
+Input: xy matrix with number of counts
+- `2s`: two dimensional spectrum with counts. \
+Input: (x, y, n. counts) TO BE IMPLEMENTED
+- `2e`: two dimensional spectrum with counts. \
+Input: (x, y, z, error z) TO BE IMPLEMENTED
+
+```
+200                      # Number of live points
+1.E-05                   # Evidence final accuracy
+RANDOM_WALK              # Type of search of live points
+0.1	20	100	10   # Param. of the search algo.(2), max n. tries, max of max tries
+```
+For the moment only a random walk (and some additional features) is implemented. The first two parameters of the above line are specific to the search algorithm.
+
+
+```
+y	f	0.5	0.2     # cluster analysis or not (y/n), method (f/g), distance, bandwidth
+```
+
+For the moment only the mean shift algorithm is implemented. The two parameters are specific to the method
+For the second option:
+- `f`: flat kernel (par. 1: distance)
+- `g`: gaussian kernel (par. 1: distance, par. 2: bandwidth)
+
+```
+1	100000			  # Number of runs and maximum of steps
+GAUSS_BG 	  		  # Name of the function
+L               		 # Additional data: left/right (l/r)
+500     20      		 # Additional data:  npoint, nwidth for convolution
+1   1024  1 1024   	  # xmin, xmax, ymin, ymax
+4               		 # number of parameters
+# npar  name    value   step    min     max     fixed
+1	'bg'	0.11	-1	0.	0.5	0
+2	'x0'	454.6	-1	400	600	0
+3	'amp'	296	-1	20	1000	0
+4	'sigma'	20.0	-1	0	100	0
+```
 
 Additional information can be found in the reference articles.
 
 ## Present version and history of the past versions
 
-The present version is 3.5.2\
+The present version is 4.0.0
 New features:
-- Modularization of the search and cluster recognition methods in preparation of implementation of new algorithms
-- New interpolation options for 1D and 2D histograms using GetDist Python package
-- Correction of some bugs in the python library
-- Additional folder with exercises is now available
-- Installation instructions now available
-- Compatible now with intel fortran (options to change in Makefile)
+- 2D data analysis
 
 
 
 Previous versions are:
+ - 3.5 Modularization of the search and cluster recognition methods in preparation of implementation of new algorithms \
+ New interpolation options for 1D and 2D histograms using GetDist Python package \
+ Correction of some bugs in the python library \
+ Additional folder with exercises is now available \
+ Installation instructions now available \
+ Compatible now with intel fortran (options to change in Makefile)
  - 3.4 Introduction of benchmark tests with synthetic likelihood function via the module Mod_likelihood_tests,f90 (instead of Mod_likelihood.f90).
  Available tests: TEST_GAUSS (multidimensional Gaussian), TEST_GAUSSIAN_SHELLS (multidimensional Gaussian shells, worse case with available search and clustering methods),
  TEST_EGGBOX (eggbox style profile to test clustering), TEST_ROSENBROCK (Rosenbock function test for 2-n dimension).\
