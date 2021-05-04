@@ -123,7 +123,7 @@ Additional information can be found in the reference articles.
 
 The present version is 4.0.0
 New features:
-- 2D data analysis
+- 2D data analysis for count-type XY images
 
 
 

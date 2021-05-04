@@ -1,8 +1,8 @@
-! Time-stamp: <Last changed by martino on Tuesday 13 April 2021 at CEST 18:50:18>
+! Time-stamp: <Last changed by martino on Tuesday 04 May 2021 at CEST 12:02:21>
 
 REAL(8) FUNCTION USERFCN_2D(x,y,npar,val,funcname)
-  ! Library of 2D functions 
-  
+  ! Library of 2D functions
+
   IMPLICIT NONE
   REAL(8), INTENT(IN) :: x, y
   INTEGER(4), INTENT(IN) :: npar
@@ -11,7 +11,7 @@ REAL(8) FUNCTION USERFCN_2D(x,y,npar,val,funcname)
   !
   REAL(8) :: GAUSS_SIMPLE_2D, GAUSS_BG_2D
   REAL(8) :: GAUSS_LINE_BG_2D, SUPERGAUSS_LINE_BG_2D, TWO_LORE_LINE_BG_2D
-  REAL(8) :: ERFPEAK_LINE_BG_2D
+  REAL(8) :: VOIGT_LINE_BG_2D, ERFPEAK_LINE_BG_2D
 
   ! Choose your model (see below for definition)
   IF(funcname.EQ.'GAUSS_SIMPLE_2D') THEN
@@ -20,6 +20,8 @@ REAL(8) FUNCTION USERFCN_2D(x,y,npar,val,funcname)
      USERFCN_2D = GAUSS_BG_2D(x,y,npar,val)
   ELSE IF(funcname.EQ.'GAUSS_LINE_BG_2D') THEN
      USERFCN_2D = GAUSS_LINE_BG_2D(x,y,npar,val)
+  ELSE IF(funcname.EQ.'VOIGT_LINE_BG_2D') THEN
+     USERFCN_2D = VOIGT_LINE_BG_2D(x,y,npar,val)
   ELSE IF(funcname.EQ.'SUPERGAUSS_LINE_BG_2D') THEN
      USERFCN_2D = SUPERGAUSS_LINE_BG_2D(x,y,npar,val)
   ELSE IF(funcname.EQ.'ERFPEAK_LINE_BG_2D') THEN
@@ -31,7 +33,7 @@ REAL(8) FUNCTION USERFCN_2D(x,y,npar,val,funcname)
      WRITE(*,*) 'Check in the manual and in the nf_input.dat file'
      STOP
   END IF
-  
+
 
   RETURN
 
@@ -57,7 +59,7 @@ REAL(8) FUNCTION GAUSS_SIMPLE_2D(x,y,npar,val)
   y0     = val(3)
   sigmax = val(4)
   sigmay = val(5)
- 
+
 
   !     Test of under of underflow first
   IF(DABS((x-x0)**2/(2*sigmax**2)).LT.700.OR.DABS((y-y0)**2/(2*sigmay**2)).LT.700) THEN
@@ -100,7 +102,7 @@ REAL(8) FUNCTION GAUSS_BG_2D(x,y,npar,val)
   valg(3) = y0
   valg(4) = sigmax
   valg(5) = sigmay
- 
+
   GAUSS_BG_2D = GAUSS_SIMPLE_2D(x,y,5,valg) + bg
 
   RETURN
@@ -117,7 +119,7 @@ END FUNCTION GAUSS_BG_2D
 ! x = a + b*(y-y0) + c*(y-y0)**2
 ! y0: middle of the image
 !
-! 
+!
 !
 !##############################################################################################
 
@@ -157,12 +159,58 @@ REAL(8) FUNCTION GAUSS_LINE_BG_2D(x,y,npar,val)
   GAUSS_LINE_BG_2D = GAUSS(x,3,valg) + bg
 
   RETURN
-  
-  
+
+
 
 END FUNCTION GAUSS_LINE_BG_2D
 
 !________________________________________________________________________________________
+
+
+REAL(8) FUNCTION VOIGT_LINE_BG_2D(x,y,npar,val)
+  ! Normalized Voigt line profile.
+  ! x: dispersion axis --> Voigt profile
+  ! y: parallel axis --> slope of the line
+  ! The value of 'amp' is the value of the volume below the curve
+
+  IMPLICIT NONE
+  REAL(8), INTENT(IN) :: x, y
+  INTEGER(4), INTENT(IN) :: npar
+  REAL(8), DIMENSION(npar), INTENT(IN) :: val
+  !
+  REAL(8), DIMENSION(4) :: valv
+  REAL(8) :: VOIGT
+  REAL(8) :: a, b, c, amp, sigma, gamma, y0, bg, x0, Dy
+
+  a     = val(1)
+  b     = val(2)
+  c     = val(3)
+  y0    = val(4)
+  Dy    = val(5)
+  amp   = val(6)
+  sigma = val(7)
+  gamma = val(8)
+  bg    = val(9)
+
+  x0 = a + b*(y-y0) + c*(y-y0)**2
+  amp = amp/Dy    ! For the normalization along the plan perpendicular to the dispersion
+
+  valv(1) = x0
+  valv(2) = amp
+  valv(3) = sigma
+  valv(4) = gamma
+
+
+  VOIGT_LINE_BG_2D = VOIGT(x,4,valv) + bg
+
+  RETURN
+
+
+
+END FUNCTION VOIGT_LINE_BG_2D
+
+!________________________________________________________________________________________
+
 
 REAL(8) FUNCTION TWO_LORE_LINE_BG_2D(x,y,npar,val)
   ! Normalized two Lorentzian line profiles.
@@ -200,17 +248,17 @@ REAL(8) FUNCTION TWO_LORE_LINE_BG_2D(x,y,npar,val)
   vall1(1) = x01
   vall1(2) = amp1
   vall1(3) = gamma
-  
+
   vall2(1) = x02
   vall2(2) = amp2
   vall2(3) = gamma
-  
+
 
   TWO_LORE_LINE_BG_2D = LORE(x,3,vall1) + LORE(x,3,vall2) + bg
 
   RETURN
-  
-  
+
+
 
 END FUNCTION TWO_LORE_LINE_BG_2D
 
@@ -249,12 +297,12 @@ REAL(8) FUNCTION SUPERGAUSS_LINE_BG_2D(x,y,npar,val)
   valg(1) = x0
   valg(2) = amp
   valg(3) = sigma
-  
+
   SUPERGAUSS_LINE_BG_2D = SUPERGAUSS(x,3,valg) + bg
 
   RETURN
-  
-  
+
+
 
 END FUNCTION SUPERGAUSS_LINE_BG_2D
 
@@ -295,12 +343,12 @@ REAL(8) FUNCTION ERFPEAK_LINE_BG_2D(x,y,npar,val)
   vale(2) = amp
   vale(3) = sigma
   vale(4) = w
-  
+
   ERFPEAK_LINE_BG_2D = ERFPEAK(x,4,vale) + bg
 
   RETURN
-  
-  
+
+
 
 END FUNCTION ERFPEAK_LINE_BG_2D
 
