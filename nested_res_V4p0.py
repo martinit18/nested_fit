@@ -656,7 +656,7 @@ class Analysis(object):
         plt.show()
 
 ####################################################################################################################################
-    def plot2D_line_proj(self,path=currentpath,xmin=0,xmax=0,ymin=0,ymax=0,zmin=0,zmax=0,typeof='max',
+    def plot2D_line_proj(self,path=currentpath,xmin=0,xmax=0,ymin=0,ymax=0,typeof='max',
                  flat=True,logscale=False,nset=0):
         '''
         Plot of the 2D spectral line projection on the dispersion axis (x-axis).
@@ -670,20 +670,20 @@ class Analysis(object):
 
         self.path = path
 
-        from numpy import genfromtxt, size, arange, sqrt
+        from numpy import genfromtxt, size, arange, sqrt, isfinite
         import matplotlib.pyplot as plt
 
         # Read parameters from input file
         input_data, input_comment = self.read_input(path=path)
-        xmin = input_data['xmin']
-        xmax = input_data['xmax']
-        ymin = input_data['ymin']
-        ymax = input_data['ymax']
+        minx = input_data['xmin']
+        maxx = input_data['xmax']
+        miny = input_data['ymin']
+        maxy = input_data['ymax']
         # Read parameters from output file
         output_data = self.read_output(path=path)
 
 
-        bins = arange(xmin,xmax+1)
+        bins = arange(minx,maxx+1)
 
 
         # Read data file
@@ -695,8 +695,8 @@ class Analysis(object):
         a, b, c, y0, Dy = output_data['max'][0:5]
 
         # Reshape data
-        x = np.arange(shape(adata)[0]) + xmin
-        y = np.arange(shape(adata)[1]) + ymin
+        x = np.arange(shape(adata)[0]) + minx
+        y = np.arange(shape(adata)[1]) + miny
         xx, yy = np.meshgrid(x, y)
         xxx = xx.flatten()
         yyy = yy.flatten()
@@ -705,8 +705,8 @@ class Analysis(object):
         xxxx = xxx - b*(yyy - y[int(y0)]) - c*(yyy - y[int(y0)])**2
         zzz = adata.T.flatten()
         # Built histogram
-        h, edges = histogram(xxxx[(zzz>0) & (xxx >= xmin) & (xxx <= xmax)],
-            weights=zzz[(zzz>0) & (xxx >= xmin) & (xxx <= xmax)],bins=bins)
+        h, edges = histogram(xxxx[(zzz>0) & (xxx >= minx) & (xxx <= maxx)],
+            weights=zzz[(zzz>0) & (xxx >= minx) & (xxx <= maxx)],bins=bins)
         # Extract data for plotting the corrected projection
         pos = edges[:-1] + (edges[1] - edges[0])/2
         nc_fit = afit[:,int(y0)]*Dy
@@ -718,6 +718,17 @@ class Analysis(object):
         plt.title('Fit result in the projection')
         plt.xlabel('Channel')
         plt.ylabel('Counts')
+        # Border of the graph
+        minx = pos.min()
+        maxx = pos.max()
+        miny = h[isfinite(h)].min()
+        maxy = h[isfinite(h)].max()*1.2
+        if xmin == 0 and xmax == 0:
+            plt.xlim([minx,maxx])
+        else:
+            plt.xlim([xmin,xmax])
+        if ymin != 0 and ymax != 0:
+            plt.ylim(ymin,ymax)
         plt.errorbar(pos,h,yerr=sqrt(h),xerr=None,fmt='or',ecolor='red',mec='red',**linestyle)
         plt.errorbar(pos,nc_fit,yerr=None,xerr=None,fmt='-b',**linestyle2)
         plt.tight_layout()
@@ -729,6 +740,17 @@ class Analysis(object):
         plt.title('Residuals in the projection')
         plt.xlabel('Channel')
         plt.ylabel('Counts')
+        # Border of the graph
+        minx = pos.min()
+        maxx = pos.max()
+        miny = nc_res[isfinite(nc_res)].min()*1.2
+        maxy = nc_res[isfinite(nc_res)].max()*1.2
+        if xmin == 0 and xmax == 0:
+            plt.xlim([minx,maxx])
+        else:
+            plt.xlim([xmin,xmax])
+        if ymin != 0 and ymax != 0:
+            plt.ylim(ymin,ymax)
         plt.errorbar(pos,nc_res,yerr=sqrt(h),xerr=None,fmt='ob',ecolor='blue',mec='blue',**linestyle)
         plt.errorbar([xmin,xmax],[0.,0.],yerr=None,xerr=None,fmt='-k',**linestyle2)
         plt.tight_layout()
