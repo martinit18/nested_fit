@@ -121,9 +121,10 @@ Additional information can be found in the reference articles.
 
 ## Present version and history of the past versions
 
-The present version is 4.0.0
+The present version is 4.0.1
 New features:
-- 2D data analysis for count-type XY images
+- 2D data analysis for count-type XY
+- computation acceleration for the 1D case introducing a mask instead of IF condition in the likelihood
 
 
 

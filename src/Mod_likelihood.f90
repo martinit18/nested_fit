@@ -110,7 +110,7 @@ CONTAINS
        STOP
     END IF
 
-    
+
     WRITE(*,*) 'Final constant in evidence calc. = ', const_ll
 
 
@@ -120,6 +120,9 @@ CONTAINS
 
   SUBROUTINE READ_FILE_COUNTS(namefile,minx,maxx,datan,x_tmp,nc_tmp)
     ! Read one file of data
+
+    USE, INTRINSIC :: IEEE_ARITHMETIC
+
     CHARACTER, INTENT(IN) :: namefile*64
     REAL(8), INTENT(IN) :: minx, maxx
     INTEGER(4), INTENT(OUT) :: datan
@@ -139,13 +142,22 @@ CONTAINS
     OPEN(10,file=namefile,status='old')
     DO i=1, maxdata
        READ(10,*,END=20) x_raw(i), nc_raw(i)
-       ! Make test for integer numbers
+       ! Make test for integer numbers, NaN and infinites
        IF (ABS(nc_raw(i)-INT(nc_raw(i))).GT.1E-5) THEN
           WRITE(*,*) 'Attention, input numbers are not counts and you are using Poisson statistic (no error bar)'
           WRITE(*,*) 'n. counts = ', nc_raw(i)
           WRITE(*,*) 'Change something!'
           STOP
+       ELSE IF (nc_raw(i).LT.0.AND.IEEE_IS_FINITE(nc_raw(i))) THEN
+          ! Check if counts are negative
+          WRITE(*,*) 'Negative counts are not accepted. Change input file'
+          STOP
+       ELSE IF (.NOT.IEEE_IS_FINITE(nc_raw(i)).OR.IEEE_IS_NAN(nc_raw(i))) THEN
+          ! Check infinites and nan
+          WRITE(*,*) 'Infinite or "NaN" counts are not accepted. Change input file'
+          STOP
        END IF
+
        ! Select the data
        IF(x_raw(i).GE.minx.AND.x_raw(i).LE.maxx) THEN
           nd = nd + 1
@@ -155,7 +167,6 @@ CONTAINS
           !IF (nc_tmp(nd).GT.0.) const_ll = const_ll - DFAC_LN(INT(nc_tmp(nd)))
           ! Uses of the gamma function gamma(n) = (n-1)!
           IF (nc_tmp(nd).GT.0.) const_ll = const_ll - DLOG_FAC(INT(nc_tmp(nd)))
-          !write(*,*) nc_tmp(nd), const_ll
        END IF
     ENDDO
 
@@ -217,9 +228,9 @@ CONTAINS
 
   SUBROUTINE READ_FILE_COUNTS_2D(namefile,minx,maxx,miny,maxy,datan)
     ! Read one file of data
-    
+
     USE, INTRINSIC :: IEEE_ARITHMETIC
-    
+
     CHARACTER, INTENT(IN) :: namefile*64
     REAL(8), INTENT(IN) :: minx, maxx, miny, maxy
     INTEGER(4), INTENT(OUT) :: datan
@@ -231,8 +242,8 @@ CONTAINS
 
     ! Initialize
     datan = 0
-    
-    ! Open file and read
+
+    ! Open file and read headers and the 2D matrix data in one shot
     OPEN(10,file=namefile,status='old')
     READ(10,*) string
     READ(10,*) sx, sy
@@ -245,7 +256,7 @@ CONTAINS
        WRITE(*,*) 'Negative counts are not accepted. Change input file'
        STOP
     END IF
-    
+
     ! Substitute infinites and nan with negative counts
     WHERE (.NOT.IEEE_IS_FINITE(adata_tmp))
        adata_tmp = -1
@@ -271,7 +282,7 @@ CONTAINS
 
     ALLOCATE(adata(nx,ny),adata_mask(nx,ny))
     adata = INT(TRANSPOSE(adata_tmp(jmin:jmax,imin:imax)))
-    
+
     DEALLOCATE(adata_tmp)
 
 
@@ -281,7 +292,7 @@ CONTAINS
     !pause
 
     ! Count the available data
-    !datan = COUNT(ieee_is_finite(adata)) 
+    !datan = COUNT(ieee_is_finite(adata))
 
     ! Calculation of the constant part of the likelihood with Poisson distribution
     adata_mask = 0
@@ -298,12 +309,12 @@ CONTAINS
           ! And the rest are bad pixels
        END DO
     END DO
-  
+
   END SUBROUTINE READ_FILE_COUNTS_2D
 
   !#####################################################################################################################
 
-  
+
 
   SUBROUTINE INIT_FUNCTIONS()
     ! Subroutine to initialize the user functions if needed
@@ -342,7 +353,7 @@ CONTAINS
     END IF
 
   END SUBROUTINE INIT_FUNCTIONS
-  
+
 !#####################################################################################################################
 
   REAL(8) FUNCTION LOGLIKELIHOOD(par)
@@ -397,7 +408,7 @@ CONTAINS
        DO i=1, nx
           DO j=1, ny
              xx = i - 0.5 + xmin(k) ! Real coordinates are given by the bins, the center of the bin.
-             yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin 
+             yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin
              enc = USERFCN_2D(xx,yy,npar,par,funcname)
              IF (enc.LE.0) THEN
                 WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
@@ -406,7 +417,7 @@ CONTAINS
                 STOP
              END IF
           END DO
-       END DO       
+       END DO
        LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_2D(par)
     END IF
 
@@ -464,32 +475,19 @@ CONTAINS
        ! Set ----------------------------------------------------------------------------------------------------------
        DO k=1,nset
           IF (data_type.EQ.'1c') THEN
-             !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
+             !$OMP PARALLEL DO PRIVATE(i,k,x,enc) REDUCTION(+:ll_tmp)
              DO i=1, ndata_set(k)
                 ! Poisson distribution calculation --------------------------------------------------
                 enc = USERFCN_SET(x(i,k),npar,par,funcname,k)
-                IF (nc(i,k).EQ.0..AND.enc.GT.0.) THEN
-                   ll_tmp = ll_tmp - enc
-                ELSE IF(nc(i,k).GT.0..AND.enc.GT.0.) THEN
-                   !ll_tmp(i) = nc(i)*DLOG(enc) - enc - DFACTLN(INT(nc(i)))
-                   ll_tmp = ll_tmp + nc(i,k)*DLOG(enc) - enc
-                ELSE IF(nc(i,k).GT.0..AND.enc.LE.0.) THEN
-                   WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
-                   WRITE(*,*) 'number of counts different from 0, model prediction equal 0 or less'
-                   STOP
-                ELSE IF(nc(i,k).LT.0) THEN
-                   WRITE(*,*) 'LIKELIHOOD ERROR: Negative counts are not accepted. Change input file'
-                   STOP
-                END IF
+                ll_tmp = ll_tmp + nc(i,k)*DLOG(enc) - enc
              END DO
              !$OMP END PARALLEL DO
           ELSE
-             !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
+             !$OMP PARALLEL DO PRIVATE(i,k,x,enc) REDUCTION(+:ll_tmp)
              DO i=1, ndata_set(k)
                 ! Normal (Gaussian) distribution calculation --------------------------------------
                 enc = USERFCN_SET(x(i,k),npar,par,funcname,k)
                 ll_tmp = ll_tmp - (nc(i,k) - enc)**2/(2*nc_err(i,k)**2)
-
              ENDDO
              !$OMP END PARALLEL DO
           END IF
@@ -505,7 +503,7 @@ CONTAINS
   !###################################################################################################
 
   REAL(8) FUNCTION LOGLIKELIHOOD_2D(par)
-    
+
     ! Main likelihood function for 2D data
     ! Type: Poisson only for the moment
 
@@ -514,8 +512,8 @@ CONTAINS
     REAL(8) :: USERFCN_2D
     REAL(8) :: ll_tmp, enc, xx, yy
     INTEGER(4) :: i=0, j=0, k=1
-    
-    
+
+
     ! Calculate LIKELIHOOD
     ll_tmp = 0.
 
@@ -524,13 +522,13 @@ CONTAINS
        DO j=1, ny
           ! Poisson distribution calculation --------------------------------------------------
           xx = i - 0.5 + xmin(k) ! Real coordinates are given by the bins, the center of the bin.
-          yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin 
+          yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin
           enc = USERFCN_2D(xx,yy,npar,par,funcname)
           ll_tmp = ll_tmp + adata_mask(i,j)*(adata(i,j)*DLOG(enc) - enc)
        END DO
     END DO
     !$OMP END PARALLEL DO
-    
+
     ! Sum all together
     LOGLIKELIHOOD_2D = ll_tmp + const_ll
 
@@ -752,7 +750,7 @@ CONTAINS
     !#####################################################################################################################
   SUBROUTINE WRITE_EXPECTED_VALUES_2D(live_max,par_mean,par_median_w)
     ! Write all auxiliar files for plots and co. in 2D
-    
+
     USE, INTRINSIC :: IEEE_ARITHMETIC
 
     REAL(8), DIMENSION(npar), INTENT(IN) :: live_max, par_mean, par_median_w
@@ -791,7 +789,7 @@ CONTAINS
              IF (adata(i,j).GE.0) THEN
                 ! Poisson distribution calculation --------------------------------------------------
                 xx = i - 0.5 + xmin(k) ! Real coordinates are given by the bins, the center of the bin.
-                yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin 
+                yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin
                 aenc(i,j) = USERFCN_2D(xx,yy,npar,live_max,funcname)
                 ares(i,j) = adata(i,j) - aenc(i,j)
              ELSE
@@ -800,7 +798,7 @@ CONTAINS
              END IF
           END DO
        END DO
-       
+
        OPEN (UNIT=20, FILE='nf_output_fit_max_2D.dat', STATUS='unknown')
        OPEN (UNIT=30, FILE='nf_output_fitres_max_2D.dat', STATUS='unknown')
        WRITE(20,*)'# matrix dimensions: ', nx, ny

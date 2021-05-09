@@ -1,5 +1,5 @@
 #  Automatic Time-stamp: <Last changed by martino on Tuesday 04 May 2021 at CEST 12:16:55>
-NAME    = nested_fit4.0.0.exe
+NAME    = nested_fit4.0.1.exe
 .SUFFIXES : .f90 .f .o .c .mod
 CFLAGS  =
 ############## FLAG TO COSTUMIZE #############################
@@ -41,10 +41,10 @@ F90FILES = Mod_parameters.f90 Mod_likelihood.f90 Mod_timestamp.f90 \
 
 
 # for gfortran
-#OPT = -O2 -static
+OPT = -O2 -static
 # For Intel fortran
 #OPT = -O2 -no-wrap-margin
-OPT = -O2 -heap-arrays -no-wrap-margin
+#OPT = -O2 -heap-arrays -no-wrap-margin
 #OPT = -O2 -no-wrap-margin
 #OPT = -fast -heap-arrays -no-wrap-margin
 #OPT = -Ofast -g -xHost -heap-arrays -no-wrap-margin
@@ -68,8 +68,8 @@ OPT = -O2 -heap-arrays -no-wrap-margin
 #LDFLAGS = -framework accelerate -fopenmp
 
 # Rules...
-#FC  = gfortran
-FC  = ifort
+FC  = gfortran
+#FC  = ifort
 CC  = gcc
 FC90= $(FC)
 SRCFILES =  $(FFILES)

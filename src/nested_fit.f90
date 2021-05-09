@@ -2,7 +2,7 @@ PROGRAM NESTED_FIT
   ! Time-stamp: <Last changed by martino on Monday 03 May 2021 at CEST 12:14:24>
   !
   ! Please read README and LICENSE files for more inforamtion
-  !
+  ! 4.1  1D parallelization acceleration with masks instead of IF conditions in the likelihood 
   ! 4.0  2D data analysis available, new input and output files for future developments
   ! 3.5  Modularization of the search algorithm (in preparation of new algorithms implementation)
   !      New interpolation options for 1D and 2D histograms using GetDist Python package
