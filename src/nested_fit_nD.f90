@@ -63,6 +63,8 @@ PROGRAM NESTED_FIT
   USE MOD_PARAMETERS
   ! Module for likelihood for data analysis
   USE MOD_LIKELIHOOD
+  
+  
   !USE RNG
   !
   IMPLICIT NONE

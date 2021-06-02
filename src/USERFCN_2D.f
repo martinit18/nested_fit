@@ -12,7 +12,13 @@ c################################### USERFCN_2D DEFINITION #####################
       REAL*8 FABIAN_2D, MOD_FABIAN_2D, POLY_2D, POLY_MORE_2D
       REAL*8 HAMILTONIAN_XY_2D, HAMILTONIAN_XQ_2D, R_POT_2D
       REAL*8 R_LJ_2D, POWER_FRAC_2D, DOUBLE_MORSE_2D, QT_2D
-      REAL*8 REAL_ENERGY_XY_2D
+      REAL*8 REAL_ENERGY_XY_2D, REAL_ENERGY_QT_2D, REAL_FABIAN_2D
+      REAL*8 MOD_REAL_FABIAN_2D, ERF_FABIAN_2D, POWER_REAL_FABIAN_2D
+      REAL*8 DIS_REAL_FABIAN_2D, ONE_DIS_FABIAN_2D, ONE_CONT_FABIAN_2D
+      REAL*8 DOUBLE_FABIAN, SYM_DOUBLE_FABIAN, QUAD_PARABOLA, DD_MORSE
+      REAL*8 INT_DOUBLE_FABIAN, INT_TH_DOUBLE_FABIAN, DINT_DOUBLE_FABIAN
+      REAL*8 CENT_SYM_DOUBLE_FABIAN, DINT_TH_DOUBLE_FABIAN
+      REAL*8 DINT_EXP_DOUBLE_FABIAN
       REAL*8 x, y
       CHARACTER*64 funcname
 
@@ -31,6 +37,22 @@ c     Choose your model (see below for definition)
          USERFCN_2D = POLY_EVENX_2D(x,y,npar,val)
       ELSE IF(funcname.EQ.'FABIAN_2D') THEN
          USERFCN_2D = FABIAN_2D(x,y,npar,val)
+      ELSE IF(funcname.EQ.'REAL_FABIAN_2D') THEN
+         USERFCN_2D = REAL_FABIAN_2D(x,y,npar,val)
+      ELSE IF(funcname.EQ.'POWER_REAL_FABIAN_2D') THEN
+         USERFCN_2D = POWER_REAL_FABIAN_2D(x,y,npar,val)
+      ELSE IF(funcname.EQ.'ERF_FABIAN_2D') THEN
+         USERFCN_2D = ERF_FABIAN_2D(x,y,npar,val)
+      ELSE IF(funcname.EQ.'MOD_REAL_FABIAN_2D') THEN
+         USERFCN_2D = MOD_REAL_FABIAN_2D(x,y,npar,val)
+      ELSE IF(funcname.EQ.'DIS_REAL_FABIAN_2D') THEN
+         USERFCN_2D = DIS_REAL_FABIAN_2D(x,y,npar,val)
+      ELSE IF(funcname.EQ.'ONE_DIS_FABIAN_2D') THEN
+         USERFCN_2D = ONE_DIS_FABIAN_2D(x,y,npar,val)
+      ELSE IF(funcname.EQ.'ONE_CONT_FABIAN_2D') THEN
+         USERFCN_2D = ONE_CONT_FABIAN_2D(x,y,npar,val)
+      ELSE IF(funcname.EQ.'MOD_REAL_FABIAN_2D') THEN
+         USERFCN_2D = MOD_REAL_FABIAN_2D(x,y,npar,val)
       ELSE IF(funcname.EQ.'MOD_FABIAN_2D') THEN
          USERFCN_2D = MOD_FABIAN_2D(x,y,npar,val)
       ELSE IF(funcname.EQ.'POLY_2D') THEN
@@ -53,6 +75,33 @@ c     Choose your model (see below for definition)
          USERFCN_2D = QT_2D(x,y,npar,val)
       ELSE IF(funcname.EQ.'REAL_ENERGY_XY_2D') THEN
          USERFCN_2D = REAL_ENERGY_XY_2D(x,y,npar,val)
+      ELSE IF(funcname.EQ.'REAL_ENERGY_QT_2D') THEN
+         USERFCN_2D = REAL_ENERGY_QT_2D(x,y,npar,val)
+      ELSE IF(funcname.EQ.'DOUBLE_FABIAN') THEN
+         USERFCN_2D = DOUBLE_FABIAN(x,y,npar,val)
+      ELSE IF(funcname.EQ.'SYM_DOUBLE_FABIAN') THEN
+         USERFCN_2D = SYM_DOUBLE_FABIAN(x,y,npar,val)
+      ELSE IF(funcname.EQ.'CENT_SYM_DOUBLE_FABIAN') THEN
+         USERFCN_2D = CENT_SYM_DOUBLE_FABIAN(x,y,npar,val)
+      ELSE IF(funcname.EQ.'QUAD_PARABOLA') THEN
+         USERFCN_2D = QUAD_PARABOLA(x,y,npar,val)
+      ELSE IF(funcname.EQ.'DD_MORSE') THEN
+         USERFCN_2D = DD_MORSE(x,y,npar,val)
+      ELSE IF(funcname.EQ.'INT_DOUBLE_FABIAN') THEN
+         USERFCN_2D = INT_DOUBLE_FABIAN(x,y,npar,val)
+      ELSE IF(funcname.EQ.'DINT_DOUBLE_FABIAN') THEN
+         USERFCN_2D = DINT_DOUBLE_FABIAN(x,y,npar,val)
+      ELSE IF(funcname.EQ.'INT_TH_DOUBLE_FABIAN') THEN
+         USERFCN_2D = INT_TH_DOUBLE_FABIAN(x,y,npar,val)
+      ELSE IF(funcname.EQ.'DINT_TH_DOUBLE_FABIAN') THEN
+         USERFCN_2D = DINT_TH_DOUBLE_FABIAN(x,y,npar,val)
+      ELSE IF(funcname.EQ.'DINT_EXP_DOUBLE_FABIAN') THEN
+         USERFCN_2D = DINT_EXP_DOUBLE_FABIAN(x,y,npar,val)
+
+
+
+
+
 
 
 
@@ -505,43 +554,62 @@ c     One minimum for yc>thr and 2 (or more if p>1) for yc<thr
       INTEGER*4 npar
       REAL*8 val(npar)
       REAL*8 FABIAN_2D, x, y
-      REAL*8 amp1,amp2, x0, yc,morse, q2
-      REAL*8 y0, q, a
-      REAL*8 r, N, s, bg, N0,D,m0,qamp,lda
+      REAL*8 amp1,amp2, x0, yc,potential, q2, q2_, B_y, A_y
+      REAL*8 y0, q1,qb1,qb2, a, Nb1, Nb2, bmp1, bmp2
+      REAL*8 r, N1, s, bg, N2,D,m0,qamp,lda,b
       LOGICAL plot
       COMMON /func_plot/ plot
 
 
       y0    = val(1)
-      q     = val(2)
+      q1     = val(2)
       a     = val(3)
       r     = val(4)
-      N     = val(5)
+      N1     = val(5)
       s     = val(6)
       bg    = val(7)
-      N0    = val(8)
+      N2    = val(8)
       D     = val(9)
       m0    = val(10)
-      qamp  = val(11)
+      q2    = val(11)
       lda   = val(12)
+      Nb1   = val(13)
+      qb1   = val(14)
+      b     = val(15)
+      qb2   = val(16)
+      Nb2   = val(17)
 
       yc     = y-y0
-      amp1   = N
-      amp2   = N+N0*yc
-      morse  = D*(1-EXP(-(y-m0)/lda))**2
+      amp1   = N1
+      amp2   = N1 
+      bmp1   = Nb1
+      bmp2   = Nb2
+
+
+      potential= D*(1-EXP(-(b*y-m0)/lda))**2        !morse
+      !potential = -D*(1+lda*(y-m0))*exp(-lda*(y-m0))!Rydberg
+      !potential = D*(1-m0/y)*exp(-lda*(y*y-m0*m0))  !Varshni
+      !potential = 4*D*((lda/(y-m0))**12-(lda/(y-m0))**6)      !Leonard-Jones
 
 
       IF(yc.LE.0) THEN
-        x0 = a*(-yc)**(r/2)
-        FABIAN_2D=amp1*((((x-x0)*(x+x0))**2)**q)+bg + morse
+        x0   = (a*ABS(yc))**(r/2)
+        A_y  = amp1*((((x-x0)*(x+x0))**2)**q1)
+        B_y  = bmp1*((((x-x0)*(x+x0))**2)**qb1)
+        FABIAN_2D= A_y + B_y + bg + potential
       ELSE
-        q2=qamp*yc+q
-        FABIAN_2D=amp2*(((x**2)**2)**q2)+bg + morse
+        q2   = q1
+        !qb2  = qb1
+        !q2  = q1/(1+b*yc) + s
+        A_y = amp2*(((x**2)**2)**q2)
+        B_y = bmp2*(((x**2)**2)**qb2)
+        FABIAN_2D= A_y + B_y + bg + potential
       END IF
 
 
       !write(*,*) q, x0, (x-x0)*(x+x0), ((((x-x0)*(x+x0))**2)**q)
       !pause
+
 
 
 c     Save the different components
@@ -552,6 +620,633 @@ c     Save the different components
       
       RETURN
       END
+
+
+c _______________________________________________________________________________________________
+
+      FUNCTION MOD_REAL_FABIAN_2D(X,Y,npar,val)
+c     One minimum for yc>thr and 2 (or more if p>1) for yc<thr
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 MOD_REAL_FABIAN_2D, x, y
+      REAL*8 y0, a, r, q, N, p, y2, D, m0, lda
+      REAL*8  xmin, ycut, ysmear,b, s, bg, s2, b2
+      REAL*8 amp, x0, yc,potential, A_y, arg, anharm, k
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      y0    = val(1)
+      a     = val(2)
+      r     = val(3)
+      q     = val(4)
+      N     = val(5)
+      p     = val(6)
+      y2    = val(7)
+      D     = val(8)
+      m0    = val(9)
+      lda   = val(10)
+      xmin  = val(11)
+      ycut  = val(12)
+      ysmear= val(13)
+      b     = val(14)
+      s     = val(15)
+      bg    = val(16)
+      s2    = val(17)
+      b2    = val(18)
+      
+      
+
+      potential= D*(1-EXP(-(y-m0)*lda))**2        !morse
+
+      !potential = -D*(1+lda*(y-m0))*exp(-lda*(y-m0))!Rydberg
+      !potential = D*(1-m0/y)*exp(-lda*(y*y-m0*m0))  !Varshni
+      !potential = 4*D*((lda/(y-m0))**12-(lda/(y-m0))**6)      !Lennard-Jones
+
+
+
+      
+      !DOUBLE WELL
+      yc     = y-y0
+      IF(yc.LE.0) THEN
+        x0   = a*(ABS(yc))**(r/2)
+        A_y  = (((x-x0)*(x+x0)/xmin**2)**2)**q
+      ELSE
+        A_y = ((x**2/xmin**2)**2)**q
+      END IF
+
+      amp = N*A_y*(EXP(-(y/y2)**2))**p  
+            
+
+      !Anharmonic term
+      
+      arg = -y+ycut
+      anharm = (b*(x/xmin)**s + b2*(x/xmin)**s2)*(1-TANH(arg))/2
+
+
+
+      MOD_REAL_FABIAN_2D = amp + anharm + potential + bg
+
+
+
+
+c     Save the different components
+      IF(plot) THEN
+         WRITE(40,*) x, y, MOD_REAL_FABIAN_2D
+      END IF
+
+      
+      RETURN
+      END
+
+
+c _______________________________________________________________________________________________
+
+      FUNCTION POWER_REAL_FABIAN_2D(X,Y,npar,val)
+c     One minimum for yc>thr and 2 (or more if p>1) for yc<thr
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 POWER_REAL_FABIAN_2D, x, y
+      REAL*8 y0, a, r, q, N, p, y2, D, m0, lda
+      REAL*8  xmin, ycut, ysmear,b, s, bg
+      REAL*8 amp, x0, yc,potential, A_y, arg, anharm, k
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      y0    = val(1)
+      a     = val(2)
+      r     = val(3)
+      q     = val(4)
+      N     = val(5)
+      p     = val(6)
+      y2    = val(7)
+      D     = val(8)
+      m0    = val(9)
+      lda   = val(10)
+      xmin  = val(11)
+      ycut  = val(12)
+      ysmear= val(13)
+      b     = val(14)
+      s     = val(15)
+      bg    = val(16)
+      
+      
+
+      potential= D*(1-EXP(-(y-m0)*lda))**2        !morse
+
+      !potential = -D*(1+lda*(y-m0))*exp(-lda*(y-m0))!Rydberg
+      !potential = D*(1-m0/y)*exp(-lda*(y*y-m0*m0))  !Varshni
+      !potential = 4*D*((lda/(y-m0))**12-(lda/(y-m0))**6)      !Lennard-Jones
+
+
+
+      
+      !DOUBLE WELL
+      yc     = y-y0
+      IF(yc.LE.0) THEN
+        x0   = a*(ABS(yc))**(r/2)
+        A_y  = (((x-x0)*(x+x0)/xmin**2)**2)**q
+      ELSE
+        A_y = ((x**2/xmin**2)**2)**q
+      END IF
+
+      amp = N*A_y*((y**p)**2)  
+            
+
+      !Anharmonic term
+      
+      arg = -(y-ycut)/ysmear
+      anharm = b*(x/xmin)**s*(1-TANH(arg))/2
+
+
+
+      POWER_REAL_FABIAN_2D = amp + anharm + potential + bg
+
+
+
+
+c     Save the different components
+      IF(plot) THEN
+         WRITE(40,*) x, y, POWER_REAL_FABIAN_2D
+      END IF
+
+      
+      RETURN
+      END
+
+c _______________________________________________________________________________________________
+
+
+      FUNCTION ONE_DIS_FABIAN_2D(X,Y,npar,val)
+c     One minimum for yc>thr and 2 (or more if p>1) for yc<thr
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 ONE_DIS_FABIAN_2D, x, y
+      REAL*8 y0, a, r, q, N, p, y2, D, m0, lda
+      REAL*8  xmin, ycut, ysmear,b, s, bg
+      REAL*8 amp, x0, yc,potential, A_y, arg, anharm, k
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      y0    = val(1)
+      a     = val(2)
+      r     = val(3)
+      q     = val(4)
+      N     = val(5)
+      p     = val(6)
+      y2    = val(7)
+      D     = val(8)
+      m0    = val(9)
+      lda   = val(10)
+      xmin  = val(11)
+      ycut  = val(12)
+      ysmear= val(13)
+      b     = val(14)
+      s     = val(15)
+      bg    = val(16)
+      
+      
+
+      potential= D*(1-EXP(-(y-m0)*lda))**2        !morse
+
+      !potential = -D*(1+lda*(y-m0))*exp(-lda*(y-m0))!Rydberg
+      !potential = D*(1-m0/y)*exp(-lda*(y*y-m0*m0))  !Varshni
+      !potential = 4*D*((lda/(y-m0))**12-(lda/(y-m0))**6)      !Lennard-Jones
+
+
+
+      
+      !DOUBLE WELL
+      yc     = y-y0
+      IF(yc.LE.0) THEN
+        x0   = a*(ABS(yc))**(r/2)
+        A_y  = (((x-x0)*(x+x0)/xmin**2)**2)**q
+        anharm = 0
+      ELSE
+        A_y = ((x**2/xmin**2)**2)**q
+        anharm =  b*(x/xmin)**s
+      END IF
+
+      amp = N*A_y*(EXP(-(y/y2)**2))**p  
+            
+
+      !Anharmonic term
+      
+      arg = -(y-ycut)/ysmear
+
+
+
+      ONE_DIS_FABIAN_2D = amp + anharm + potential + bg
+
+
+
+
+c     Save the different components
+      IF(plot) THEN
+         WRITE(40,*) x, y, ONE_DIS_FABIAN_2D
+      END IF
+
+      
+      RETURN
+      END
+
+c _______________________________________________________________________________________________
+
+
+      FUNCTION ONE_CONT_FABIAN_2D(X,Y,npar,val)
+c     One minimum for yc>thr and 2 (or more if p>1) for yc<thr
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 ONE_CONT_FABIAN_2D, x, y
+      REAL*8 y0, a, r, q, N, p, y2, D, m0, lda
+      REAL*8  xmin, ycut, ysmear,b, s, bg
+      REAL*8 amp, x0, yc,potential, A_y, arg, anharm, k
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      y0    = val(1)
+      a     = val(2)
+      r     = val(3)
+      q     = val(4)
+      N     = val(5)
+      p     = val(6)
+      y2    = val(7)
+      D     = val(8)
+      m0    = val(9)
+      lda   = val(10)
+      xmin  = val(11)
+      ycut  = val(12)
+      ysmear= val(13)
+      b     = val(14)
+      s     = val(15)
+      bg    = val(16)
+      
+      
+
+      potential= D*(1-EXP(-(y-m0)*lda))**2        !morse
+
+      !potential = -D*(1+lda*(y-m0))*exp(-lda*(y-m0))!Rydberg
+      !potential = D*(1-m0/y)*exp(-lda*(y*y-m0*m0))  !Varshni
+      !potential = 4*D*((lda/(y-m0))**12-(lda/(y-m0))**6)      !Lennard-Jones
+
+
+
+      
+      !DOUBLE WELL
+      yc     = y-y0
+      IF(yc.LE.0) THEN
+        x0   = a*(ABS(yc))**(r/2)
+        A_y  = (((x-x0)*(x+x0)/xmin**2)**2)**q
+        anharm = 0
+      ELSE
+        A_y = ((x**2/xmin**2)**2)**q
+        anharm =  (yc**(p))**2*b*(x/xmin)**s
+      END IF
+
+      amp = N*A_y*(EXP(-(y/y2)**2))  
+            
+
+      !Anharmonic term
+      
+      arg = -(y-ycut)/ysmear
+
+
+
+      ONE_CONT_FABIAN_2D = amp + anharm + potential + bg
+
+
+
+
+c     Save the different components
+      IF(plot) THEN
+         WRITE(40,*) x, y, ONE_CONT_FABIAN_2D
+      END IF
+
+      
+      RETURN
+      END
+
+
+
+
+c _______________________________________________________________________________________________
+
+
+      FUNCTION DIS_REAL_FABIAN_2D(X,Y,npar,val)
+c     One minimum for yc>thr and 2 (or more if p>1) for yc<thr
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 DIS_REAL_FABIAN_2D, x, y
+      REAL*8 y0, a, r, q, N, p, y2, D, m0, lda
+      REAL*8  xmin, ycut, ysmear,b, s, bg
+      REAL*8 amp, x0, yc,potential, A_y, arg, anharm, k
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      y0    = val(1)
+      a     = val(2)
+      r     = val(3)
+      q     = val(4)
+      N     = val(5)
+      p     = val(6)
+      y2    = val(7)
+      D     = val(8)
+      m0    = val(9)
+      lda   = val(10)
+      xmin  = val(11)
+      ycut  = val(12)
+      ysmear= val(13)
+      b     = val(14)
+      s     = val(15)
+      bg    = val(16)
+      
+      
+
+      potential= D*(1-EXP(-(y-m0)*lda))**2        !morse
+
+      !potential = -D*(1+lda*(y-m0))*exp(-lda*(y-m0))!Rydberg
+      !potential = D*(1-m0/y)*exp(-lda*(y*y-m0*m0))  !Varshni
+      !potential = 4*D*((lda/(y-m0))**12-(lda/(y-m0))**6)      !Lennard-Jones
+
+
+
+      
+      !DOUBLE WELL
+      yc     = y-y0
+      IF(yc.LE.0) THEN
+        x0   = a*(ABS(yc))**(r/2)
+        A_y  = (((x-x0)*(x+x0)/xmin**2)**2)**q
+      ELSE
+        A_y = ((x**2/xmin**2)**2)**q
+      END IF
+
+      amp = N*A_y*(EXP(-(y/y2)**2))**p  
+            
+
+      !Anharmonic term
+      
+      arg = -(y-ycut)/ysmear
+      anharm = b*((x/xmin)**s)**2
+
+
+
+      DIS_REAL_FABIAN_2D = amp + anharm + potential + bg
+
+
+
+
+c     Save the different components
+      IF(plot) THEN
+         WRITE(40,*) x, y, DIS_REAL_FABIAN_2D
+      END IF
+
+      
+      RETURN
+      END
+
+
+
+c _______________________________________________________________________________________________
+
+
+      FUNCTION Y0_REAL_FABIAN_2D(X,Y,npar,val)
+c     One minimum for yc>thr and 2 (or more if p>1) for yc<thr
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 Y0_REAL_FABIAN_2D, x, y
+      REAL*8 y0, a, r, q, N, p, y2, D, m0, lda
+      REAL*8  xmin, ycut, ysmear,b, s, bg
+      REAL*8 amp, x0, yc,potential, A_y, arg, anharm, k
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      y0    = val(1)
+      a     = val(2)
+      r     = val(3)
+      q     = val(4)
+      N     = val(5)
+      p     = val(6)
+      y2    = val(7)
+      D     = val(8)
+      m0    = val(9)
+      lda   = val(10)
+      xmin  = val(11)
+      ycut  = val(12)
+      ysmear= val(13)
+      b     = val(14)
+      s     = val(15)
+      bg    = val(16)
+      
+      
+
+      potential= D*(1-EXP(-(y-m0)*lda))**2        !morse
+
+      !potential = -D*(1+lda*(y-m0))*exp(-lda*(y-m0))!Rydberg
+      !potential = D*(1-m0/y)*exp(-lda*(y*y-m0*m0))  !Varshni
+      !potential = 4*D*((lda/(y-m0))**12-(lda/(y-m0))**6)      !Lennard-Jones
+
+
+
+      
+      !DOUBLE WELL
+      yc     = y-y0
+      IF(yc.LE.0) THEN
+        x0   = a*(ABS(yc))**(r/2)
+        A_y  = (((x-x0)*(x+x0)/xmin**2)**2)**q
+      ELSE
+        A_y = ((x**2/xmin**2)**2)**q
+      END IF
+
+      amp = N*A_y*(EXP(-(y/y2)**2))**p  
+            
+
+      !Anharmonic term
+      
+      arg = -(y-y0)/ysmear
+      anharm = b*(x/xmin)**s*(1-TANH(arg))/2
+
+
+
+      Y0_REAL_FABIAN_2D = amp + anharm + potential + bg
+
+
+c     Save the different components
+      IF(plot) THEN
+         WRITE(40,*) x, y, Y0_REAL_FABIAN_2D
+      END IF
+
+      
+      RETURN
+      END
+
+c ______________________________________________________________________________________________
+
+
+
+
+      FUNCTION REAL_FABIAN_2D(X,Y,npar,val)
+c     One minimum for yc>thr and 2 (or more if p>1) for yc<thr
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 REAL_FABIAN_2D, x, y
+      REAL*8 y0, a, r, q, N, p, y2, D, m0, lda
+      REAL*8  xmin, ycut, ysmear,b, s, bg
+      REAL*8 amp, x0, yc,potential, A_y, arg, anharm, k
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      y0    = val(1)
+      a     = val(2)
+      r     = val(3)
+      q     = val(4)
+      N     = val(5)
+      p     = val(6)
+      y2    = val(7)
+      D     = val(8)
+      m0    = val(9)
+      lda   = val(10)
+      xmin  = val(11)
+      ycut  = val(12)
+      ysmear= val(13)
+      b     = val(14)
+      s     = val(15)
+      bg    = val(16)
+      
+      
+
+      potential= D*(1-EXP(-(y-m0)*lda))**2        !morse
+
+      !potential = -D*(1+lda*(y-m0))*exp(-lda*(y-m0))!Rydberg
+      !potential = D*(1-m0/y)*exp(-lda*(y*y-m0*m0))  !Varshni
+      !potential = 4*D*((lda/(y-m0))**12-(lda/(y-m0))**6)      !Lennard-Jones
+
+
+
+      
+      !DOUBLE WELL
+      yc     = y-y0
+      IF(yc.LE.0) THEN
+        x0   = a*(ABS(yc))**(r/2)
+        A_y  = (((x-x0)*(x+x0)/xmin**2)**2)**q
+      ELSE
+        A_y = ((x**2/xmin**2)**2)**q
+      END IF
+
+      amp = N*A_y*(EXP(-(y/y2)**2))**p  
+            
+
+      !Anharmonic term
+      
+      arg = -(y-ycut)/ysmear
+      anharm = b*(x/xmin)**s*(1-TANH(arg))/2
+
+
+
+      REAL_FABIAN_2D = amp + anharm + potential + bg
+
+
+
+
+c     Save the different components
+      IF(plot) THEN
+         WRITE(40,*) x, y, REAL_FABIAN_2D
+      END IF
+
+      
+      RETURN
+      END
+
+c _______________________________________________________________________________________________
+
+
+      FUNCTION ERF_FABIAN_2D(X,Y,npar,val)
+c     One minimum for yc>thr and 2 (or more if p>1) for yc<thr
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 ERF_FABIAN_2D, x, y
+      REAL*8 y0, a, r, q, N, p, y2, D, m0, lda
+      REAL*8  xmin, ycut, ysmear,b, s, bg
+      REAL*8 amp, x0, yc,potential, A_y, arg, anharm, k
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      y0    = val(1)
+      a     = val(2)
+      r     = val(3)
+      q     = val(4)
+      N     = val(5)
+      p     = val(6)
+      y2    = val(7)
+      D     = val(8)
+      m0    = val(9)
+      lda   = val(10)
+      xmin  = val(11)
+      ycut  = val(12)
+      ysmear= val(13)
+      b     = val(14)
+      s     = val(15)
+      bg    = val(16)
+      
+      
+
+      potential= D*(1-EXP(-(y-m0)*lda))**2        !morse
+
+      !potential = -D*(1+lda*(y-m0))*exp(-lda*(y-m0))!Rydberg
+      !potential = D*(1-m0/y)*exp(-lda*(y*y-m0*m0))  !Varshni
+      !potential = 4*D*((lda/(y-m0))**12-(lda/(y-m0))**6)      !Lennard-Jones
+
+
+
+      
+      !DOUBLE WELL
+      yc     = y-y0
+      IF(yc.LE.0) THEN
+        x0   = a*(ABS(yc))**(r/2)
+        A_y  = (((x-x0)*(x+x0)/xmin**2)**2)**q
+      ELSE
+        A_y = ((x**2/xmin**2)**2)**q
+      END IF
+
+      amp = N*A_y*(EXP(-(y/y2)**2))**p  
+            
+
+      !Anharmonic term
+      
+      arg = -(y-ycut)/ysmear
+      anharm = b*(x/xmin)**s*(1-ERF(arg))/2
+
+
+
+      ERF_FABIAN_2D = amp + anharm + potential + bg
+
+
+
+
+c     Save the different components
+      IF(plot) THEN
+         WRITE(40,*) x, y, ERF_FABIAN_2D
+      END IF
+
+      
+      RETURN
+      END
+
+
 
 c _______________________________________________________________________________________________
 
@@ -932,7 +1627,7 @@ c ______________________________________________________________________________
       REAL(8) :: kappa_o, q0, alpha   ! O-O potential 
       REAL(8) :: q, morse, qmod                               ! the proton
       REAL(8) :: r,en0,en1
-      REAL(8) :: dd, r0, lam
+      REAL(8) :: dd, r0, lam, bg
       REAL(8) :: arg1, arg2, f1, f2 
       REAL(8) :: temp  ! temperature      
       LOGICAL plot
@@ -948,6 +1643,7 @@ c ______________________________________________________________________________
       dd        = val(8)
       r0        = val(9)
       lam       = val(10)
+      bg        = val(11)
 
      
       !Defining distance
@@ -964,11 +1660,12 @@ c ______________________________________________________________________________
 
       !q (an)harmonic part
 
-      qmod = q + alpha*temp
-      en0 = kappa_o*(qmod-q0)**2 + kappa_o*(qmod-q0)**4/q0**2 
-      en1 = kappa_b*(y-y0)**2
+      qmod = q0 + alpha*temp
 
-      REAL_ENERGY_XY_2D = en0 + en1 + morse 
+      en0 = kappa_o*(q-qmod)**2 + kappa_o*(q-qmod)**4/qmod**2 
+      en1 = kappa_b*(ABS(y-y0))**2
+
+      REAL_ENERGY_XY_2D = en0 + en1 + morse + bg
       
       
       
@@ -977,6 +1674,630 @@ c ______________________________________________________________________________
       END IF      
 
       
+      RETURN
+      END
+
+
+
+
+
+c _______________________________________________________________________________________________
+
+      FUNCTION REAL_ENERGY_QT_2D(X,Y,npar,val)
+      
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 REAL_ENERGY_QT_2D, x, y
+      REAL(8) :: kappa_b, y0   ! the proton, along y (bending)
+      REAL(8) :: kappa_o, q0, alpha   ! O-O potential 
+      REAL(8) :: q, morse, qmod                               ! the proton
+      REAL(8) :: r,en0,en1
+      REAL(8) :: dd, r0, lam, bg, x_, y_
+      REAL(8) :: arg1, arg2, f1, f2 
+      REAL(8) :: temp  ! temperature      
+      LOGICAL plot
+      COMMON /func_plot/ plot
+      
+      x_        = val(1)
+      y_        = val(2)
+      kappa_b   = val(3)
+      kappa_o   = val(4)
+      y0        = val(5)
+      q0        = val(6)
+      alpha     = val(7)
+      dd        = val(8)
+      r0        = val(9)
+      lam       = val(10)
+      bg        = val(11)
+
+     
+      !Redefining variables
+
+      q    = x
+      temp = y
+
+
+      !Defining distance
+      r = SQRT(x_*x_+y_*y_)
+      
+      !double morse part
+      arg1 = (r-r0)/lam
+      f1   = (1-exp(-arg1))**2
+
+      arg2 = (q-(r-r0))/lam
+      f2   = (1-exp(-arg2))**2
+
+      morse= dd*(f1 + f2)
+
+      !q (an)harmonic part
+
+      qmod = q0 + alpha*temp
+
+      en0 = kappa_o*(q-qmod)**2 + kappa_o*(q-qmod)**4/qmod**2 
+      en1 = kappa_b*(ABS(y-y0))**2
+
+      REAL_ENERGY_QT_2D = en0 + en1 + morse + bg
+      
+      
+      
+      IF(plot) THEN
+         WRITE(40,*) x, y, REAL_ENERGY_QT_2D
+      END IF      
+
+      
+      RETURN
+      END
+
+
+
+c _______________________________________________________________________________________________
+
+      FUNCTION DOUBLE_FABIAN(X,Y,npar,val)
+      
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 DOUBLE_FABIAN, x, y
+      REAL*8 s1,s2,s01,s02,N,bg
+      REAL*8 p1, p2
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      N  = val(1)
+      s01 = val(2) 
+      s02 = val(3) 
+      bg = val(4) 
+
+      s1 = (x+y)/2
+      s2 = (x-y)/2
+      
+
+
+      p1 = (s1+s01)*(s1-s01)
+      p2 = (s2+s02)*(s2-s02)
+
+      DOUBLE_FABIAN = N*p1**2*p2**2 + bg
+
+
+
+
+
+
+
+      IF(plot) THEN
+         WRITE(40,*) x, y, DOUBLE_FABIAN
+      END IF      
+
+
+
+      RETURN
+      END
+
+
+
+
+c _______________________________________________________________________________________________
+
+      FUNCTION SYM_DOUBLE_FABIAN(X,Y,npar,val)
+      
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 SYM_DOUBLE_FABIAN, x, y
+      REAL*8 s0,N,bg,q,b
+      REAL*8 p2, p1,anharm
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      N  = val(1)
+      s0 = val(2)
+      bg = val(3)
+      q  = val(4)
+      b  = val(5)
+
+
+
+      !s1 = (x+y)/2
+      !s2 = (x-y)/2
+      
+
+
+      p1 = (x+s0)*(x-s0)
+      p2 = (y+s0)*(y-s0)
+
+      anharm = b*(x**6 + y**6)
+
+      SYM_DOUBLE_FABIAN = N*(p1**2)**q+ N*(p2**2)**q + anharm + bg
+
+
+
+
+
+
+
+      IF(plot) THEN
+         WRITE(40,*) x, y, SYM_DOUBLE_FABIAN
+      END IF      
+
+
+
+      RETURN
+      END
+
+c _______________________________________________________________________________________________
+
+      FUNCTION CENT_SYM_DOUBLE_FABIAN(X,Y,npar,val)
+      
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 CENT_SYM_DOUBLE_FABIAN, x, y
+      REAL*8 s0,N,bg,q,b
+      REAL*8 p2, p1,anharm
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      N  = val(1)
+      s0 = val(2)
+      bg = val(3)
+      q  = val(4)
+      b  = val(5)
+
+
+
+      !s1 = (x+y)/2
+      !s2 = (x-y)/2
+      
+
+
+      p1 = (x+s0)*(x-s0)
+      p2 = (y+s0)*(y-s0)
+
+      anharm = b*(p1**2 + p2**2)**3
+
+      CENT_SYM_DOUBLE_FABIAN = N*(p1**2)**q+ N*(p2**2)**q + anharm + bg
+
+
+
+
+
+
+
+      IF(plot) THEN
+         WRITE(40,*) x, y, CENT_SYM_DOUBLE_FABIAN
+      END IF      
+
+
+
+      RETURN
+      END
+c _______________________________________________________________________________________________
+
+      FUNCTION INT_DOUBLE_FABIAN(X,Y,npar,val)
+      
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 INT_DOUBLE_FABIAN, prev, x, y
+      REAL*8 s0,N,bg,q,b,i1,i3
+      REAL*8 p2, p1,anharm, inter, pol_inter
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      N  = val(1)
+      s0 = val(2)
+      bg = val(3)
+      q  = val(4)
+      b  = val(5)
+      i1 = val(6)
+      i3 = val(7)
+
+
+
+      !s1 = (x+y)/2
+      !s2 = (x-y)/2
+      
+
+
+      
+
+      p1 = (x+s0)*(x-s0)
+      p2 = (y+s0)*(y-s0)
+
+      anharm = b*(x**6 + y**6)
+
+      
+      inter = x*y
+      pol_inter = i1*inter + i3*inter**3
+
+
+      prev = N*(p1**2)**q+ N*(p2**2)**q + anharm + bg
+
+      INT_DOUBLE_FABIAN =prev + pol_inter
+
+
+
+
+
+
+
+      IF(plot) THEN
+         WRITE(40,*) x, y, INT_DOUBLE_FABIAN
+      END IF      
+
+
+
+      RETURN
+      END
+      
+c _______________________________________________________________________________________________
+
+      FUNCTION DINT_DOUBLE_FABIAN(X,Y,npar,val)
+      
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 DINT_DOUBLE_FABIAN, prev, x, y
+      REAL*8 s0,N,bg,q,b,i1,i2
+      REAL*8 p2, p1,anharm, inter, pol_inter
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      N  = val(1)
+      s0 = val(2)
+      bg = val(3)
+      q  = val(4)
+      b  = val(5)
+      i1 = val(6)
+      i2 = val(7)
+
+
+
+      !s1 = (x+y)/2
+      !s2 = (x-y)/2
+      
+
+
+      
+
+      p1 = (x+s0)*(x-s0)
+      p2 = (y+s0)*(y-s0)
+
+      anharm = b*(x**6 + y**6)
+
+      
+      inter = abs(x-y)
+      pol_inter = i1*inter + i2*inter**2
+
+
+      prev = N*(p1**2)**q+ N*(p2**2)**q + anharm + bg
+
+      DINT_DOUBLE_FABIAN =prev + pol_inter
+
+
+
+
+
+
+
+      IF(plot) THEN
+         WRITE(40,*) x, y, DINT_DOUBLE_FABIAN
+      END IF      
+
+
+
+      RETURN
+      END
+
+
+
+c _______________________________________________________________________________________________
+
+      FUNCTION INT_TH_DOUBLE_FABIAN(X,Y,npar,val)
+      
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 INT_TH_DOUBLE_FABIAN, prev, x, y
+      REAL*8 s0,N,bg,q,b,amp, a, y2_0
+      REAL*8 p2, p1,anharm, inter, tan_inter
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      N  = val(1)
+      s0 = val(2)
+      bg = val(3)
+      q  = val(4)
+      b  = val(5)
+      amp= val(6)
+      a  = val(7)
+      y2_0= val(8)
+
+
+
+      !s1 = (x+y)/2
+      !s2 = (x-y)/2
+      
+
+
+      
+
+      p1 = (x+s0)*(x-s0)
+      p2 = (y+s0)*(y-s0)
+
+      anharm = b*(x**6 + y**6)
+
+      
+      inter = x*y
+      tan_inter = amp*tanh(inter/a-y2_0)
+
+
+      prev = N*(p1**2)**q+ N*(p2**2)**q + anharm + bg
+
+      INT_TH_DOUBLE_FABIAN =prev + tan_inter
+
+
+
+
+
+
+
+      IF(plot) THEN
+         WRITE(40,*) x, y, INT_TH_DOUBLE_FABIAN
+      END IF      
+
+
+
+      RETURN
+      END
+
+c _______________________________________________________________________________________________
+
+      FUNCTION DINT_TH_DOUBLE_FABIAN(X,Y,npar,val)
+      
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 DINT_TH_DOUBLE_FABIAN, prev, x, y
+      REAL*8 s0,N,bg,q,b,amp, a, y2_0
+      REAL*8 p2, p1,anharm, inter, tan_inter
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      N  = val(1)
+      s0 = val(2)
+      bg = val(3)
+      q  = val(4)
+      b  = val(5)
+      amp= val(6)
+      a  = val(7)
+      y2_0= val(8)
+
+
+
+      !s1 = (x+y)/2
+      !s2 = (x-y)/2
+      
+
+
+      
+
+      p1 = (x+s0)*(x-s0)
+      p2 = (y+s0)*(y-s0)
+
+      anharm = b*(x**6 + y**6)
+
+      
+      inter = -abs(x-y)
+      tan_inter = amp*tanh(inter/a-y2_0)
+
+
+      prev = N*(p1**2)**q+ N*(p2**2)**q + anharm + bg
+
+      DINT_TH_DOUBLE_FABIAN =prev + tan_inter
+
+
+
+
+
+
+
+      IF(plot) THEN
+         WRITE(40,*) x, y, DINT_TH_DOUBLE_FABIAN
+      END IF      
+
+
+
+      RETURN
+      END
+
+
+c _______________________________________________________________________________________________
+
+      FUNCTION DINT_EXP_DOUBLE_FABIAN(X,Y,npar,val)
+      
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 DINT_EXP_DOUBLE_FABIAN, prev, x, y
+      REAL*8 s0,N,bg,q,b,amp, a, y2_0, p
+      REAL*8 p2, p1,anharm, inter, exp_inter
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      N  = val(1)
+      s0 = val(2)
+      bg = val(3)
+      q  = val(4)
+      b  = val(5)
+      amp= val(6)
+      a  = val(7)
+      y2_0= val(8)
+      p  = val(9)
+
+
+
+      !s1 = (x+y)/2
+      !s2 = (x-y)/2
+      
+
+
+      
+
+      p1 = (x+s0)*(x-s0)
+      p2 = (y+s0)*(y-s0)
+
+      anharm = b*((x**2)**p + (y**2)**p)
+
+      
+      inter = -abs(x-y)
+      exp_inter = amp*exp(inter/a-y2_0)
+
+
+      prev = N*(p1**2)**q+ N*(p2**2)**q + anharm + bg
+
+      DINT_EXP_DOUBLE_FABIAN =prev + exp_inter
+
+
+
+
+
+
+
+      IF(plot) THEN
+         WRITE(40,*) x, y, DINT_EXP_DOUBLE_FABIAN
+      END IF      
+
+
+
+      RETURN
+      END
+
+
+
+c _______________________________________________________________________________________________
+
+      FUNCTION QUAD_PARABOLA(X,Y,npar,val)
+      
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 QUAD_PARABOLA, x, y
+      REAL*8 r0, bg, N,q
+      REAL*8 par
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      N  = val(1)
+      r0 = val(2)
+      bg = val(3)
+      q  = val(4)
+
+
+
+      IF ((x>0).AND.(y>0)) THEN
+         par = (x-r0)**2+(y-r0)**2
+      ELSE IF ((x>0).AND.(y<0)) THEN
+         par = (x-r0)**2+(y+r0)**2
+      ELSE IF ((x<0).AND.(y<0)) THEN
+         par = (x+r0)**2+(y+r0)**2
+      ELSE
+         par = (x+r0)**2+(y-r0)**2
+      END IF
+
+      
+
+
+      
+      QUAD_PARABOLA = N*par**q + bg
+
+
+
+
+
+
+
+      IF(plot) THEN
+         WRITE(40,*) x, y, QUAD_PARABOLA
+      END IF      
+
+
+
+      RETURN
+      END
+
+
+c _______________________________________________________________________________________________
+
+      FUNCTION DD_MORSE(X,Y,npar,val)
+      
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 DD_MORSE, x, y
+      REAL*8 r0, bg, N,q
+      REAL*8 dm1, dm2
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      N  = val(1)
+      r0 = val(2)
+      bg = val(3)
+      q  = val(4)
+
+
+
+      dm1 = (1-exp(q*(x-r0)))**2+(1-exp(-q*(x+r0)))**2
+      dm2 = (1-exp(q*(y-r0)))**2+(1-exp(-q*(y+r0)))**2
+      
+
+
+      
+      DD_MORSE = N*(dm1+dm2) + bg
+
+
+
+
+
+
+
+      IF(plot) THEN
+         WRITE(40,*) x, y, DD_MORSE
+      END IF      
+
+
+
       RETURN
       END
 

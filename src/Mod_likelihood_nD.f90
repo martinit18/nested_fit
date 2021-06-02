@@ -15,6 +15,8 @@ MODULE MOD_LIKELIHOOD
 
   ! Module for the input parameter definition
   USE MOD_PARAMETERS
+  
+  !USE MOD_NSM
   !ONLY: maxdata, nsetmax, filename, errorbars_yn, set_yn, nset, funcname, &
   !     xmin, xmax, npar, par_in
   
@@ -40,7 +42,7 @@ CONTAINS
     CALL READ_DATA()
 
     ! Initialize functions
-    !CALL INIT_FUNCTIONS()
+    CALL INIT_FUNCTIONS()
 
   END SUBROUTINE INIT_LIKELIHOOD 
 
@@ -208,7 +210,18 @@ CONTAINS
 
   !#####################################################################################################################
 
+  SUBROUTINE INIT_FUNCTIONS()
+    USE MOD_NSM
+    ! Subroutine to initialize the user functions if needed
 
+    ! Initialise functions if needed
+    IF(funcname.EQ.'NSM_SN_BE'.OR.funcname.EQ.'NSM_SN') THEN
+          
+       CALL INIT_NSM()
+       
+    END IF
+
+  END SUBROUTINE INIT_FUNCTIONS
 
 
   FUNCTION LOGLIKELIHOOD(par)
@@ -258,7 +271,7 @@ CONTAINS
     REAL(8), DIMENSION(npar), INTENT(IN) :: live_max, par_mean, par_median_w
 
     ! Write auxiliar files for plots
-    CALL WRITE_EXPECTED_VALUES()
+    CALL WRITE_EXPECTED_VALUES(live_max,par_mean,par_median_w)
 
     ! Deallocate variables
     CALL DEALLOCATE_DATA()
@@ -267,7 +280,69 @@ CONTAINS
 
 
   !#####################################################################################################################
-  SUBROUTINE WRITE_EXPECTED_VALUES()
+  SUBROUTINE WRITE_EXPECTED_VALUES(live_max,par_mean,par_median_w)
+     ! Write all auxiliar files for plots and co.
+
+    REAL(8), DIMENSION(npar), INTENT(IN) :: live_max, par_mean, par_median_w
+    !
+    INTEGER(8), PARAMETER :: maxfit = 100
+    REAL(8) :: USERFCN_nD, USERFCN_SET
+    REAL(8) :: enc = 0. ! minx=0., maxx=0., xfit=0., dx=0.,miny=0., maxy=0., yfit=0., dy=0.,  !2Dadded y
+    INTEGER(4) :: i=0, j=0, k=0
+    ! Stuff to save separate components
+    LOGICAL :: plot = .false.
+    REAL(8) :: zfit
+    CHARACTER :: out_filename*64
+
+    COMMON /func_plot/ plot
+
+    !-----------------------Calculate the expected function values -------------------------
+
+    ! Calculate the expected function value and residual for max likelihood
+    ! New from version 1.0: save three pairs of files with values from max likelihood, mean and median of the parameters
+    !IF(arg.EQ. ' ') THEN
+    write(*,*) 'works'
+    IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
+       k=1
+       enc = 0.
+       ! max likelihood values -------------------------------------------------------------
+       OPEN (UNIT=20, FILE='nf_output_data_max.dat', STATUS='unknown')
+       WRITE(20,*)'# variables         data     theory       diff     err'
+       DO i=1, ndata
+          enc = USERFCN_nD(x(:,i,k),npar,live_max,funcname)
+          IF (errorbars_yn.EQ.'y'.OR.errorbars_yn.EQ.'Y') THEN
+             WRITE(20,*) x(:,i,k),' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)
+          ELSE
+          END IF
+       END DO
+       CLOSE(20)
+       ! mean values ------------------------------------------------------------------------
+       OPEN (UNIT=20, FILE='nf_output_data_mean.dat', STATUS='unknown')
+       WRITE(20,*)'# variables         data     theory       diff     err'
+       DO i=1, ndata
+          enc = USERFCN_nD(x(:,i,k),npar,par_mean,funcname)       !2D added y
+          IF (errorbars_yn.EQ.'y'.OR.errorbars_yn.EQ.'Y') THEN
+             WRITE(20,*) x(:,i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)  !2D added y
+          ELSE
+          END IF
+       END DO
+       CLOSE(20)
+       ! median values ----------------------------------------------------------------------
+       OPEN (UNIT=20, FILE='nf_output_data_median.dat', STATUS='unknown')
+       WRITE(20,*)'# variables         data     theory       diff     err'
+       DO i=1, ndata
+          enc = USERFCN_nD(x(:,i,k),npar,par_median_w,funcname)  !2D added y
+          IF (errorbars_yn.EQ.'y'.OR.errorbars_yn.EQ.'Y') THEN
+             WRITE(20,*) x(:,i,k),' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)   !2D added y
+          ELSE
+          END IF
+       END DO
+       CLOSE(20)
+       ! -------------------------------------------------------------------------------------
+    ELSE
+       
+    END IF
+
 
   END SUBROUTINE WRITE_EXPECTED_VALUES
 
