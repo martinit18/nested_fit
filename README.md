@@ -144,6 +144,6 @@ Previous versions are:
 ## Other resources
 
 
-**Articles about nested sampling method**:\
+**Articles about nested sampling method**:\   
 [1] J. Skilling, *Nested sampling for general Bayesian computation*, Bayesian Anal. **1**, 833-859 (2006)\
 [2] D.S. Sivia and J. Skilling, *Data analysis: a Bayesian tutorial*. Second ed. 2006: Oxford University Press
