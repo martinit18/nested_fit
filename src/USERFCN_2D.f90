@@ -1,4 +1,4 @@
-! Time-stamp: <Last changed by martino on Tuesday 04 May 2021 at CEST 12:02:21>
+! Time-stamp: <Last changed by martino on Monday 07 June 2021 at CEST 10:30:06>
 
 REAL(8) FUNCTION USERFCN_2D(x,y,npar,val,funcname)
   ! Library of 2D functions
@@ -10,7 +10,8 @@ REAL(8) FUNCTION USERFCN_2D(x,y,npar,val,funcname)
   CHARACTER, INTENT(IN) :: funcname*64
   !
   REAL(8) :: GAUSS_SIMPLE_2D, GAUSS_BG_2D
-  REAL(8) :: GAUSS_LINE_BG_2D, SUPERGAUSS_LINE_BG_2D, TWO_LORE_LINE_BG_2D
+  REAL(8) :: GAUSS_LINE_BG_2D, SUPERGAUSS_LINE_BG_2D
+  REAL(8) :: TWO_LORE_LINE_BG_2D, TWO_VOIGT_LINE_BG_2D
   REAL(8) :: VOIGT_LINE_BG_2D, ERFPEAK_LINE_BG_2D
 
   ! Choose your model (see below for definition)
@@ -28,6 +29,8 @@ REAL(8) FUNCTION USERFCN_2D(x,y,npar,val,funcname)
      USERFCN_2D = ERFPEAK_LINE_BG_2D(x,y,npar,val)
   ELSE IF(funcname.EQ.'TWO_LORE_LINE_BG_2D') THEN
      USERFCN_2D = TWO_LORE_LINE_BG_2D(x,y,npar,val)
+  ELSE IF(funcname.EQ.'TWO_VOIGT_LINE_BG_2D') THEN
+     USERFCN_2D = TWO_VOIGT_LINE_BG_2D(x,y,npar,val)
   ELSE
      WRITE(*,*) 'Error in the function name def. in USERFCN_2D'
      WRITE(*,*) 'Check in the manual and in the nf_input.dat file'
@@ -209,58 +212,6 @@ REAL(8) FUNCTION VOIGT_LINE_BG_2D(x,y,npar,val)
 
 END FUNCTION VOIGT_LINE_BG_2D
 
-!________________________________________________________________________________________
-
-
-REAL(8) FUNCTION TWO_LORE_LINE_BG_2D(x,y,npar,val)
-  ! Normalized two Lorentzian line profiles.
-  ! x: dispersion axis --> Lorentzian profile
-  ! y: parallel axis --> slope of the line
-  ! The value of 'amp' is the value of the volume below the curve
-  ! Dy and y0 are not variables but information for the heigth of the detector and
-  ! the middle plan, respectively
-
-  IMPLICIT NONE
-  REAL(8), INTENT(IN) :: x, y
-  INTEGER(4), INTENT(IN) :: npar
-  REAL(8), DIMENSION(npar), INTENT(IN) :: val
-  !
-  REAL(8), DIMENSION(3) :: vall1, vall2
-  REAL(8) :: LORE
-  REAL(8) :: a, b, c, y0, Dy, dx, amp1, gamma, damp, amp2, bg, x01, x02
-
-  a     = val(1)
-  b     = val(2)
-  c     = val(3)
-  y0    = val(4)
-  Dy    = val(5)
-  dx    = val(6)
-  amp1  = val(7)
-  damp  = val(8)
-  gamma = val(9)
-  bg    = val(10)
-
-  x01 = a + b*(y-y0) + c*(y-y0)**2
-  x02 = x01 + dx
-  amp1 = amp1/Dy    ! For the normalization along the plan perpendicular to the dispersion
-  amp2 = amp1*damp
-
-  vall1(1) = x01
-  vall1(2) = amp1
-  vall1(3) = gamma
-
-  vall2(1) = x02
-  vall2(2) = amp2
-  vall2(3) = gamma
-
-
-  TWO_LORE_LINE_BG_2D = LORE(x,3,vall1) + LORE(x,3,vall2) + bg
-
-  RETURN
-
-
-
-END FUNCTION TWO_LORE_LINE_BG_2D
 
 !________________________________________________________________________________________
 
@@ -351,5 +302,116 @@ REAL(8) FUNCTION ERFPEAK_LINE_BG_2D(x,y,npar,val)
 
 
 END FUNCTION ERFPEAK_LINE_BG_2D
+
+
+!________________________________________________________________________________________
+
+
+REAL(8) FUNCTION TWO_LORE_LINE_BG_2D(x,y,npar,val)
+  ! Normalized two Lorentzian line profiles.
+  ! x: dispersion axis --> Lorentzian profile
+  ! y: parallel axis --> slope of the line
+  ! The value of 'amp' is the value of the volume below the curve
+  ! Dy and y0 are not variables but information for the heigth of the detector and
+  ! the middle plan, respectively
+
+  IMPLICIT NONE
+  REAL(8), INTENT(IN) :: x, y
+  INTEGER(4), INTENT(IN) :: npar
+  REAL(8), DIMENSION(npar), INTENT(IN) :: val
+  !
+  REAL(8), DIMENSION(3) :: vall1, vall2
+  REAL(8) :: LORE
+  REAL(8) :: a, b, c, y0, Dy, dx, amp1, gamma, damp, amp2, bg, x01, x02
+
+  a     = val(1)
+  b     = val(2)
+  c     = val(3)
+  y0    = val(4)
+  Dy    = val(5)
+  dx    = val(6)
+  amp1  = val(7)
+  damp  = val(8)
+  gamma = val(9)
+  bg    = val(10)
+
+  x01 = a + b*(y-y0) + c*(y-y0)**2
+  x02 = x01 + dx
+  amp1 = amp1/Dy    ! For the normalization along the plan perpendicular to the dispersion
+  amp2 = amp1*damp
+
+  vall1(1) = x01
+  vall1(2) = amp1
+  vall1(3) = gamma
+
+  vall2(1) = x02
+  vall2(2) = amp2
+  vall2(3) = gamma
+
+
+  TWO_LORE_LINE_BG_2D = LORE(x,3,vall1) + LORE(x,3,vall2) + bg
+
+  RETURN
+
+
+
+END FUNCTION TWO_LORE_LINE_BG_2D
+
+!________________________________________________________________________________________
+
+
+REAL(8) FUNCTION TWO_VOIGT_LINE_BG_2D(x,y,npar,val)
+  ! Normalized two Voigt line profiles.
+  ! x: dispersion axis --> Lorentzian profile
+  ! y: parallel axis --> slope of the line
+  ! The value of 'amp' is the value of the volume below the curve
+  ! Dy and y0 are not variables but information for the heigth of the detector and
+  ! the middle plan, respectively
+
+  IMPLICIT NONE
+  REAL(8), INTENT(IN) :: x, y
+  INTEGER(4), INTENT(IN) :: npar
+  REAL(8), DIMENSION(npar), INTENT(IN) :: val
+  !
+  REAL(8), DIMENSION(4) :: valv1, valv2
+  REAL(8) :: VOIGT
+  REAL(8) :: a, b, c, y0, Dy, dx, amp1, sigma, gamma, damp, amp2, bg, x01, x02
+
+  a     = val(1)
+  b     = val(2)
+  c     = val(3)
+  y0    = val(4)
+  Dy    = val(5)
+  dx    = val(6)
+  amp1  = val(7)
+  damp  = val(8)
+  sigma = val(9)
+  gamma = val(10)
+  bg    = val(11)
+
+  x01 = a + b*(y-y0) + c*(y-y0)**2
+  x02 = x01 + dx
+  amp1 = amp1/Dy    ! For the normalization along the plan perpendicular to the dispersion
+  amp2 = amp1*damp
+
+  valv1(1) = x01
+  valv1(2) = amp1
+  valv1(3) = sigma
+  valv1(4) = gamma
+
+  valv2(1) = x02
+  valv2(2) = amp2
+  valv2(3) = sigma
+  valv2(4) = gamma
+
+
+  TWO_VOIGT_LINE_BG_2D = VOIGT(x,4,valv1) + VOIGT(x,4,valv2) + bg
+
+  RETURN
+
+
+
+END FUNCTION TWO_VOIGT_LINE_BG_2D
+
 
 !________________________________________________________________________________________

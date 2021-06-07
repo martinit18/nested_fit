@@ -1,9 +1,9 @@
 PROGRAM NESTED_FIT
-  ! Time-stamp: <Last changed by martino on Monday 03 May 2021 at CEST 12:14:24>
+  ! Time-stamp: <Last changed by martino on Monday 07 June 2021 at CEST 10:29:22>
   !
   ! Please read README and LICENSE files for more inforamtion
-  ! 4.1  1D parallelization acceleration with masks instead of IF conditions in the likelihood 
   ! 4.0  2D data analysis available, new input and output files for future developments
+  !      1D parallelization acceleration with masks instead of IF conditions in the likelihood
   ! 3.5  Modularization of the search algorithm (in preparation of new algorithms implementation)
   !      New interpolation options for 1D and 2D histograms using GetDist Python package
   !      Correction of some bugs in the python library
@@ -106,7 +106,7 @@ PROGRAM NESTED_FIT
   REAL(8) :: seconds, seconds_omp, startt, stopt
 
   ! Random number variables
-  !INTEGER(4) :: seed_array(33) = 1
+  INTEGER(4) :: seed_array(33) = 1
 
 
   ! PARALLEL VARIABLE: PUT ".TRUE." IF YOU WANT TO RUN IN PARALLEL
