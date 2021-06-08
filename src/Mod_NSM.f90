@@ -56,8 +56,8 @@ CONTAINS
          READ(2,*, END=45)  nuc(i), Jays(i),length(i),element(i), sp(i),me_3b(:,i), me_2b(:,i)
       END DO 
       45 CLOSE (2)
-      write(*,*) 'After reading'
-                 
+   
+   
 
    END SUBROUTINE INIT_NSM
    
@@ -70,48 +70,62 @@ CONTAINS
       REAL(8) :: val(npar)
       REAL(8) ::  X(3)
       REAL(8) :: Jinp, ltemp_gs
-      INTEGER(4) :: N, k, l, i,loc , cnt, col, el, ier
+      INTEGER(4) :: N, k, l, i,loc , cnt, col, el, ier, switch
       INTEGER(4) :: loc_gs, lgth_gs, siz_gs, lgth, compar
-      INTEGER(4) :: nentries=1000, n2b, n3b, junk_size=5, siz
+      INTEGER(4) :: nentries=1000, junk_size=5, siz
       REAL(8), ALLOCATABLE, DIMENSION(:) ::  lin_m, eig, iperm
       REAL(8), ALLOCATABLE, DIMENSION(:) ::  iperm_gs, lin_m_gs, eig_gs
       REAL(8), ALLOCATABLE, DIMENSION(:,:) :: matrix, matrix_gs
-      REAL(8) :: ex, me_stmp, me_tmp, val_tmp, ltemp, rem, J_st
+      REAL(8) :: ex, me_stmp, me_tmp, val_tmp, ltemp, rem
       REAL(8), DIMENSION(2) :: sort_ex
       
       N    = X(1) 
       Jinp = X(2)
       el   = X(3)
       
-      
       !Checking positions:
-
+      switch = 1
       !of the GS
+      !DO i=1, nentries
+      !   IF (Jays(i)==J_st) THEN
+      !      write (*,*) 'Jackpot'
+      !   END IF
+      !END DO
+      
       DO i=1, nentries
          IF (nuc(i).EQ.N) THEN
             !write(*,*) MOD(N,2)
             IF (MOD(N,2)==0.) THEN
+               !write(*,*) 
                IF (Jays(i)==0) THEN
                   loc_gs = i
                   lgth_gs = length(i)
                   ltemp_gs = real(lgth_gs)
+                  !write(*,*) 'ltemp_gs', ltemp_gs
                   siz_gs = int((sqrt(1.+8*ltemp_gs)-1)/2)
-                  !write(*,*) N, J(i),lgth_gs, ltemp_gs, siz_gs
+                  !write(*,*) 'siz_gs', siz_gs
+                  
+                  switch = 0
                   EXIT
                END IF
             ELSE
+               !write(*,*) 'Odd N', N, Jays(i), J_st
                IF (Jays(i)==J_st) THEN
+                  !write(*,*) 'Jackpot'
                   loc_gs = i
                   lgth_gs = length(i)
                   ltemp_gs = real(lgth_gs)
+                  !write(*,*) 'ltemp_gs', ltemp_gs
                   siz_gs = int((sqrt(1.+8*ltemp_gs)-1)/2)
-                  !write(*,*) N, J(i),lgth_gs, ltemp_gs, siz_gs
+                  !write(*,*) 'siz_gs', siz_gs
+                  !write(*,*) N, Jays(i),lgth_gs, ltemp_gs, siz_gs
+                  switch = 0
                   EXIT
                END IF
             END IF
          END IF 
       END DO
-      
+
 !write(*,*) N, Jinp, lgth_gs, ltemp_gs, siz_gs
 
 
@@ -123,11 +137,17 @@ CONTAINS
                lgth  = length(i)
                ltemp = real(lgth)
                siz = int((sqrt(1.+8*ltemp)-1)/2)
+               
                !write(*,*) N, J(i),lgth_gs, ltemp_gs, siz_gs
                EXIT 
             END IF
          END IF 
       END DO
+      
+
+      IF (switch==1) THEN
+         write(*,*)  N,Jinp,'Something goes wrong'
+      END IF
       
       
       
@@ -135,8 +155,10 @@ CONTAINS
       ALLOCATE(matrix_gs(siz_gs,siz_gs), lin_m_gs(lgth_gs),eig_gs(siz_gs))
       
       
+      
       DO l=1, lgth_gs
          me_tmp = 0
+         
          DO k=1, n2b
             val_tmp = val(k)
             me_stmp= me_2b(k,loc_gs + l -1)
@@ -163,7 +185,8 @@ CONTAINS
          END DO
          col = col + 1
       END DO
-
+      
+            
 
      ! Locating excited  state
       DO l=1, lgth
@@ -181,7 +204,6 @@ CONTAINS
          lin_m(l)  = me_tmp
       END DO
 
-
       cnt = 1
       col = 1
       DO i = 1, siz
@@ -196,7 +218,7 @@ CONTAINS
 
 
      !Symmetrizing matrix
-     !write(*,*) siz
+     !write(*,*) siz, siz_gs
      call diasym(matrix,eig,siz)
 
      !write(*,*) matrix, siz
@@ -211,8 +233,11 @@ CONTAINS
 
 
      CALL DPSORT(eig,siz,iperm,2,ier)
-
+     
+     !write(*,*) 'Done'
+     
      CALL DPSORT(eig_gs,siz_gs,iperm_gs,2,ier)
+     !write(*,*) 'Also done'
 
 
 

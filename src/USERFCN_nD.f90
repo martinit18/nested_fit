@@ -586,9 +586,11 @@
 
      !Symmetrizing matrix
      !write(*,*) siz
+     write(*,*) siz
      call diasym(matrix,eig,siz)
 
      !write(*,*) matrix, siz
+     write(*,*) siz_gs
      call diasym(matrix_gs,eig_gs,siz_gs)
 
      
