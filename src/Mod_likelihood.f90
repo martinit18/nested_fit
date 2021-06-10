@@ -1,5 +1,5 @@
 MODULE MOD_LIKELIHOOD
-  ! Automatic Time-stamp: <Last changed by martino on Monday 03 May 2021 at CEST 13:06:01>
+  ! Automatic Time-stamp: <Last changed by martino on Wednesday 09 June 2021 at CEST 09:15:31>
   ! Module of the likelihood function for data analysis
 
 
@@ -277,7 +277,7 @@ CONTAINS
     nx = imax - imin + 1
     ny = jmax - jmin + 1
 
-    write(*,*) imin, imax, jmin, jmax
+    !write(*,*) imin, imax, jmin, jmax
 
 
     ALLOCATE(adata(nx,ny),adata_mask(nx,ny))
@@ -757,13 +757,14 @@ CONTAINS
     !
     INTEGER(8), PARAMETER :: maxfit = 10000
     REAL(8) :: USERFCN_2D
-    REAL(8) :: minx=0., maxx=0., enc = 0.
-    INTEGER(4) :: i=0, j=0, k=0
+    REAL(8) :: minx=0., maxx=0., enc = 0., dx, xfit, yfit
+    INTEGER(4) :: i=0, j=0, k=0, ix=0
     ! Stuff to save separate components
     LOGICAL :: plot = .FALSE.
     CHARACTER :: out_filename*64
     REAL(8), DIMENSION(nx,ny) :: aenc, ares
-    REAL(8) :: xx, yy, nan
+    REAL(8), DIMENSION(nx) :: hx, hnc, henc, hres
+    REAL(8) :: xx, yy, nan, a, b, c, y0, Dy
 
     COMMON /func_plot/ plot
 
@@ -771,46 +772,93 @@ CONTAINS
     aenc = 0.
     ares = 0.
 
+    ! If "LINE" profile, prepare for projection
+    IF (INDEX(funcname,"_LINE").NE.0) THEN
+       hx   = 0.
+       hnc  = 0.
+       henc = 0.
+       hres = 0.
+       a  = live_max(1)
+       b  = live_max(2)
+       c  = live_max(3)
+       y0 = live_max(4)
+       Dy = live_max(5)
+    END IF
 
     IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
        k=1
-       ! Rewrite data only -------------------------------------------------------------
-       OPEN (UNIT=20, FILE='nf_output_data_2D.dat', STATUS='unknown')
-       WRITE(20,*)'# matrix dimensions: ', nx, ny
+       maxx = xmax(1)
+       minx = xmin(1)
+       plot = .TRUE.
+       xfit = 0.
+       dx=(maxx-minx)/(maxfit-1)
        IF (data_type.EQ.'2c') THEN
+          ! Rewrite data and write function and residuals and corresponding projection if "LINE" profile ---
+          OPEN (UNIT=20, FILE='nf_output_data_2D.dat', STATUS='unknown')
+          WRITE(20,*)'# matrix dimensions: ', nx, ny
           DO i=1,nx
              WRITE(20,*) adata(i,:)
-          END DO
-       END IF
-       CLOSE(20)
-       ! Write function and residuals -------------------------------------------------------------
-       DO i=1, nx
-          DO j=1, ny
-             IF (adata(i,j).GE.0) THEN
-                ! Poisson distribution calculation --------------------------------------------------
-                xx = i - 0.5 + xmin(k) ! Real coordinates are given by the bins, the center of the bin.
-                yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin
-                aenc(i,j) = USERFCN_2D(xx,yy,npar,live_max,funcname)
-                ares(i,j) = adata(i,j) - aenc(i,j)
-             ELSE
-                aenc(i,j) = nan
-                ares(i,j) = nan
+             xx = i - 0.5 + xmin(k) ! Real coordinates are given by the bins, the center of the bin.
+             ! If "LINE" profile, built the projection
+             IF (INDEX(funcname,"_LINE").NE.0) THEN
+                hx(i) = xx
              END IF
+             DO j=1, ny
+                IF (adata(i,j).GE.0) THEN
+                   ! Poisson distribution calculation --------------------------------------------------
+                   yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin
+                   aenc(i,j) = USERFCN_2D(xx,yy,npar,live_max,funcname)
+                   ares(i,j) = adata(i,j) - aenc(i,j)
+                   IF (INDEX(funcname,"_LINE").NE.0) THEN
+                      ix = CEILING(xx - b*(yy-y0) - c*(yy-y0)**2 - xmin(k))
+                      IF (ix.GE.1.AND.ix.LE.nx) THEN
+                         hnc(ix)  = hnc(ix) + adata(i,j)
+                         henc(ix) = henc(ix) + aenc(i,j)
+                         hres(ix) = hres(ix) + ares(i,j)
+                         !write(*,*) ix, xx, yy, y0 !hx(i), hnc(ix), henc(ix), hres(ix)
+                         !pause
+                      END IF
+                   END IF
+                ELSE
+                   aenc(i,j) = nan
+                   ares(i,j) = nan
+                END IF
+             END DO
           END DO
-       END DO
-
-       OPEN (UNIT=20, FILE='nf_output_fit_max_2D.dat', STATUS='unknown')
-       OPEN (UNIT=30, FILE='nf_output_fitres_max_2D.dat', STATUS='unknown')
-       WRITE(20,*)'# matrix dimensions: ', nx, ny
-       WRITE(30,*)'# matrix dimensions: ', nx, ny
-       IF (data_type.EQ.'2c') THEN
+          CLOSE(20)
+          
+          ! Write projection
+          IF (INDEX(funcname,"_LINE").NE.0) THEN
+             ! max likelihood values -------------------------------------------------------------
+             OPEN (UNIT=20, FILE='nf_output_data_max.dat', STATUS='unknown')
+             WRITE(20,*)'# x    y data    y theory      y diff    y err'
+             DO i=1, nx
+                WRITE(20,*) hx(i), ' ',hnc(i), ' ',henc(i), ' ',hres(i), ' ', SQRT(hnc(i))
+             END DO
+             CLOSE(20)
+             ! Fit result with high resolution
+             OPEN (UNIT=40, FILE='nf_output_fit_max.dat', STATUS='unknown')
+             WRITE(40,*)'# x    y fit'
+             DO i=1, maxfit
+                xfit = minx + (i-1)*dx
+                yfit = Dy*USERFCN_2D(xfit,y0,npar,live_max,funcname)
+                WRITE(40,*) xfit, yfit
+             ENDDO
+             CLOSE(40)
+          END IF
+          
+          OPEN (UNIT=20, FILE='nf_output_fit_max_2D.dat', STATUS='unknown')
+          OPEN (UNIT=30, FILE='nf_output_fitres_max_2D.dat', STATUS='unknown')
+          WRITE(20,*)'# matrix dimensions: ', nx, ny
+          WRITE(30,*)'# matrix dimensions: ', nx, ny
           DO i=1,nx
              WRITE(20,*) aenc(i,:)
              WRITE(30,*) ares(i,:)
           END DO
+          CLOSE(20)
+          CLOSE(30)
+          
        END IF
-       CLOSE(20)
-       CLOSE(30)
     END IF
 
   END SUBROUTINE WRITE_EXPECTED_VALUES_2D

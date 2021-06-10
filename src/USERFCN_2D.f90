@@ -1,4 +1,4 @@
-! Time-stamp: <Last changed by martino on Monday 07 June 2021 at CEST 10:30:06>
+! Time-stamp: <Last changed by martino on Wednesday 09 June 2021 at CEST 12:09:13>
 
 REAL(8) FUNCTION USERFCN_2D(x,y,npar,val,funcname)
   ! Library of 2D functions
@@ -11,8 +11,9 @@ REAL(8) FUNCTION USERFCN_2D(x,y,npar,val,funcname)
   !
   REAL(8) :: GAUSS_SIMPLE_2D, GAUSS_BG_2D
   REAL(8) :: GAUSS_LINE_BG_2D, SUPERGAUSS_LINE_BG_2D
+  REAL(8) :: LORE_LINE_BG_2D, ERFPEAK_LINE_BG_2D
+  REAL(8) :: VOIGT_LINE_BG_2D
   REAL(8) :: TWO_LORE_LINE_BG_2D, TWO_VOIGT_LINE_BG_2D
-  REAL(8) :: VOIGT_LINE_BG_2D, ERFPEAK_LINE_BG_2D
 
   ! Choose your model (see below for definition)
   IF(funcname.EQ.'GAUSS_SIMPLE_2D') THEN
@@ -21,6 +22,8 @@ REAL(8) FUNCTION USERFCN_2D(x,y,npar,val,funcname)
      USERFCN_2D = GAUSS_BG_2D(x,y,npar,val)
   ELSE IF(funcname.EQ.'GAUSS_LINE_BG_2D') THEN
      USERFCN_2D = GAUSS_LINE_BG_2D(x,y,npar,val)
+  ELSE IF(funcname.EQ.'LORE_LINE_BG_2D') THEN
+     USERFCN_2D = LORE_LINE_BG_2D(x,y,npar,val)
   ELSE IF(funcname.EQ.'VOIGT_LINE_BG_2D') THEN
      USERFCN_2D = VOIGT_LINE_BG_2D(x,y,npar,val)
   ELSE IF(funcname.EQ.'SUPERGAUSS_LINE_BG_2D') THEN
@@ -168,6 +171,49 @@ REAL(8) FUNCTION GAUSS_LINE_BG_2D(x,y,npar,val)
 END FUNCTION GAUSS_LINE_BG_2D
 
 !________________________________________________________________________________________
+
+REAL(8) FUNCTION LORE_LINE_BG_2D(x,y,npar,val)
+  ! Normalized Lorentzian line profile.
+  ! x: dispersion axis --> Gaussian profile
+  ! y: parallel axis --> slope of the line
+  ! The value of 'amp' is the value of the volume below the curve
+
+  IMPLICIT NONE
+  REAL(8), INTENT(IN) :: x, y
+  INTEGER(4), INTENT(IN) :: npar
+  REAL(8), DIMENSION(npar), INTENT(IN) :: val
+  !
+  REAL(8), DIMENSION(3) :: vall
+  REAL(8) :: LORE
+  REAL(8) :: a, b, c, amp, gamma, y0, bg, x0, Dy
+
+  a     = val(1)
+  b     = val(2)
+  c     = val(3)
+  y0    = val(4)
+  Dy    = val(5)
+  amp   = val(6)
+  gamma = val(7)
+  bg    = val(8)
+
+  x0 = a + b*(y-y0) + c*(y-y0)**2
+  amp = amp/Dy    ! For the normalization along the plan perpendicular to the dispersion
+
+  vall(1) = x0
+  vall(2) = amp
+  vall(3) = gamma
+
+
+  LORE_LINE_BG_2D = LORE(x,3,vall) + bg
+
+  RETURN
+
+
+
+END FUNCTION LORE_LINE_BG_2D
+
+!________________________________________________________________________________________
+
 
 
 REAL(8) FUNCTION VOIGT_LINE_BG_2D(x,y,npar,val)
@@ -323,6 +369,9 @@ REAL(8) FUNCTION TWO_LORE_LINE_BG_2D(x,y,npar,val)
   REAL(8), DIMENSION(3) :: vall1, vall2
   REAL(8) :: LORE
   REAL(8) :: a, b, c, y0, Dy, dx, amp1, gamma, damp, amp2, bg, x01, x02
+  ! To plot the different components
+  LOGICAL :: plot
+  COMMON /func_plot/ plot
 
   a     = val(1)
   b     = val(2)

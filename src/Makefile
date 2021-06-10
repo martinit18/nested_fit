@@ -1,5 +1,5 @@
-#  Automatic Time-stamp: <Last changed by martino on Monday 07 June 2021 at CEST 10:28:31>
-NAME    = nested_fit4.0.2.exe
+#  Automatic Time-stamp: <Last changed by martino on Tuesday 08 June 2021 at CEST 15:08:06>
+NAME    = nested_fit4.0.3.exe
 .SUFFIXES : .f90 .f .o .c .mod
 CFLAGS  =
 ############## FLAG TO COSTUMIZE #############################

@@ -10,10 +10,9 @@ import matplotlib.pyplot as plt
 
 current_version=4.0 # and beyond
 
-
+        
 linestyle = {"markeredgewidth":2, "elinewidth":2, "capsize":4,"markersize":3}
 linestyle2 = {"markeredgewidth":0, "elinewidth":2, "capsize":0,"markersize":0}
-
 
 
 a="""
@@ -309,13 +308,16 @@ class Analysis(object):
 
 ####################################################################################################################################
     def plot(self,path=currentpath,xmin=0,xmax=0,ymin=0,ymax=0,typeof='max',
-                 logscale=False,nset=0,high_definition=False):
+                 logscale=False,nset=0,high_definition=True):
         '''
         Plot the fit results present in the file output_data.dat and eventually to the file output_fit.dat.
         The limit of the plot can be indicated. If not, the maximum and the minimum of the histogram are taken into account.
         If there is a set of profiles to fit, specify which one has to be visualized
         '''
 
+        
+        linestyle = {"markeredgewidth":2, "elinewidth":2, "capsize":4,"markersize":3}
+        linestyle2 = {"markeredgewidth":0, "elinewidth":2, "capsize":0,"markersize":0}
 
         # Adjust the path first
         if path[-1]!='/' and path != None:  path = path+'/'
@@ -656,7 +658,7 @@ class Analysis(object):
         plt.show()
 
 ####################################################################################################################################
-    def plot2D_line_proj(self,path=currentpath,xmin=0,xmax=0,ymin=0,ymax=0,typeof='max',
+    def plot2D_projection(self,path=currentpath,xmin=0,xmax=0,ymin=0,ymax=0,typeof='max',
                  flat=True,logscale=False,nset=0):
         '''
         Plot of the 2D spectral line projection on the dispersion axis (x-axis).
@@ -664,6 +666,9 @@ class Analysis(object):
         the plane chosen from the fit (via the variable y0).
         '''
 
+        print("\n\n\n \t\t\t ATTENTION\n This is still experimental and not working properly yet!!!\n\n\n")
+        
+        
         # Adjust the path first
         if path[-1]!='/' and path != None:  path = path+'/'
         #
@@ -695,8 +700,8 @@ class Analysis(object):
         a, b, c, y0, Dy = output_data['max'][0:5]
 
         # Reshape data
-        x = np.arange(shape(adata)[0]) + minx
-        y = np.arange(shape(adata)[1]) + miny
+        x = np.arange(shape(adata)[0]) + minx + 0.5
+        y = np.arange(shape(adata)[1]) + miny - 0.5
         xx, yy = np.meshgrid(x, y)
         xxx = xx.flatten()
         yyy = yy.flatten()
