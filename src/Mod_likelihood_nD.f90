@@ -218,8 +218,13 @@ CONTAINS
     IF(funcname.EQ.'NSM_SN_BE'.OR.funcname.EQ.'NSM_SN') THEN
           
        CALL INIT_NSM()
+    
+    ELSE IF(funcname.EQ.'NSM_FULL') THEN
+       CALL INIT_NSM_FULL()
        
     END IF
+    
+    
 
   END SUBROUTINE INIT_FUNCTIONS
 

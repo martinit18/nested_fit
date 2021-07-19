@@ -18,7 +18,8 @@ c################################### USERFCN_2D DEFINITION #####################
       REAL*8 DOUBLE_FABIAN, SYM_DOUBLE_FABIAN, QUAD_PARABOLA, DD_MORSE
       REAL*8 INT_DOUBLE_FABIAN, INT_TH_DOUBLE_FABIAN, DINT_DOUBLE_FABIAN
       REAL*8 CENT_SYM_DOUBLE_FABIAN, DINT_TH_DOUBLE_FABIAN
-      REAL*8 DINT_EXP_DOUBLE_FABIAN
+      REAL*8 DINT_EXP_DOUBLE_FABIAN, FAKE_ENERGY_XY
+      REAL*8 DINT_LINT_DOUBLE_FABIAN, DINT_LINT_SAME_DOUBLE_FABIAN
       REAL*8 x, y
       CHARACTER*64 funcname
 
@@ -97,6 +98,12 @@ c     Choose your model (see below for definition)
          USERFCN_2D = DINT_TH_DOUBLE_FABIAN(x,y,npar,val)
       ELSE IF(funcname.EQ.'DINT_EXP_DOUBLE_FABIAN') THEN
          USERFCN_2D = DINT_EXP_DOUBLE_FABIAN(x,y,npar,val)
+      ELSE IF(funcname.EQ.'FAKE_ENERGY_XY') THEN
+         USERFCN_2D = FAKE_ENERGY_XY(x,y,npar,val)
+      ELSE IF(funcname.EQ.'DINT_LINT_DOUBLE_FABIAN') THEN
+         USERFCN_2D = DINT_LINT_DOUBLE_FABIAN(x,y,npar,val)
+      ELSE IF(funcname.EQ.'DINT_LINT_SAME_DOUBLE_FABIAN') THEN
+         USERFCN_2D = DINT_LINT_SAME_DOUBLE_FABIAN(x,y,npar,val)
 
 
 
@@ -121,7 +128,7 @@ c################################### LINESHAPE DEFINITIONS #####################
 
       FUNCTION GAUSS_2D(X,Y,npar,val)
 c     Normalized Gaussian distribution
-c     The value of 'amp' is the value of the surface-->volume below the curve-->surface
+c     The value of 'amp' is the value of the volume below the surface
 
       IMPLICIT NONE
       INTEGER*4 npar
@@ -129,19 +136,19 @@ c     The value of 'amp' is the value of the surface-->volume below the curve-->
       REAL*8 GAUSS_2D, x, y ! 2D: added y
       REAL*8 pi
       PARAMETER(pi=3.141592653589793d0)
-      REAL*8 x0, y0, amp, sigmax, sigmay, aux1, aux2, norm  ! 2D: added y and sigma
+      REAL*8 x0, y0, amp, sigmax, sigmay, aux1, aux2, norm  
 
       x0    = val(1)
       y0    = val(2)
-      amp   = val(3)                 ! 2D: added variables. ASK
+      amp   = val(3)                 
       sigmax= val(4)
       sigmay= val(5)
       aux1  = -(x-x0)**2/(2*sigmax**2)
       aux2  = -(y-y0)**2/(2*sigmay**2)
       norm  = amp/(2*pi*sigmax*sigmay)
 c     Test of under of underflow first
-      IF(ABS(aux1+aux2).LT.700) THEN   ! 2D: added.
-         GAUSS_2D = norm*dexp(aux1+aux2)  ! Corrected normalisation. amp is now a volume
+      IF(ABS(aux1+aux2).LT.700) THEN   
+         GAUSS_2D = norm*dexp(aux1+aux2)  
       ELSE
          GAUSS_2D = 0.d0
       END IF
@@ -676,7 +683,7 @@ c     One minimum for yc>thr and 2 (or more if p>1) for yc<thr
         A_y = ((x**2/xmin**2)**2)**q
       END IF
 
-      amp = N*A_y*(EXP(-(y/y2)**2))**p  
+      amp = N*A_y*EXP(-((y/y2)**2)**p)  
             
 
       !Anharmonic term
@@ -1678,6 +1685,60 @@ c ______________________________________________________________________________
       END
 
 
+c _______________________________________________________________________________________________
+
+      FUNCTION FAKE_ENERGY_XY(X,Y,npar,val)
+      
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 FAKE_ENERGY_XY, x, y
+      real(8) :: kappa_b    ! the proton, along y (bending)
+      real(8) :: alpha   ! O-O potential 
+      real(8) :: kappa_b2 
+      real(8) :: dd, r0, y0, lam=0.35
+      REAL(8) :: ENERGY
+      REAL(8) :: morse                   ! the proton
+      REAL(8) :: r, en1
+      REAL(8) :: arg1, f1    
+      LOGICAL plot
+      COMMON /func_plot/ plot
+      
+      
+      kappa_b   = val(1)
+      kappa_b2   = val(2)
+      y0        = val(3)
+      dd        = val(4)
+      r0        = val(5)
+      lam       = val(6)
+
+     
+      !Defining distance
+      r = SQRT(x*x+y*y)
+      
+      !double morse part
+      arg1 = (r-r0)/lam
+      f1   = (1-exp(-arg1))**2
+
+
+      morse= dd*(f1) !+ f2)
+
+      
+      en1 = kappa_b*(ABS(y-y0))**2 + kappa_b2*(ABS(y-y0))**4
+
+      FAKE_ENERGY_XY = en1 + morse 
+      
+      
+      IF(plot) THEN
+         WRITE(40,*) x, y, FAKE_ENERGY_XY
+      END IF      
+
+      
+      RETURN
+      END
+
+
+
 
 
 
@@ -2301,6 +2362,133 @@ c ______________________________________________________________________________
       RETURN
       END
 
+
+c _______________________________________________________________________________________________
+
+      FUNCTION DINT_LINT_DOUBLE_FABIAN(X,Y,npar,val)
+      
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 DINT_LINT_DOUBLE_FABIAN, prev, x, y
+      REAL*8 s0,N,bg,q,b,amp, a1, a2, p
+      REAL*8 p2, p1,anharm, inter, lin_inter, inter_pos
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      N   = val(1)
+      s0  = val(2)
+      bg  = val(3)
+      q   = val(4)
+      b   = val(5)
+      amp = val(6)
+      a1  = val(7)
+      a2  = val(8)
+      p   = val(9)
+
+
+
+      !s1 = (x+y)/2
+      !s2 = (x-y)/2
+      
+
+
+      
+
+      p1 = (x+s0)*(x-s0)
+      p2 = (y+s0)*(y-s0)
+
+      anharm = b*((x**2)**p + (y**2)**p)
+
+      
+      inter = abs(x-y)
+      inter_pos = abs(x+y)
+      
+      lin_inter = a1*inter+a2*inter_pos
+
+
+      prev = N*(p1**2)**q+ N*(p2**2)**q + anharm + bg
+
+      DINT_LINT_DOUBLE_FABIAN =prev + lin_inter
+
+
+
+
+
+
+
+      IF(plot) THEN
+         WRITE(40,*) x, y, DINT_LINT_DOUBLE_FABIAN
+      END IF      
+
+
+
+      RETURN
+      END
+
+c _______________________________________________________________________________________________
+
+      FUNCTION DINT_LINT_SAME_DOUBLE_FABIAN(X,Y,npar,val)
+      
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 DINT_LINT_SAME_DOUBLE_FABIAN, prev, x, y
+      REAL*8 s0,N,bg,q,b,amp, a, p
+      REAL*8 p2, p1,anharm, inter, lin_inter, inter_pos
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      N   = val(1)
+      s0  = val(2)
+      bg  = val(3)
+      q   = val(4)
+      b   = val(5)
+      amp = val(6)
+      a  = val(7)
+      p   = val(8)
+
+
+
+      !s1 = (x+y)/2
+      !s2 = (x-y)/2
+      
+
+
+      
+
+      p1 = (x+s0)*(x-s0)
+      p2 = (y+s0)*(y-s0)
+
+      anharm = b*((x**2)**p + (y**2)**p)
+
+      
+      inter = abs(x-y)
+      inter_pos = abs(x+y)
+      
+      lin_inter = a*inter+a*inter_pos
+
+
+      prev = N*(p1**2)**q+ N*(p2**2)**q + anharm + bg
+
+      DINT_LINT_SAME_DOUBLE_FABIAN =prev + lin_inter
+
+
+
+
+
+
+
+      IF(plot) THEN
+         WRITE(40,*) x, y, DINT_LINT_SAME_DOUBLE_FABIAN
+      END IF      
+
+
+
+      RETURN
+      END
 
 
 

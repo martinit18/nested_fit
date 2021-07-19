@@ -11,7 +11,8 @@
       INTEGER(4) :: npar, maxdim=40
       REAL(8), DIMENSION(npar) :: val
       REAL(8), DIMENSION(:) :: x(maxdim)
-      REAL(8) ::  USERFCN_nD, GAUSS_3D,REAL_ENERGY_ND,NSM_F72,NSM_BE_F72
+      REAL(8) ::  USERFCN_nD, GAUSS_3D,REAL_ENERGY_ND,SEMIREAL_ENERGY_ND,NSM_F72,NSM_BE_F72
+      REAL(8) :: AN_SEMIREAL_ENERGY_ND
       CHARACTER(64) :: funcname
       
       
@@ -21,6 +22,10 @@
          USERFCN_nD = GAUSS_3D(x,npar,val)
       ELSE IF(funcname.EQ.'REAL_ENERGY_ND') THEN
          USERFCN_nD = REAL_ENERGY_ND(x,npar,val)
+      ELSE IF(funcname.EQ.'SEMIREAL_ENERGY_ND') THEN
+         USERFCN_nD = SEMIREAL_ENERGY_ND(x,npar,val)
+      ELSE IF(funcname.EQ.'AN_SEMIREAL_ENERGY_ND') THEN
+         USERFCN_nD = AN_SEMIREAL_ENERGY_ND(x,npar,val)
       ELSE IF(funcname.EQ.'NSM_F72') THEN
          USERFCN_nD = NSM_F72(x,npar,val)
       ELSE IF(funcname.EQ.'NSM_BE_F72') THEN
@@ -29,6 +34,8 @@
          USERFCN_nD = NSM_SN(x,npar,val)
       ELSE IF(funcname.EQ.'NSM_SN_BE') THEN
          USERFCN_nD = NSM_SN_BE(x,npar,val)
+      ELSE IF(funcname.EQ.'NSM_FULL') THEN
+         USERFCN_nD = NSM_FULL(x,npar,val)
       
 
 
@@ -123,10 +130,10 @@
       lam       = val(8)
 
 
-      x(1) = x_
-      x(2) = y
-      x(3) = q
-      x(4) = temp
+      x_ = x(1) 
+      y  = x(2)
+      q  = x(3)
+      temp = x(4) 
 
 
      
@@ -154,13 +161,153 @@
       
       
       
-      !IF(plot) THEN
-      !   WRITE(40,*) x, y, REAL_ENERGY_XY_2D
-      !END IF      
+      IF(plot) THEN
+         WRITE(40,*) x, y, REAL_ENERGY_ND
+      END IF      
 
       
       RETURN
       END
+
+
+!______________________________________________________________________________________________
+
+      FUNCTION SEMIREAL_ENERGY_ND(X, npar,val)
+      
+      IMPLICIT NONE
+      INTEGER(4) :: npar
+      REAL(8) :: val(npar)
+      REAL(8) :: SEMIREAL_ENERGY_ND, x(4),x_, y
+      REAL(8) :: kappa_b, y0   ! the proton, along y (bending)
+      REAL(8) :: kappa_o, q0, alpha   ! O-O potential
+      REAL(8) :: q, q_mod , morse                   ! the proton
+      REAL(8) :: r,en0,en1
+      REAL(8) :: dd, r0, lam
+      REAL(8) :: arg1, arg2, f1, f2, bg, qmod 
+      REAL(8) :: temp  ! temperature      
+      LOGICAL plot
+      COMMON /func_plot/ plot
+      
+
+      kappa_b   = val(1)
+      kappa_o   = val(2)
+      y0        = val(3)
+      q0        = val(4)
+      alpha     = val(5)
+      dd        = val(6)
+      r0        = val(7)
+      lam       = val(8)
+
+
+      x_ = x(1) 
+      y  = x(2)
+      q  = x(3)
+      temp = x(4) 
+
+
+     
+      !Defining distance
+      r = SQRT(x_*x_+y*y)
+      
+      !double morse part
+      arg1 = (r-r0)/lam
+      f1   = (1-exp(-arg1))**2
+
+      arg2 = (q-(r-r0))/lam
+      f2   = (1-exp(-arg2))**2
+
+      morse= dd*(f1 + f2)
+
+      !q (an)harmonic part
+
+      qmod = q0 + alpha*temp
+
+      en0 = kappa_o*(q-qmod)**2 
+      en1 = kappa_b*(ABS(y-y0))**2
+
+      SEMIREAL_ENERGY_ND = en0 + en1 + morse + bg
+
+      
+      
+      
+      IF(plot) THEN
+         WRITE(40,*) x, y, SEMIREAL_ENERGY_ND
+      END IF      
+
+      
+      RETURN
+      END
+
+
+!______________________________________________________________________________________________
+
+      FUNCTION AN_SEMIREAL_ENERGY_ND(X, npar,val)
+      
+      IMPLICIT NONE
+      INTEGER(4) :: npar
+      REAL(8) :: val(npar)
+      REAL(8) :: AN_SEMIREAL_ENERGY_ND, x(4),x_, y
+      REAL(8) :: kappa_b, y0   ! the proton, along y (bending)
+      REAL(8) :: kappa_o, q0, alpha,kappa_o2  ! O-O potential
+      REAL(8) :: q, q_mod , morse                   ! the proton
+      REAL(8) :: r,en0,en1
+      REAL(8) :: dd, r0, lam
+      REAL(8) :: arg1, arg2, f1, f2, bg, qmod 
+      REAL(8) :: temp  ! temperature      
+      LOGICAL plot
+      COMMON /func_plot/ plot
+      
+
+      kappa_b   = val(1)
+      kappa_o   = val(2)
+      y0        = val(3)
+      q0        = val(4)
+      alpha     = val(5)
+      dd        = val(6)
+      r0        = val(7)
+      lam       = val(8)
+      kappa_o2  = val(9)
+
+
+      x_ = x(1) 
+      y  = x(2)
+      q  = x(3)
+      temp = x(4) 
+
+
+     
+      !Defining distance
+      r = SQRT(x_*x_+y*y)
+      
+      !double morse part
+      arg1 = (r-r0)/lam
+      f1   = (1-exp(-arg1))**2
+
+      arg2 = (q-(r-r0))/lam
+      f2   = (1-exp(-arg2))**2
+
+      morse= dd*(f1 + f2)
+
+      !q (an)harmonic part
+
+      qmod = q0 + alpha*temp
+
+      en0 = kappa_o*(q-qmod)**2 + kappa_o2*(q-qmod)**4/qmod**2 
+      en1 = kappa_b*(ABS(y-y0))**2
+
+      AN_SEMIREAL_ENERGY_ND = en0 + en1 + morse + bg
+
+      
+      
+      
+      IF(plot) THEN
+         WRITE(40,*) x, y, AN_SEMIREAL_ENERGY_ND
+      END IF      
+
+      
+      RETURN
+      END
+
 
 
 ! ##############################################################################################

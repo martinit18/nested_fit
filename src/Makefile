@@ -1,5 +1,5 @@
 #  Automatic Time-stamp: <Last changed by martino on Saturday 02 May 2020 at CEST 13:47:23>
-NAME    = nested_fit3.5.2_nD.exe
+NAME    = nested_fit3.5.2_2D.exe
 .SUFFIXES : .f90 .f .o .c .mod
 CFLAGS  =
 ############## FLAG TO COSTUMIZE #############################
@@ -23,7 +23,7 @@ CFILES =
 # 2D #
 ######
 
-#FFILES  =  USERFCN_2D.f USERFCN_SET_2D.f init_interpolation.f \
+FFILES  =  USERFCN_2D.f USERFCN_SET_2D.f init_interpolation.f \
 	\
 	dpsort.f \
 	xermsg.f fdump.f j4save.f xercnt.f \
@@ -38,7 +38,7 @@ CFILES =
 
 # Change Mod_likelihood.f90 in Mod_likelihood_tests.f90 below for tests
 
-#F90FILES = Mod_parameters.f90 Mod_likelihood_2D.f90 Mod_timestamp.f90 \
+F90FILES = Mod_parameters.f90 Mod_likelihood_2D.f90 Mod_timestamp.f90 \
 	Mod_cluster_analysis.f90 Mod_search_new_point.f90 \
 	nested_fit.f90 nested_sampling.f90 \
 	dlog_fac.f90 sortn_slatec.f90 meanvar.f90 randn.f90 shirley_fitpack.f90 \
@@ -48,7 +48,7 @@ CFILES =
 # nD #
 ######
 
-FFILES  =  USERFCN_SET_2D.f init_interpolation.f \
+#FFILES  =  USERFCN_SET_2D.f init_interpolation.f \
         \
         dpsort.f \
         xermsg.f fdump.f j4save.f xercnt.f \
@@ -63,7 +63,7 @@ FFILES  =  USERFCN_SET_2D.f init_interpolation.f \
 
 # Change Mod_likelihood.f90 in Mod_likelihood_tests.f90 below for tests
 
-F90FILES = Mod_NSM.f90 Mod_parameters_nD.f90 Mod_likelihood_nD.f90 Mod_timestamp.f90 \
+#F90FILES = Mod_parameters_nD.f90  Mod_NSM.f90  Mod_likelihood_nD.f90 Mod_timestamp.f90 \
         Mod_cluster_analysis.f90 Mod_search_new_point.f90 \
         nested_fit_nD.f90 nested_sampling.f90 \
         dlog_fac.f90 sortn_slatec.f90 meanvar.f90 randn.f90 shirley_fitpack.f90 \
