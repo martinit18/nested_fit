@@ -19,6 +19,33 @@ CFILES =
 
 # In the order: my stuff, Num. Rec., SLATEC, FITPACK, others stuff
 
+
+######
+# 1D #
+######
+
+#FFILES  =  USERFCN.f USERFCN_SET.f init_interpolation.f \
+	\
+	dpsort.f \
+	xermsg.f fdump.f j4save.f xercnt.f \
+	xerhlt.f xerprn.f xersve.f xgetua.f i1mach.f\
+	\
+	splev.f	 curfit.f fprati.f fprota.f fpknot.f \
+	fpdisc.f fpgivs.f fpcurf.f fpbspl.f fpchec.f fpback.f \
+	\
+	rinteg.f WOFZ.f \
+#	cw.f
+#	splint.f fpintb.f
+
+# Change Mod_likelihood.f90 in Mod_likelihood_tests.f90 below for tests
+
+#F90FILES = Mod_parameters.f90 Mod_likelihood_2D.f90 Mod_timestamp.f90 \
+	Mod_cluster_analysis.f90 Mod_search_new_point.f90 \
+	nested_fit.f90 nested_sampling.f90 \
+	dlog_fac.f90 sortn_slatec.f90 meanvar.f90 randn.f90 shirley_fitpack.f90 \
+
+
+
 ######
 # 2D #
 ######
@@ -40,7 +67,7 @@ FFILES  =  USERFCN_2D.f USERFCN_SET_2D.f init_interpolation.f \
 
 F90FILES = Mod_parameters.f90 Mod_likelihood_2D.f90 Mod_timestamp.f90 \
 	Mod_cluster_analysis.f90 Mod_search_new_point.f90 \
-	nested_fit.f90 nested_sampling.f90 \
+	nested_fit_2D.f90 nested_sampling.f90 \
 	dlog_fac.f90 sortn_slatec.f90 meanvar.f90 randn.f90 shirley_fitpack.f90 \
 	
       

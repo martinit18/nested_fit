@@ -169,7 +169,6 @@ PROGRAM NESTED_FIT
   READ(77,*) lr, string
   READ(77,*) npoint, nwidth, string
   READ(77,*) xmin(1), xmax(1), string
-  READ(77,*) ymin(1), ymax(1), string
   READ(77,*) npar, string
 
 
