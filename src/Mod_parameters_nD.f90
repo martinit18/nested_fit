@@ -30,7 +30,7 @@ MODULE MOD_PARAMETERS
   
   COMMON /func_exp/ lr
   COMMON /func_conv/ npoint, nwidth
-  !
+  
   
 
 

@@ -20,8 +20,7 @@ c################################### USERFCN_2D DEFINITION #####################
       REAL*8 CENT_SYM_DOUBLE_FABIAN, DINT_TH_DOUBLE_FABIAN
       REAL*8 DINT_EXP_DOUBLE_FABIAN, FAKE_ENERGY_XY
       REAL*8 DINT_LINT_DOUBLE_FABIAN, DINT_LINT_SAME_DOUBLE_FABIAN
-      REAL*8 DINT_EXP_DOUBLE_FABIAN
-      REAL*8 DINT_EXP_DOUBLE_FABIAN,DINT_EXP_EXTRA_FABIAN 
+      REAL*8 DINT_EXP_EXTRA_FABIAN 
       REAL*8 x, y
       CHARACTER*64 funcname
 
@@ -106,7 +105,6 @@ c     Choose your model (see below for definition)
          USERFCN_2D = DINT_LINT_DOUBLE_FABIAN(x,y,npar,val)
       ELSE IF(funcname.EQ.'DINT_LINT_SAME_DOUBLE_FABIAN') THEN
          USERFCN_2D = DINT_LINT_SAME_DOUBLE_FABIAN(x,y,npar,val)
-=======
       ELSE IF(funcname.EQ.'DINT_EXP_EXTRA_FABIAN') THEN
          USERFCN_2D = DINT_EXP_EXTRA_FABIAN(x,y,npar,val)
 
@@ -170,33 +168,33 @@ c     Normalized Gaussian distribution plus background
 c     The value of 'amp' is the value of the surface below the curve
       IMPLICIT NONE
       INTEGER*4 npar
-      REAL*8 val(npar), val1(5)        ! 2D: Changed 3->5
-      REAL*8 GAUSS_2D, GAUSS_BG_2D, x, y  	! 2D: Added y
+      REAL*8 val(npar), val1(5)        
+      REAL*8 GAUSS_2D, GAUSS_BG_2D, x, y  	
       REAL*8 pi
       PARAMETER(pi=3.141592653589793d0)
-      REAL*8 x0, y0, amp, sigmax, sigmay, bg  ! 2D: Added y
+      REAL*8 x0, y0, amp, sigmax, sigmay, bg  
       LOGICAL plot
       COMMON /func_plot/ plot
 
       bg    = val(1)
       x0    = val(2)
       y0    = val(3)
-      amp   = val(4)                 ! 2D: added variables. ASK
+      amp   = val(4)                 
       sigmax= val(5)
       sigmay= val(6)
 
 c     for the pure gauss peak
       val1(1) = x0
       val1(2) = y0
-      val1(3) = amp                 ! 2D: added variables
+      val1(3) = amp                 
       val1(4) = sigmax
       val1(5) = sigmay
 
-      GAUSS_BG_2D = GAUSS_2D(x,y,5,val1) + bg   ! 2D: Changed 3->5
+      GAUSS_BG_2D = GAUSS_2D(x,y,5,val1) + bg   
 
 c     Save the different components
       IF(plot) THEN
-         WRITE(40,*) x, y, GAUSS_BG_2D, GAUSS_2D(x,y,5,val1), bg ! 2D: added y Changed 3->5
+         WRITE(40,*) x, y, GAUSS_BG_2D, GAUSS_2D(x,y,5,val1), bg ! 
       END IF
 
       RETURN

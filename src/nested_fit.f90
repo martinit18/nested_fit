@@ -148,7 +148,6 @@ PROGRAM NESTED_FIT
   funcname = ' '
 
 
-
   ! Read parameter file ------------------------------------------------------------------------------------------------------------
   OPEN (UNIT=77, FILE='nf_input.dat', STATUS='old')
   READ(77,*) version_file, string
