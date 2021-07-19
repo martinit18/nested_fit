@@ -20,6 +20,8 @@ c################################### USERFCN_2D DEFINITION #####################
       REAL*8 CENT_SYM_DOUBLE_FABIAN, DINT_TH_DOUBLE_FABIAN
       REAL*8 DINT_EXP_DOUBLE_FABIAN, FAKE_ENERGY_XY
       REAL*8 DINT_LINT_DOUBLE_FABIAN, DINT_LINT_SAME_DOUBLE_FABIAN
+      REAL*8 DINT_EXP_DOUBLE_FABIAN
+      REAL*8 DINT_EXP_DOUBLE_FABIAN,DINT_EXP_EXTRA_FABIAN 
       REAL*8 x, y
       CHARACTER*64 funcname
 
@@ -104,6 +106,9 @@ c     Choose your model (see below for definition)
          USERFCN_2D = DINT_LINT_DOUBLE_FABIAN(x,y,npar,val)
       ELSE IF(funcname.EQ.'DINT_LINT_SAME_DOUBLE_FABIAN') THEN
          USERFCN_2D = DINT_LINT_SAME_DOUBLE_FABIAN(x,y,npar,val)
+=======
+      ELSE IF(funcname.EQ.'DINT_EXP_EXTRA_FABIAN') THEN
+         USERFCN_2D = DINT_EXP_EXTRA_FABIAN(x,y,npar,val)
 
 
 
@@ -2262,6 +2267,76 @@ c ______________________________________________________________________________
 
       RETURN
       END
+
+
+c _______________________________________________________________________________________________
+
+      FUNCTION DINT_EXP_EXTRA_FABIAN(X,Y,npar,val)
+      
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 DINT_EXP_EXTRA_FABIAN, prev, x, y
+      REAL*8 s0,N,bg,q,b,amp, a, y2_0, p
+      REAL*8 p2, p1,anharm, inter, exp_inter
+      REAL*8 anharm_2, p_2, q_2, N_2, b_2, prev_2
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+      N    = val(1)
+      s0   = val(2)
+      bg   = val(3)
+      q    = val(4)
+      b    = val(5)
+      amp  = val(6)
+      a    = val(7)
+      y2_0 = val(8)
+      p    = val(9)
+      N_2  = val(10)
+      q_2  = val(11)
+      b_2  = val(12)
+      p_2  = val(13)
+
+
+      !s1 = (x+y)/2
+      !s2 = (x-y)/2
+      
+
+
+      
+
+      p1 = (x+s0)*(x-s0)
+      p2 = (y+s0)*(y-s0)
+
+      anharm = b*((x**2)**p + (y**2)**p)
+      anharm_2 = b_2*((x**2)**p_2 + (y**2)**p_2)
+
+      
+      inter = -abs(x-y)
+      exp_inter = amp*exp(inter/a-y2_0)
+
+
+      prev = N*(p1**2)**q+ N*(p2**2)**q  + anharm + anharm_2 + bg
+      prev_2 = N_2*(p1**2)**q_2+ N_2*(p2**2)**q_2
+
+      DINT_EXP_EXTRA_FABIAN =prev + prev_2 + exp_inter
+
+
+
+
+
+
+
+      IF(plot) THEN
+         WRITE(40,*) x, y, DINT_EXP_EXTRA_FABIAN
+      END IF      
+
+
+
+      RETURN
+      END
+
 
 
 
