@@ -1,4 +1,4 @@
-c     Automatic Time-stamp: <Last changed by martino on Tuesday 13 April 2021 at CEST 19:12:05>
+c     Automatic Time-stamp: <Last changed by martino on Wednesday 30 June 2021 at CEST 23:17:26>
 c################################### USERFCN DEFINITION #####################################
 
 
@@ -12,7 +12,8 @@ c################################### USERFCN DEFINITION ########################
       REAL*8 DOUBLE_GAUSS_BG, DOUBLET_GAUSS_BG
       REAL*8 TRIPLE_GAUSS_BG,QUAD_GAUSS_BG,QUINT_GAUSS_BG,SIX_GAUSS_BG
       REAL*8 SIX_GAUSS_EXPBG_WF, SIX_GAUSS_DBEXPBG_WF
-      REAL*8 LORE, LORENORM, LORE_BG, CONS
+      REAL*8 LORE, LORENORM, LORE_BG, DOUBLE_LORE_WF_BG
+      REAL*8 SIX_LORE_WF_BG, SIX_LORE_WF_REL_BG, CONS
       REAL*8 SIX_VOIGT_BG, SIX_VOIGT_XRD, SIX_VOIGT_EXP_BG
       REAL*8 EIGHT_GAUSS_POLYBG_WF, EIGHT_VOIGT_POLYBG_WF
       REAL*8 EXPFCN, ERFFCN,BS_EM, BS_EM2, BS_EM_NM
@@ -49,12 +50,12 @@ c################################### USERFCN DEFINITION ########################
       REAL*8 x
       CHARACTER*64 funcname
 
+
 c     Choose your model (see below for definition)
       IF(funcname.EQ.'GAUSS') THEN
          USERFCN = GAUSS(x,npar,val)
       ELSE IF(funcname.EQ.'SUPERGAUSS') THEN
          USERFCN = SUPERGAUSS(x,npar,val)
-         USERFCN = GAUSS(x,npar,val)
       ELSE IF(funcname.EQ.'ERFPEAK') THEN
          USERFCN = ERFPEAK(x,npar,val)
       ELSE IF(funcname.EQ.'GAUSS_BG') THEN
@@ -65,6 +66,12 @@ c     Choose your model (see below for definition)
          USERFCN = LORENORM(x,npar,val)
       ELSE IF(funcname.EQ.'LORE_BG') THEN
          USERFCN = LORE_BG(x,npar,val)
+      ELSE IF(funcname.EQ.'DOUBLE_LORE_WF_BG') THEN
+         USERFCN = DOUBLE_LORE_WF_BG(x,npar,val)
+      ELSE IF(funcname.EQ.'SIX_LORE_WF_BG') THEN
+         USERFCN = SIX_LORE_WF_BG(x,npar,val)
+      ELSE IF(funcname.EQ.'SIX_LORE_WF_REL_BG') THEN
+         USERFCN = SIX_LORE_WF_REL_BG(x,npar,val)
       ELSE IF(funcname.EQ.'CONS') THEN
          USERFCN = CONS(x,npar,val)
       ELSE IF(funcname.EQ.'DOUBLE_GAUSS_BG') THEN
@@ -287,6 +294,32 @@ c     Test of under of underflow first
 
 c     _______________________________________________________________________________________________
 
+      FUNCTION ERFPEAK_OLD(X,npar,val)
+c     Normalized Supergaussian distribution
+c     The value of 'amp' is the value of the surface below the curve
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 ERFPEAK_OLD, x
+      REAL*8 pi
+      PARAMETER(pi=3.141592653589793d0)
+      REAL*8 x0, amp, sigma, w
+
+      x0    = val(1)
+      amp   = val(2)
+      sigma = val(3)
+      w     = val(4)
+
+      ERFPEAK_OLD = amp*(0.5 - DERF((-w + ABS(x - x0))/sigma)/2.)/
+     +     (sigma/(DEXP(w**2/sigma**2)*SQRT(pi)) + w + w*DERF(w/sigma))
+
+
+
+      RETURN
+      END
+
+c     _______________________________________________________________________________________________
+
       FUNCTION ERFPEAK(X,npar,val)
 c     Normalized Supergaussian distribution
 c     The value of 'amp' is the value of the surface below the curve
@@ -303,13 +336,14 @@ c     The value of 'amp' is the value of the surface below the curve
       sigma = val(3)
       w     = val(4)
 
-      ERFPEAK = amp*(0.5 - DERF((-w + ABS(x - x0))/sigma)/2.)/
-     +     (sigma/(DEXP(w**2/sigma**2)*SQRT(pi)) + w + w*DERF(w/sigma))
+      ERFPEAK = amp*(DERF((w + x - x0)/(DSQRT(2.0d0)*sigma))
+     +     + DERF((w - x + x0)/(DSQRT(2.0d0)*sigma)))/(4.*w)
 
 
 
       RETURN
       END
+
 
 
 
@@ -1037,6 +1071,227 @@ c     polynomial background
       RETURN
       END
 
+c _______________________________________________________________________________________________
+
+      FUNCTION DOUBLE_LORE_WF_BG(X,npar,val)
+c     2 Normalized Lorentzian distribution plus background
+c     The value of 'amp' is the value of the surface below the curve
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar), vall1(3), vall2(3)
+      REAL*8 DOUBLE_LORE_WF_BG, LORE, x
+      REAL*8 pi
+      PARAMETER(pi=3.141592653589793d0)
+      REAL*8 x01, x02, amp1, amp2, gamma1, gamma2, bg
+      ! To plot the different components
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+      bg     = val(1)
+      x01    = val(2)
+      x02    = val(3)
+      amp1   = val(4)
+      amp2   = val(5)
+      gamma1 = val(6)
+      gamma2 = val(7)
+
+c     first gauss peak
+      vall1(1) = x01
+      vall1(2) = amp1
+      vall1(3) = gamma1
+
+
+c     second gauss peak
+      vall2(1) = x02
+      vall2(2) = amp2
+      vall2(3) = gamma2
+
+      DOUBLE_LORE_WF_BG = LORE(x,3,vall1) + LORE(x,3,vall2) + bg
+
+c     Save the different components
+      IF(plot) THEN
+         WRITE(40,*) x, DOUBLE_LORE_WF_BG,
+     +        LORE(x,3,vall1), LORE(x,3,vall2), bg
+      ENDIF
+
+      RETURN
+      END
+
+
+c _______________________________________________________________________________________________
+
+      FUNCTION SIX_LORE_WF_BG(X,npar,val)
+c     2 Normalized Lorentzian distribution plus background
+c     The value of 'amp' is the value of the surface below the curve
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar), vall1(3), vall2(3), vall3(3)
+      REAL*8 vall4(3), vall5(3), vall6(3)
+      REAL*8 SIX_LORE_WF_BG, LORE, x
+      REAL*8 pi
+      PARAMETER(pi=3.141592653589793d0)
+      REAL*8 x01, amp1, gamma1, bg
+      REAL*8 x02, amp2, gamma2
+      REAL*8 x03, amp3, gamma3
+      REAL*8 x04, amp4, gamma4
+      REAL*8 x05, amp5, gamma5
+      REAL*8 x06, amp6, gamma6
+      ! To plot the different components
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+      bg     = val(1)
+      x01    = val(2)
+      x02    = val(3)
+      x03    = val(4)
+      x04    = val(5)
+      x05    = val(6)
+      x06    = val(7)
+      amp1   = val(8)
+      amp2   = val(9)
+      amp3   = val(10)
+      amp4   = val(11)
+      amp5   = val(12)
+      amp6   = val(13)
+      gamma1 = val(14)
+      gamma2 = val(15)
+      gamma3 = val(16)
+      gamma4 = val(17)
+      gamma5 = val(18)
+      gamma6 = val(19)
+
+c     first lorentzian peak
+      vall1(1) = x01
+      vall1(2) = amp1
+      vall1(3) = gamma1
+
+c     second lorentzian peak
+      vall2(1) = x02
+      vall2(2) = amp2
+      vall2(3) = gamma2
+
+c     third lorentzian peak
+      vall3(1) = x03
+      vall3(2) = amp3
+      vall3(3) = gamma3
+      
+c     fourth lorentzian peak
+      vall4(1) = x04
+      vall4(2) = amp4
+      vall4(3) = gamma4
+
+c     fifht lorentzian peak
+      vall5(1) = x05
+      vall5(2) = amp5
+      vall5(3) = gamma5
+
+c     sixth lorentzian peak
+      vall6(1) = x06
+      vall6(2) = amp6
+      vall6(3) = gamma6
+
+      SIX_LORE_WF_BG = LORE(x,3,vall1) + LORE(x,3,vall2)
+     +     + LORE(x,3,vall3) + LORE(x,3,vall4)  + LORE(x,3,vall5)
+     +     + LORE(x,3,vall6) + bg
+
+c     Save the different components
+      IF(plot) THEN
+         WRITE(40,*) x, SIX_LORE_WF_BG,
+     +        LORE(x,3,vall1), LORE(x,3,vall2), LORE(x,3,vall3),
+     +        LORE(x,3,vall4), LORE(x,3,vall5), LORE(x,3,vall6), bg
+      ENDIF
+
+      RETURN
+      END
+
+c _______________________________________________________________________________________________
+
+      FUNCTION SIX_LORE_WF_REL_BG(X,npar,val)
+c     2 Normalized Lorentzian distribution plus background
+c     The value of 'amp' is the value of the surface below the curve
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar), vall1(3), vall2(3), vall3(3)
+      REAL*8 vall4(3), vall5(3), vall6(3)
+      REAL*8 SIX_LORE_WF_REL_BG, LORE, x
+      REAL*8 pi
+      PARAMETER(pi=3.141592653589793d0)
+      REAL*8 x01, amp1, gamma1, bg
+      REAL*8 dx02, damp2, gamma2
+      REAL*8 dx03, damp3, gamma3
+      REAL*8 dx04, damp4, gamma4
+      REAL*8 x05, amp5, gamma5
+      REAL*8 x06, amp6, gamma6
+      ! To plot the different components
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+      bg     = val(1)
+      x01    = val(2)
+      dx02    = val(3)
+      dx03    = val(4)
+      dx04    = val(5)
+      x05    = val(6)
+      x06    = val(7)
+      amp1   = val(8)
+      damp2   = val(9)
+      damp3   = val(10)
+      damp4   = val(11)
+      amp5   = val(12)
+      amp6   = val(13)
+      gamma1 = val(14)
+      gamma2 = val(15)
+      gamma3 = val(16)
+      gamma4 = val(17)
+      gamma5 = val(18)
+      gamma6 = val(19)
+
+c     first lorentzian peak
+      vall1(1) = x01
+      vall1(2) = amp1
+      vall1(3) = gamma1
+
+c     second lorentzian peak
+      vall2(1) = x01 + dx02
+      vall2(2) = amp1*damp2
+      vall2(3) = gamma2
+
+c     third lorentzian peak
+      vall3(1) = x01 + dx03
+      vall3(2) = amp1*damp3
+      vall3(3) = gamma3
+      
+c     fourth lorentzian peak
+      vall4(1) = x01 + dx02 + dx04
+      vall4(2) = amp1*damp2*damp4
+      vall4(3) = gamma4
+
+c     fifht lorentzian peak
+      vall5(1) = x05
+      vall5(2) = amp5
+      vall5(3) = gamma5
+
+c     sixth lorentzian peak
+      vall6(1) = x06
+      vall6(2) = amp6
+      vall6(3) = gamma6
+
+      SIX_LORE_WF_REL_BG = LORE(x,3,vall1) + LORE(x,3,vall2)
+     +     + LORE(x,3,vall3) + LORE(x,3,vall4)  + LORE(x,3,vall5)
+     +     + LORE(x,3,vall6) + bg
+      
+c     Save the different components
+      IF(plot) THEN
+         WRITE(40,*) x, SIX_LORE_WF_REL_BG,
+     +        LORE(x,3,vall1), LORE(x,3,vall2), LORE(x,3,vall3),
+     +        LORE(x,3,vall4), LORE(x,3,vall5), LORE(x,3,vall6), bg
+      ENDIF
+
+      RETURN
+      END
+
+
+      
 c _______________________________________________________________________________________________
 
       FUNCTION SIX_VOIGT_EXPBG_WF(X,npar,val)

@@ -308,7 +308,7 @@ class Analysis(object):
 
 ####################################################################################################################################
     def plot(self,path=currentpath,xmin=0,xmax=0,ymin=0,ymax=0,typeof='max',
-                 logscale=False,nset=0,high_definition=True):
+                 logscale=False,nset=0,high_definition=True,savefig=False):
         '''
         Plot the fit results present in the file output_data.dat and eventually to the file output_fit.dat.
         The limit of the plot can be indicated. If not, the maximum and the minimum of the histogram are taken into account.
@@ -390,6 +390,7 @@ class Analysis(object):
         plt.errorbar(x_fit,y_fit,yerr=None,xerr=None,fmt='-b',**linestyle2)
         #plt.plot(x_fit,y_fit,'-b',label='Fit')
         plt.tight_layout()
+        if savefig: plt.savefig(path+'/plot.pdf')
 
         # Plot the residual
         plt.figure()
@@ -409,6 +410,7 @@ class Analysis(object):
         plt.errorbar([minx,maxx],[0.,0.],yerr=None,xerr=None,fmt='-k',**linestyle2)
         #plt.axhline(linewidth=2,color='k')
         plt.tight_layout()
+        if savefig: plt.savefig(path+'/res.pdf')
 
         plt.show()
 
@@ -1429,7 +1431,7 @@ class Analysis(object):
             return
 
         g = plots.get_single_plotter()
-        g.plot_1d(self.path+'/nf_output_points',par_name)
+        g.plot_1d(self.path+'/nf_output_points.txt',par_name)
 
         #---------------------------------------------------------------------------------------------------------------------
 

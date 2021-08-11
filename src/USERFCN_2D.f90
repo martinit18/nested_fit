@@ -1,4 +1,4 @@
-! Time-stamp: <Last changed by martino on Wednesday 09 June 2021 at CEST 12:09:13>
+! Time-stamp: <Last changed by martino on Monday 21 June 2021 at CEST 17:56:10>
 
 REAL(8) FUNCTION USERFCN_2D(x,y,npar,val,funcname)
   ! Library of 2D functions
@@ -13,7 +13,8 @@ REAL(8) FUNCTION USERFCN_2D(x,y,npar,val,funcname)
   REAL(8) :: GAUSS_LINE_BG_2D, SUPERGAUSS_LINE_BG_2D
   REAL(8) :: LORE_LINE_BG_2D, ERFPEAK_LINE_BG_2D
   REAL(8) :: VOIGT_LINE_BG_2D
-  REAL(8) :: TWO_LORE_LINE_BG_2D, TWO_VOIGT_LINE_BG_2D
+  REAL(8) :: TWO_LORE_LINE_BG_2D, TWO_LORE_WF_LINE_BG_2D, TWO_VOIGT_LINE_BG_2D
+  REAL(8) :: FOUR_LORE_WF_LINE_BG_2D
 
   ! Choose your model (see below for definition)
   IF(funcname.EQ.'GAUSS_SIMPLE_2D') THEN
@@ -32,8 +33,12 @@ REAL(8) FUNCTION USERFCN_2D(x,y,npar,val,funcname)
      USERFCN_2D = ERFPEAK_LINE_BG_2D(x,y,npar,val)
   ELSE IF(funcname.EQ.'TWO_LORE_LINE_BG_2D') THEN
      USERFCN_2D = TWO_LORE_LINE_BG_2D(x,y,npar,val)
-  ELSE IF(funcname.EQ.'TWO_VOIGT_LINE_BG_2D') THEN
-     USERFCN_2D = TWO_VOIGT_LINE_BG_2D(x,y,npar,val)
+  ELSE IF(funcname.EQ.'TWO_LORE_LINE_BG_2D') THEN
+     USERFCN_2D = TWO_LORE_LINE_BG_2D(x,y,npar,val)
+  ELSE IF(funcname.EQ.'TWO_LORE_WF_LINE_BG_2D') THEN
+     USERFCN_2D = TWO_LORE_WF_LINE_BG_2D(x,y,npar,val)
+  ELSE IF(funcname.EQ.'FOUR_LORE_WF_LINE_BG_2D') THEN
+     USERFCN_2D = FOUR_LORE_WF_LINE_BG_2D(x,y,npar,val)
   ELSE
      WRITE(*,*) 'Error in the function name def. in USERFCN_2D'
      WRITE(*,*) 'Check in the manual and in the nf_input.dat file'
@@ -407,6 +412,146 @@ REAL(8) FUNCTION TWO_LORE_LINE_BG_2D(x,y,npar,val)
 END FUNCTION TWO_LORE_LINE_BG_2D
 
 !________________________________________________________________________________________
+
+
+REAL(8) FUNCTION TWO_LORE_WF_LINE_BG_2D(x,y,npar,val)
+  ! Normalized two Lorentzian line profiles.
+  ! x: dispersion axis --> Lorentzian profile
+  ! y: parallel axis --> slope of the line
+  ! The value of 'amp' is the value of the volume below the curve
+  ! Dy and y0 are not variables but information for the heigth of the detector and
+  ! the middle plan, respectively
+
+  IMPLICIT NONE
+  REAL(8), INTENT(IN) :: x, y
+  INTEGER(4), INTENT(IN) :: npar
+  REAL(8), DIMENSION(npar), INTENT(IN) :: val
+  !
+  REAL(8), DIMENSION(3) :: vall1, vall2
+  REAL(8) :: LORE
+  REAL(8) :: a, b, c, y0, Dy, dx, amp1, gamma1, gamma2, damp, amp2, bg, x01, x02
+  ! To plot the different components
+  LOGICAL :: plot
+  COMMON /func_plot/ plot
+
+  a      = val(1)
+  b      = val(2)
+  c      = val(3)
+  y0     = val(4)
+  Dy     = val(5)
+  dx     = val(6)
+  amp1   = val(7)
+  damp   = val(8)
+  gamma1 = val(9)
+  gamma2 = val(10)
+  bg     = val(11)
+
+  x01 = a + b*(y-y0) + c*(y-y0)**2
+  x02 = x01 + dx
+  amp1 = amp1/Dy    ! For the normalization along the plan perpendicular to the dispersion
+  amp2 = amp1*damp
+
+  vall1(1) = x01
+  vall1(2) = amp1
+  vall1(3) = gamma1
+
+  vall2(1) = x02
+  vall2(2) = amp2
+  vall2(3) = gamma2
+
+
+  TWO_LORE_WF_LINE_BG_2D = LORE(x,3,vall1) + LORE(x,3,vall2) + bg
+
+  RETURN
+
+
+
+END FUNCTION TWO_LORE_WF_LINE_BG_2D
+
+
+!________________________________________________________________________________________
+
+!________________________________________________________________________________________
+
+
+REAL(8) FUNCTION FOUR_LORE_WF_LINE_BG_2D(x,y,npar,val)
+  ! Normalized four Lorentzian line profiles.
+  ! x: dispersion axis --> Lorentzian profile
+  ! y: parallel axis --> slope of the line
+  ! The value of 'amp' is the value of the volume below the curve
+  ! Dy and y0 are not variables but information for the heigth of the detector and
+  ! the middle plan, respectively
+
+  IMPLICIT NONE
+  REAL(8), INTENT(IN) :: x, y
+  INTEGER(4), INTENT(IN) :: npar
+  REAL(8), DIMENSION(npar), INTENT(IN) :: val
+  !
+  REAL(8), DIMENSION(3) :: vall1, vall2, vall3, vall4
+  REAL(8) :: LORE
+  REAL(8) :: a, b, c, y0, Dy
+  REAL(8) :: amp1, gamma1, dx2, damp2, gamma2
+  REAL(8) :: dx3, damp3, gamma3, dx4, damp4, gamma4
+  REAL(8) :: x01, x02, x03, x04, amp2, amp3, amp4, bg
+  ! To plot the different components
+  LOGICAL :: plot
+  COMMON /func_plot/ plot
+
+  a      = val(1)
+  b      = val(2)
+  c      = val(3)
+  y0     = val(4)
+  Dy     = val(5)
+  dx2    = val(6)
+  dx3    = val(7)
+  dx4    = val(8)
+  amp1   = val(9)
+  damp2  = val(10)
+  damp3  = val(11)
+  damp4  = val(12)
+  gamma1 = val(13)
+  gamma2 = val(14)
+  gamma3 = val(15)
+  gamma4 = val(16)
+  bg     = val(17)
+
+  x01 = a + b*(y-y0) + c*(y-y0)**2
+  x02 = x01 + dx2
+  x03 = x01 + dx3
+  x04 = x02 + dx4
+  amp1 = amp1/Dy    ! For the normalization along the plan perpendicular to the dispersion
+  amp2 = amp1*damp2
+  amp3 = amp1*damp3
+  amp4 = amp1*damp4
+
+  vall1(1) = x01
+  vall1(2) = amp1
+  vall1(3) = gamma1
+
+  vall2(1) = x02
+  vall2(2) = amp2
+  vall2(3) = gamma2
+
+  vall3(1) = x03
+  vall3(2) = amp3
+  vall3(3) = gamma3
+
+  vall4(1) = x04
+  vall4(2) = amp4
+  vall4(3) = gamma4
+
+
+  FOUR_LORE_WF_LINE_BG_2D = LORE(x,3,vall1) + LORE(x,3,vall2) + LORE(x,3,vall3) + LORE(x,3,vall4)+ bg
+
+  RETURN
+
+
+
+END FUNCTION FOUR_LORE_WF_LINE_BG_2D
+
+
+!________________________________________________________________________________________
+
 
 
 REAL(8) FUNCTION TWO_VOIGT_LINE_BG_2D(x,y,npar,val)
