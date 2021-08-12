@@ -125,7 +125,9 @@ The present version is 4.0.3
 New features:
 - 2D data analysis for count-type XY
 - computation acceleration for the 1D case introducing a mask instead of IF condition in the likelihood
-- new ERFPEAK function
+- new ERFPEAK function  
+- new example files for python analysis with pandas  
+
 
 
 
