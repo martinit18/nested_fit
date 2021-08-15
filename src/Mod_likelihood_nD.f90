@@ -237,7 +237,7 @@ CONTAINS
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
     !
     REAL(8) :: LOGLIKELIHOOD, USERFCN_nD, USERFCN_SET  !2D: USERFCN--> 2D
-    REAL(8) :: ll_tmp, enc
+    REAL(8) :: ll_tmp, enc, res
     INTEGER(4) :: i=0, k=0
 
 
@@ -248,6 +248,17 @@ CONTAINS
        ! No set --------------------------------------------------------------------------------------------------------
        k=1
        IF (errorbars_yn.EQ.'n'.OR.errorbars_yn.EQ.'N') THEN
+         
+       ELSE IF (errorbars_yn.EQ.'s') THEN
+          !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
+          DO i=1, ndata_set(k)
+             ! Normal (Gaussian) distribution calculation --------------------------------------
+             enc = USERFCN_nD(x(:,i,k),npar,par,funcname)
+             res = (nc(i,k) - enc)/nc_err(i,k)      
+             ll_tmp = ll_tmp + DLOG((1-EXP(-res**2/2))/res**2)
+          ENDDO
+          !$OMP END PARALLEL DO
+         
           
        ELSE
           !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
@@ -315,7 +326,7 @@ CONTAINS
        WRITE(20,*)'# variables         data     theory       diff     err'
        DO i=1, ndata
           enc = USERFCN_nD(x(:,i,k),npar,live_max,funcname)
-          IF (errorbars_yn.EQ.'y'.OR.errorbars_yn.EQ.'Y') THEN
+          IF (errorbars_yn.EQ.'y'.OR.errorbars_yn.EQ.'Y'.OR.errorbars_yn.EQ.'s') THEN
              WRITE(20,*) x(:,i,k),' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)
           ELSE
           END IF
@@ -326,7 +337,7 @@ CONTAINS
        WRITE(20,*)'# variables         data     theory       diff     err'
        DO i=1, ndata
           enc = USERFCN_nD(x(:,i,k),npar,par_mean,funcname)       !2D added y
-          IF (errorbars_yn.EQ.'y'.OR.errorbars_yn.EQ.'Y') THEN
+          IF (errorbars_yn.EQ.'y'.OR.errorbars_yn.EQ.'Y'.OR.errorbars_yn.EQ.'s') THEN
              WRITE(20,*) x(:,i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)  !2D added y
           ELSE
           END IF
@@ -337,7 +348,7 @@ CONTAINS
        WRITE(20,*)'# variables         data     theory       diff     err'
        DO i=1, ndata
           enc = USERFCN_nD(x(:,i,k),npar,par_median_w,funcname)  !2D added y
-          IF (errorbars_yn.EQ.'y'.OR.errorbars_yn.EQ.'Y') THEN
+          IF (errorbars_yn.EQ.'y'.OR.errorbars_yn.EQ.'Y'.OR.errorbars_yn.EQ.'s') THEN
              WRITE(20,*) x(:,i,k),' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)   !2D added y
           ELSE
           END IF

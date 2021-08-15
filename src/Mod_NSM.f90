@@ -498,7 +498,8 @@ CONTAINS
      
      CALL DPSORT(eig_gs,siz_gs,iperm_gs,2,ier)
      !write(*,*) 'Also done'
-
+     
+     
 
 
      !Calculating requested energy
