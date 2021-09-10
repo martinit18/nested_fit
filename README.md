@@ -129,8 +129,6 @@ New features:
 - new example files for python analysis with pandas  
 
 
-
-
 Previous versions are:
  - 3.5 Modularization of the search and cluster recognition methods in preparation of implementation of new algorithms \
  New interpolation options for 1D and 2D histograms using GetDist Python package \
@@ -187,20 +185,29 @@ Previous versions are:
       N. Chopin and C.P. Robert, Biometrika 97, 741-755 (2010).
  - 0.1: Program developed from D.S. Sivia, "Data Analysis, a Bayesian tutorial" (2006) and L. Simons' original program.
 
- ## Additional included sources
+## External codes and other contributors
 
- In addition to the original files from the main author (M. Trassinelli), nesed_fit includes
- - *FITPACK (DIERCKX)* package, to fit and interpolating data with splines (no license)
-   - Ref: Paul Dierckx, Curve and Surface Fitting with Splines, Oxford University Press, 1993
+### Additional included sources
+
+In addition to the original files from the main author (M. Trassinelli), nesed_fit includes
+- *FITPACK (DIERCKX)* package, to fit and interpolating data with splines (no license)
+  - Ref: Paul Dierckx, Curve and Surface Fitting with Splines, Oxford University Press, 1993
  Developer,
-   - Address: Paul Dierckx, Department of Computer Science, K.U. Leuven, Celestijnenlaan 200 A, B-3001, Heverlee, Belgium, Paul.Dierckx@cs.kuleuven.ac.be
-   - [http://nalag.cs.kuleuven.be/research/topics/fitpack.shtml](http://nalag.cs.kuleuven.be/research/topics/fitpack.shtml)
- - `dpsort.f` + dependencies from SLATEC library (no license) for sorting arrays with respect another array
- - `WOFZ.f`' for the complex error function from TOMS algorithm n. 680 (included in Fortran 2008)
- - `rinteg.f` to calculate the integral of a function using a nq points quadrature ( nq is any integer between 1 and 14 ). Written by C. C. J. Roothaan (no license)
+  - Address: Paul Dierckx, Department of Computer Science, K.U. Leuven, Celestijnenlaan 200 A, B-3001, Heverlee, Belgium, Paul.Dierckx@cs.kuleuven.ac.be
+  - [http://nalag.cs.kuleuven.be/research/topics/fitpack.shtml](http://nalag.cs.kuleuven.be/research/topics/fitpack.shtml)
+- `dpsort.f` + dependencies from SLATEC library (no license) for sorting arrays with respect another array
+- `WOFZ.f`' for the complex error function from TOMS algorithm n. 680 (included in Fortran 2008)
+- `rinteg.f` to calculate the integral of a function using a nq points quadrature ( nq is any integer between 1 and 14 ). Written by C. C. J. Roothaan (no license)
+
+### Other contributors to the code
+(chronological order)
+
+- Anna Lévy (photoemission spectra models)
+- Nancy Paul (rocking curves and Bragg spectrometer lines)
+
+
 
 ## Other resources
-
 
 **Articles about nested sampling method**:\   
 [1] J. Skilling, *Nested sampling for general Bayesian computation*, Bayesian Anal. **1**, 833-859 (2006)\
