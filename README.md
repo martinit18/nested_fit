@@ -23,10 +23,6 @@ CNRS, Institute of NanoSciences of Paris\
 email: trassinelli AT insp.jussieu.fr\
 email: m.trassinelli AT gmail.com
 
-### Other contributors:
-L. Gonzalez
-
-
 ## Installation instructions ##
 **Prerequisite**:
 - Fortran compiler (gfortran by default)
@@ -205,7 +201,10 @@ In addition to the original files from the main author (M. Trassinelli), nesed_f
 - Anna Lévy (photoemission spectra models)
 - Nancy Paul (rocking curves and Bragg spectrometer lines)
 
+### Thanks for bugs corrections
+(alphabetical order)
 
+- Takuma Okumura
 
 ## Other resources
 

@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 current_version=4.0 # and beyond
 
-        
+
 linestyle = {"markeredgewidth":2, "elinewidth":2, "capsize":4,"markersize":3}
 linestyle2 = {"markeredgewidth":0, "elinewidth":2, "capsize":0,"markersize":0}
 
@@ -315,7 +315,7 @@ class Analysis(object):
         If there is a set of profiles to fit, specify which one has to be visualized
         '''
 
-        
+
         linestyle = {"markeredgewidth":2, "elinewidth":2, "capsize":4,"markersize":3}
         linestyle2 = {"markeredgewidth":0, "elinewidth":2, "capsize":0,"markersize":0}
 
@@ -669,8 +669,8 @@ class Analysis(object):
         '''
 
         print("\n\n\n \t\t\t ATTENTION\n This is still experimental and not working properly yet!!!\n\n\n")
-        
-        
+
+
         # Adjust the path first
         if path[-1]!='/' and path != None:  path = path+'/'
         #
@@ -802,9 +802,9 @@ class Analysis(object):
 
 
         if plotmode == 'lin' :
-            plt.hist(data[:,par_index],bins=bins,weights=data[:,2])
+            plt.hist(data[:,par_index],bins=bins,weights=data[:,0])
         elif plotmode == 'log':
-            plt.hist(log(data[:,par_index])+50.,bins=bins,weights=data[:,2])
+            plt.hist(log(data[:,par_index])+50.,bins=bins,weights=data[:,0])
             print('not working I do not why')
         else:
             # Make histogram with differnet colors for different confidence levels
@@ -1356,7 +1356,7 @@ class Analysis(object):
         data = data[(data[:,par_index1] < xmax) & (data[:,par_index1] > xmin) & (data[:,par_index2] < ymax) & (data[:,par_index2] > ymin)]
 
         # Make histogram
-        histo2D, yedges, xedges  = histogram2d(data[:,par_index2],data[:,par_index1],bins=bins,weights=data[:,2])
+        histo2D, yedges, xedges  = histogram2d(data[:,par_index2],data[:,par_index1],bins=bins,weights=data[:,0])
         #extent = [ yedges[0], yedges[-1],xedges[0], xedges[-1]]
 
         #print xmin,xmax,ymin,ymax,bins, grid_steps
