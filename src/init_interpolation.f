@@ -36,14 +36,14 @@ c     Initialize the variables
       WRITE(*,*) fileinterp_name
 
       sum = 0.
-      OPEN(18,file=fileinterp_name, ERR=181, status='old')
+      OPEN(18,file=fileinterp_name, status='old')
       DO i=1, interpmax
          READ(18,*,END=180) x(i), y(i)
          sum = sum + y(i)
       ENDDO
  180  CONTINUE
       n = i-1
- 181  CLOSE(18)
+      CLOSE(18)
 c     Normalize function and calculate the weights
       DO i=1, n
          IF (y(i).GT.0) THEN

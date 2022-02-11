@@ -81,7 +81,7 @@ CONTAINS
           CALL READ_FILE_ERRORBARS(filename(k),xmin(k),xmax(k),ndata_set(k), &
                x_tmp(:,k),nc_tmp(:,k),nc_err_tmp(:,k))
           WRITE(*,*) 'Number of file = ', k, ' of ', nset
-          WRITE(*,*) 'Data file', filename(k), ' read'
+          WRITE(*,*) 'Data file ', filename(k), ' read'
           WRITE(*,*) 'ndata = ', ndata
           WRITE(*,*) 'constant in evidence calc. = ', const_ll
        END DO
@@ -104,6 +104,8 @@ CONTAINS
           WRITE(*,*) 'Read data file ', TRIM(filename(k))
           WRITE(*,*) 'ndata = ', ndata_set(k)
           WRITE(*,*) 'constant in evidence calc. = ', const_ll
+
+          IF(ndata.EQ.0) WRITE(*,*) 'ndata = 0, no data in the selected range. Please check your min max and data'
        END DO
     ELSE
        WRITE(*,*) 'Data type ', data_type, ' not available. Please change your input file'
@@ -826,7 +828,7 @@ CONTAINS
              END DO
           END DO
           CLOSE(20)
-          
+
           ! Write projection
           IF (INDEX(funcname,"_LINE").NE.0) THEN
              ! max likelihood values -------------------------------------------------------------
@@ -846,7 +848,7 @@ CONTAINS
              ENDDO
              CLOSE(40)
           END IF
-          
+
           OPEN (UNIT=20, FILE='nf_output_fit_max_2D.dat', STATUS='unknown')
           OPEN (UNIT=30, FILE='nf_output_fitres_max_2D.dat', STATUS='unknown')
           WRITE(20,*)'# matrix dimensions: ', nx, ny
@@ -857,7 +859,7 @@ CONTAINS
           END DO
           CLOSE(20)
           CLOSE(30)
-          
+
        END IF
     END IF
 
