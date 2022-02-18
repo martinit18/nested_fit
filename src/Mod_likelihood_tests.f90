@@ -76,6 +76,8 @@ CONTAINS
        LOGLIKELIHOOD = TEST_EGGBOX(par)
     ELSE IF (funcname.eq.'TEST_ROSENBROCK') THEN
        LOGLIKELIHOOD = TEST_ROSENBROCK(par)
+    ELSE IF (funcname.eq.'TEST_GAUSS_WITH_CORRELATION') THEN
+       LOGLIKELIHOOD=TEST_GAUSS_WITH_CORRELATION(par)
     ELSE
        WRITE(*,*) 'Error of the function name in Mod_likelihood_test module'
        WRITE(*,*) 'Check the manual and the input file'
@@ -249,5 +251,38 @@ CONTAINS
   END FUNCTION TEST_ROSENBROCK
 
   !#####################################################################################################################   
+
+  REAL(8) FUNCTION TEST_GAUSS_WITH_CORRELATION(par)
+    !> Basic multidimensional Gaussian likelihood with mean mu(:) and a correlated covariance Sigma(:).
+    !! Inspired from polychord code
+    !! 
+    !! It is normalised so that it should output an evidence of 1.0 for
+    !! effectively infinite priors.
+    !!
+    !! The mean is set at 0.0 by default, and all sigmas at 0.01
+
+    REAL(8), DIMENSION(:), INTENT(IN) :: par
+    REAL(8), PARAMETER :: pi=3.141592653589793d0
+    REAL(8) :: sigma_d, sigma_c ! Standard deviation (uncorrelated) 
+    REAL(8), DIMENSION(SIZE(par)) :: mu    ! Mean 
+    REAL(8), DIMENSION(SIZE(par)) :: x     ! Variable to explore
+
+    x = par
+
+    ! Initialise the mean and standard deviation
+    mu    = 0  ! mean 
+    sigma_d = 1d-2  ! all sigma set relatively small, diagonal elements
+    sigma_c = 9d-3  ! non-diagonal elements
+    
+    ! Gaussian normalisation
+    TEST_GAUSS_WITH_CORRELATION = - LOG( sigma_d**2-sigma_c**2 )/2.d0 - LOG(2*pi)
+
+    ! x dependence
+    TEST_GAUSS_WITH_CORRELATION = TEST_GAUSS_WITH_CORRELATION &
+            - (sigma_d*(x(1)-mu(1))**2+sigma_d*(x(2)-mu(2))**2-2*sigma_c*(x(1)-mu(1))*(x(2)-mu(2)))/ (2.d0*(sigma_d**2-sigma_c**2))
+
+
+  END FUNCTION TEST_GAUSS_WITH_CORRELATION
+  !##################################################################################################################### 
 
 END MODULE MOD_LIKELIHOOD
