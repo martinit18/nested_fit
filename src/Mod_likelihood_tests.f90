@@ -253,17 +253,17 @@ CONTAINS
   !#####################################################################################################################   
 
   REAL(8) FUNCTION TEST_GAUSS_WITH_CORRELATION(par)
-    !> Basic multidimensional Gaussian likelihood with mean mu(:) and a correlated covariance Sigma(:).
-    !! Inspired from polychord code
+    !> Multidimensional Gaussian likelihood with mean mu(:) and a correlated covariance Sigma(:). (Here 2D)
+    !! Inspired by the TEST_GAUSS function (https://en.wikipedia.org/wiki/Multivariate_normal_distribution)
     !! 
     !! It is normalised so that it should output an evidence of 1.0 for
     !! effectively infinite priors.
     !!
-    !! The mean is set at 0.0 by default, and all sigmas at 0.01
+    !! The mean is set at 0.0 by default, the diagonal terms of the covariance matrix at 0.01, and the non diagonal terms at 0.009
 
     REAL(8), DIMENSION(:), INTENT(IN) :: par
     REAL(8), PARAMETER :: pi=3.141592653589793d0
-    REAL(8) :: sigma_d, sigma_c ! Standard deviation (uncorrelated) 
+    REAL(8) :: sigma_d, sigma_c ! diagonal and non diagonal terms of the covariance (correlated) 
     REAL(8), DIMENSION(SIZE(par)) :: mu    ! Mean 
     REAL(8), DIMENSION(SIZE(par)) :: x     ! Variable to explore
 
