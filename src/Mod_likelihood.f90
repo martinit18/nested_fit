@@ -386,7 +386,11 @@ CONTAINS
     REAL(8) :: USERFCN, USERFCN_SET, USERFCN_2D, xx, yy
 
 
+<<<<<<< HEAD
     IF (data_type.EQ.'1c') THEN
+=======
+    IF (data_type.EQ.'1e') THEN
+>>>>>>> 067e59d8391b7ad54bfee309f82e08b4b82e2784
        ! Check if the choosen function assumes zero or negative values
        DO k=1,nset
           DO i=1, ndata_set(k)
@@ -405,7 +409,11 @@ CONTAINS
           END DO
        END DO
        LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_1D(par)
+<<<<<<< HEAD
     ELSE IF (data_type.EQ.'2c') THEN
+=======
+    ELSE IF (data_type.EQ.'2e') THEN
+>>>>>>> 067e59d8391b7ad54bfee309f82e08b4b82e2784
        ! Check if the choosen function assumes zero or negative values
        DO i=1, nx
           DO j=1, ny
