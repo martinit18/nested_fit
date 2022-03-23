@@ -23,6 +23,9 @@ CNRS, Institute of NanoSciences of Paris\
 email: trassinelli AT insp.jussieu.fr\
 email: m.trassinelli AT gmail.com
 
+Lune Maillard\
+Institut of NanoSciences of Paris, Sorbonne Université, CNRS\
+email: lune.maillard AT insp.upmc.fr
 ## Installation instructions ##
 **Prerequisite**:
 - Fortran compiler (gfortran by default)
@@ -94,10 +97,13 @@ For the moment only a random walk (and some additional features) is implemented.
 y	f	0.5	0.2     # cluster analysis or not (y/n), method (f/g), distance, bandwidth
 ```
 
-For the moment only the mean shift algorithm is implemented. The two parameters are specific to the method
+For the moment four clustering algorithms are implemented. The two parameters are specific to the method
 For the second option:
-- `f`: flat kernel (par. 1: distance)
-- `g`: gaussian kernel (par. 1: distance, par. 2: bandwidth)
+- `f`: mean-shift with flat kernel (par. 1: distance)
+- `g`: mean-shift with gaussian kernel (par. 1: distance, par. 2: bandwidth)
+- `d`: dbscan (par. 1: distance, par. 2 : minimum number of neighbours)
+- `s`: agglomerative clustering with single linkage (par. 1: distance limit (in percentage of the maximum distance))
+- `k`: k nearest neighbours (no parameters)
 
 ```
 1	100000			  # Number of runs and maximum of steps
