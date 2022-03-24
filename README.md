@@ -24,7 +24,7 @@ email: trassinelli AT insp.jussieu.fr\
 email: m.trassinelli AT gmail.com
 
 Lune Maillard\
-Institut of NanoSciences of Paris, Sorbonne Université, CNRS\
+Institute of NanoSciences of Paris, Sorbonne Université, CNRS\
 email: lune.maillard AT insp.upmc.fr
 ## Installation instructions ##
 **Prerequisite**:
