@@ -221,7 +221,7 @@ CONTAINS
 20  CONTINUE
     CLOSE(10)
     ! Calculation of the constant part of the likelihood with Gaussian distribution
-    const_ll = -nd*DLOG(2*pi)/2
+    const_ll = const_ll - nd*DLOG(2*pi)/2
     datan = nd
 
   END SUBROUTINE READ_FILE_ERRORBARS
