@@ -53,6 +53,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   INTEGER(4) :: i,j, l, n, jlim
   REAL(8) :: ADDLOG, RANDN, rn
   CHARACTER :: out_filename*64
+  INTEGER(4) :: n_call_cluster
 
   EXTERNAL :: SORTN
 
@@ -83,6 +84,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   nstep = maxstep - nlive + 1
   !maxtries = 50*njump ! Accept an efficiency of more than 2% for the exploration, otherwise change something
 
+  n_call_cluster=0
 
   ! ---------- Inintial live points sorting ------------------------------------------------
   WRITE(*,*) 'Sorting live points. N. of points = ', nlive
