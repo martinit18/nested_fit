@@ -43,8 +43,8 @@ CONTAINS
 
   !#####################################################################################################################
 
-  SUBROUTINE SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
-       live_like_new,live_new,icluster,ntries,too_many_tries)
+  SUBROUTINE RANDOM_WALK_SEARCH(n,itry,min_live_like,live_like,live, &
+       live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
   ! SUBROUTINE LAWN_MOWER_ROBOT(min_ll,nlive,live_like,live,new_live_like,new_live)
 
     USE MOD_PARAMETERS, ONLY: nlive, sdfraction, njump, maxtries, maxntries, &
@@ -67,6 +67,8 @@ CONTAINS
     ! Other variables
     INTEGER(4) :: i=0, l=0, irn=0
     REAL(8) :: rn
+    INTEGER(4) :: n_call_cluster_it, test
+    INTEGER(4), INTENT(INOUT) :: n_call_cluster
 
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
@@ -79,7 +81,8 @@ CONTAINS
     ntries   = 0
     n_ntries = 0
     too_many_tries = .false.
-
+    
+    n_call_cluster_it=0
 
     ! Select a live point as starting point
     ntries = 0
@@ -174,6 +177,18 @@ CONTAINS
 
                    
                 IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+                   
+                   IF(n_call_cluster_it>=3) THEN
+                     WRITE(*,*) 'Too many cluster analysis for an iteration'
+                     WRITE(*,*) 'Change cluster recognition parameters'
+                     STOP
+                   END IF
+                   IF(n_call_cluster>=10) THEN
+                     WRITE(*,*) 'Too many cluster analysis'
+                     WRITE(*,*) 'Change cluster recognition parameters'
+                     STOP
+                   END IF
+                   
                    WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
                    !
                    !write(*,*) nlive, npar, cluster_yn, cluster_method, bandwidth, distance_limit
@@ -182,7 +197,8 @@ CONTAINS
                    ! outputs: p_cluster ! flag of number of appartenance cluster for each live point
                    cluster_on = .true.
                    n_ntries = 0
-
+                   n_call_cluster_it=n_call_cluster_it+1
+                   n_call_cluster=n_call_cluster+1
 
                    ! Choose a new random live point and restart all
                    CALL RANDOM_NUMBER(rn)
