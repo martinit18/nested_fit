@@ -11,7 +11,7 @@ REAL(8) FUNCTION USERFCN_2D(x,y,npar,val,funcname)
   !
   REAL(8) :: GAUSS_SIMPLE_2D, GAUSS_BG_2D
   REAL(8) :: GAUSS_LINE_BG_2D, SUPERGAUSS_LINE_BG_2D
-  REAL(8) :: LORE_LINE_BG_2D, ERFPEAK_LINE_BG_2D
+  REAL(8) :: LORE_LINE_BG_2D, ERFPEAK_LINE_BG_2D, TWO_ERFPEAK_LINE_BG_2D
   REAL(8) :: VOIGT_LINE_BG_2D
   REAL(8) :: TWO_LORE_LINE_BG_2D, TWO_LORE_WF_LINE_BG_2D, TWO_VOIGT_LINE_BG_2D
   REAL(8) :: FOUR_LORE_WF_LINE_BG_2D
@@ -31,6 +31,8 @@ REAL(8) FUNCTION USERFCN_2D(x,y,npar,val,funcname)
      USERFCN_2D = SUPERGAUSS_LINE_BG_2D(x,y,npar,val)
   ELSE IF(funcname.EQ.'ERFPEAK_LINE_BG_2D') THEN
      USERFCN_2D = ERFPEAK_LINE_BG_2D(x,y,npar,val)
+  ELSE IF(funcname.EQ.'TWO_ERFPEAK_LINE_BG_2D') THEN
+     USERFCN_2D = TWO_ERFPEAK_LINE_BG_2D(x,y,npar,val)
   ELSE IF(funcname.EQ.'TWO_LORE_LINE_BG_2D') THEN
      USERFCN_2D = TWO_LORE_LINE_BG_2D(x,y,npar,val)
   ELSE IF(funcname.EQ.'TWO_LORE_LINE_BG_2D') THEN
@@ -269,7 +271,7 @@ END FUNCTION VOIGT_LINE_BG_2D
 
 REAL(8) FUNCTION SUPERGAUSS_LINE_BG_2D(x,y,npar,val)
   ! Normalized Supergaussian line profile.
-  ! x: dispersion axis --> Gaussian profile
+  ! x: dispersion axis --> Supergaussian profile
   ! y: parallel axis --> slope of the line
   ! The value of 'amp' is the value of the volume below the curve
   ! Dy and y0 are not variables but information for the heigth of the detector and
@@ -313,7 +315,7 @@ END FUNCTION SUPERGAUSS_LINE_BG_2D
 
 REAL(8) FUNCTION ERFPEAK_LINE_BG_2D(x,y,npar,val)
   ! Normalized errorfunction peak line profile.
-  ! x: dispersion axis --> Gaussian profile
+  ! x: dispersion axis --> Gaussian-flat convolution profile
   ! y: parallel axis --> slope of the line
   ! The value of 'amp' is the value of the volume below the curve
   ! Dy and y0 are not variables but information for the heigth of the detector and
@@ -354,6 +356,64 @@ REAL(8) FUNCTION ERFPEAK_LINE_BG_2D(x,y,npar,val)
 
 END FUNCTION ERFPEAK_LINE_BG_2D
 
+!________________________________________________________________________________________
+
+
+REAL(8) FUNCTION TWO_ERFPEAK_LINE_BG_2D(x,y,npar,val)
+  ! Normalized two Lorentzian line profiles.
+  ! x: dispersion axis --> Gaussian-flat convolution profile
+  ! y: parallel axis --> slope of the line
+  ! The value of 'amp' is the value of the volume below the curve
+  ! Dy and y0 are not variables but information for the heigth of the detector and
+  ! the middle plan, respectively
+
+  IMPLICIT NONE
+  REAL(8), INTENT(IN) :: x, y
+  INTEGER(4), INTENT(IN) :: npar
+  REAL(8), DIMENSION(npar), INTENT(IN) :: val
+  !
+  REAL(8), DIMENSION(4) :: vale1, vale2
+  REAL(8) :: ERFPEAK
+  REAL(8) :: a, b, c, y0, Dy, dx, amp1, sigma, w, damp, amp2, bg, x01, x02
+  ! To plot the different components
+  LOGICAL :: plot
+  COMMON /func_plot/ plot
+
+  a     = val(1)
+  b     = val(2)
+  c     = val(3)
+  y0    = val(4)
+  Dy    = val(5)
+  dx    = val(6)
+  amp1  = val(7)
+  damp  = val(8)
+  sigma = val(9)
+  w     = val(10)
+  bg    = val(11)
+
+  x01 = a + b*(y-y0) + c*(y-y0)**2
+  x02 = x01 + dx
+  amp1 = amp1/Dy    ! For the normalization along the plan perpendicular to the dispersion
+  amp2 = amp1*damp
+
+  vale1(1) = x01
+  vale1(2) = amp1
+  vale1(3) = sigma
+  vale1(4) = w
+
+  vale2(1) = x02
+  vale2(2) = amp2
+  vale2(3) = sigma
+  vale2(4) = w
+
+
+  TWO_ERFPEAK_LINE_BG_2D = ERFPEAK(x,4,vale1) + ERFPEAK(x,4,vale2) + bg
+
+  RETURN
+
+
+
+END FUNCTION TWO_ERFPEAK_LINE_BG_2D
 
 !________________________________________________________________________________________
 
