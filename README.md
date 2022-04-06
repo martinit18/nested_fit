@@ -17,7 +17,7 @@ Users are also required to cite the Nested Fit papers here below in their public
 - [B] M. Trassinelli, *The Nested_fit Data Analysis Program*, Proceedings **33**, 14 (2019), [doi:10.3390/proceedings2019033014](https://doi.org/10.3390/proceedings2019033014)\
 - [C] M. Trassinelli, P. Ciccodicola *Mean Shift Cluster Recognition Method Implementation in the Nested Sampling Algorithm*, Entropy **22**, 185 (2020), [doi:10.3390/e22020185](https://doi.org/10.3390/e22020185)
 
-### Author
+### Authors
 Dr. Martino Trassinelli\
 CNRS, Institute of NanoSciences of Paris\
 email: trassinelli AT insp.jussieu.fr\
@@ -68,7 +68,7 @@ Together with this file, also the files `nf_output_points.paramnames` and `nf_ou
 
 **Details of the input file line by line**
 ```
-4.0           # Program version
+4.1           # Program version
 he-histo.dat  # Name of the (first) data file
 n             # Set of files (y/n)
 1c            # Type of data: error bars or not and dimensions (1c,1e,2c,2s,2e)
@@ -88,13 +88,13 @@ Input: (x, y, z, error z) TO BE IMPLEMENTED
 200                      # Number of live points
 1.E-05                   # Evidence final accuracy
 RANDOM_WALK              # Type of search of live points
-0.1	20	100	10   # Param. of the search algo.(2), max n. tries, max of max tries
+0.1	20	100	10   # Param. search algo.(2), max n. tries, max of max tries
 ```
 For the moment only a random walk (and some additional features) is implemented. The first two parameters of the above line are specific to the search algorithm.
 
 
 ```
-y	f	0.5	0.2     # cluster analysis or not (y/n), method (f/g), distance, bandwidth
+y	f	0.5	0.2     # cluster analysis or not (y/n), method (f/g/d/s/k), param. cluster algo. (2)
 ```
 
 For the moment four clustering algorithms are implemented. The two parameters are specific to the method
@@ -123,15 +123,16 @@ Additional information can be found in the reference articles.
 
 ## Present version and history of the past versions
 
-The present version is 4.0.3
+The present version is 4.1.0
 New features:
-- 2D data analysis for count-type XY
-- computation acceleration for the 1D case introducing a mask instead of IF condition in the likelihood
-- new ERFPEAK function  
-- new example files for python analysis with pandas  
+- New cluster recognition methods added
 
 
 Previous versions are:
+ - 4.0 2D data analysis for count-type XY \
+ Computation acceleration for the 1D case introducing a mask instead of IF condition in the likelihood \
+ New ERFPEAK function  \
+ New example files for python analysis with pandas  
  - 3.5 Modularization of the search and cluster recognition methods in preparation of implementation of new algorithms \
  New interpolation options for 1D and 2D histograms using GetDist Python package \
  Correction of some bugs in the python library \

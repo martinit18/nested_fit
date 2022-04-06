@@ -543,6 +543,8 @@ CONTAINS
 
     REAL(8), DIMENSION(npar), INTENT(IN) :: live_max, par_mean, par_median_w
 
+    write(*,*) 'hello'
+
     ! Write auxiliar files for plots
     IF (data_type(1:1).EQ.'1') THEN
        CALL WRITE_EXPECTED_VALUES(live_max,par_mean,par_median_w)

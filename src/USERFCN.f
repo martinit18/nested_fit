@@ -623,6 +623,8 @@ c     The value of 'amp' is the value of the surface below the curve
       REAL*8 pi
       PARAMETER(pi=3.141592653589793d0)
       REAL*8 x01, x02, x03, x04, amp1, amp2, amp3, amp4, sigma, bg
+      LOGICAL plot
+      COMMON /func_plot/ plot
 
       bg    = val(1)
       x01   = val(2)
@@ -659,6 +661,12 @@ c     fourth gauss peak
 
       QUAD_GAUSS_BG = GAUSS(x,3,val1) + GAUSS(x,3,val2) +
      +     GAUSS(x,3,val3) +  GAUSS(x,3,val4) + bg
+
+c     Save the different components
+           IF(plot) THEN
+              WRITE(40,*) x, GAUSS(x,3,val1), GAUSS(x,3,val2),
+     +                  GAUSS(x,3,val3), GAUSS(x,3,val4), bg
+           END IF
 
       RETURN
       END
@@ -1174,7 +1182,7 @@ c     third lorentzian peak
       vall3(1) = x03
       vall3(2) = amp3
       vall3(3) = gamma3
-      
+
 c     fourth lorentzian peak
       vall4(1) = x04
       vall4(2) = amp4
@@ -1260,7 +1268,7 @@ c     third lorentzian peak
       vall3(1) = x01 + dx03
       vall3(2) = amp1*damp3
       vall3(3) = gamma3
-      
+
 c     fourth lorentzian peak
       vall4(1) = x01 + dx02 + dx04
       vall4(2) = amp1*damp2*damp4
@@ -1279,7 +1287,7 @@ c     sixth lorentzian peak
       SIX_LORE_WF_REL_BG = LORE(x,3,vall1) + LORE(x,3,vall2)
      +     + LORE(x,3,vall3) + LORE(x,3,vall4)  + LORE(x,3,vall5)
      +     + LORE(x,3,vall6) + bg
-      
+
 c     Save the different components
       IF(plot) THEN
          WRITE(40,*) x, SIX_LORE_WF_REL_BG,
@@ -1291,7 +1299,7 @@ c     Save the different components
       END
 
 
-      
+
 c _______________________________________________________________________________________________
 
       FUNCTION SIX_VOIGT_EXPBG_WF(X,npar,val)

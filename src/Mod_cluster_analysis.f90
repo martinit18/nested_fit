@@ -57,19 +57,23 @@ CONTAINS
     ! INPUTS
     USE MOD_TIMESTAMP, ONLY: timestamp
     ! Module for the input parameter definition
-    USE MOD_PARAMETERS, ONLY: cluster_method, bandwidth, distance_limit
+    USE MOD_PARAMETERS, ONLY: cluster_method, cluster_par1, cluster_par2
     INTEGER(4), INTENT(IN) :: np_in, ndim_in
     REAL(8), INTENT(IN), DIMENSION(np_in,ndim_in) :: p_in
     ! Other variables
     REAL(8), DIMENSION(np_in,ndim_in) :: p, p_mean_shift, p_mean_old
     REAL(8), PARAMETER :: accuracy = 1e-7, accuracy_cluster = 1e-2
     REAL(8) :: dist, weight, val_max, val_min, actual_accuracy, max_accuracy=0.
+    REAL(8) :: distance_limit=0., bandwidth=0.
     REAL(8), DIMENSION(ndim_in) :: num, dem
     INTEGER(4), PARAMETER :: iter_max=30, ncluster_max=500
     INTEGER(4) :: i, j, k, l, nn, min_nn
     REAL(8), DIMENSION(ncluster_max,ndim_in) :: mean_cluster
     LOGICAL :: accuracy_reached
     LOGICAL, DIMENSION(ndim_in) :: p_fix
+
+    distance_limit = cluster_par1
+    bandwidth = cluster_par2
 
     np = np_in
     ndim = ndim_in
@@ -110,7 +114,7 @@ CONTAINS
 
     ! Run the algorithm -----------------------------------------------------------------------------------
     ! Stop when the mean values do not move anymore
-    WRITE(*,*) 'Starting cluster analysis'
+    WRITE(*,*) 'Starting mean-shift cluster analysis'
     DO i=1,iter_max
        p_mean_old  = p_mean_shift
 
@@ -264,15 +268,19 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     !see https://scikit-learn.org/stable/modules/clustering.html
     USE MOD_TIMESTAMP, ONLY: timestamp
     ! Module for the input parameter definition
-    USE MOD_PARAMETERS, ONLY: bandwidth, distance_limit
+    USE MOD_PARAMETERS, ONLY: cluster_par1, cluster_par2
     ! distance_limit corresponds to epsilon and bandwith to minimum number of neighbors for core points
     INTEGER(4), INTENT(IN) :: np_in, ndim_in
     REAL(8), INTENT(IN), DIMENSION(np_in,ndim_in) :: p_in
+    REAL(8) :: distance_limit=0., bandwidth=0.
     INTEGER(4), PARAMETER :: ncluster_max=500
     INTEGER(4) :: i, j, k, nn, min_nn, min_neighb
     INTEGER(4), DIMENSION(np_in) :: neighb, selected, not_cluster
     REAL(8), DIMENSION(np_in,ndim_in) :: p
     REAL(8) :: val_max, val_min
+
+    distance_limit = cluster_par1
+    bandwidth = cluster_par2
 
 
     np = np_in
@@ -289,6 +297,7 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     p_cluster = 0
 
 
+    WRITE(*,*) 'Starting dbscan cluster analysis'
     DO i=1,ndim
        val_max = maxval(p_in(:,i))
        val_min = minval(p_in(:,i))
@@ -441,16 +450,20 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     !see https://scikit-learn.org/stable/modules/clustering.html
     USE MOD_TIMESTAMP, ONLY: timestamp
     ! Module for the input parameter definition
-    USE MOD_PARAMETERS, ONLY: cluster_method, distance_limit
+    USE MOD_PARAMETERS, ONLY: cluster_method, cluster_par1
     ! distance_limit corresponds to maximum distance percentage
     INTEGER(4), INTENT(IN) :: np_in, ndim_in
     REAL(8), INTENT(IN), DIMENSION(np_in,ndim_in) :: p_in
+    REAL(8) :: distance_limit=0.
     INTEGER(4), PARAMETER :: ncluster_max=500
     INTEGER(4) :: i, j, k, l, clust_min, clust_max
     REAL(8), DIMENSION(np_in,ndim_in) :: p
     REAL(8) :: val_max, val_min, dist_min, dist, max_dist
     REAL(8), DIMENSION(np_in,np_in) :: dist_pt
     INTEGER(4), DIMENSION(2) :: clusters_to_concat
+
+    distance_limit = cluster_par1
+
     np = np_in
     ndim = ndim_in
     ncluster=np_in
@@ -460,6 +473,8 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     DO i=1,np
       p_cluster(i)= i
     END DO
+
+    WRITE(*,*) 'Starting agglomerative cluster analysis'
 
     !$OMP PARALLEL DO PRIVATE(j)
     DO i=1,ndim
@@ -579,6 +594,9 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     np = np_in
     ndim = ndim_in
     np_temp=0
+
+
+    WRITE(*,*) 'Starting KNN cluster analysis'
 
     !$OMP PARALLEL DO
     DO i=1,np
@@ -752,6 +770,7 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     INTEGER(4) :: i, j, k, l, clust_min, clust_max
     INTEGER(4), DIMENSION(np) :: p_cluster_new, p_cluster_old
     INTEGER(4) :: ncluster_new, ncluster_old
+
 
     DO i=1,np
       p_cluster_new(i) = i

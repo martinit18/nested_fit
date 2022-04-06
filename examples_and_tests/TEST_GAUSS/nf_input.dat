@@ -1,8 +1,8 @@
-4.0				# Program version
+4.1				# Program version
 whatever			# Name of the (first) data file
 n				# Set of files (y/n)
 1c				# Type of data: error bars or not and dimensions (1c,1e,2c,2s,2e)
-1000				# Number of live points				
+1000				# Number of live points
 1.E-05		  		# Evidence final accuracy
 RANDOM_WALK     		# Type of search of live points
 0.1	20	100	10	# Fraction of st. dev., n of jumps, max n. tries, max of max tries
@@ -11,7 +11,7 @@ n	f	0.5	0.2	# cluster anaylis or not (y/n), method (f/g), distance, bandwidth
 TEST_GAUSS 	  		# Name of the function
 L               		# Additional data: left/right (l/r)
 500     20      		# Additional data:  npoint, nwidth for convolution
--100	100	0	0	# xmin, xmax (ymin, ymax)     
+-100	100	0	0	# xmin, xmax (ymin, ymax)
 5               		# number of parameters
 # npar  name    value   step    min     max     fixed
 1	'x1'	0.5	-1	0.	1.	0
@@ -19,4 +19,3 @@ L               		# Additional data: left/right (l/r)
 3	'x3'	0.5	-1	0.	1.	0
 4	'x4'	0.5	-1	0.	1.	0
 5	'x5'	0.5	-1	0.	1.	0
-

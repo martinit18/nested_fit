@@ -13,11 +13,11 @@ MODULE MOD_SEARCH_NEW_POINT
   IMPLICIT NONE
 
 CONTAINS
-  
-  
+
+
 !!$  ! Select option of several search modes
 !!$  !#####################################################################################################################
-!!$  
+!!$
 !!$  SUBROUTINE SEARCH_NEW_POINT(min_ll,nlive,live_like,live,new_live_like,new_live)
 !!$    ! Main search function
 !!$    USE MOD_PARAMETERS, ONLY: search_method
@@ -48,7 +48,7 @@ CONTAINS
   ! SUBROUTINE LAWN_MOWER_ROBOT(min_ll,nlive,live_like,live,new_live_like,new_live)
 
     USE MOD_PARAMETERS, ONLY: nlive, sdfraction, njump, maxtries, maxntries, &
-         cluster_yn, cluster_method, distance_limit, bandwidth, par_in
+         cluster_yn, cluster_method, par_in
 
     ! MCMC search function from Leo's ideas and mine
     INTEGER(4), INTENT(IN) :: n, itry
@@ -172,12 +172,10 @@ CONTAINS
              ! If you already did too much tries, gave up or start a cluster analysis
              IF (n_ntries.GE.maxntries) THEN
 
-                   
+
                 IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
                    WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
                    !
-                   !write(*,*) nlive, npar, cluster_yn, cluster_method, bandwidth, distance_limit
-                   !pause
                    CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
                    ! outputs: p_cluster ! flag of number of appartenance cluster for each live point
                    cluster_on = .true.
@@ -306,7 +304,7 @@ CONTAINS
     live_new = new_jump
     live_like_new = LOGLIKELIHOOD(new_jump)
 
-    RETURN  
+    RETURN
     ! ------------------------------------------------------------------------------------
 
 

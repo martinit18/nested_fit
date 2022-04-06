@@ -16,7 +16,7 @@ MODULE MOD_PARAMETERS
   INTEGER(4) :: njump=20, maxtries=1000, maxntries=10
   CHARACTER :: cluster_yn*1= 'n'
   CHARACTER :: cluster_method*1= 'f'
-  REAL(8) :: bandwidth=0.12, distance_limit=0.4
+  REAL(8) :: cluster_par1=0.4, cluster_par2=0.1
   INTEGER(4) :: ntry=1, maxstep_try = 10000
   CHARACTER :: funcname*64
   CHARACTER :: lr*1= 'r'

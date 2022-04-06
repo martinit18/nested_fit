@@ -1,4 +1,4 @@
-4.0				# Program version
+4.1				# Program version
 GE_image_UL_210328_01.dat 	# Name of the (first) data file
 n				# Set of files (y/n)
 2c				# Type of data: error bars or not and dimensions (1c,1e,2c,2s,2e)

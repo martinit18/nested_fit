@@ -2,6 +2,7 @@ PROGRAM NESTED_FIT
   ! Time-stamp: <Last changed by martino on Monday 07 June 2021 at CEST 10:29:22>
   !
   ! Please read README and LICENSE files for more inforamtion
+  ! 4.1  Several cluster recognition methods added.
   ! 4.0  2D data analysis available, new input and output files for future developments
   !      1D parallelization acceleration with masks instead of IF conditions in the likelihood
   ! 3.5  Modularization of the search algorithm (in preparation of new algorithms implementation)
@@ -77,7 +78,7 @@ PROGRAM NESTED_FIT
   ! Parameters values and co.
   CHARACTER :: string*128
   REAL(4) :: version_file
-  REAL(4), PARAMETER :: version = 4.0
+  REAL(4), PARAMETER :: version = 4.1
   REAL(8) :: search_par1 = 0.0
   REAL(8) :: search_par2 = 0.0
   ! Results from Nested sampling
@@ -167,7 +168,7 @@ PROGRAM NESTED_FIT
   READ(77,*) evaccuracy, string
   READ(77,*) search_method, string
   READ(77,*) search_par1, search_par2, maxtries, maxntries, string
-  READ(77,*) cluster_yn, cluster_method, distance_limit, bandwidth, string
+  READ(77,*) cluster_yn, cluster_method, cluster_par1, cluster_par2
   READ(77,*) ntry, maxstep_try, string
   READ(77,*) funcname, string
   READ(77,*) lr, string
