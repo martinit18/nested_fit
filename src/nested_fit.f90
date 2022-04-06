@@ -238,6 +238,9 @@ PROGRAM NESTED_FIT
      njump      = INT(search_par2)
   END IF
 
+  IF (search_method.EQ.'SLICE_SAMPLING') THEN
+     njump      = INT(search_par2)
+  END IF
 
   ! ----------------------------------------------------------------------------------------------------------------------------------
 
