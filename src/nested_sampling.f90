@@ -211,6 +211,9 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 500  IF(search_method .EQ. 'RANDOM_WALK') THEN
         CALL RANDOM_WALK_SEARCH(n,itry,min_live_like,live_like,live, &
           live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
+     ELSE IF(search_method .EQ. 'UNIFORM') THEN
+        CALL UNIFORM_SEARCH(n,itry,min_live_like,live_like,live, &
+          live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
      ELSE
         WRITE(*,*) 'Search method name not recognized'
         STOP
