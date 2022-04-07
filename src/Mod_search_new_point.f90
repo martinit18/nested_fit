@@ -17,33 +17,44 @@ CONTAINS
   
 !!$  ! Select option of several search modes
 !!$  !#####################################################################################################################
-!!$  
-!!$  SUBROUTINE SEARCH_NEW_POINT(min_ll,nlive,live_like,live,new_live_like,new_live)
-!!$    ! Main search function
-!!$    USE MOD_PARAMETERS, ONLY: search_method
-!!$
-!!$    REAL(8), INTENT(IN) :: min_ll
-!!$    INTEGER(4), INTENT(IN) :: nlive
-!!$    REAL(8), DIMENSION(nlive), INTENT(IN) :: live_like
-!!$    REAL(8), DIMENSION(nlive,npar), INTENT(IN) :: live
-!!$    REAL(8), INTENT(OUT) :: new_live_like
-!!$    REAL(8), DIMENSION(npar), INTENT(OUT) :: new_live
-!!$
-!!$    ! Select the search method
-!!$    IF (search_method.eq.'RANDOM_WALK') THEN
-!!$    CALL LAWN_MOWER_ROBOT(min_ll,nlive,live_like,live)
-!!$    ELSE
-!!$       WRITE(*,*) 'Error of the search type name in Mod_search_new_point module'
-!!$       WRITE(*,*) 'Check the manual and the input file'
-!!$       STOP
-!!$    END IF
-!!$
-!!$
-!!$  END SUBROUTINE SEARCH_NEW_POINT
+  
+  SUBROUTINE SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
+          live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
+    ! Main search function
+    USE MOD_PARAMETERS, ONLY: search_method, nlive
+
+    INTEGER(4), INTENT(IN) :: n, itry
+    REAL(8), INTENT(IN) :: min_live_like
+    REAL(8), INTENT(IN), DIMENSION(nlive) :: live_like
+    REAL(8), INTENT(IN), DIMENSION(nlive,npar) :: live
+    REAL(8), INTENT(OUT) :: live_like_new
+    REAL(8), DIMENSION(npar), INTENT(OUT) :: live_new
+    INTEGER(4), INTENT(OUT) :: icluster, ntries
+    LOGICAL, INTENT(OUT) :: too_many_tries
+    INTEGER(4), INTENT(INOUT) :: n_call_cluster
+
+    ! Select the search method
+    IF (search_method.eq.'RANDOM_WALK') THEN
+        CALL RANDOM_WALK(n,itry,min_live_like,live_like,live, &
+       live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
+    ELSE IF(search_method .EQ. 'UNIFORM') THEN
+        CALL UNIFORM(n,itry,min_live_like,live_like,live, &
+          live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
+    ELSE IF(search_method .EQ. 'SLICE_SAMPLING') THEN
+        CALL SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
+          live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
+    ELSE
+        WRITE(*,*) 'Error of the search type name in Mod_search_new_point module'
+        WRITE(*,*) 'Check the manual and the input file'
+        STOP
+    END IF
+
+
+  END SUBROUTINE SEARCH_NEW_POINT
 
   !#####################################################################################################################
 
-  SUBROUTINE RANDOM_WALK_SEARCH(n,itry,min_live_like,live_like,live, &
+  SUBROUTINE RANDOM_WALK(n,itry,min_live_like,live_like,live, &
        live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
   ! SUBROUTINE LAWN_MOWER_ROBOT(min_ll,nlive,live_like,live,new_live_like,new_live)
 
@@ -326,9 +337,9 @@ CONTAINS
     ! ------------------------------------------------------------------------------------
 
 
-  END SUBROUTINE RANDOM_WALK_SEARCH
+  END SUBROUTINE RANDOM_WALK
 
-  SUBROUTINE UNIFORM_SEARCH(n,itry,min_live_like,live_like,live, &
+  SUBROUTINE UNIFORM(n,itry,min_live_like,live_like,live, &
        live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
     ! SUBROUTINE LAWN_MOWER_ROBOT(min_ll,nlive,live_like,live,new_live_like,new_live)
 
@@ -606,11 +617,11 @@ CONTAINS
     ! ------------------------------------------------------------------------------------
 
 
-  END SUBROUTINE UNIFORM_SEARCH
+  END SUBROUTINE UNIFORM
 
   !----------------------------------------------------------------------------------------------------------------------------------------
   
-  SUBROUTINE SLICE_SAMPLING_SEARCH(n,itry,min_live_like,live_like,live, &
+  SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
        live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
      
     !inspired from polychord code
@@ -842,7 +853,7 @@ CONTAINS
     live_new = new_jump_comp
     live_like_new = LOGLIKELIHOOD(new_jump_comp)
 
-END SUBROUTINE SLICE_SAMPLING_SEARCH
+END SUBROUTINE SLICE_SAMPLING
 
 SUBROUTINE BASE_O_N(D,base) !generates an orthonormal basis
   INTEGER(4), INTENT(IN) :: D
