@@ -308,7 +308,7 @@ class Analysis(object):
 
 ####################################################################################################################################
     def plot(self,path=currentpath,xmin=0,xmax=0,ymin=0,ymax=0,typeof='max',
-                 logscale=False,nset=0,high_definition=False,savefig=False):
+                 logscale=False,nset=0,high_definition=True,savefig=False):
         '''
         Plot the fit results present in the file output_data.dat and eventually to the file output_fit.dat.
         The limit of the plot can be indicated. If not, the maximum and the minimum of the histogram are taken into account.

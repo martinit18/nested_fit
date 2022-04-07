@@ -230,7 +230,7 @@ CONTAINS
 
 
     ! Write file for further analysis and check of cluster recognition
-    OPEN (UNIT=10, FILE='nf_output_meanshift_final_'//timestamp()//'.dat', STATUS='unknown')
+    OPEN (UNIT=10, FILE='nf_output_cluster_final_'//timestamp()//'.dat', STATUS='unknown')
     DO l=1,np
        WRITE(10,*) p_cluster(l), p_in(l,:)
     END DO
@@ -250,7 +250,7 @@ CONTAINS
        CALL MAKE_CLUSTER_STD(p_in,k)
     END DO
 
-    OPEN (UNIT=10, FILE='nf_output_meanshift_mean_std.dat', STATUS='unknown')
+    OPEN (UNIT=10, FILE='nf_output_cluster_mean_std.dat', STATUS='unknown')
     DO k=1,ncluster
        DO l=1,ndim
           WRITE(10,*) k, cluster_np(k), l, cluster_mean(k,l), cluster_std(k,l)
@@ -391,7 +391,7 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
       END DO
     END IF
 
-    OPEN (UNIT=10, FILE='nf_output_dbscan_final_'//timestamp()//'.dat', STATUS='unknown')
+    OPEN (UNIT=10, FILE='nf_output_cluster_final_'//timestamp()//'.dat', STATUS='unknown')
     DO i=1,np
        WRITE(10,*) p_cluster(i), p_in(i,:)
     END DO
@@ -435,7 +435,7 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
       END DO
     END IF
 
-    OPEN (UNIT=10, FILE='nf_output_dbscan_mean_std.dat', STATUS='unknown')
+    OPEN (UNIT=10, FILE='nf_output_cluster_mean_std.dat', STATUS='unknown')
     DO j=1,ncluster
        DO k=1,ndim
           WRITE(10,*) j, cluster_np(j), k, cluster_mean(j,k), cluster_std(j,k)
@@ -544,7 +544,7 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
 
     WRITE(*,*) 'Number of cluster found = ', ncluster
 
-    OPEN (UNIT=10, FILE='nf_output_agglomerative_final_'//timestamp()//'.dat', STATUS='unknown')
+    OPEN (UNIT=10, FILE='nf_output_cluster_final_'//timestamp()//'.dat', STATUS='unknown')
     DO i=1,np
        WRITE(10,*) p_cluster(i), p_in(i,:)
     END DO
@@ -562,7 +562,7 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
       CALL MAKE_CLUSTER_STD(p_in,j)
     END DO
 
-    OPEN (UNIT=10, FILE='nf_output_agglomerative_mean_std.dat', STATUS='unknown')
+    OPEN (UNIT=10, FILE='nf_output_clustermean_std.dat', STATUS='unknown')
     DO j=1,ncluster
        DO k=1,ndim
          WRITE(10,*) j, cluster_np(j), k, cluster_mean(j,k), cluster_std(j,k)
@@ -710,7 +710,7 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     IF(.NOT.cluster_on) ALLOCATE(p_cluster(np))
     p_cluster=p_cluster_new
 
-    OPEN (UNIT=10, FILE='nf_output_knn_final_'//timestamp()//'.dat', STATUS='unknown')
+    OPEN (UNIT=10, FILE='nf_output_cluster_final_'//timestamp()//'.dat', STATUS='unknown')
     DO i=1,np
        WRITE(10,*) p_cluster(i), p_in(i,:)
     END DO
@@ -728,7 +728,7 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
       CALL MAKE_CLUSTER_STD(p_in,j)
     END DO
 
-    OPEN (UNIT=10, FILE='nf_output_knn_mean_std.dat', STATUS='unknown')
+    OPEN (UNIT=10, FILE='nf_output_cluster_mean_std.dat', STATUS='unknown')
     DO j=1,ncluster
        DO k=1,ndim
          WRITE(10,*) j, cluster_np(j), k, cluster_mean(j,k), cluster_std(j,k)
