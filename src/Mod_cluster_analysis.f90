@@ -266,13 +266,16 @@ CONTAINS
 
 SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     !see https://scikit-learn.org/stable/modules/clustering.html
+    ! From a group of np points p of dimension ndim, determine the clusters
+    ! using the DBSCAN algorithm
+    ! using distance_limit and min_neighb (minimal number of neigbours) as parameters
+    ! INPUTS
     USE MOD_TIMESTAMP, ONLY: timestamp
     ! Module for the input parameter definition
     USE MOD_PARAMETERS, ONLY: cluster_par1, cluster_par2
-    ! distance_limit corresponds to epsilon and bandwith to minimum number of neighbors for core points
     INTEGER(4), INTENT(IN) :: np_in, ndim_in
     REAL(8), INTENT(IN), DIMENSION(np_in,ndim_in) :: p_in
-    REAL(8) :: distance_limit=0., bandwidth=0.
+    REAL(8) :: distance_limit=0.
     INTEGER(4), PARAMETER :: ncluster_max=500
     INTEGER(4) :: i, j, k, nn, min_nn, min_neighb
     INTEGER(4), DIMENSION(np_in) :: neighb, selected, not_cluster
@@ -280,14 +283,13 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     REAL(8) :: val_max, val_min
 
     distance_limit = cluster_par1
-    bandwidth = cluster_par2
+    min_neighb=nint(cluster_par2)
 
 
     np = np_in
     ndim = ndim_in
     min_nn = np
     nn=0
-    min_neighb=nint(bandwidth) ! transforming bandwith to an integer
     neighb=0
     selected=0
     not_cluster=1
@@ -448,6 +450,10 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
 
   SUBROUTINE AGGLOMERATIVE_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     !see https://scikit-learn.org/stable/modules/clustering.html
+    ! From a group of np points p of dimension ndim, determine the clusters
+    ! using the agglomerative algorithm
+    ! using distance_limit as parameter
+    ! INPUTS
     USE MOD_TIMESTAMP, ONLY: timestamp
     ! Module for the input parameter definition
     USE MOD_PARAMETERS, ONLY: cluster_method, cluster_par1
@@ -576,6 +582,10 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
 
   SUBROUTINE KNN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     !inspired from polychord code
+    ! From a group of np points p of dimension ndim, determine the clusters
+    ! using the KNN algorithm
+    ! no parameters
+    ! INPUTS
     USE MOD_TIMESTAMP, ONLY: timestamp
     INTEGER(4), INTENT(IN) :: np_in, ndim_in
     REAL(8), INTENT(IN), DIMENSION(np_in,ndim_in) :: p_in
