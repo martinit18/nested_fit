@@ -232,7 +232,15 @@ PROGRAM NESTED_FIT
      sdfraction = search_par1
      njump      = INT(search_par2)
   END IF
+  
+  IF (search_method.EQ.'UNIFORM') THEN
+     sdfraction = search_par1
+     njump      = INT(search_par2)
+  END IF
 
+  IF (search_method.EQ.'SLICE_SAMPLING') THEN
+     njump      = INT(search_par2)
+  END IF
 
   ! ----------------------------------------------------------------------------------------------------------------------------------
 

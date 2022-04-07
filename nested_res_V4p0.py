@@ -1511,8 +1511,8 @@ class Summary(object):
                 dirname = dir+'/'
             print('Loading directory ', dir)
             # Start analysis in this directory if the analysis is done
-            if not os.path.isfile(dirname+'nf_output_points.txt'):
-                print('Result file nf_output_points.txt not present\n Nothing to load')
+            if not os.path.isfile(dirname+'nf_output_res.dat'):
+                print('Result file nf_output_res.dat not present\n Nothing to load')
                 continue
             an = Analysis(path=dirname)
             print('Analysis in ' + dirname)
@@ -1565,8 +1565,8 @@ class Summary(object):
             else:
                 dirname = dir+'/'
             # Check if the analysis is done in the directory
-            if not os.path.isfile(dirname+'nf_output_points.txt'):
-                print('Result file nf_output_points.txt not present\n Nothing to load')
+            if not os.path.isfile(dirname+'nf_output_res.dat'):
+                print('Result file nf_output_res.dat not present\n Nothing to load')
                 continue
             input = an.load_input(dirname)
             output = an.load_output_results(dirname)
