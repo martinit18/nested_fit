@@ -77,7 +77,7 @@ PROGRAM NESTED_FIT
   ! Parameters values and co.
   CHARACTER :: string*128
   REAL(4) :: version_file
-  REAL(4), PARAMETER :: version = 4.0
+  REAL(4), PARAMETER :: version = 4.2
   REAL(8) :: search_par1 = 0.0
   REAL(8) :: search_par2 = 0.0
   ! Results from Nested sampling
@@ -232,7 +232,7 @@ PROGRAM NESTED_FIT
      sdfraction = search_par1
      njump      = INT(search_par2)
   END IF
-  
+
   IF (search_method.EQ.'UNIFORM') THEN
      sdfraction = search_par1
      njump      = INT(search_par2)
