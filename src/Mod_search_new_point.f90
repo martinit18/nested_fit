@@ -3,7 +3,6 @@ MODULE MOD_SEARCH_NEW_POINT
   ! Module for search of new points
 
   ! Module for the input parameter definition
-  !USE MOD_PARAMETERS, ONLY: search_type ???? TO IMPLEMENT
   USE MOD_PARAMETERS, ONLY:  npar, par_step, par_bnd1, par_bnd2, par_fix
   ! Module for likelihood
   USE MOD_LIKELIHOOD
@@ -13,11 +12,11 @@ MODULE MOD_SEARCH_NEW_POINT
   IMPLICIT NONE
 
 CONTAINS
-  
-  
+
+
 !!$  ! Select option of several search modes
 !!$  !#####################################################################################################################
-  
+
   SUBROUTINE SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
           live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
     ! Main search function
@@ -92,7 +91,7 @@ CONTAINS
     ntries   = 0
     n_ntries = 0
     too_many_tries = .false.
-    
+
     n_call_cluster_it=0
 
     ! Select a live point as starting point
@@ -186,9 +185,9 @@ CONTAINS
              ! If you already did too much tries, gave up or start a cluster analysis
              IF (n_ntries.GE.maxntries) THEN
 
-                   
+
                 IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
-                   
+
                    IF(n_call_cluster_it>=3) THEN
                      WRITE(*,*) 'Too many cluster analysis for an iteration'
                      WRITE(*,*) 'Change cluster recognition parameters'
@@ -199,7 +198,7 @@ CONTAINS
                      WRITE(*,*) 'Change cluster recognition parameters'
                      STOP
                    END IF
-                   
+
                    WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
                    !
                    !write(*,*) nlive, npar, cluster_yn, cluster_method, bandwidth, distance_limit
@@ -333,7 +332,7 @@ CONTAINS
     live_new = new_jump
     live_like_new = LOGLIKELIHOOD(new_jump)
 
-    RETURN  
+    RETURN
     ! ------------------------------------------------------------------------------------
 
 
@@ -380,7 +379,7 @@ CONTAINS
     frac=sdfraction
     n_call_cluster_it=0
     nb_cube=0
-    
+
     ! Select a live point as starting point
     ntries = 0
     CALL RANDOM_NUMBER(rn)
@@ -443,7 +442,7 @@ CONTAINS
           END IF
        END DO
         !$OMP END PARALLEL DO
-       
+
 
        ! Check if the new point is inside the parameter volume defined by the minimum likelihood of the live points
        IF (LOGLIKELIHOOD(new_jump).GT.min_live_like) THEN
@@ -480,9 +479,9 @@ CONTAINS
              ! If you already did too much tries, gave up or start a cluster analysis
              IF (n_ntries.GE.maxntries) THEN
 
-                   
+
                 IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
-                   
+
                    IF(n_call_cluster_it>=3) THEN
                      WRITE(*,*) 'Too many cluster analysis for an iteration'
                      WRITE(*,*) 'Change cluster recognition parameters'
@@ -503,7 +502,7 @@ CONTAINS
                    n_ntries = 0
                    n_call_cluster_it=n_call_cluster_it+1
                    n_call_cluster=n_call_cluster+1
-  
+
 
                    ! Choose a new random live point and restart all
                    CALL RANDOM_NUMBER(rn)
@@ -525,12 +524,12 @@ CONTAINS
              ! DO CLUSTER ANALYSIS if selected, or use other randomizations
              ! For all live points, assign a cluster number, which is used to calculate specific standard deviation
              ! for the search of the new point
-             
+
              frac=frac/2.0
-             
+
              IF(.not.cluster_on) THEN
                 ! Alternate the two techniques to find a new life point
-             
+
                 CALL RANDOM_NUMBER(rn)
                 irn = FLOOR(2*rn+1)
                 IF(MOD(ntries,2).EQ.1) THEN
@@ -613,19 +612,19 @@ CONTAINS
     live_new = new_jump
     live_like_new = LOGLIKELIHOOD(new_jump)
 
-    RETURN  
+    RETURN
     ! ------------------------------------------------------------------------------------
 
 
   END SUBROUTINE UNIFORM
 
   !----------------------------------------------------------------------------------------------------------------------------------------
-  
+
   SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
        live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
-     
+
     !inspired from polychord code
-       
+
     USE MOD_PARAMETERS, ONLY: nlive, njump, maxtries, maxntries, &
          cluster_yn, cluster_method, distance_limit, bandwidth, par_in
     INTEGER(4), INTENT(IN) :: n, itry
@@ -677,10 +676,10 @@ CONTAINS
     IF(.NOT. ALLOCATED(left)) ALLOCATE(left(dim_eff),right(dim_eff), &
         left_prov(dim_eff),right_prov(dim_eff))
 
-    
+
     ! Select a live point as starting point
-    ntries = 0 
-    
+    ntries = 0
+
     j=1
     DO i=1,npar
       IF(par_fix(i).NE.1) THEN
@@ -688,14 +687,14 @@ CONTAINS
         j=j+1
       END IF
     END DO
-    
-    
+
+
 500 CALL RANDOM_NUMBER(rn)
     istart= FLOOR((nlive-1)*rn+1)
     start_jump_comp = live(istart,:)
-    
+
     !Select only the variables that are not fixed
-    start_jump=start_jump_comp(par_var)  
+    start_jump=start_jump_comp(par_var)
     live_nf=live(:,par_var)
 
     ! Calculate momenta of the live points
@@ -738,8 +737,8 @@ CONTAINS
     CALL cholesky(dim_eff,live_cov,live_chol)
     CALL triang_inv(dim_eff,live_chol,inv_chol)
     start_jump_t=matmul(inv_chol,start_jump) !start jump in the new space
-    
-       
+
+
     ! Make several consecutive casual jumps in the region with loglikelyhood > minlogll
 700 CONTINUE
     DO i=1,njump
@@ -776,7 +775,7 @@ CONTAINS
          CALL test_bnd_sub(dim_eff,new_jump_t,par_var,live_chol,test_bnd) !check if the new point is inside the sampled space
          DO WHILE(part_like.LT.min_live_like .OR. .NOT. test_bnd)
            ntries=ntries+1
-           IF(ntries>maxtries) THEN 
+           IF(ntries>maxtries) THEN
              IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
                IF(n_call_cluster_it>=3) THEN
                  WRITE(*,*) 'Too many cluster analysis for an iteration'
@@ -815,7 +814,7 @@ CONTAINS
          start_jump_t=new_jump_t
        END DO
      END DO
-    
+
     !Find the new point in the original space
     new_jump=matmul(live_chol,new_jump_t)
     j=1
@@ -826,8 +825,8 @@ CONTAINS
       ELSE
         new_jump_comp(l)=par_in(l)
       END IF
-    END DO 
-    
+    END DO
+
     ! Final check of the last point for gaussian priors
     DO l=1,npar
        IF(par_fix(l).NE.1) THEN
@@ -842,13 +841,13 @@ CONTAINS
 
     ! Last(maybe useless) check
     IF(LOGLIKELIHOOD(new_jump_comp).LT.min_live_like) GOTO 700
-    
+
     DO l=1,npar
       IF (new_jump_comp(l).LT.par_bnd1(l).OR.new_jump_comp(l).GT.par_bnd2(l)) THEN
         WRITE(*,*) l, .FALSE.
       END IF
     END DO
-    
+
     ! Take the last point after jumps as new livepoint
     live_new = new_jump_comp
     live_like_new = LOGLIKELIHOOD(new_jump_comp)
@@ -870,7 +869,7 @@ SUBROUTINE BASE_O_N(D,base) !generates an orthonormal basis
     DO j=1,i-1
       base(:,i)=base(:,i)-DOT_PRODUCT(base(:,i),base(:,j))*base(:,j)
     END DO
-    base(:,j)=base(:,j)/NORM2(base(:,j))  
+    base(:,j)=base(:,j)/NORM2(base(:,j))
   END DO
 END SUBROUTINE BASE_O_N
 
@@ -880,7 +879,7 @@ SUBROUTINE mat_cov(pts,np,D,istart,cov) !calculates the covariance matrix
   REAL(8), DIMENSION(D,D), INTENT(OUT) :: cov
   REAL(8), DIMENSION(D) :: mean
   INTEGER(4) :: i,j, icluster
-  
+
   IF (cluster_on) THEN
     ! Identify cluster appartenance
     icluster = p_cluster(istart)
@@ -925,11 +924,11 @@ SUBROUTINE mat_cov(pts,np,D,istart,cov) !calculates the covariance matrix
         cov(j,i)=cov(i,j)
       END DO
     END DO
-  END IF 
+  END IF
 END SUBROUTINE mat_cov
 
 SUBROUTINE cholesky(D,cov,chol) !calculates the cholesky decomposition of the covariance matrix
-   INTEGER(4), INTENT(IN) :: D 
+   INTEGER(4), INTENT(IN) :: D
    REAL(8), DIMENSION(D,D), INTENT(IN) :: cov
    REAL(8), DIMENSION(D,D), INTENT(OUT) :: chol
    INTEGER(4) :: i,j,k
@@ -955,7 +954,7 @@ SUBROUTINE cholesky(D,cov,chol) !calculates the cholesky decomposition of the co
 END SUBROUTINE cholesky
 
 SUBROUTINE triang_inv(D,mat,mat_inv) !calculates the inverse of the cholesky decomposition
-   INTEGER(4), INTENT(IN) :: D 
+   INTEGER(4), INTENT(IN) :: D
    REAL(8), DIMENSION(D,D), INTENT(IN) :: mat
    REAL(8), DIMENSION(D,D), INTENT(OUT) :: mat_inv
    INTEGER(4) :: i,j,k
@@ -969,7 +968,7 @@ SUBROUTINE triang_inv(D,mat,mat_inv) !calculates the inverse of the cholesky dec
        DO k=1,j
           mat_inv(i+j,i)=mat_inv(i+j,i)-mat(i+k,i)*mat_inv(i+j,i+k)
        END DO
-       mat_inv(i+j,i)=mat_inv(i+j,i)/mat(i,i)      
+       mat_inv(i+j,i)=mat_inv(i+j,i)/mat(i,i)
      END DO
    END DO
 END SUBROUTINE triang_inv
@@ -981,7 +980,7 @@ SUBROUTINE part_like_sub(D,pt,chol,part_like) !calculates the likelihood for a p
   REAL(8), DIMENSION(D,D), INTENT(IN) :: chol
   REAL(8), INTENT(OUT) :: part_like
   REAL(8), DIMENSION(D) :: pt_t
-  REAL(8), DIMENSION(npar) :: pt_comp 
+  REAL(8), DIMENSION(npar) :: pt_comp
   INTEGER(4) :: l, j
   pt_t=matmul(chol,pt)
   j=1
@@ -993,6 +992,7 @@ SUBROUTINE part_like_sub(D,pt,chol,part_like) !calculates the likelihood for a p
       pt_comp(l)=par_in(l)
     END IF
   END DO
+  write(*,*) pt_comp ! ?????
   part_like=LOGLIKELIHOOD(pt_comp)
 END SUBROUTINE part_like_sub
 

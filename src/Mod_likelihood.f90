@@ -459,6 +459,8 @@ CONTAINS
              ELSE IF(nc(i,k).GT.0..AND.enc.LE.0.) THEN
                 WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
                 WRITE(*,*) 'number of counts different from 0, model prediction equal 0 or less'
+                WRITE(*,*) 'Function value = ', enc, ' n. counts = ', nc(i,k)
+                write(*,*) i,x(i,k), npar, par, funcname
                 STOP
              END IF
           END DO
