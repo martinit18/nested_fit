@@ -768,7 +768,7 @@ class Analysis(object):
 
 
 #################################################################################################################
-    def histo(self,par_number,path=currentpath,bins=50,plotmode='sigma',xmin=None,xmax=None,savedata=False,alpha=1.,clear=True):
+    def histo(self,par_number,path=currentpath,bins=50,plotmode='sigma',logbase=50.,xmin=None,xmax=None,savedata=False,alpha=1.,clear=True):
 
         '''Plot histogram relative to one parameter and calculate the different confidence levels.
         If plotmode = 'sigmalog', plot in logarithmic mode.
@@ -804,8 +804,15 @@ class Analysis(object):
         if plotmode == 'lin' :
             plt.hist(data[:,par_index],bins=bins,weights=data[:,0])
         elif plotmode == 'log':
-            plt.hist(log(data[:,par_index])+50.,bins=bins,weights=data[:,0])
-            print('not working I do not why')
+            histo, edges = histogram(data[:,par_index],bins=bins,weights=data[:,0])\
+
+            # Make array with histogram values, position
+            pos = zeros((bins))
+            ipos = list(range(bins))
+            histo_sum = histo.sum()
+            for i in ipos: pos[i] = (edges[i]+edges[i+1])/2
+            width = edges[1]-edges[0]
+            plt.bar(pos,log(histo)+logbase,width=width,color='blue',edgecolor="blue", linewidth=0.0)
         else:
             # Make histogram with differnet colors for different confidence levels
             histo, edges = histogram(data[:,par_index],bins=bins,weights=data[:,0])\
@@ -854,11 +861,12 @@ class Analysis(object):
                 plt.bar(edges[:-1],histo_data68,width=width,color='red',edgecolor="red", linewidth=0.0,alpha=alpha)
             elif plotmode == 'sigmalog':
                 # Logarithimic scale
-                plt.ylabel('Log(probability) + 50')
-                plt.bar(edges[:-1],log(histo_data_rest)+50.,width=width,color='blue',edgecolor="blue", linewidth=0.0)
-                plt.bar(edges[:-1],log(histo_data99)+50.,width=width,color='limegreen',edgecolor="limegreen", linewidth=0.0)
-                plt.bar(edges[:-1],log(histo_data95)+50.,width=width,color='yellow',edgecolor="yellow", linewidth=0.0)
-                plt.bar(edges[:-1],log(histo_data68)+50.,width=width,color='red',edgecolor="red", linewidth=0.0)
+                string = 'Log(probability) + '+ str(logbase)
+                plt.ylabel(string)
+                plt.bar(edges[:-1],log(histo_data_rest)+logbase,width=width,color='blue',edgecolor="blue", linewidth=0.0)
+                plt.bar(edges[:-1],log(histo_data99)+logbase,width=width,color='limegreen',edgecolor="limegreen", linewidth=0.0)
+                plt.bar(edges[:-1],log(histo_data95)+logbase,width=width,color='yellow',edgecolor="yellow", linewidth=0.0)
+                plt.bar(edges[:-1],log(histo_data68)+logbase,width=width,color='red',edgecolor="red", linewidth=0.0)
 
             plt.tight_layout()
 
