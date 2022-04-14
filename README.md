@@ -63,7 +63,7 @@ The corresponding information gain and the Bayesian complexity are also provided
 - `nf_output_fit_ .dat`: Model function values with higher density sampling that the data (for plot purpose). In addition, different components of the model are given
 - `nf_output_tries.dat`: For each live points trial, it contains the final evidence, the number of iterations and the maximum value of the likelihood function.
 - `nf_output_points.txt`: contains all discarded and final live points values, their associated likelihood values and posterior probabilities. From them, the different parameter probability distributions can be built.
-For this purpose, the python function in `nested_res_ .py` can be used.
+For this purpose, the python function in `nested_res_ .py` can be used also for compressed `nf_output_points.txt` files (using gzip with the name `nf_output_points.txt.gz`).
 Together with this file, also the files `nf_output_points.paramnames` and `nf_output_points.ranges` are created for the use of GetDist python library.
 
 **Details of the input file line by line**

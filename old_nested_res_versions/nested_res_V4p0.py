@@ -95,6 +95,9 @@ class Analysis(object):
 
 
     def load_output_data(self, path=currentpath):
+        import gzip
+        import shutil
+        
         # Adjust the path first
         if path[-1]!='/' and path != None:  path = path+'/'
         #
@@ -102,8 +105,13 @@ class Analysis(object):
         self.number_of_values = self.input_data['npar']
         # Check first if is there
         if not os.path.isfile(path+'nf_output_points.txt'):
-            print('Result file nf_output_points.txt not present\n Nothing to load')
-            return None
+            if os.path.isfile(path+'nf_output_points.txt.gz'):
+                with gzip.open(path+'nf_output_points.txt.gz', 'rb') as f_in:
+                    with open(path+'nf_output_points.txt', 'wb') as f_out:
+                        shutil.copyfileobj(f_in, f_out)
+            else:
+                print('Result file nf_output_points.txt not present\n Nothing to load')
+                return None
         self.df = pd.read_csv(path+'nf_output_points.txt', delim_whitespace=True, header=0,
                 names=["weight","lnlikelihood"] + ["val_%s" % d for d in range(1, self.number_of_values+1)])
 
