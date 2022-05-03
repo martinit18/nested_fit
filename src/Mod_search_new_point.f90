@@ -340,7 +340,6 @@ CONTAINS
 
   SUBROUTINE UNIFORM(n,itry,min_live_like,live_like,live, &
        live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
-    ! SUBROUTINE LAWN_MOWER_ROBOT(min_ll,nlive,live_like,live,new_live_like,new_live)
 
     USE MOD_PARAMETERS, ONLY: nlive, sdfraction, njump, maxtries, maxntries, &
          cluster_yn, cluster_method, distance_limit, bandwidth, par_in
@@ -620,13 +619,13 @@ CONTAINS
 
   !----------------------------------------------------------------------------------------------------------------------------------------
 
-  SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
+SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
        live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
 
     !inspired from polychord code
 
     USE MOD_PARAMETERS, ONLY: nlive, njump, maxtries, maxntries, &
-         cluster_yn, cluster_method, distance_limit, bandwidth, par_in
+         cluster_yn, cluster_method, distance_limit, bandwidth, par_in, sdfraction
     INTEGER(4), INTENT(IN) :: n, itry
     REAL(8), INTENT(IN) :: min_live_like
     REAL(8), INTENT(IN), DIMENSION(nlive) :: live_like
@@ -641,7 +640,7 @@ CONTAINS
     INTEGER(4) :: istart=0, n_ntries=0
     REAL(8), DIMENSION(nlive,npar) :: live_selected
     ! Other variables
-    INTEGER(4) :: i=0, l=0, irn=0,j=0
+    INTEGER(4) :: i=0, l=0, irn=0,j=0, kr=0, kl=0
     REAL(8) :: rn, sd_mean
     INTEGER(4) :: n_call_cluster_it, test
     INTEGER(4), INTENT(INOUT) :: n_call_cluster
@@ -653,8 +652,9 @@ CONTAINS
     REAL(8), DIMENSION(:,:), ALLOCATABLE :: live_nf
     REAL(8), DIMENSION(:), ALLOCATABLE :: start_jump, new_jump, start_jump_t, new_jump_t
     INTEGER(4), DIMENSION(:), ALLOCATABLE :: par_var
-    REAL(8) :: part_like
+    REAL(8) :: part_like, size_jump, size_jump_save
     LOGICAL :: test_bnd
+    INTEGER(4) :: init_fail, test2
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
     live_new = 0.
@@ -667,6 +667,9 @@ CONTAINS
     too_many_tries = .false.
     n_call_cluster_it=0
     dim_eff=npar-SUM(par_fix) !number of parameters not fixed
+    size_jump=sdfraction !0.2
+    init_fail=0
+    size_jump_save=size_jump
     IF(.NOT. ALLOCATED(basis)) ALLOCATE(basis(dim_eff,dim_eff), &
         live_cov(dim_eff,dim_eff),live_chol(dim_eff,dim_eff),inv_chol(dim_eff,dim_eff))
     IF(.NOT. ALLOCATED(live_nf)) ALLOCATE(live_nf(nlive,dim_eff))
@@ -680,6 +683,17 @@ CONTAINS
     ! Select a live point as starting point
     ntries = 0
 
+
+    IF(cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+       IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
+             WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
+             CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
+            cluster_on = .true.
+             n_ntries = 0
+       END IF
+    END IF
+    
+    
     j=1
     DO i=1,npar
       IF(par_fix(i).NE.1) THEN
@@ -733,73 +747,102 @@ CONTAINS
     END IF
     sd_mean=SUM(live_sd)*1.0/npar
 
-    CALL mat_cov(live_nf,nlive,dim_eff,istart,live_cov)
-    CALL cholesky(dim_eff,live_cov,live_chol)
-    CALL triang_inv(dim_eff,live_chol,inv_chol)
+    CALL MAT_COV(live_nf,nlive,dim_eff,istart,live_cov)
+    CALL CHOLESKY(dim_eff,live_cov,live_chol)
+    CALL TRIANG_INV(dim_eff,live_chol,inv_chol)
     start_jump_t=matmul(inv_chol,start_jump) !start jump in the new space
-
-
+    
     ! Make several consecutive casual jumps in the region with loglikelyhood > minlogll
 700 CONTINUE
     DO i=1,njump
+       !ntries=0
        !Generate a random orthonormal basis
        CALL BASE_O_N(dim_eff,basis)
        DO l=1,dim_eff
+         size_jump=sdfraction
 701      CONTINUE
          !Place the first interval around the start_jump
 702      CALL RANDOM_NUMBER(rn)
-         left=start_jump_t-rn*basis(:,l)
-         right=left+basis(:,l)
+         left=start_jump_t-rn*basis(:,l)*size_jump
+         right=left+basis(:,l)*size_jump
+         CALL TEST_BND_SUB(dim_eff,left,par_var,live_chol,test_bnd)
+         IF(.NOT.test_bnd) GOTO 202
          !Extend the interval left then right
+         !size_jump_save=size_jump
          j=1
-         !CALL test_bnd_sub(dim_eff,left,par_var,live_chol,test_bnd)
-         CALL part_like_sub(dim_eff,left,live_chol,part_like)
-         DO WHILE(part_like.GT.min_live_like .AND. j<=10) !check if the left boundary verifies the condition
-           left=left-basis(:,l)
-           CALL part_like_sub(dim_eff,left,live_chol,part_like)
+         CALL RANDOM_NUMBER(rn)
+         kl=FLOOR(100*rn)
+         kr=100-kl
+         CALL PART_LIKE_SUB(dim_eff,left,live_chol,part_like)
+         DO WHILE(part_like.GT.min_live_like .AND. j<=kl) !check if the left boundary verifies the condition
+           left=left-basis(:,l)*size_jump
+           CALL TEST_BND_SUB(dim_eff,left,par_var,live_chol,test_bnd)
+           IF(.NOT. test_bnd) THEN
+             GOTO 202
+           END IF
+           CALL PART_LIKE_SUB(dim_eff,left,live_chol,part_like)
            j=j+1
          END DO
+202      CALL TEST_BND_SUB(dim_eff,right,par_var,live_chol,test_bnd)
+         IF(.NOT.test_bnd) GOTO 203
          j=1
-         !CALL test_bnd_sub(dim_eff,right,par_var,live_chol,test_bnd)
-         CALL part_like_sub(dim_eff,right,live_chol,part_like)
-         DO WHILE(part_like.GT.min_live_like .AND. j<=10) !check if the right boundary verifies the condition
-           right=right+basis(:,l)
-           CALL part_like_sub(dim_eff,right,live_chol,part_like)
+         CALL PART_LIKE_SUB(dim_eff,right,live_chol,part_like)
+         DO WHILE(part_like.GT.min_live_like .AND. j<=kr) !check if the right boundary verifies the condition
+           right=right+basis(:,l)*size_jump
+           CALL TEST_BND_SUB(dim_eff,right,par_var,live_chol,test_bnd)
+           IF(.NOT. test_bnd) THEN
+             GOTO 203
+           END IF
+           CALL PART_LIKE_SUB(dim_eff,right,live_chol,part_like)
            j=j+1
          END DO
          !Select new point
-         CALL RANDOM_NUMBER(rn)
+203      CALL RANDOM_NUMBER(rn)
          new_jump_t=left+rn*(right-left)
-         ntries=1
-         CALL part_like_sub(dim_eff,new_jump_t,live_chol,part_like) !check if the new point verifies the condition
-         CALL test_bnd_sub(dim_eff,new_jump_t,par_var,live_chol,test_bnd) !check if the new point is inside the sampled space
-         DO WHILE(part_like.LT.min_live_like .OR. .NOT. test_bnd)
-           ntries=ntries+1
-           IF(ntries>maxtries) THEN
-             IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
-               IF(n_call_cluster_it>=3) THEN
-                 WRITE(*,*) 'Too many cluster analysis for an iteration'
-                 WRITE(*,*) 'Change cluster recognition parameters'
-                 STOP
+         ntries=1+ntries
+         CALL TEST_BND_SUB(dim_eff,new_jump_t,par_var,live_chol,test_bnd) !check if the new point is inside the sampled space
+         IF(test_bnd) THEN
+            CALL PART_LIKE_SUB(dim_eff,new_jump_t,live_chol,part_like) !check if the new point verifies the condition
+         ELSE
+            part_like=min_live_like-1
+         END IF
+         DO WHILE(part_like.LT.min_live_like)
+204        ntries=ntries+1
+           IF(ntries .GT. maxtries) THEN
+             n_ntries=n_ntries+1
+             ntries=0
+             
+             WRITE(*,*) 'Too many tries to find new live points for try n.', &
+             itry,'!!!! More than',maxtries,&
+             'n_ntries =',n_ntries,' over ', maxntries, 'n. step =', n
+             
+             IF(n_ntries .GE. maxntries) THEN
+               IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+                 IF(n_call_cluster_it>=3) THEN
+                   WRITE(*,*) 'Too many cluster analysis for an iteration'
+                   WRITE(*,*) 'Change cluster recognition parameters'
+                   STOP
+                 END IF
+                 IF(n_call_cluster>=10) THEN
+                   WRITE(*,*) 'Too many cluster analysis'
+                   WRITE(*,*) 'Change cluster recognition parameters'
+                   STOP
+                 END IF
+                 WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
+                 CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
+                 cluster_on = .true.
+                 n_ntries = 0
+                 n_call_cluster_it=n_call_cluster_it+1
+                 n_call_cluster=n_call_cluster+1
+                 GOTO 500
+               ELSE
+                 WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries
+                 WRITE(*,*) 'We take the data as they are :-~'
+                 too_many_tries = .true.
+                 RETURN
                END IF
-               IF(n_call_cluster>=10) THEN
-                 WRITE(*,*) 'Too many cluster analysis'
-                 WRITE(*,*) 'Change cluster recognition parameters'
-                 STOP
-               END IF
-               WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
-               CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
-               cluster_on = .true.
-               n_ntries = 0
-               n_call_cluster_it=n_call_cluster_it+1
-               n_call_cluster=n_call_cluster+1
-               GOTO 500
-             ELSE
-               WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries
-               WRITE(*,*) 'We take the data as they are :-~'
-               too_many_tries = .true.
-               RETURN
              END IF
+             GOTO 500
            END IF
            IF(DOT_PRODUCT(start_jump_t-new_jump_t,start_jump_t-left)>0) THEN !change the left or right bondary accordingly
              left=new_jump_t
@@ -808,8 +851,9 @@ CONTAINS
            END IF
            CALL RANDOM_NUMBER(rn)
            new_jump_t=left+rn*(right-left)
-           CALL part_like_sub(dim_eff,new_jump_t,live_chol,part_like)
-           CALL test_bnd_sub(dim_eff,new_jump_t,par_var,live_chol,test_bnd)
+           CALL TEST_BND_SUB(dim_eff,new_jump_t,par_var,live_chol,test_bnd)
+           IF(.NOT. test_bnd) GOTO 204
+           CALL PART_LIKE_SUB(dim_eff,new_jump_t,live_chol,part_like)
          END DO
          start_jump_t=new_jump_t
        END DO
@@ -851,6 +895,7 @@ CONTAINS
     ! Take the last point after jumps as new livepoint
     live_new = new_jump_comp
     live_like_new = LOGLIKELIHOOD(new_jump_comp)
+    ntries=ntries/dim_eff
 
 END SUBROUTINE SLICE_SAMPLING
 
@@ -873,11 +918,11 @@ SUBROUTINE BASE_O_N(D,base) !generates an orthonormal basis
   END DO
 END SUBROUTINE BASE_O_N
 
-SUBROUTINE mat_cov(pts,np,D,istart,cov) !calculates the covariance matrix
+SUBROUTINE MAT_COV(pts,np,D,istart,cov) !calculates the covariance matrix
   INTEGER(4), INTENT(IN) :: np, D, istart
   REAL(8), DIMENSION(np,D), INTENT(IN) :: pts
   REAL(8), DIMENSION(D,D), INTENT(OUT) :: cov
-  REAL(8), DIMENSION(D) :: mean
+  REAL(8), DIMENSION(D) :: mean, mean_prov
   INTEGER(4) :: i,j, icluster
 
   IF (cluster_on) THEN
@@ -885,49 +930,76 @@ SUBROUTINE mat_cov(pts,np,D,istart,cov) !calculates the covariance matrix
     icluster = p_cluster(istart)
     ! Get for the specific cluster if the cluster analysis is on
     ! Standard deviation
-    IF(cluster_np(icluster).EQ.1) THEN
+    IF(cluster_np(icluster).LT.2*D) THEN
        mean=pts(istart,:)
+       !$OMP PARALLEL DO
        DO i=1,D
+         mean_prov(i)=SUM(pts(:,i))/np
+       END DO
+       !$OMP END PARALLEL DO
+       !$OMP PARALLEL DO
+       DO i=1,D
+         !$OMP PARALLEL DO
          DO j=i,D
-           cov(i,j)=SUM((pts(:,i)-mean(i))*(pts(:,j)-mean(j)))/np
+           cov(i,j)=SUM((pts(:,i)-mean_prov(i))*(pts(:,j)-mean_prov(j)))/(np-1)
            cov(j,i)=cov(i,j)
          END DO
+         !$OMP END PARALLEL DO
        END DO
+       !$OMP END PARALLEL DO
     ELSE IF(icluster==0) THEN
+       !$OMP PARALLEL DO
        DO i=1,D
          mean(i)=SUM(pts(:,i))/np
        END DO
+       !$OMP END PARALLEL DO
+       !$OMP PARALLEL DO
        DO i=1,D
+         !$OMP PARALLEL DO
          DO j=i,D
-           cov(i,j)=SUM((pts(:,i)-mean(i))*(pts(:,j)-mean(j)))/np
+           cov(i,j)=SUM((pts(:,i)-mean(i))*(pts(:,j)-mean(j)))/(np-1)
            cov(j,i)=cov(i,j)
          END DO
+         !$OMP END PARALLEL DO
        END DO
+       !$OMP END PARALLEL DO
     ELSE
+       !$OMP PARALLEL DO
        DO i=1,D
          mean(i)=SUM(pts(:,i),MASK=(p_cluster==icluster))/cluster_np(icluster)
        END DO
+       !$OMP END PARALLEL DO
+       !$OMP PARALLEL DO
        DO i=1,D
+         !$OMP PARALLEL DO
          DO j=i,D
-           cov(i,j)=SUM((pts(:,i)-mean(i))*(pts(:,j)-mean(j)),MASK=(p_cluster==icluster))/cluster_np(icluster)
+           cov(i,j)=SUM((pts(:,i)-mean(i))*(pts(:,j)-mean(j)),MASK=(p_cluster==icluster))/(cluster_np(icluster)-1)
            cov(j,i)=cov(i,j)
          END DO
+         !$OMP END PARALLEL DO
        END DO
+       !$OMP END PARALLEL DO
     END IF
   ELSE
+    !$OMP PARALLEL DO
     DO i=1,D
       mean(i)=SUM(pts(:,i))/np
     END DO
+    !$OMP END PARALLEL DO
+    !$OMP PARALLEL DO
      DO i=1,D
+       !$OMP PARALLEL DO
       DO j=i,D
-        cov(i,j)=SUM((pts(:,i)-mean(i))*(pts(:,j)-mean(j)))/np
+        cov(i,j)=SUM((pts(:,i)-mean(i))*(pts(:,j)-mean(j)))/(np-1)
         cov(j,i)=cov(i,j)
       END DO
+      !$OMP END PARALLEL DO
     END DO
+    !$OMP END PARALLEL DO
   END IF
-END SUBROUTINE mat_cov
+END SUBROUTINE MAT_COV
 
-SUBROUTINE cholesky(D,cov,chol) !calculates the cholesky decomposition of the covariance matrix
+SUBROUTINE CHOLESKY(D,cov,chol) !calculates the cholesky decomposition of the covariance matrix
    INTEGER(4), INTENT(IN) :: D
    REAL(8), DIMENSION(D,D), INTENT(IN) :: cov
    REAL(8), DIMENSION(D,D), INTENT(OUT) :: chol
@@ -951,9 +1023,9 @@ SUBROUTINE cholesky(D,cov,chol) !calculates the cholesky decomposition of the co
        chol(j,i)=chol(j,i)/chol(i,i)
      END DO
    END DO
-END SUBROUTINE cholesky
+END SUBROUTINE CHOLESKY
 
-SUBROUTINE triang_inv(D,mat,mat_inv) !calculates the inverse of the cholesky decomposition
+SUBROUTINE TRIANG_INV(D,mat,mat_inv) !calculates the inverse of the cholesky decomposition
    INTEGER(4), INTENT(IN) :: D
    REAL(8), DIMENSION(D,D), INTENT(IN) :: mat
    REAL(8), DIMENSION(D,D), INTENT(OUT) :: mat_inv
@@ -971,9 +1043,9 @@ SUBROUTINE triang_inv(D,mat,mat_inv) !calculates the inverse of the cholesky dec
        mat_inv(i+j,i)=mat_inv(i+j,i)/mat(i,i)
      END DO
    END DO
-END SUBROUTINE triang_inv
+END SUBROUTINE TRIANG_INV
 
-SUBROUTINE part_like_sub(D,pt,chol,part_like) !calculates the likelihood for a point in the new space
+SUBROUTINE PART_LIKE_SUB(D,pt,chol,part_like) !calculates the likelihood for a point in the new space
   USE MOD_PARAMETERS, ONLY: par_in
   INTEGER(4), INTENT(IN) :: D
   REAL(8), DIMENSION(D), INTENT(IN) :: pt
@@ -992,12 +1064,12 @@ SUBROUTINE part_like_sub(D,pt,chol,part_like) !calculates the likelihood for a p
       pt_comp(l)=par_in(l)
     END IF
   END DO
-  write(*,*) pt_comp ! ?????
+  !write(*,*) pt_comp ! ?????
   part_like=LOGLIKELIHOOD(pt_comp)
-END SUBROUTINE part_like_sub
+END SUBROUTINE PART_LIKE_SUB
 
 
-SUBROUTINE test_bnd_sub(D,pt,par_var,chol,test_bnd) !checks if a point in the new space is in the sampled space
+SUBROUTINE TES_BND_SUB(D,pt,par_var,chol,test_bnd) !checks if a point in the new space is in the sampled space
   INTEGER(4), INTENT(IN) :: D
   REAL(8), DIMENSION(D), INTENT(IN) :: pt
   INTEGER(4), DIMENSION(D), INTENT(IN) :: par_var
@@ -1016,7 +1088,7 @@ SUBROUTINE test_bnd_sub(D,pt,par_var,chol,test_bnd) !checks if a point in the ne
       EXIT
     END IF
   END DO
-END SUBROUTINE test_bnd_sub
+END SUBROUTINE TEST_BND_SUB
 
  !#####################################################################################################################
 
