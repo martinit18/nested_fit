@@ -123,15 +123,15 @@ Additional information can be found in the reference articles.
 
 ## Present version and history of the past versions
 
-The present version is 4.0.3
+The present version is 4.2alpha
 New features:
-- 2D data analysis for count-type XY
-- computation acceleration for the 1D case introducing a mask instead of IF condition in the likelihood
-- new ERFPEAK function  
-- new example files for python analysis with pandas  
-
+- additional search methods : Uniform search and Slice Sampling  
 
 Previous versions are:
+ - 4.0.3 2D data analysis for count-type XY \
+ Computation acceleration for the 1D case introducing a mask instead of IF condition in the likelihood \
+ New ERFPEAK function \
+ New example files for python analysis with pandas 
  - 3.5 Modularization of the search and cluster recognition methods in preparation of implementation of new algorithms \
  New interpolation options for 1D and 2D histograms using GetDist Python package \
  Correction of some bugs in the python library \
