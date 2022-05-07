@@ -239,6 +239,7 @@ PROGRAM NESTED_FIT
   END IF
 
   IF (search_method.EQ.'SLICE_SAMPLING') THEN
+     sdfraction = search_par1
      njump      = INT(search_par2)
   END IF
 
