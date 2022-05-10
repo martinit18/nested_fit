@@ -692,8 +692,8 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
              n_ntries = 0
        END IF
     END IF
-    
-    
+
+
     j=1
     DO i=1,npar
       IF(par_fix(i).NE.1) THEN
@@ -751,7 +751,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     CALL CHOLESKY(dim_eff,live_cov,live_chol)
     CALL TRIANG_INV(dim_eff,live_chol,inv_chol)
     start_jump_t=matmul(inv_chol,start_jump) !start jump in the new space
-    
+
     ! Make several consecutive casual jumps in the region with loglikelyhood > minlogll
 700 CONTINUE
     DO i=1,njump
@@ -811,11 +811,11 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
            IF(ntries .GT. maxtries) THEN
              n_ntries=n_ntries+1
              ntries=0
-             
+
              WRITE(*,*) 'Too many tries to find new live points for try n.', &
              itry,'!!!! More than',maxtries,&
              'n_ntries =',n_ntries,' over ', maxntries, 'n. step =', n
-             
+
              IF(n_ntries .GE. maxntries) THEN
                IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
                  IF(n_call_cluster_it>=3) THEN
@@ -1069,7 +1069,7 @@ SUBROUTINE PART_LIKE_SUB(D,pt,chol,part_like) !calculates the likelihood for a p
 END SUBROUTINE PART_LIKE_SUB
 
 
-SUBROUTINE TES_BND_SUB(D,pt,par_var,chol,test_bnd) !checks if a point in the new space is in the sampled space
+SUBROUTINE TEST_BND_SUB(D,pt,par_var,chol,test_bnd) !checks if a point in the new space is in the sampled space
   INTEGER(4), INTENT(IN) :: D
   REAL(8), DIMENSION(D), INTENT(IN) :: pt
   INTEGER(4), DIMENSION(D), INTENT(IN) :: par_var

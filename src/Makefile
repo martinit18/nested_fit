@@ -33,7 +33,7 @@ FFILES  =  USERFCN.f USERFCN_SET.f init_interpolation.f \
 
 # Change Mod_likelihood.f90 in Mod_likelihood_tests.f90 below for tests
 
-F90FILES = Mod_parameters.f90 Mod_likelihood.f90 Mod_timestamp.f90 \
+F90FILES = Mod_parameters.f90 Mod_likelihood_tests.f90 Mod_timestamp.f90 \
 	Mod_cluster_analysis.f90 Mod_search_new_point.f90 \
 	nested_fit.f90 nested_sampling.f90 \
 	USERFCN_2D.f90 \
