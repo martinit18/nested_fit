@@ -90,7 +90,7 @@ Input: (x, y, z, error z) TO BE IMPLEMENTED
 RANDOM_WALK              # Type of search of live points
 0.1	20	100	10   # Param. of the search algo.(2), max n. tries, max of max tries
 ```
-For the moment, a random walk (RANDOM_WALK), a uniform search (UNIFORM) and slice sampling (SLICE_SAMPLING) are implemented. The first two parameters of the above line are specific to the search algorithm.
+For the moment, a random walk (RANDOM_WALK), a uniform search (UNIFORM), slice sampling (SLICE_SAMPLING) and slice sampling with an adaptable step (SLICE_SAMPLING_ADAPT) are implemented. The first two parameters of the above line are specific to the search algorithm.
 
 
 ```
