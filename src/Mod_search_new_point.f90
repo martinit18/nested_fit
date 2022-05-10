@@ -768,14 +768,14 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
 702      CALL RANDOM_NUMBER(rn)
          left=start_jump_t-rn*basis(:,l)*size_jump
          right=left+basis(:,l)*size_jump
+         CALL RANDOM_NUMBER(rn)
+         kl=FLOOR(100*rn)
+         kr=100-kl
          CALL TEST_BND_SUB(dim_eff,left,par_var,live_chol,test_bnd)
          IF(.NOT.test_bnd) GOTO 202
          !Extend the interval left then right
          !size_jump_save=size_jump
          j=1
-         CALL RANDOM_NUMBER(rn)
-         kl=FLOOR(100*rn)
-         kr=100-kl
          CALL PART_LIKE_SUB(dim_eff,left,live_chol,part_like)
          DO WHILE(part_like.GT.min_live_like .AND. j<=kl) !check if the left boundary verifies the condition
            left=left-basis(:,l)*size_jump
