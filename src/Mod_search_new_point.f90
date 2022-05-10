@@ -42,6 +42,9 @@ CONTAINS
     ELSE IF(search_method .EQ. 'SLICE_SAMPLING') THEN
         CALL SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
           live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
+    ELSE IF(search_method .EQ. 'SLICE_SAMPLING_ADAPT') THEN
+        CALL SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
+          live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
     ELSE
         WRITE(*,*) 'Error of the search type name in Mod_search_new_point module'
         WRITE(*,*) 'Check the manual and the input file'
@@ -765,14 +768,14 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
 702      CALL RANDOM_NUMBER(rn)
          left=start_jump_t-rn*basis(:,l)*size_jump
          right=left+basis(:,l)*size_jump
+         CALL RANDOM_NUMBER(rn)
+         kl=FLOOR(100*rn)
+         kr=100-kl
          CALL TEST_BND_SUB(dim_eff,left,par_var,live_chol,test_bnd)
          IF(.NOT.test_bnd) GOTO 202
          !Extend the interval left then right
          !size_jump_save=size_jump
          j=1
-         CALL RANDOM_NUMBER(rn)
-         kl=FLOOR(100*rn)
-         kr=100-kl
          CALL PART_LIKE_SUB(dim_eff,left,live_chol,part_like)
          DO WHILE(part_like.GT.min_live_like .AND. j<=kl) !check if the left boundary verifies the condition
            left=left-basis(:,l)*size_jump
@@ -898,6 +901,307 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     ntries=ntries/dim_eff
 
 END SUBROUTINE SLICE_SAMPLING
+
+!----------------------------------------------------------------------------------------------
+
+SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
+       live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
+
+    !inspired from polychord code
+
+    USE MOD_PARAMETERS, ONLY: nlive, njump, maxtries, maxntries, &
+         cluster_yn, cluster_method, distance_limit, bandwidth, par_in, sdfraction
+    INTEGER(4), INTENT(IN) :: n, itry
+    REAL(8), INTENT(IN) :: min_live_like
+    REAL(8), INTENT(IN), DIMENSION(nlive) :: live_like
+    REAL(8), INTENT(IN), DIMENSION(nlive,npar) :: live
+    REAL(8), INTENT(OUT) :: live_like_new
+    REAL(8), DIMENSION(npar), INTENT(OUT) :: live_new
+    INTEGER(4), INTENT(OUT) :: icluster, ntries
+    LOGICAL, INTENT(OUT) :: too_many_tries
+    ! MCMC new point search variables
+    REAL(8) :: gval=0.
+    REAL(8), DIMENSION(npar) :: live_ave, live_var, live_sd, start_jump_comp, new_jump_comp
+    INTEGER(4) :: istart=0, n_ntries=0
+    REAL(8), DIMENSION(nlive,npar) :: live_selected
+    ! Other variables
+    INTEGER(4) :: i=0, l=0, irn=0,j=0, k=0
+    REAL(8) :: rn, sd_mean
+    INTEGER(4) :: n_call_cluster_it, test
+    INTEGER(4), INTENT(INOUT) :: n_call_cluster
+    INTEGER(4) :: dim_eff
+    REAL(8), DIMENSION(:,:),ALLOCATABLE :: basis
+    !REAL(8), DIMENSION(:,:), ALLOCATABLE :: basis
+    REAL(8), DIMENSION(:), ALLOCATABLE :: left, right, left_prov,right_prov
+    REAL(8), DIMENSION(:,:), ALLOCATABLE  :: live_cov, live_chol, inv_chol
+    REAL(8), DIMENSION(:,:), ALLOCATABLE :: live_nf
+    REAL(8), DIMENSION(:), ALLOCATABLE :: start_jump, new_jump, start_jump_t, new_jump_t
+    INTEGER(4), DIMENSION(:), ALLOCATABLE :: par_var
+    REAL(8) :: part_like, size_jump, size_jump_save
+    LOGICAL :: test_bnd
+    INTEGER(4) :: init_fail, test2
+    ! Find new live points
+    ! ----------------------------------FIND_POINT_MCMC------------------------------------
+    live_new = 0.
+    live_like_new = 0.
+    live_ave = 0.
+    live_var = 0.
+    live_sd  = 0.
+    ntries   = 0
+    n_ntries = 0
+    too_many_tries = .false.
+    n_call_cluster_it=0
+    dim_eff=npar-SUM(par_fix) !number of parameters not fixed
+    size_jump=sdfraction !0.2
+    init_fail=0
+    size_jump_save=size_jump
+    IF(.NOT. ALLOCATED(basis)) ALLOCATE(basis(dim_eff,dim_eff), &
+        live_cov(dim_eff,dim_eff),live_chol(dim_eff,dim_eff),inv_chol(dim_eff,dim_eff))
+    IF(.NOT. ALLOCATED(live_nf)) ALLOCATE(live_nf(nlive,dim_eff))
+    IF(.NOT. ALLOCATED(start_jump)) ALLOCATE(start_jump(dim_eff),new_jump(dim_eff), &
+        start_jump_t(dim_eff),new_jump_t(dim_eff))
+    IF(.NOT. ALLOCATED(par_var)) ALLOCATE(par_var(dim_eff))
+    IF(.NOT. ALLOCATED(left)) ALLOCATE(left(dim_eff),right(dim_eff), &
+        left_prov(dim_eff),right_prov(dim_eff))
+
+
+    ! Select a live point as starting point
+    ntries = 0
+
+
+    IF(cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+       IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
+             WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
+             CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
+            cluster_on = .true.
+             n_ntries = 0
+       END IF
+    END IF
+    
+    
+    j=1
+    DO i=1,npar
+      IF(par_fix(i).NE.1) THEN
+        par_var(j)=i
+        j=j+1
+      END IF
+    END DO
+
+
+500 CALL RANDOM_NUMBER(rn)
+    istart= FLOOR((nlive-1)*rn+1)
+    start_jump_comp = live(istart,:)
+
+    !Select only the variables that are not fixed
+    start_jump=start_jump_comp(par_var)
+    live_nf=live(:,par_var)
+
+    ! Calculate momenta of the live points
+600 IF (cluster_on) THEN
+       ! Identify cluster appartenance
+       icluster = p_cluster(istart)
+       ! Get for the specific cluster if the cluster analysis is on
+       ! Standard deviation
+       live_sd(:) = cluster_std(icluster,:)
+       IF(cluster_std(icluster,1).EQ.0.) THEN
+          ! If the cluster is formed only from one point, take the standard standard deviation
+          !$OMP PARALLEL DO
+          DO i=1,npar
+             IF(par_fix(i).NE.1) THEN
+                CALL MEANVAR(live(:,i),nlive,live_ave(i),live_var(i))
+             ELSE
+                live_ave(i) = par_in(i)
+             END IF
+          END DO
+          !$OMP END PARALLEL DO
+          live_sd = DSQRT(live_var)
+       END IF
+       ! and mean
+       live_ave(:) = cluster_mean(icluster,:)
+    ELSE
+       !$OMP PARALLEL DO
+       DO i=1,npar
+          IF(par_fix(i).NE.1) THEN
+             CALL MEANVAR(live(:,i),nlive,live_ave(i),live_var(i))
+          ELSE
+             live_ave(i) = par_in(i)
+          END IF
+       END DO
+       !$OMP END PARALLEL DO
+       live_sd = DSQRT(live_var)
+    END IF
+    sd_mean=SUM(live_sd)*1.0/npar
+
+    CALL MAT_COV(live_nf,nlive,dim_eff,istart,live_cov)
+    CALL CHOLESKY(dim_eff,live_cov,live_chol)
+    CALL TRIANG_INV(dim_eff,live_chol,inv_chol)
+    start_jump_t=matmul(inv_chol,start_jump) !start jump in the new space
+    
+    ! Make several consecutive casual jumps in the region with loglikelyhood > minlogll
+700 CONTINUE
+    DO i=1,njump
+       !ntries=0
+       !Generate a random orthonormal basis
+       CALL BASE_O_N(dim_eff,basis)
+       DO l=1,dim_eff
+         size_jump=sdfraction
+701      CONTINUE
+         !Place the first interval around the start_jump
+702      CALL RANDOM_NUMBER(rn)
+         left=start_jump_t-rn*basis(:,l)*size_jump
+         right=left+basis(:,l)*size_jump
+         CALL TEST_BND_SUB(dim_eff,left,par_var,live_chol,test_bnd)
+         IF(.NOT. test_bnd) THEN
+           init_fail=init_fail+1
+           IF(init_fail>5) THEN
+             size_jump=size_jump/2.
+             init_fail=0
+           END IF
+           GOTO 702
+         END IF
+         CALL TEST_BND_SUB(dim_eff,right,par_var,live_chol,test_bnd)
+         IF(.NOT. test_bnd) THEN
+           init_fail=init_fail+1
+           IF(init_fail>5) THEN
+             size_jump=size_jump/2.
+             init_fail=0
+           END IF
+           GOTO 702
+         END IF
+         !Extend the interval left then right
+         size_jump_save=size_jump
+         j=1
+         k=1
+         CALL PART_LIKE_SUB(dim_eff,left,live_chol,part_like)
+         DO WHILE(part_like.GT.min_live_like .AND. j<=10) !check if the left boundary verifies the condition
+200        left_prov=left-basis(:,l)*size_jump
+           CALL TEST_BND_SUB(dim_eff,left_prov,par_var,live_chol,test_bnd)
+           IF(.NOT. test_bnd) THEN
+             IF(k>3) EXIT
+             size_jump=size_jump/2
+             GOTO 200
+             k=k+1
+           !  EXIT
+           END IF
+           left=left_prov
+           CALL PART_LIKE_SUB(dim_eff,left,live_chol,part_like)
+           j=j+1
+         END DO
+         size_jump=size_jump_save
+         j=1
+         k=1
+         CALL PART_LIKE_SUB(dim_eff,right,live_chol,part_like)
+         DO WHILE(part_like.GT.min_live_like .AND. j<=10) !check if the right boundary verifies the condition
+201           right_prov=right+basis(:,l)*size_jump
+           CALL TEST_BND_SUB(dim_eff,right_prov,par_var,live_chol,test_bnd)
+           IF(.NOT. test_bnd) THEN
+             IF(k>3) EXIT
+             size_jump=size_jump/2
+             GOTO 201
+           !  EXIT
+           END IF
+           right=right_prov
+           CALL PART_LIKE_SUB(dim_eff,right,live_chol,part_like)
+           j=j+1
+         END DO
+         size_jump=size_jump_save
+         !Select new point
+         CALL RANDOM_NUMBER(rn)
+         new_jump_t=left+rn*(right-left)
+         ntries=1+ntries
+         CALL PART_LIKE_SUB(dim_eff,new_jump_t,live_chol,part_like) !check if the new point verifies the condition
+         CALL TEST_BND_SUB(dim_eff,new_jump_t,par_var,live_chol,test_bnd) !check if the new point is inside the sampled space
+         DO WHILE(part_like.LT.min_live_like .OR. .NOT. test_bnd)
+           ntries=ntries+1
+           IF(ntries .GT. maxtries) THEN
+             n_ntries=n_ntries+1
+             ntries=0
+             
+             WRITE(*,*) 'Too many tries to find new live points for try n.', &
+             itry,'!!!! More than',maxtries,&
+             'n_ntries =',n_ntries,' over ', maxntries, 'n. step =', n
+             
+             IF(n_ntries .GE. maxntries) THEN
+               IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+                 IF(n_call_cluster_it>=3) THEN
+                   WRITE(*,*) 'Too many cluster analysis for an iteration'
+                   WRITE(*,*) 'Change cluster recognition parameters'
+                   STOP
+                 END IF
+                 IF(n_call_cluster>=10) THEN
+                   WRITE(*,*) 'Too many cluster analysis'
+                   WRITE(*,*) 'Change cluster recognition parameters'
+                   STOP
+                 END IF
+                 WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
+                 CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
+                 cluster_on = .true.
+                 n_ntries = 0
+                 n_call_cluster_it=n_call_cluster_it+1
+                 n_call_cluster=n_call_cluster+1
+                 GOTO 500
+               ELSE
+                 WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries
+                 WRITE(*,*) 'We take the data as they are :-~'
+                 too_many_tries = .true.
+                 RETURN
+               END IF
+             END IF
+             GOTO 500
+           END IF
+           IF(DOT_PRODUCT(start_jump_t-new_jump_t,start_jump_t-left)>0) THEN !change the left or right bondary accordingly
+             left=new_jump_t
+           ELSE
+             right=new_jump_t
+           END IF
+           CALL RANDOM_NUMBER(rn)
+           new_jump_t=left+rn*(right-left)
+           CALL PART_LIKE_SUB(dim_eff,new_jump_t,live_chol,part_like)
+           CALL TEST_BND_SUB(dim_eff,new_jump_t,par_var,live_chol,test_bnd)
+         END DO
+         start_jump_t=new_jump_t
+       END DO
+     END DO
+
+    !Find the new point in the original space
+    new_jump=matmul(live_chol,new_jump_t)
+    j=1
+    DO l=1,npar
+      IF(par_fix(l).NE.1) THEN
+        new_jump_comp(l)=new_jump(j)
+        j=j+1
+      ELSE
+        new_jump_comp(l)=par_in(l)
+      END IF
+    END DO
+
+    ! Final check of the last point for gaussian priors
+    DO l=1,npar
+       IF(par_fix(l).NE.1) THEN
+          IF(par_step(l).GT.0) THEN
+             ! maximum of the distribution is 1 (and is not normalized to 1 as the previous line)
+             gval = dexp(-(new_jump_comp(l)-par_in(l))**2/(2*par_step(l)**2))
+             CALL RANDOM_NUMBER(rn)
+             IF (rn.GT.gval) GOTO 700
+          END IF
+       END IF
+    END DO
+
+    ! Last(maybe useless) check
+    IF(LOGLIKELIHOOD(new_jump_comp).LT.min_live_like) GOTO 700
+
+    DO l=1,npar
+      IF (new_jump_comp(l).LT.par_bnd1(l).OR.new_jump_comp(l).GT.par_bnd2(l)) THEN
+        WRITE(*,*) l, .FALSE.
+      END IF
+    END DO
+
+    ! Take the last point after jumps as new livepoint
+    live_new = new_jump_comp
+    live_like_new = LOGLIKELIHOOD(new_jump_comp)
+    ntries=ntries/dim_eff
+
+END SUBROUTINE SLICE_SAMPLING_ADAPT
 
 SUBROUTINE BASE_O_N(D,base) !generates an orthonormal basis
   INTEGER(4), INTENT(IN) :: D
