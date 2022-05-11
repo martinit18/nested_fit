@@ -386,13 +386,6 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
       STOP
     END IF
 
-    IF(COUNT(p_cluster==0)>=1) THEN
-      ncluster=ncluster+1
-      DO i=1,np
-        IF(p_cluster(i)==0) p_cluster(i)=ncluster
-      END DO
-    END IF
-
     OPEN (UNIT=10, FILE='nf_output_cluster_final_'//timestamp()//'.dat', STATUS='unknown')
     DO i=1,np
        WRITE(10,*) p_cluster(i), p_in(i,:)
@@ -405,7 +398,11 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
       DEALLOCATE(cluster_np)
     END IF
 
-    ALLOCATE(cluster_std(ncluster,ndim),cluster_mean(ncluster,ndim),cluster_np(ncluster))
+    IF(COUNT(p_cluster==0)==0) THEN
+       ALLOCATE(cluster_std(ncluster,ndim),cluster_mean(ncluster,ndim),cluster_np(ncluster))
+    ELSE
+       ALLOCATE(cluster_std(0:ncluster,ndim),cluster_mean(0:ncluster,ndim),cluster_np(0:ncluster))
+    END IF
     cluster_std = 0.
     cluster_mean = 0.
     cluster_np = 0
@@ -438,11 +435,19 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     END IF
 
     OPEN (UNIT=10, FILE='nf_output_cluster_mean_std.dat', STATUS='unknown')
-    DO j=1,ncluster
-       DO k=1,ndim
-          WRITE(10,*) j, cluster_np(j), k, cluster_mean(j,k), cluster_std(j,k)
-       END DO
-    END DO
+    IF(COUNT(p_cluster==0)==0) THEN
+      DO j=1,ncluster
+         DO k=1,ndim
+            WRITE(10,*) j, cluster_np(j), k, cluster_mean(j,k), cluster_std(j,k)
+         END DO
+      END DO
+    ELSE
+      DO j=0,ncluster
+         DO k=1,ndim
+            WRITE(10,*) j, cluster_np(j), k, cluster_mean(j,k), cluster_std(j,k)
+         END DO
+      END DO  
+    END IF
     CLOSE(10)
   END SUBROUTINE DBSCAN_CLUSTER_ANALYSIS
 
