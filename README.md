@@ -123,7 +123,7 @@ Additional information can be found in the reference articles.
 
 ## Present version and history of the past versions
 
-The present version is 4.1.0
+The present version is 4.1.1
 New features:
 - New cluster recognition methods added
 
