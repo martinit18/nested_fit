@@ -78,8 +78,6 @@ PROGRAM NESTED_FIT
   CHARACTER :: string*128
   REAL(4) :: version_file
   REAL(4), PARAMETER :: version = 4.2
-  REAL(8) :: search_par1 = 0.0
-  REAL(8) :: search_par2 = 0.0
   ! Results from Nested sampling
   INTEGER(4) :: nall=0
   REAL(8) :: evsum_final=0., live_like_max=0.
@@ -227,23 +225,7 @@ PROGRAM NESTED_FIT
      CLOSE(88)
   ENDIF
 
-  ! Adapt serach parameters to the search algorithm
-  IF (search_method.EQ.'RANDOM_WALK') THEN
-     sdfraction = search_par1
-     njump      = INT(search_par2)
-  END IF
-
-  IF (search_method.EQ.'UNIFORM') THEN
-     sdfraction = search_par1
-     njump      = INT(search_par2)
-  END IF
-
-  IF (search_method.EQ.'SLICE_SAMPLING' .OR. search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
-     sdfraction = search_par1
-     njump      = INT(search_par2)
-  END IF
-
-  ! ----------------------------------------------------------------------------------------------------------------------------------
+ ----------------------------------------------------------------------------------------------------------------------------------
 
 
   ! Some tests and messages
