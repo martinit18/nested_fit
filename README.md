@@ -90,7 +90,9 @@ Input: (x, y, z, error z) TO BE IMPLEMENTED
 RANDOM_WALK              # Type of search of live points
 0.1	20	100	10   # Param. of the search algo.(2), max n. tries, max of max tries
 ```
-For the moment, a random walk (RANDOM_WALK), a uniform search (UNIFORM), slice sampling (SLICE_SAMPLING) and slice sampling with an adaptable step (SLICE_SAMPLING_ADAPT) are implemented. The first two parameters of the above line are specific to the search algorithm.
+For the moment, a random walk (`RANDOM_WALK`), a uniform search (`UNIFORM`), slice sampling (`SLICE_SAMPLING`) and slice sampling with an adaptable step (`SLICE_SAMPLING_ADAPT`) are implemented. The first two parameters of the above line are specific to the search algorithm:
+- `RANDOM_WALK` par. 1: fraction of standard deviation for each jump, par. 2: number of jumps. Suggested values: 0.1-0.2, 10-40.
+- `SLICE_SAMPLING` and `SLICE_SAMPLING_ADAPT` par. 1: fraction of standard deviation for segment exploration, par. 2: number of jumps. Suggested values: 0.1-0.2, 3-5.
 
 
 ```
@@ -131,7 +133,7 @@ Previous versions are:
  - 4.0.3 2D data analysis for count-type XY \
  Computation acceleration for the 1D case introducing a mask instead of IF condition in the likelihood \
  New ERFPEAK function \
- New example files for python analysis with pandas 
+ New example files for python analysis with pandas
  - 3.5 Modularization of the search and cluster recognition methods in preparation of implementation of new algorithms \
  New interpolation options for 1D and 2D histograms using GetDist Python package \
  Correction of some bugs in the python library \
