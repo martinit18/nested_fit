@@ -60,7 +60,7 @@ CONTAINS
        live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
   ! SUBROUTINE LAWN_MOWER_ROBOT(min_ll,nlive,live_like,live,new_live_like,new_live)
 
-    USE MOD_PARAMETERS, ONLY: nlive, sdfraction, njump, maxtries, maxntries, &
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, &
          cluster_yn, cluster_method, distance_limit, bandwidth, par_in
 
     ! MCMC search function from Leo's ideas and mine
@@ -82,6 +82,8 @@ CONTAINS
     REAL(8) :: rn
     INTEGER(4) :: n_call_cluster_it, test
     INTEGER(4), INTENT(INOUT) :: n_call_cluster
+    REAL(8) :: sdfraction
+    INTEGER(4) :: njump
 
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
@@ -96,6 +98,8 @@ CONTAINS
     too_many_tries = .false.
 
     n_call_cluster_it=0
+    sdfraction=search_par1
+    njump=INT(search_par2)
 
     ! Select a live point as starting point
     ntries = 0
@@ -344,7 +348,7 @@ CONTAINS
   SUBROUTINE UNIFORM(n,itry,min_live_like,live_like,live, &
        live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
 
-    USE MOD_PARAMETERS, ONLY: nlive, sdfraction, njump, maxtries, maxntries, &
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, &
          cluster_yn, cluster_method, distance_limit, bandwidth, par_in
 
     ! uniform search function
@@ -366,7 +370,7 @@ CONTAINS
     REAL(8) :: rn, sd_mean, frac
     INTEGER(4) :: n_call_cluster_it, test
     INTEGER(4), INTENT(INOUT) :: n_call_cluster
-    INTEGER(4) :: nb_cube
+    INTEGER(4) :: nb_cube, njump
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
     new_jump = par_in
@@ -378,9 +382,10 @@ CONTAINS
     ntries   = 0
     n_ntries = 0
     too_many_tries = .false.
-    frac=sdfraction
+    frac=search_par1
     n_call_cluster_it=0
     nb_cube=0
+    njump=INT(search_par2)
 
     ! Select a live point as starting point
     ntries = 0
@@ -627,8 +632,8 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
 
     !inspired from polychord code
 
-    USE MOD_PARAMETERS, ONLY: nlive, njump, maxtries, maxntries, &
-         cluster_yn, cluster_method, distance_limit, bandwidth, par_in, sdfraction
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, &
+         cluster_yn, cluster_method, distance_limit, bandwidth, par_in
     INTEGER(4), INTENT(IN) :: n, itry
     REAL(8), INTENT(IN) :: min_live_like
     REAL(8), INTENT(IN), DIMENSION(nlive) :: live_like
@@ -657,7 +662,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     INTEGER(4), DIMENSION(:), ALLOCATABLE :: par_var
     REAL(8) :: part_like, size_jump, size_jump_save
     LOGICAL :: test_bnd
-    INTEGER(4) :: init_fail, test2
+    INTEGER(4) :: init_fail, test2, njump
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
     live_new = 0.
@@ -670,9 +675,10 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     too_many_tries = .false.
     n_call_cluster_it=0
     dim_eff=npar-SUM(par_fix) !number of parameters not fixed
-    size_jump=sdfraction !0.2
+    size_jump=search_par1
     init_fail=0
     size_jump_save=size_jump
+    njump=INT(search_par2) !number of bases used
     IF(.NOT. ALLOCATED(basis)) ALLOCATE(basis(dim_eff,dim_eff), &
         live_cov(dim_eff,dim_eff),live_chol(dim_eff,dim_eff),inv_chol(dim_eff,dim_eff))
     IF(.NOT. ALLOCATED(live_nf)) ALLOCATE(live_nf(nlive,dim_eff))
@@ -909,8 +915,8 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
 
     !inspired from polychord code
 
-    USE MOD_PARAMETERS, ONLY: nlive, njump, maxtries, maxntries, &
-         cluster_yn, cluster_method, distance_limit, bandwidth, par_in, sdfraction
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, &
+         cluster_yn, cluster_method, distance_limit, bandwidth, par_in
     INTEGER(4), INTENT(IN) :: n, itry
     REAL(8), INTENT(IN) :: min_live_like
     REAL(8), INTENT(IN), DIMENSION(nlive) :: live_like
@@ -939,7 +945,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     INTEGER(4), DIMENSION(:), ALLOCATABLE :: par_var
     REAL(8) :: part_like, size_jump, size_jump_save
     LOGICAL :: test_bnd
-    INTEGER(4) :: init_fail, test2
+    INTEGER(4) :: init_fail, test2, njump
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
     live_new = 0.
@@ -952,9 +958,10 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     too_many_tries = .false.
     n_call_cluster_it=0
     dim_eff=npar-SUM(par_fix) !number of parameters not fixed
-    size_jump=sdfraction !0.2
+    size_jump=search_par1
     init_fail=0
     size_jump_save=size_jump
+    njump=INT(search_par2) !number of bases used
     IF(.NOT. ALLOCATED(basis)) ALLOCATE(basis(dim_eff,dim_eff), &
         live_cov(dim_eff,dim_eff),live_chol(dim_eff,dim_eff),inv_chol(dim_eff,dim_eff))
     IF(.NOT. ALLOCATED(live_nf)) ALLOCATE(live_nf(nlive,dim_eff))
