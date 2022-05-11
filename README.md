@@ -92,8 +92,12 @@ RANDOM_WALK              # Type of search of live points
 ```
 For the moment, a random walk (`RANDOM_WALK`), a uniform search (`UNIFORM`), slice sampling (`SLICE_SAMPLING`) and slice sampling with an adaptable step (`SLICE_SAMPLING_ADAPT`) are implemented. The first two parameters of the above line are specific to the search algorithm:
 - `RANDOM_WALK` par. 1: fraction of standard deviation for each jump, par. 2: number of jumps. Suggested values: 0.1-0.2, 10-40.
+<<<<<<< HEAD
 - `SLICE_SAMPLING` and `SLICE_SAMPLING_ADAPT` par. 1: fraction of standard deviation for segment exploration, par. 2: number of jumps. Suggested values: ~1, 3-5.
 - `UNIFORM` par. 1: fraction of standard deviation for the box size, par. 2: number of jumps. Suggested values: 0.1-11, 1.
+=======
+- `SLICE_SAMPLING` and `SLICE_SAMPLING_ADAPT` par. 1: fraction of standard deviation for segment exploration, par. 2: number of jumps. Suggested values: 0.1-0.2, 3-5.
+>>>>>>> 3ab58c336c8e7d5a566263c2494a551869a019a1
 
 
 ```
