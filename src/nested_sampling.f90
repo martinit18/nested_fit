@@ -9,7 +9,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   !USE RNG
 
   ! Parameter module
-  USE MOD_PARAMETERS, ONLY:  nlive, evaccuracy, njump, par_in, par_step, par_bnd1, par_bnd2, par_fix, search_method
+  USE MOD_PARAMETERS, ONLY:  nlive, evaccuracy, search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, search_method
   ! Module for likelihood
   USE MOD_LIKELIHOOD
   ! Module for searching new live points
@@ -281,7 +281,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
         WRITE(*,*) 'N. try:', itry, 'N step:', n, &
              'Min. loglike', min_live_like,'Evidence: ',evsum, &
              'Ev. step:', evstep(n),'Ev. pres. acc.:', evtotest-evsum, &
-             'Typical eff.:', REAL(njump)/ntries
+             'Typical eff.:', search_par2/ntries
      !
      !   ! Store actual live points
      !   WRITE(out_filename,1000) 'live_points_',itry,'.dat'

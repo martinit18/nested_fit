@@ -465,7 +465,7 @@ CONTAINS
             GOTO 700
           END IF
           start_jump = new_jump
-          frac=sdfraction
+          frac=search_par1
        ELSE
           ! Check failures
           ! message of too many failures
@@ -768,7 +768,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
        !Generate a random orthonormal basis
        CALL BASE_O_N(dim_eff,basis)
        DO l=1,dim_eff
-         size_jump=sdfraction
+         size_jump=search_par1
 701      CONTINUE
          !Place the first interval around the start_jump
 702      CALL RANDOM_NUMBER(rn)
@@ -984,8 +984,8 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
              n_ntries = 0
        END IF
     END IF
-    
-    
+
+
     j=1
     DO i=1,npar
       IF(par_fix(i).NE.1) THEN
@@ -1043,7 +1043,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     CALL CHOLESKY(dim_eff,live_cov,live_chol)
     CALL TRIANG_INV(dim_eff,live_chol,inv_chol)
     start_jump_t=matmul(inv_chol,start_jump) !start jump in the new space
-    
+
     ! Make several consecutive casual jumps in the region with loglikelyhood > minlogll
 700 CONTINUE
     DO i=1,njump
@@ -1051,7 +1051,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
        !Generate a random orthonormal basis
        CALL BASE_O_N(dim_eff,basis)
        DO l=1,dim_eff
-         size_jump=sdfraction
+         size_jump=search_par1
 701      CONTINUE
          !Place the first interval around the start_jump
 702      CALL RANDOM_NUMBER(rn)
@@ -1123,11 +1123,11 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
            IF(ntries .GT. maxtries) THEN
              n_ntries=n_ntries+1
              ntries=0
-             
+
              WRITE(*,*) 'Too many tries to find new live points for try n.', &
              itry,'!!!! More than',maxtries,&
              'n_ntries =',n_ntries,' over ', maxntries, 'n. step =', n
-             
+
              IF(n_ntries .GE. maxntries) THEN
                IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
                  IF(n_call_cluster_it>=3) THEN
