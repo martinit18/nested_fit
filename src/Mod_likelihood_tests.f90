@@ -54,10 +54,10 @@ CONTAINS
     LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD(par)
 
   END FUNCTION LOGLIKELIHOOD_WITH_TEST
-  
+
   !------------------------------------------------------------------------------------------------------------------------
 
-  
+
   REAL(8) FUNCTION LOGLIKELIHOOD(par)
     ! Main likelihood function
 
@@ -106,35 +106,35 @@ CONTAINS
 
 
   !#####################################################################################################################
-  !############################################## AVAILABLE FUNCTIONS ################################################## 
+  !############################################## AVAILABLE FUNCTIONS ##################################################
   !#####################################################################################################################
 
-  
+
   !#####################################################################################################################
   REAL(8) FUNCTION TEST_SIMPLE_GAUSS(par)
-    
+
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
     REAL(8), PARAMETER :: pi=3.141592653589793d0
     REAL(8), PARAMETER :: x0=0., sigma=1., amp=1.
     REAL(8) :: x
 
     x = par(1)
-    
+
     IF(DABS(-(x-x0)**2/(2*sigma**2)).LT.700) THEN
        TEST_SIMPLE_GAUSS = amp/(dsqrt(2*pi)*sigma)*dexp(-(x-x0)**2/(2*sigma**2))
     ELSE
        TEST_SIMPLE_GAUSS = 0.d0
     END IF
-    
+
 
   END FUNCTION TEST_SIMPLE_GAUSS
-  
+
   !#####################################################################################################################
-  
+
   REAL(8) FUNCTION TEST_GAUSS(par)
     !> Basic multidimensional Gaussian likelihood with mean mu(:) and an uncorrelated covariance sigma(:).
     !! Inspired from polychord code
-    !! 
+    !!
     !! It is normalised so that it should output an evidence of 1.0 for
     !! effectively infinite priors.
     !!
@@ -142,18 +142,18 @@ CONTAINS
 
     REAL(8), DIMENSION(:), INTENT(IN) :: par
     REAL(8), PARAMETER :: pi=3.141592653589793d0
-    REAL(8), DIMENSION(SIZE(par)) :: sigma ! Standard deviation (uncorrelated) 
-    REAL(8), DIMENSION(SIZE(par)) :: mu    ! Mean 
+    REAL(8), DIMENSION(SIZE(par)) :: sigma ! Standard deviation (uncorrelated)
+    REAL(8), DIMENSION(SIZE(par)) :: mu    ! Mean
     REAL(8), DIMENSION(SIZE(par)) :: x     ! Variable to explore
 
     x = par
 
     ! Initialise the mean and standard deviation
-    mu    = 5d-1  ! mean 
+    mu    = 5d-1  ! mean
     sigma = 1d-2  ! all sigma set relatively small
 
     ! Gaussian normalisation
-    TEST_GAUSS = - SUM( LOG( sigma ) + LOG(2*pi)/2d0 ) 
+    TEST_GAUSS = - SUM( LOG( sigma ) + LOG(2*pi)/2d0 )
 
     ! x dependence
     TEST_GAUSS = TEST_GAUSS - SUM( ( ( x - mu ) / sigma ) ** 2d0 ) / 2d0
@@ -162,7 +162,7 @@ CONTAINS
   END FUNCTION TEST_GAUSS
 
   !#####################################################################################################################
-  
+
   REAL(8) FUNCTION TEST_GAUSSIAN_SHELLS(par)
     !> Basic multidimensional Gaussian shells likelihood with mean mu(:) and an uncorrelated covariance sigma(:).
     !! Inspired from polychord and multinest codes
@@ -170,7 +170,7 @@ CONTAINS
     REAL(8), DIMENSION(:), INTENT(IN) :: par
     REAL(8), PARAMETER :: pi=3.141592653589793d0
     REAL(8) :: ADDLOG, radius, sigma, A_norm, value_shell_1, value_shell_2
-    REAL(8), DIMENSION(SIZE(par)) :: mu    ! Mean 
+    REAL(8), DIMENSION(SIZE(par)) :: mu    ! Mean
     REAL(8), DIMENSION(SIZE(par)) :: x     ! Variable to explore
 
     x = par
@@ -181,7 +181,7 @@ CONTAINS
     sigma = 1d-2  ! all sigma set relatively small
 
     ! Gaussian normalisation like Feroz 2009
-    A_norm = - ( LOG( sigma ) + LOG(2*pi)/2d0 ) 
+    A_norm = - ( LOG( sigma ) + LOG(2*pi)/2d0 )
 
     ! First shell
     ! Parameters
@@ -211,7 +211,7 @@ CONTAINS
 
     theta = par
 
-    TEST_EGGBOX = - (2 + PRODUCT(COS(THETA/2d0)))**5
+    TEST_EGGBOX = (2 + PRODUCT(COS(THETA/2d0)))**5
 
 
   END FUNCTION TEST_EGGBOX
@@ -229,12 +229,12 @@ CONTAINS
     END IF
 
   END SUBROUTINE INIT_ROSENBROCK
-  
+
   REAL(8) FUNCTION TEST_ROSENBROCK(par)
     ! Upside down Rosenbock function
     ! http://en.wikipedia.org/wiki/Rosenbrock_function
-    ! 
-    ! \log\mathcal{L}(x) = - \sum_{i=1}^{N-1}  (1 -x_i)^2 + 100(x_{i+1} -\x_i^2 )^2 
+    !
+    ! \log\mathcal{L}(x) = - \sum_{i=1}^{N-1}  (1 -x_i)^2 + 100(x_{i+1} -\x_i^2 )^2
     ! it has exactly one minimum for N=2 and N=3 (at (1,1) and (1, 1, 1)) and exactly two minima for 4<= N<= 7.
     ! The global minimum of all ones and a local minimum near x_{N})= (x_{1},x_{2},\dots ,x_{N})=(-1,1,\dots ,1).
     ! For N = 2, it is normalized to 1.
@@ -245,17 +245,17 @@ CONTAINS
     INTEGER(4) :: i=0
 
     x = par
-    
+
     TEST_ROSENBROCK =  - SUM( (1-x(1:npar-1))**2 + 100d0*( x(2:npar) - x(1:npar-1)**2 )**2 )
-    
+
   END FUNCTION TEST_ROSENBROCK
 
-  !#####################################################################################################################   
+  !#####################################################################################################################
 
   REAL(8) FUNCTION TEST_GAUSS_WITH_CORRELATION(par)
     !> Multidimensional Gaussian likelihood with mean mu(:) and a correlated covariance Sigma(:). (Here 2D)
     !! Inspired by the TEST_GAUSS function (https://en.wikipedia.org/wiki/Multivariate_normal_distribution)
-    !! 
+    !!
     !! It is normalised so that it should output an evidence of 1.0 for
     !! effectively infinite priors.
     !!
@@ -263,17 +263,17 @@ CONTAINS
 
     REAL(8), DIMENSION(:), INTENT(IN) :: par
     REAL(8), PARAMETER :: pi=3.141592653589793d0
-    REAL(8) :: sigma_d, sigma_c ! diagonal and non diagonal terms of the covariance (correlated) 
-    REAL(8), DIMENSION(SIZE(par)) :: mu    ! Mean 
+    REAL(8) :: sigma_d, sigma_c ! diagonal and non diagonal terms of the covariance (correlated)
+    REAL(8), DIMENSION(SIZE(par)) :: mu    ! Mean
     REAL(8), DIMENSION(SIZE(par)) :: x     ! Variable to explore
 
     x = par
 
     ! Initialise the mean and standard deviation
-    mu    = 0  ! mean 
+    mu    = 0  ! mean
     sigma_d = 1d-2  ! all sigma set relatively small, diagonal elements
     sigma_c = 9d-3  ! non-diagonal elements
-    
+
     ! Gaussian normalisation
     TEST_GAUSS_WITH_CORRELATION = - LOG( sigma_d**2-sigma_c**2 )/2.d0 - LOG(2*pi)
 
@@ -283,6 +283,6 @@ CONTAINS
 
 
   END FUNCTION TEST_GAUSS_WITH_CORRELATION
-  !##################################################################################################################### 
+  !#####################################################################################################################
 
 END MODULE MOD_LIKELIHOOD
