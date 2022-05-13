@@ -2,6 +2,7 @@ PROGRAM NESTED_FIT
   ! Time-stamp: <Last changed by martino on Monday 07 June 2021 at CEST 10:29:22>
   !
   ! Please read README and LICENSE files for more inforamtion
+  ! 4.2  New search method added: uniform (around each live point) and slice sampling
   ! 4.1  Several cluster recognition methods added.
   ! 4.0  2D data analysis available, new input and output files for future developments
   !      1D parallelization acceleration with masks instead of IF conditions in the likelihood
@@ -78,9 +79,7 @@ PROGRAM NESTED_FIT
   ! Parameters values and co.
   CHARACTER :: string*128
   REAL(4) :: version_file
-  REAL(4), PARAMETER :: version = 4.1
-  REAL(8) :: search_par1 = 0.0
-  REAL(8) :: search_par2 = 0.0
+  REAL(4), PARAMETER :: version = 4.2
   ! Results from Nested sampling
   INTEGER(4) :: nall=0
   REAL(8) :: evsum_final=0., live_like_max=0.
@@ -228,14 +227,7 @@ PROGRAM NESTED_FIT
      CLOSE(88)
   ENDIF
 
-  ! Adapt serach parameters to the search algorithm
-  IF (search_method.EQ.'RANDOM_WALK') THEN
-     sdfraction = search_par1
-     njump      = INT(search_par2)
-  END IF
-
-
-  ! ----------------------------------------------------------------------------------------------------------------------------------
+ !----------------------------------------------------------------------------------------------------------------------------------
 
 
   ! Some tests and messages

@@ -9,7 +9,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   !USE RNG
 
   ! Parameter module
-  USE MOD_PARAMETERS, ONLY:  nlive, evaccuracy, njump, par_in, par_step, par_bnd1, par_bnd2, par_fix
+  USE MOD_PARAMETERS, ONLY:  nlive, evaccuracy, search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, search_method
   ! Module for likelihood
   USE MOD_LIKELIHOOD
   ! Module for searching new live points
@@ -53,6 +53,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   INTEGER(4) :: i,j, l, n, jlim
   REAL(8) :: ADDLOG, RANDN, rn
   CHARACTER :: out_filename*64
+  INTEGER(4) :: n_call_cluster
 
   EXTERNAL :: SORTN
 
@@ -83,6 +84,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   nstep = maxstep - nlive + 1
   !maxtries = 50*njump ! Accept an efficiency of more than 2% for the exploration, otherwise change something
 
+  n_call_cluster=0
 
   ! ---------- Inintial live points sorting ------------------------------------------------
   WRITE(*,*) 'Sorting live points. N. of points = ', nlive
@@ -206,8 +208,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
      ! Find a new live point
      ! Parallelism not implemented, does not accelerate
      !!!!OMP PARALLEL DEFAULT(NONE) SHARED(n,itry,min_live_like,live_like,live)
-     CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
-          live_like_new,live_new,icluster,ntries,too_many_tries)
+500  CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
+          live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
      !!!!OMP END PARALLEL
      IF (too_many_tries) THEN
         nstep_final = n - 1
@@ -279,7 +281,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
         WRITE(*,*) 'N. try:', itry, 'N step:', n, &
              'Min. loglike', min_live_like,'Evidence: ',evsum, &
              'Ev. step:', evstep(n),'Ev. pres. acc.:', evtotest-evsum, &
-             'Typical eff.:', REAL(njump)/ntries
+             'Typical eff.:', search_par2/ntries
      !
      !   ! Store actual live points
      !   WRITE(out_filename,1000) 'live_points_',itry,'.dat'

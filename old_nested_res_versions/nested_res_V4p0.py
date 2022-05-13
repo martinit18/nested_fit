@@ -97,7 +97,7 @@ class Analysis(object):
     def load_output_data(self, path=currentpath):
         import gzip
         import shutil
-        
+
         # Adjust the path first
         if path[-1]!='/' and path != None:  path = path+'/'
         #

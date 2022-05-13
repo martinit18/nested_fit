@@ -1,12 +1,12 @@
-4.1					# Program version	
+4.1					# Program version
 he-histo.dat				# Name of the (first) data file
 n					# Set of files (y/n)
 1c					# Type of data: error bars or not and dimensions (1c,1e,2c,2s,2e)
 1000					# Number of live points
 1.00E-05				# Evidence_fina_accuracy
 RANDOM_WALK     			# Type of search of live points
-0.2	20	200	2		# Fraction of st. dev., n of jumps, max n. tries, max of max tries
-y	g 	0.6	0.2		# cluster anaylis or not (y/n), method (f,g), distance, bandwidth
+0.2	20	200	2		# Param. search algo. (2), max n. tries, max of max tries
+y	g 	0.6	0.2		# Cluster analysis or not (y/n), method (f/g/d/s/k), param. cluster algo. (2)
 1	100000				# Number of tries and maximum of steps
 QUAD_GAUSS_BG				# Name of the function
 L					# Additional data: left/right (l/r)

@@ -1,12 +1,12 @@
-4.1				# Program version
+4.2				# Program version
 gauss_bg-x0_300-sigma_20-A_300-p_to_bg_20-bin_1.dat	# Name of the (first) data file
 y				# Set of files (y/n)
 1c				# Type of data: error bars or not and dimensions (1c,1e,2c,2s,2e)
 1000 				# Number of live points
 1.E-05		  		# Evidence final accuracy
 RANDOM_WALK     		# Type of search of live points
-0.2	20	100	10	# Fraction of st. dev., n of jumps, max n. tries, max of max tries
-n	g	0.5	0.2	# cluster anaylis or not (y/n), method (f/g), distance, bandwidth
+0.2	20	100	10	# Param. search algo. (2), max n. tries, max of max tries
+n	g	0.5	0.2	# Cluster analysis or not (y/n), method (f/g/d/s/k), param. cluster algo. (2)
 1	100000			# Number of tries and maximum of steps
 GAUSS_BG_SET	  		# Name of the function
 L               		# Additional data: left/right (l/r)
