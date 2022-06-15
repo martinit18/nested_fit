@@ -414,23 +414,14 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
         CALL MAKE_CLUSTER_STD(p_in,j)
       END DO
     ELSE
-      DO j=1,ncluster-1
+      DO j=0,ncluster
         ! WRITE(*,*) 'Computing mean and std. dev. of cluster ', j
         CALL MAKE_CLUSTER_STD(p_in,j)
       END DO
       DO j=1,np
-        IF(p_cluster(j).EQ.ncluster) THEN
-          cluster_np(ncluster)=cluster_np(ncluster) + 1
+        IF(p_cluster(j).EQ.0) THEN
+          cluster_np(0)=cluster_np(0) + 1
         END IF
-      END DO
-
-      DO j=1,ndim
-        cluster_mean(ncluster,j) = 0.
-        cluster_std(ncluster,j) = 0.
-        cluster_mean(ncluster,j) = SUM(p_in(1:np,j))/np
-        cluster_std(ncluster,j) =  &
-            DSQRT(SUM((p_in(1:np,j)-cluster_mean(ncluster,j))**2)/ &
-                  (np-1))
       END DO
     END IF
 
@@ -839,8 +830,6 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
 
   !--------------------------------------------------------------------------------------------------------------
 
-
-
   SUBROUTINE MAKE_CLUSTER_STD(p,icl)
     ! Make analysis of the selected cluster
     REAL(8), DIMENSION(np,ndim), INTENT(IN) :: p
@@ -850,32 +839,42 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     REAL(8), DIMENSION(np,ndim) :: p_cl
 
 
-    ! Recognize cluster elements------------------------------
-    np_cl = 0
-    p_cl = 0.
-    DO j=1,np
-       IF(p_cluster(j).EQ.icl) THEN
-          np_cl = np_cl + 1
-          p_cl(np_cl,:) = p(j,:)
-       END IF
-    END DO
-    cluster_np(icl) = np_cl
-
-    ! Compute average and std---------------------------------
-    IF(cluster_np(icl).EQ.1) THEN
-       cluster_mean(icl,:) = p_cl(1,:)
-       cluster_std(icl,:) = 0.
+    IF(icl==0) THEN
+      DO l=1,ndim
+        cluster_mean(icl,l) = 0.
+        cluster_std(icl,l) = 0.
+        cluster_mean(icl,l) = SUM(p(1:np,l))/np
+        cluster_std(icl,l) =  &
+            DSQRT(SUM((p(1:np,l)-cluster_mean(icl,l))**2)/ &
+                  (np-1))
+      END DO
     ELSE
-       DO l=1,ndim
-         cluster_mean(icl,l) = 0.
-         cluster_std(icl,l) = 0.
-         cluster_mean(icl,l) = SUM(p_cl(1:cluster_np(icl),l))/cluster_np(icl)
-         cluster_std(icl,l) =  &
-         DSQRT(SUM((p_cl(1:cluster_np(icl),l)-cluster_mean(icl,l))**2)/ &
-                (cluster_np(icl)-1))
-       END DO
+      ! Recognize cluster elements------------------------------
+      np_cl = 0
+      p_cl = 0.
+      DO j=1,np
+         IF(p_cluster(j).EQ.icl) THEN
+            np_cl = np_cl + 1
+            p_cl(np_cl,:) = p(j,:)
+         END IF
+      END DO
+      cluster_np(icl) = np_cl
+  
+      ! Compute average and std---------------------------------
+      IF(cluster_np(icl).EQ.1) THEN
+         cluster_mean(icl,:) = p_cl(1,:)
+         cluster_std(icl,:) = 0.
+      ELSE
+         DO l=1,ndim
+           cluster_mean(icl,l) = 0.
+           cluster_std(icl,l) = 0.
+           cluster_mean(icl,l) = SUM(p_cl(1:cluster_np(icl),l))/cluster_np(icl)
+           cluster_std(icl,l) =  &
+           DSQRT(SUM((p_cl(1:cluster_np(icl),l)-cluster_mean(icl,l))**2)/ &
+                  (cluster_np(icl)-1))
+         END DO
+      END IF
     END IF
-
   END SUBROUTINE MAKE_CLUSTER_STD
 
   !--------------------------------------------------------------------------------------------------------------
