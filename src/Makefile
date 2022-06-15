@@ -6,11 +6,11 @@ NAME    = nested_fit4.3alpha.exe
 CFLAGS  =
 ############## FLAG TO COSTUMIZE #############################
 #### Uncomment next line to run in parallel in LINUX
-#FFLAGS  = -fopenmp
+FFLAGS  = -fopenmp
 #### Uncomment next line to optimize in MAC
 #FFLAGS   = -framework accelerate
 #### Uncomment next line to run in parallel and optimize in MAC
-FFLAGS   = -framework accelerate -fopenmp
+#FFLAGS   = -framework accelerate -fopenmp
 ###############################################################
 ### ATTENTION!!!!
 ### If you do not want to run in parallel,

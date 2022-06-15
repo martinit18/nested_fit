@@ -86,14 +86,22 @@ Input: (x, y, z, error z) TO BE IMPLEMENTED
 
 ```
 200                      # Number of live points
-1.E-05                   # Evidence final accuracy
+LIKE_ACC		 # Method used for convergence 
+1.E-05	0.01             # Evidence final accuracy and additional convergence parameter
+```
+
+For the moment, there are three convergence methods :
+- `LIKE_ACC` : the algorithm stops when the difference between the calculated evidence and the estimated total evidence is below a certain value (first parameter on the above line). Typical value for the parameter : 1.E-05.
+- `ENERGY_ACC` : the algorithm stops when the difference between the calculated partition function and the estimated total partition function is below a certain value (first parameter on the above line). The second parameter corresponds to the temperature at which the partition function is calculated. Typical value for the first parameter : 1.E-05.
+- `ENERGY_MAX` : the algorithm stops when the difference between the current contribution to the partion function and its maximal previous contribution is below a certain value (first parameter on the above line). The second parameter corresponds to the temperature at which the partition function is calculated. Typical value for the first parameter : -10.
+```
 RANDOM_WALK              # Type of search of live points
 0.1	20	100	10   # Param. search algo.(2), max n. tries, max of max tries
 ```
 For the moment, a random walk (`RANDOM_WALK`), a uniform search around each live point (`UNIFORM`), slice sampling (`SLICE_SAMPLING`) and slice sampling with an adaptable step (`SLICE_SAMPLING_ADAPT`) are implemented. The first two parameters of the above line are specific to the search algorithm:
 - `RANDOM_WALK` par. 1: fraction of standard deviation for each jump, par. 2: number of jumps. Suggested values: 0.1-0.2, 10-40.
 - `SLICE_SAMPLING` and `SLICE_SAMPLING_ADAPT` par. 1: fraction of standard deviation for segment exploration, par. 2: number of jumps. Suggested values: ~1, 3-5.
-- `UNIFORM` par. 1: fraction of standard deviation for the box size, par. 2: number of jumps. Suggested values: 0.1-11, 1.
+- `UNIFORM` par. 1: fraction of standard deviation for the box size, par. 2: number of jumps. Suggested values: 0.1-1, 1.
 
 
 ```
@@ -126,11 +134,13 @@ Additional information can be found in the reference articles.
 
 ## Present version and history of the past versions
 
-The present version is 4.2
+The present version is 4.3alpha
 New features:
-- additional search methods : Uniform search around each live point and Slice Sampling  
+- New (test) function : harmonic potential in 3D
+- Choice between different convergence methods : evidence or partition function  
 
 Previous versions are:
+ - 4.2 Additional search methods : Uniform search around each live point and Slice Sampling
  - 4.1.1 New cluster recognition methods added
  - 4.0.3 2D data analysis for count-type XY \
  Computation acceleration for the 1D case introducing a mask instead of IF condition in the likelihood \

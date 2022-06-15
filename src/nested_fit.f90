@@ -2,6 +2,8 @@ PROGRAM NESTED_FIT
   ! Time-stamp: <Last changed by martino on Monday 07 June 2021 at CEST 10:29:22>
   !
   ! Please read README and LICENSE files for more inforamtion
+  ! 4.3  New (test) functions : harmonic and Lennard - Jones potentials in 3D
+  !      Choice between different convergence methods : evidence or partition function
   ! 4.2  New search method added: uniform (around each live point) and slice sampling
   ! 4.1  Several cluster recognition methods added.
   ! 4.0  2D data analysis available, new input and output files for future developments
@@ -79,7 +81,7 @@ PROGRAM NESTED_FIT
   ! Parameters values and co.
   CHARACTER :: string*128
   REAL(4) :: version_file
-  REAL(4), PARAMETER :: version = 4.2
+  REAL(4), PARAMETER :: version = 4.3
   ! Results from Nested sampling
   INTEGER(4) :: nall=0
   REAL(8) :: evsum_final=0., live_like_max=0.
@@ -164,7 +166,8 @@ PROGRAM NESTED_FIT
   READ(77,*) set_yn, string
   READ(77,*) data_type, string
   READ(77,*) nlive, string
-  READ(77,*) evaccuracy, string
+  READ(77,*) conv_method, string
+  READ(77,*) evaccuracy, conv_par, string
   READ(77,*) search_method, string
   READ(77,*) search_par1, search_par2, maxtries, maxntries, string
   READ(77,*) cluster_yn, cluster_method, cluster_par1, cluster_par2
