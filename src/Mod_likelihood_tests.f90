@@ -80,9 +80,7 @@ CONTAINS
        LOGLIKELIHOOD=TEST_GAUSS_WITH_CORRELATION(par)
     ELSE IF(funcname.eq.'ENERGY_HARM_3D') THEN
        LOGLIKELIHOOD=ENERGY_HARM_3D(par)
-    ELSE IF(funcname.eq.'ENERGY_LJ_3D') THEN
-       LOGLIKELIHOOD=ENERGY_LJ_3D(par)
-    ELSE
+   ELSE
        WRITE(*,*) 'Error of the function name in Mod_likelihood_test module'
        WRITE(*,*) 'Check the manual and the input file'
        STOP
@@ -290,7 +288,7 @@ CONTAINS
   !#####################################################################################################################
 
 
-    REAL(8) FUNCTION ENERGY_HARM_3D(par)
+  REAL(8) FUNCTION ENERGY_HARM_3D(par)
     !> The parameters are the positions of the points (...,x_i,y_i,z_i,....)
     !> Potential of the form eps*SUM(x-i**2+y_i**2+z_i**2)
 
