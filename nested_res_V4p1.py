@@ -35,7 +35,7 @@ a="""
 # 'an.load_data()'                                        #
 # otherwise specific the path                             #
 # 'an.load_data(path="your path")'                        #
-#                                                         #
+#                                                        #
 # Uses the different functions                            #
 # 'an.function()', (ex: 'an.plot()')                      #
 #                                                         #
@@ -1446,8 +1446,9 @@ class Analysis(object):
             print('Use a parameter name and not a number')
             return
 
+
         g = plots.get_single_plotter()
-        g.plot_1d(self.path+'/nf_output_points.txt',par_name)
+        g.plot_1d(self.path+'/nf_output_points',par_name)
 
         #---------------------------------------------------------------------------------------------------------------------
 
