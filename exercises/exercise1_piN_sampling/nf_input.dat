@@ -11,7 +11,7 @@ n	f	0.5	0.2	# Cluster analysis or not (y/n), method (f/g/d/s/k), param. cluster 
 SIX_VOIGT_BG 	  		# Name of the function
 L               		# Additional data: left/right (l/r)
 500     20      		# Additional data:  npoint, nwidth for convolution
-180   350   			# xmin, xmax
+180   350   0	0		# xmin, xmax
 15               		# number of parameters
 # npar  name    value   step    min     max     fixed
 1	'x01'	250	-1	240	260	0

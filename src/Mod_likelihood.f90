@@ -214,7 +214,7 @@ CONTAINS
              STOP
           END IF
           ! Calculation of the constant part of the likelihood with Gaussian distribution
-          const_ll = const_ll -DLOG(nc_err_raw(i))
+          const_ll = -DLOG(nc_err_raw(i))
        END IF
     ENDDO
 
@@ -404,6 +404,8 @@ CONTAINS
           END DO
        END DO
        LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_1D(par)
+    ELSE IF (data_type.EQ.'1e') THEN
+      LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_1D(par)
     ELSE IF (data_type.EQ.'2c') THEN
        ! Check if the choosen function assumes zero or negative values
        DO i=1, nx
@@ -420,6 +422,9 @@ CONTAINS
           END DO
        END DO
        LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_2D(par)
+    ELSE IF (data_type.EQ.'2e') THEN
+      LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_2D(par)
+
     END IF
 
 
@@ -543,8 +548,6 @@ CONTAINS
     ! Final action for the likelihood function
 
     REAL(8), DIMENSION(npar), INTENT(IN) :: live_max, par_mean, par_median_w
-
-    write(*,*) 'hello'
 
     ! Write auxiliar files for plots
     IF (data_type(1:1).EQ.'1') THEN
