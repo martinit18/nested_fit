@@ -1,5 +1,5 @@
 #  Automatic Time-stamp: <Last changed by martino on Tuesday 08 June 2021 at CEST 15:08:06>
-NAME    = nested_fit4.2.0.exe
+NAME    = nested_fit4.2.1.exe
 
 .SUFFIXES : .f90 .f .o .c .mod
 
