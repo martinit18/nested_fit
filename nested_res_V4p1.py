@@ -1450,6 +1450,8 @@ class Analysis(object):
         g = plots.get_single_plotter()
         g.plot_1d(self.path+'/nf_output_points',par_name)
 
+        plt.show()
+
         #---------------------------------------------------------------------------------------------------------------------
 
     def histo2D_interp(self,par_name1,par_name2,path=currentpath):
