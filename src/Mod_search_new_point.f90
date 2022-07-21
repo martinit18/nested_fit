@@ -1,5 +1,5 @@
 MODULE MOD_SEARCH_NEW_POINT
-  ! Automatic Time-stamp: <Last changed by martino on Monday 03 May 2021 at CEST 12:14:44>
+  ! Automatic Time-stamp: <Last changed by martino on Wednesday 20 July 2022 at CEST 15:10:52>
   ! Module for search of new points
 
   ! Module for the input parameter definition
@@ -15,7 +15,7 @@ CONTAINS
 
 
   SUBROUTINE SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
-          live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
+          live_like_new,live_new,icluster,ntries,too_many_tries)
     ! Main search function
     USE MOD_PARAMETERS, ONLY: search_method, nlive
 
@@ -27,7 +27,6 @@ CONTAINS
     REAL(8), DIMENSION(npar), INTENT(OUT) :: live_new
     INTEGER(4), INTENT(OUT) :: icluster, ntries
     LOGICAL, INTENT(OUT) :: too_many_tries
-    INTEGER(4), INTENT(INOUT) :: n_call_cluster
 
     ! Select the search method
     IF (search_method.eq.'RANDOM_WALK') THEN

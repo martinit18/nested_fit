@@ -1,6 +1,6 @@
 SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,&
      live_final,live_like_max,live_max)
-  ! Time-stamp: <Last changed by martino on Monday 03 May 2021 at CEST 11:56:05>
+  ! Time-stamp: <Last changed by martino on Wednesday 20 July 2022 at CEST 17:07:02>
   ! For parallel tests only
   !SUBROUTINE NESTED_SAMPLING(irnmax,rng,itry,ndata,x,nc,funcname,&
   !   npar,par_fix,par_step,par_in,par_bnd1,par_bnd2,nlive,evaccuracy,sdfraction,&
@@ -39,13 +39,14 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   REAL(8), DIMENSION(maxstep) :: live_like_old
   REAL(8), DIMENSION(maxstep,npar) :: live_old
   REAL(8) :: evsum = 0., evrestest = 0., evtotest = 0.
-  ! Search variable
-  INTEGER(4) :: icluster=0, icluster_old=0, ntries=0
-  LOGICAL :: too_many_tries = .false.
-  ! Live points variables
+  ! Search variable to monitor efficiency
+  INTEGER(4) :: ntries=0
+  ! Live points variables parallel
   REAL(8) :: min_live_like = 0.
-  REAL(8), DIMENSION(nlive) :: live_like
-  REAL(8), DIMENSION(nlive,npar) :: live
+  REAL(8), ALLOCATABLE, DIMENSION(:,nlive) :: live_like
+  REAL(8), ALLOCATABLE, DIMENSION(:,nlive,npar) :: live
+  LOGICAL ALLOCATABLE :: too_many_tries(:)
+  INTEGER(4) :: icluster_old=0
   ! Final calculations
   INTEGER(4) :: nstep_final
   REAL(8) :: last_likes, live_like_last, evrest_last, evlast
@@ -53,7 +54,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   INTEGER(4) :: i,j, l, n, jlim
   REAL(8) :: ADDLOG, RANDN, rn
   CHARACTER :: out_filename*64
-  INTEGER(4) :: n_call_cluster
 
   EXTERNAL :: SORTN
 
@@ -84,7 +84,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   nstep = maxstep - nlive + 1
   !maxtries = 50*njump ! Accept an efficiency of more than 2% for the exploration, otherwise change something
 
-  n_call_cluster=0
 
   ! ---------- Inintial live points sorting ------------------------------------------------
   WRITE(*,*) 'Sorting live points. N. of points = ', nlive
@@ -187,124 +186,130 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   !                                 START THE MAIN LOOP                                    !
   !                                                                                        !
   !----------------------------------------------------------------------------------------!
-
-  DO n=2, nstep
-
-
-     ! Calculate steps, mass and rest each time without crude approximation
-     !!CALL RANDOM_NUMBER(rng)
-     !!tstep(n+1) = MAXVAL(rng)*tstep(n)
-
-     !tstep(n+1) = MAXVAL(rng(irn:irn+nlive))*tstep(n)
-     !irn = irn + nlive
-     ! trapezoidal rule applied here (Skilling Entropy 2006)
-     tlnmass(n) = DLOG(-(tstep(n+1)-tstep(n-1))/2.d0)
-     tlnrest(n) = DLOG((tstep(n+1)+tstep(n-1))/2.d0)
-
-     ! Present minimal value of the likelihood
-     min_live_like = live_like(1)
+  n = 1
+  DO WHILE (n.LE.nstep)
 
      ! ##########################################################################
      ! Find a new live point
-     ! Parallelism not implemented, does not accelerate
-     !!!!OMP PARALLEL DEFAULT(NONE) SHARED(n,itry,min_live_like,live_like,live)
-500  CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
-          live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
-     !!!!OMP END PARALLEL
-     IF (too_many_tries) THEN
+     ! Parallelism is going to be implemented soon
+     !OMP PARALLEL DO 
+500  DO nt = 1, ntmax
+        CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
+             live_like_new(nt),live_new(nt),icluster(nt),ntries,too_many_tries(nt))
+     END DO
+     !OMP END PARALLEL DO
+     
+     IF (ANY(too_many_tries)) THEN
         nstep_final = n - 1
         GOTO 601
      END IF
      ! ##########################################################################
 
-     ! Reorder found point (no parallel here) and make the required calculation for the evidence
-     ! Reorder point
-     ! Order and exclude last point
-     DO j=1,nlive-1
-        IF (live_like_new.GT.live_like(j).AND.live_like_new.LT.live_like(j+1)) THEN
-           jlim = j
-        ELSE IF (live_like_new.GT.live_like(nlive)) THEN
-           jlim = nlive
+     DO nt = 1, ntmax
+
+        ! If the parallely computed live point is not good anymore, skip it.
+        ! Otherwise take it for loop calculation 
+        IF ((nt.GT.1).AND.(live_like_new.LE.min_live_like)) THEN
+           CYCLE
+        ELSE
+           n = n +1
+        ENDIF
+        
+        ! Calculate steps, mass and rest each time
+        ! trapezoidal rule applied here (Skilling Entropy 2006)
+        tlnmass(n) = DLOG(-(tstep(n+1)-tstep(n-1))/2.d0)
+        tlnrest(n) = DLOG((tstep(n+1)+tstep(n-1))/2.d0)
+        
+        ! Present minimal value of the likelihood
+        min_live_like = live_like(1)
+        ! Reorder found point (no parallel here) and make the required calculation for the evidence
+        ! Reorder point
+        ! Order and exclude last point
+        DO j=1,nlive-1
+           IF (live_like_new.GT.live_like(j).AND.live_like_new.LT.live_like(j+1)) THEN
+              jlim = j
+           ELSE IF (live_like_new.GT.live_like(nlive)) THEN
+              jlim = nlive
+           END IF
+        END DO
+        
+        ! Store old values
+        live_like_old(n) = live_like(1)
+        live_old(n,:) = live(1,:)
+        
+        IF (jlim.LT.1.OR.jlim.GT.nlive) THEN
+           WRITE(*,*) 'Problem in the search method, or in the calculations'
+           WRITE(*,*) 'No improvement in the likelihood value after finding the new point'
+           WRITE(*,*) 'j = ', jlim, 'old min like = ', min_live_like, 'new min like = ', live_like_new
+           STOP
+        ELSE IF (jlim.EQ.1) THEN
+           live_like(1) = live_like_new
+           live(1,:) = live_new(:)
+        ELSE
+           ! Shift values
+           live_like(1:jlim-1) =  live_like(2:jlim)
+           live(1:jlim-1,:) =  live(2:jlim,:)
+           ! Insert new value
+           live_like(jlim) =  live_like_new
+           live(jlim,:) =  live_new
+           ! The rest stay as it is
+        END IF
+        
+        
+        ! Assign to the new point, the same cluster number of the start point
+        IF (cluster_on) THEN
+           ! Instert new point
+           p_cluster(1:jlim-1) =  p_cluster(2:jlim)
+           p_cluster(jlim) = icluster
+           cluster_np(icluster) = cluster_np(icluster) + 1
+           ! Take out old point
+           icluster_old = p_cluster(1)
+           cluster_np(icluster_old) = cluster_np(icluster_old) - 1
+           ! Call cluster module to recalculate the std of the considered cluster and the cluster of the discarted point
+           CALL REMAKE_CLUSTER_STD(live,icluster,icluster_old)
+        END IF
+        
+        ! Calculate the evidence for this step
+        evstep(n) = live_like_old(n) + tlnmass(n)
+        
+        ! Sum the evidences
+        evsum = ADDLOG(evsum,evstep(n))
+        
+        ! Check if the estimate accuracy is reached
+        evrestest = live_like(nlive) + tlnrest(n)
+        evtotest = ADDLOG(evsum,evrestest)
+        
+        IF (evtotest-evsum.LT.evaccuracy) GOTO 301
+        
+        IF (MOD(n,50).EQ.0) THEN
+           !   ! Write status
+           WRITE(*,*) 'N. try:', itry, 'N step:', n, &
+                'Min. loglike', min_live_like,'Evidence: ',evsum, &
+                'Ev. step:', evstep(n),'Ev. pres. acc.:', evtotest-evsum, &
+                'Typical eff.:', search_par2/ntries
+           !
+           !   ! Store actual live points
+           !   WRITE(out_filename,1000) 'live_points_',itry,'.dat'
+           !   OPEN(22,FILE=out_filename,STATUS= 'UNKNOWN')
+           !   WRITE(22,*) '# n     lnlikelihood     parameters'
+           !   DO l=1,nlive
+           !      WRITE(22,*) l, live_like(l), live(l,:)
+           !   END DO
+           !   CLOSE(22)
+           !   pause
+           !
+           !   ! Write temporal results in a file
+           !   WRITE(out_filename,2000) 'status_',itry,'.dat'
+           !   OPEN(33,FILE='status.dat',STATUS= 'UNKNOWN')
+           !   WRITE(33,*) 'New last live point : ', live_like(1), live(1,:)
+           !   WRITE(33,*) 'New first live point : ', live_like(nlive), live(nlive,:)
+           !   WRITE(33,*) 'N step: ', n, 'Ev. at present: ',evsum, &
+           !        'Ev. of the step: ', evstep(n), 'Diff. with the estimate total ev.: ', evtotest-evsum
+           !   CLOSE(33)
+           !
         END IF
      END DO
-
-     ! Store old values
-     live_like_old(n) = live_like(1)
-     live_old(n,:) = live(1,:)
-
-     IF (jlim.LT.1.OR.jlim.GT.nlive) THEN
-        WRITE(*,*) 'Problem in the search method, or in the calculations'
-        WRITE(*,*) 'No improvement in the likelihood value after finding the new point'
-        WRITE(*,*) 'j = ', jlim, 'old min like = ', min_live_like, 'new min like = ', live_like_new
-        STOP
-     ELSE IF (jlim.EQ.1) THEN
-        live_like(1) = live_like_new
-        live(1,:) = live_new(:)
-     ELSE
-        ! Shift values
-        live_like(1:jlim-1) =  live_like(2:jlim)
-        live(1:jlim-1,:) =  live(2:jlim,:)
-        ! Insert new value
-        live_like(jlim) =  live_like_new
-        live(jlim,:) =  live_new
-        ! The rest stay as it is
-     END IF
-
-
-     ! Assign to the new point, the same cluster number of the start point
-     IF (cluster_on) THEN
-        ! Instert new point
-        p_cluster(1:jlim-1) =  p_cluster(2:jlim)
-        p_cluster(jlim) = icluster
-        cluster_np(icluster) = cluster_np(icluster) + 1
-        ! Take out old point
-        icluster_old = p_cluster(1)
-        cluster_np(icluster_old) = cluster_np(icluster_old) - 1
-        ! Call cluster module to recalculate the std of the considered cluster and the cluster of the discarted point
-        CALL REMAKE_CLUSTER_STD(live,icluster,icluster_old)
-     END IF
-
-     ! Calculate the evidence for this step
-     evstep(n) = live_like_old(n) + tlnmass(n)
-
-     ! Sum the evidences
-     evsum = ADDLOG(evsum,evstep(n))
-
-     ! Check if the estimate accuracy is reached
-     evrestest = live_like(nlive) + tlnrest(n)
-     evtotest = ADDLOG(evsum,evrestest)
-
-     IF (evtotest-evsum.LT.evaccuracy) GOTO 301
-
-     IF (MOD(n,50).EQ.0) THEN
-     !   ! Write status
-        WRITE(*,*) 'N. try:', itry, 'N step:', n, &
-             'Min. loglike', min_live_like,'Evidence: ',evsum, &
-             'Ev. step:', evstep(n),'Ev. pres. acc.:', evtotest-evsum, &
-             'Typical eff.:', search_par2/ntries
-     !
-     !   ! Store actual live points
-     !   WRITE(out_filename,1000) 'live_points_',itry,'.dat'
-     !   OPEN(22,FILE=out_filename,STATUS= 'UNKNOWN')
-     !   WRITE(22,*) '# n     lnlikelihood     parameters'
-     !   DO l=1,nlive
-     !      WRITE(22,*) l, live_like(l), live(l,:)
-     !   END DO
-     !   CLOSE(22)
-     !   pause
-     !
-     !   ! Write temporal results in a file
-     !   WRITE(out_filename,2000) 'status_',itry,'.dat'
-     !   OPEN(33,FILE='status.dat',STATUS= 'UNKNOWN')
-     !   WRITE(33,*) 'New last live point : ', live_like(1), live(1,:)
-     !   WRITE(33,*) 'New first live point : ', live_like(nlive), live(nlive,:)
-     !   WRITE(33,*) 'N step: ', n, 'Ev. at present: ',evsum, &
-     !        'Ev. of the step: ', evstep(n), 'Diff. with the estimate total ev.: ', evtotest-evsum
-     !   CLOSE(33)
-     !
-     END IF
   END DO
-
 
   ! ---------------------------------------------------------------------------------------!
   !                                                                                        !
