@@ -452,7 +452,7 @@ CONTAINS
        ! No set --------------------------------------------------------------------------------------------------------
        k=1
        IF (data_type.EQ.'1c') THEN
-          !$OMP PARALLEL DO PRIVATE(enc) REDUCTION(+:ll_tmp)
+          !!$OMP PARALLEL DO PRIVATE(enc) REDUCTION(+:ll_tmp)
           DO i=1, ndata_set(k)
              ! Poisson distribution calculation --------------------------------------------------
              enc = USERFCN(x(i,k),npar,par,funcname)
@@ -468,35 +468,35 @@ CONTAINS
                 STOP
              END IF
           END DO
-          !$OMP END PARALLEL DO
+          !!$OMP END PARALLEL DO
        ELSE IF (data_type.EQ.'1e') THEN
-          !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
+          !!$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
           DO i=1, ndata_set(k)
              ! Normal (Gaussian) distribution calculation --------------------------------------
              enc = USERFCN(x(i,k),npar,par,funcname)
              ll_tmp = ll_tmp - (nc(i,k) - enc)**2/(2*nc_err(i,k)**2)
           ENDDO
-          !$OMP END PARALLEL DO
+          !!$OMP END PARALLEL DO
        END IF
     ELSE
        ! Set ----------------------------------------------------------------------------------------------------------
        DO k=1,nset
           IF (data_type.EQ.'1c') THEN
-             !$OMP PARALLEL DO PRIVATE(i,k,x,enc) REDUCTION(+:ll_tmp)
+             !!$OMP PARALLEL DO PRIVATE(i,k,x,enc) REDUCTION(+:ll_tmp)
              DO i=1, ndata_set(k)
                 ! Poisson distribution calculation --------------------------------------------------
                 enc = USERFCN_SET(x(i,k),npar,par,funcname,k)
                 ll_tmp = ll_tmp + nc(i,k)*DLOG(enc) - enc
              END DO
-             !$OMP END PARALLEL DO
+             !!$OMP END PARALLEL DO
           ELSE
-             !$OMP PARALLEL DO PRIVATE(i,k,x,enc) REDUCTION(+:ll_tmp)
+             !!$OMP PARALLEL DO PRIVATE(i,k,x,enc) REDUCTION(+:ll_tmp)
              DO i=1, ndata_set(k)
                 ! Normal (Gaussian) distribution calculation --------------------------------------
                 enc = USERFCN_SET(x(i,k),npar,par,funcname,k)
                 ll_tmp = ll_tmp - (nc(i,k) - enc)**2/(2*nc_err(i,k)**2)
              ENDDO
-             !$OMP END PARALLEL DO
+             !!$OMP END PARALLEL DO
           END IF
        END DO
     END IF
@@ -524,7 +524,7 @@ CONTAINS
     ! Calculate LIKELIHOOD
     ll_tmp = 0.
 
-    !$OMP PARALLEL DO PRIVATE(i,j,xx,yy,enc) REDUCTION(+:ll_tmp)
+    !!$OMP PARALLEL DO PRIVATE(i,j,xx,yy,enc) REDUCTION(+:ll_tmp)
     DO i=1, nx
        DO j=1, ny
           ! Poisson distribution calculation --------------------------------------------------
@@ -534,7 +534,7 @@ CONTAINS
           ll_tmp = ll_tmp + adata_mask(i,j)*(adata(i,j)*DLOG(enc) - enc)
        END DO
     END DO
-    !$OMP END PARALLEL DO
+    !!$OMP END PARALLEL DO
 
     ! Sum all together
     LOGLIKELIHOOD_2D = ll_tmp + const_ll

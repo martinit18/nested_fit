@@ -11,6 +11,9 @@ MODULE MOD_SEARCH_NEW_POINT
 
   IMPLICIT NONE
 
+  INTEGER(4) :: n_call_cluster=0
+  INTEGER(4), PARAMETER :: n_call_cluster_it_max=3, n_call_cluster_max=10
+
 CONTAINS
 
 
@@ -28,19 +31,20 @@ CONTAINS
     INTEGER(4), INTENT(OUT) :: icluster, ntries
     LOGICAL, INTENT(OUT) :: too_many_tries
 
+
     ! Select the search method
     IF (search_method.eq.'RANDOM_WALK') THEN
         CALL RANDOM_WALK(n,itry,min_live_like,live_like,live, &
-       live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
+       live_like_new,live_new,icluster,ntries,too_many_tries)
     ELSE IF(search_method .EQ. 'UNIFORM') THEN
         CALL UNIFORM(n,itry,min_live_like,live_like,live, &
-          live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
+          live_like_new,live_new,icluster,ntries,too_many_tries)
     ELSE IF(search_method .EQ. 'SLICE_SAMPLING') THEN
         CALL SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
-          live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
+          live_like_new,live_new,icluster,ntries,too_many_tries)
     ELSE IF(search_method .EQ. 'SLICE_SAMPLING_ADAPT') THEN
         CALL SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
-          live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
+          live_like_new,live_new,icluster,ntries,too_many_tries)
     ELSE
         WRITE(*,*) 'Error of the search type name in Mod_search_new_point module'
         WRITE(*,*) 'Check the manual and the input file'
@@ -53,7 +57,7 @@ CONTAINS
   !#####################################################################################################################
 
   SUBROUTINE RANDOM_WALK(n,itry,min_live_like,live_like,live, &
-       live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
+       live_like_new,live_new,icluster,ntries,too_many_tries)
   ! SUBROUTINE LAWN_MOWER_ROBOT(min_ll,nlive,live_like,live,new_live_like,new_live)
 
 
@@ -78,7 +82,6 @@ CONTAINS
     INTEGER(4) :: i=0, l=0, irn=0
     REAL(8) :: rn
     INTEGER(4) :: n_call_cluster_it, test
-    INTEGER(4), INTENT(INOUT) :: n_call_cluster
     REAL(8) :: sdfraction
     INTEGER(4) :: njump
 
@@ -117,7 +120,7 @@ CONTAINS
        live_sd(:) = cluster_std(icluster,:)
        IF(cluster_std(icluster,1).EQ.0.) THEN
           ! If the cluster is formed only from one point, take the standard standard deviation
-          !$OMP PARALLEL DO
+          !!$OMP PARALLEL DO
           DO i=1,npar
              IF(par_fix(i).NE.1) THEN
                 CALL MEANVAR(live(:,i),nlive,live_ave(i),live_var(i))
@@ -125,13 +128,13 @@ CONTAINS
                 live_ave(i) = par_in(i)
              END IF
           END DO
-          !$OMP END PARALLEL DO
+          !!$OMP END PARALLEL DO
           live_sd = DSQRT(live_var)
        END IF
        ! and mean
        live_ave(:) = cluster_mean(icluster,:)
     ELSE
-       !$OMP PARALLEL DO
+       !!$OMP PARALLEL DO
        DO i=1,npar
           IF(par_fix(i).NE.1) THEN
              CALL MEANVAR(live(:,i),nlive,live_ave(i),live_var(i))
@@ -139,7 +142,7 @@ CONTAINS
              live_ave(i) = par_in(i)
           END IF
        END DO
-       !$OMP END PARALLEL DO
+       !!$OMP END PARALLEL DO
        live_sd = DSQRT(live_var)
     END IF
 
@@ -150,7 +153,7 @@ CONTAINS
     DO i=1,njump
 501    CONTINUE
        ntries = ntries + 1
-       !$OMP PARALLEL DO
+       !!$OMP PARALLEL DO
        DO l=1,npar
           IF (par_fix(l).NE.1) THEN
 502          CALL RANDOM_NUMBER(rn)
@@ -164,7 +167,7 @@ CONTAINS
              END IF
           END IF
        END DO
-       !$OMP END PARALLEL DO
+       !!$OMP END PARALLEL DO
 
        ! Check if the new point is inside the parameter volume defined by the minimum likelihood of the live points
        IF (LOGLIKELIHOOD(new_jump).GT.min_live_like) THEN
@@ -192,12 +195,12 @@ CONTAINS
 
                 IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
 
-                   IF(n_call_cluster_it>=3) THEN
+                   IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
                      WRITE(*,*) 'Too many cluster analysis for an iteration'
                      WRITE(*,*) 'Change cluster recognition parameters'
                      STOP
                    END IF
-                   IF(n_call_cluster>=10) THEN
+                   IF(n_call_cluster>=n_call_cluster_max) THEN
                      WRITE(*,*) 'Too many cluster analysis'
                      WRITE(*,*) 'Change cluster recognition parameters'
                      STOP
@@ -251,7 +254,7 @@ CONTAINS
                 irn = FLOOR(2*rn+1)
                 IF(MOD(ntries,2).EQ.1) THEN
                    ! My new technique: mix parameter values from different sets to hope to find a good new value
-                   !$OMP PARALLEL DO
+                   !!$OMP PARALLEL DO
                    DO l=1,npar
                       IF (par_fix(l).NE.1) THEN
                          CALL RANDOM_NUMBER(rn)
@@ -259,17 +262,17 @@ CONTAINS
                          new_jump(l) = live(istart,l)
                       END IF
                    END DO
-                   !$OMP END PARALLEL DO
+                   !!$OMP END PARALLEL DO
                 ELSE
                    ! Leo's technique, go between the average and this point
-                   !$OMP PARALLEL DO
+                   !!$OMP PARALLEL DO
                    DO l=1,npar
                       IF (par_fix(l).NE.1) THEN
                          CALL RANDOM_NUMBER(rn)
                          new_jump(l) = live_ave(l) + (new_jump(l) - live_ave(l))*rn
                       END IF
                    END DO
-                   !$OMP END PARALLEL DO
+                   !!$OMP END PARALLEL DO
                 END IF
                 !
 
@@ -285,14 +288,14 @@ CONTAINS
              ELSE
                 ! If cluster analysis, do not mix the points!!
                 ! Leo's technique only, go between the average and this point
-                !$OMP PARALLEL DO
+                !!$OMP PARALLEL DO
                 DO l=1,npar
                    IF (par_fix(l).NE.1) THEN
                       CALL RANDOM_NUMBER(rn)
                       new_jump(l) = live_ave(l) + (new_jump(l) - live_ave(l))*rn
                    END IF
                 END DO
-                !$OMP END PARALLEL DO
+                !!$OMP END PARALLEL DO
                 IF (LOGLIKELIHOOD(new_jump).GT.min_live_like) THEN
                    start_jump = new_jump
                 ELSE
@@ -341,7 +344,7 @@ CONTAINS
   END SUBROUTINE RANDOM_WALK
 
   SUBROUTINE UNIFORM(n,itry,min_live_like,live_like,live, &
-       live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
+       live_like_new,live_new,icluster,ntries,too_many_tries)
 
     USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, &
          cluster_yn, cluster_method, par_in
@@ -364,7 +367,6 @@ CONTAINS
     INTEGER(4) :: i=0, l=0, irn=0, j
     REAL(8) :: rn, sd_mean, frac
     INTEGER(4) :: n_call_cluster_it, test
-    INTEGER(4), INTENT(INOUT) :: n_call_cluster
     INTEGER(4) :: nb_cube, njump
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
@@ -398,7 +400,7 @@ CONTAINS
        live_sd(:) = cluster_std(icluster,:)
        IF(cluster_std(icluster,1).EQ.0.) THEN
           ! If the cluster is formed only from one point, take the standard standard deviation
-          !$OMP PARALLEL DO
+          !!$OMP PARALLEL DO
           DO i=1,npar
              IF(par_fix(i).NE.1) THEN
                 CALL MEANVAR(live(:,i),nlive,live_ave(i),live_var(i))
@@ -406,13 +408,13 @@ CONTAINS
                 live_ave(i) = par_in(i)
              END IF
           END DO
-          !$OMP END PARALLEL DO
+          !!$OMP END PARALLEL DO
           live_sd = DSQRT(live_var)
        END IF
        ! and mean
        live_ave(:) = cluster_mean(icluster,:)
     ELSE
-       !$OMP PARALLEL DO
+       !!$OMP PARALLEL DO
        DO i=1,npar
           IF(par_fix(i).NE.1) THEN
              CALL MEANVAR(live(:,i),nlive,live_ave(i),live_var(i))
@@ -420,7 +422,7 @@ CONTAINS
              live_ave(i) = par_in(i)
           END IF
        END DO
-       !$OMP END PARALLEL DO
+       !!$OMP END PARALLEL DO
        live_sd = DSQRT(live_var)
     END IF
     sd_mean=SUM(live_sd)*1.0/npar
@@ -431,7 +433,7 @@ CONTAINS
     DO i=1,njump
 701    CONTINUE
        ntries = ntries + 1
-       !$OMP PARALLEL DO
+       !!$OMP PARALLEL DO
        DO l=1,npar
           IF (par_fix(l).NE.1) THEN
 702          CALL RANDOM_NUMBER(rn)
@@ -443,16 +445,16 @@ CONTAINS
              END IF
           END IF
        END DO
-        !$OMP END PARALLEL DO
+        !!$OMP END PARALLEL DO
 
 
        ! Check if the new point is inside the parameter volume defined by the minimum likelihood of the live points
        IF (LOGLIKELIHOOD(new_jump).GT.min_live_like) THEN
-           !$OMP PARALLEL DO REDUCTION(+:nb_cube)
+           !!$OMP PARALLEL DO REDUCTION(+:nb_cube)
            DO j=1, nlive
               IF(ALL(ABS(new_jump-live(j,:)) .LT. frac*live_sd)) nb_cube=nb_cube+1
            END DO
-          !$OMP END PARALLEL DO
+          !!$OMP END PARALLEL DO
           CALL RANDOM_NUMBER(rn)
           IF(rn.GT.1./nb_cube) THEN
             nb_cube=0
@@ -484,12 +486,12 @@ CONTAINS
 
                 IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
 
-                   IF(n_call_cluster_it>=3) THEN
+                   IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
                      WRITE(*,*) 'Too many cluster analysis for an iteration'
                      WRITE(*,*) 'Change cluster recognition parameters'
                      STOP
                    END IF
-                   IF(n_call_cluster>=10) THEN
+                   IF(n_call_cluster>=n_call_cluster_max) THEN
                      WRITE(*,*) 'Too many cluster analysis'
                      WRITE(*,*) 'Change cluster recognition parameters'
                      STOP
@@ -535,7 +537,7 @@ CONTAINS
                 irn = FLOOR(2*rn+1)
                 IF(MOD(ntries,2).EQ.1) THEN
                    ! My new technique: mix parameter values from different sets to hope to find a good new value
-                   !$OMP PARALLEL DO
+                   !!$OMP PARALLEL DO
                    DO l=1,npar
                       IF (par_fix(l).NE.1) THEN
                          CALL RANDOM_NUMBER(rn)
@@ -543,17 +545,17 @@ CONTAINS
                          new_jump(l) = live(istart,l)
                       END IF
                    END DO
-                   !$OMP END PARALLEL DO
+                   !!$OMP END PARALLEL DO
                 ELSE
                    ! Leo's technique, go between the average and this point
-                   !$OMP PARALLEL DO
+                   !!$OMP PARALLEL DO
                    DO l=1,npar
                       IF (par_fix(l).NE.1) THEN
                          CALL RANDOM_NUMBER(rn)
                          new_jump(l) = live_ave(l) + (new_jump(l) - live_ave(l))*rn
                       END IF
                    END DO
-                   !$OMP END PARALLEL DO
+                   !!$OMP END PARALLEL DO
                 END IF
                 !
                  IF (LOGLIKELIHOOD(new_jump).GT.min_live_like) THEN
@@ -568,14 +570,14 @@ CONTAINS
              ELSE
                 ! If cluster analysis, do not mix the points!!
                 ! Leo's technique only, go between the average and this point
-                !$OMP PARALLEL DO
+                !!$OMP PARALLEL DO
                 DO l=1,npar
                    IF (par_fix(l).NE.1) THEN
                       CALL RANDOM_NUMBER(rn)
                       new_jump(l) = live_ave(l) + (new_jump(l) - live_ave(l))*rn
                    END IF
                 END DO
-                !$OMP END PARALLEL DO
+                !!$OMP END PARALLEL DO
                 IF (LOGLIKELIHOOD(new_jump).GT.min_live_like) THEN
                    start_jump = new_jump
                 ELSE
@@ -622,7 +624,7 @@ CONTAINS
   !----------------------------------------------------------------------------------------------------------------------------------------
 
 SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
-       live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
+       live_like_new,live_new,icluster,ntries,too_many_tries)
 
     !inspired from polychord code
 
@@ -645,7 +647,6 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     INTEGER(4) :: i=0, l=0, irn=0,j=0, kr=0, kl=0
     REAL(8) :: rn, sd_mean
     INTEGER(4) :: n_call_cluster_it, test
-    INTEGER(4), INTENT(INOUT) :: n_call_cluster
     INTEGER(4) :: dim_eff
     REAL(8), DIMENSION(:,:),ALLOCATABLE :: basis
     !REAL(8), DIMENSION(:,:), ALLOCATABLE :: basis
@@ -723,7 +724,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
        live_sd(:) = cluster_std(icluster,:)
        IF(cluster_std(icluster,1).EQ.0.) THEN
           ! If the cluster is formed only from one point, take the standard standard deviation
-          !$OMP PARALLEL DO
+          !!$OMP PARALLEL DO
           DO i=1,npar
              IF(par_fix(i).NE.1) THEN
                 CALL MEANVAR(live(:,i),nlive,live_ave(i),live_var(i))
@@ -731,13 +732,13 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
                 live_ave(i) = par_in(i)
              END IF
           END DO
-          !$OMP END PARALLEL DO
+          !!$OMP END PARALLEL DO
           live_sd = DSQRT(live_var)
        END IF
        ! and mean
        live_ave(:) = cluster_mean(icluster,:)
     ELSE
-       !$OMP PARALLEL DO
+       !!$OMP PARALLEL DO
        DO i=1,npar
           IF(par_fix(i).NE.1) THEN
              CALL MEANVAR(live(:,i),nlive,live_ave(i),live_var(i))
@@ -745,7 +746,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
              live_ave(i) = par_in(i)
           END IF
        END DO
-       !$OMP END PARALLEL DO
+       !!$OMP END PARALLEL DO
        live_sd = DSQRT(live_var)
     END IF
     sd_mean=SUM(live_sd)*1.0/npar
@@ -821,12 +822,12 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
 
              IF(n_ntries .GE. maxntries) THEN
                IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
-                 IF(n_call_cluster_it>=3) THEN
+                 IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
                    WRITE(*,*) 'Too many cluster analysis for an iteration'
                    WRITE(*,*) 'Change cluster recognition parameters'
                    STOP
                  END IF
-                 IF(n_call_cluster>=10) THEN
+                 IF(n_call_cluster>=n_call_cluster_max) THEN
                    WRITE(*,*) 'Too many cluster analysis'
                    WRITE(*,*) 'Change cluster recognition parameters'
                    STOP
@@ -905,7 +906,7 @@ END SUBROUTINE SLICE_SAMPLING
 !----------------------------------------------------------------------------------------------
 
 SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
-       live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
+       live_like_new,live_new,icluster,ntries,too_many_tries)
 
     !inspired from polychord code
 
@@ -928,7 +929,6 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     INTEGER(4) :: i=0, l=0, irn=0,j=0, k=0
     REAL(8) :: rn, sd_mean
     INTEGER(4) :: n_call_cluster_it, test
-    INTEGER(4), INTENT(INOUT) :: n_call_cluster
     INTEGER(4) :: dim_eff
     REAL(8), DIMENSION(:,:),ALLOCATABLE :: basis
     !REAL(8), DIMENSION(:,:), ALLOCATABLE :: basis
@@ -1006,7 +1006,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
        live_sd(:) = cluster_std(icluster,:)
        IF(cluster_std(icluster,1).EQ.0.) THEN
           ! If the cluster is formed only from one point, take the standard standard deviation
-          !$OMP PARALLEL DO
+          !!$OMP PARALLEL DO
           DO i=1,npar
              IF(par_fix(i).NE.1) THEN
                 CALL MEANVAR(live(:,i),nlive,live_ave(i),live_var(i))
@@ -1014,13 +1014,13 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
                 live_ave(i) = par_in(i)
              END IF
           END DO
-          !$OMP END PARALLEL DO
+          !!$OMP END PARALLEL DO
           live_sd = DSQRT(live_var)
        END IF
        ! and mean
        live_ave(:) = cluster_mean(icluster,:)
     ELSE
-       !$OMP PARALLEL DO
+       !!$OMP PARALLEL DO
        DO i=1,npar
           IF(par_fix(i).NE.1) THEN
              CALL MEANVAR(live(:,i),nlive,live_ave(i),live_var(i))
@@ -1028,7 +1028,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
              live_ave(i) = par_in(i)
           END IF
        END DO
-       !$OMP END PARALLEL DO
+       !!$OMP END PARALLEL DO
        live_sd = DSQRT(live_var)
     END IF
     sd_mean=SUM(live_sd)*1.0/npar
@@ -1124,12 +1124,12 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
 
              IF(n_ntries .GE. maxntries) THEN
                IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
-                 IF(n_call_cluster_it>=3) THEN
+                 IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
                    WRITE(*,*) 'Too many cluster analysis for an iteration'
                    WRITE(*,*) 'Change cluster recognition parameters'
                    STOP
                  END IF
-                 IF(n_call_cluster>=10) THEN
+                 IF(n_call_cluster>=n_call_cluster_max) THEN
                    WRITE(*,*) 'Too many cluster analysis'
                    WRITE(*,*) 'Change cluster recognition parameters'
                    STOP
@@ -1237,70 +1237,70 @@ SUBROUTINE MAT_COV(pts,np,D,istart,cov) !calculates the covariance matrix
     ! Standard deviation
     IF(cluster_np(icluster).LT.2*D) THEN
        mean=pts(istart,:)
-       !$OMP PARALLEL DO
+       !!$OMP PARALLEL DO
        DO i=1,D
          mean_prov(i)=SUM(pts(:,i))/np
        END DO
-       !$OMP END PARALLEL DO
-       !$OMP PARALLEL DO
+       !!$OMP END PARALLEL DO
+       !!$OMP PARALLEL DO
        DO i=1,D
-         !$OMP PARALLEL DO
+         !!$OMP PARALLEL DO
          DO j=i,D
            cov(i,j)=SUM((pts(:,i)-mean_prov(i))*(pts(:,j)-mean_prov(j)))/(np-1)
            cov(j,i)=cov(i,j)
          END DO
-         !$OMP END PARALLEL DO
+         !!$OMP END PARALLEL DO
        END DO
-       !$OMP END PARALLEL DO
+       !!$OMP END PARALLEL DO
     ELSE IF(icluster==0) THEN
-       !$OMP PARALLEL DO
+       !!$OMP PARALLEL DO
        DO i=1,D
          mean(i)=SUM(pts(:,i))/np
        END DO
-       !$OMP END PARALLEL DO
-       !$OMP PARALLEL DO
+       !!$OMP END PARALLEL DO
+       !!$OMP PARALLEL DO
        DO i=1,D
-         !$OMP PARALLEL DO
+         !!$OMP PARALLEL DO
          DO j=i,D
            cov(i,j)=SUM((pts(:,i)-mean(i))*(pts(:,j)-mean(j)))/(np-1)
            cov(j,i)=cov(i,j)
          END DO
-         !$OMP END PARALLEL DO
+         !!$OMP END PARALLEL DO
        END DO
-       !$OMP END PARALLEL DO
+       !!$OMP END PARALLEL DO
     ELSE
-       !$OMP PARALLEL DO
+       !!$OMP PARALLEL DO
        DO i=1,D
          mean(i)=SUM(pts(:,i),MASK=(p_cluster==icluster))/cluster_np(icluster)
        END DO
-       !$OMP END PARALLEL DO
-       !$OMP PARALLEL DO
+       !!$OMP END PARALLEL DO
+       !!$OMP PARALLEL DO
        DO i=1,D
-         !$OMP PARALLEL DO
+         !!$OMP PARALLEL DO
          DO j=i,D
            cov(i,j)=SUM((pts(:,i)-mean(i))*(pts(:,j)-mean(j)),MASK=(p_cluster==icluster))/(cluster_np(icluster)-1)
            cov(j,i)=cov(i,j)
          END DO
-         !$OMP END PARALLEL DO
+         !!$OMP END PARALLEL DO
        END DO
-       !$OMP END PARALLEL DO
+       !!$OMP END PARALLEL DO
     END IF
   ELSE
-    !$OMP PARALLEL DO
+    !!$OMP PARALLEL DO
     DO i=1,D
       mean(i)=SUM(pts(:,i))/np
     END DO
-    !$OMP END PARALLEL DO
-    !$OMP PARALLEL DO
+    !!$OMP END PARALLEL DO
+    !!$OMP PARALLEL DO
      DO i=1,D
-       !$OMP PARALLEL DO
+       !!$OMP PARALLEL DO
       DO j=i,D
         cov(i,j)=SUM((pts(:,i)-mean(i))*(pts(:,j)-mean(j)))/(np-1)
         cov(j,i)=cov(i,j)
       END DO
-      !$OMP END PARALLEL DO
+      !!$OMP END PARALLEL DO
     END DO
-    !$OMP END PARALLEL DO
+    !!$OMP END PARALLEL DO
   END IF
 END SUBROUTINE MAT_COV
 

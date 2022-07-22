@@ -26,6 +26,9 @@ MODULE MOD_PARAMETERS
   INTEGER(4), ALLOCATABLE,  DIMENSION(:) :: par_num, par_fix
   CHARACTER,  ALLOCATABLE, DIMENSION(:) :: par_name*10
   REAL(8), ALLOCATABLE, DIMENSION(:) :: par_step, par_in, par_bnd1, par_bnd2
+  ! parallel variables
+  INTEGER(4) :: nth=1
+
 
 
   COMMON /func_exp/ lr

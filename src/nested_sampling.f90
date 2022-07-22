@@ -5,11 +5,11 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   !SUBROUTINE NESTED_SAMPLING(irnmax,rng,itry,ndata,x,nc,funcname,&
   !   npar,par_fix,par_step,par_in,par_bnd1,par_bnd2,nlive,evaccuracy,sdfraction,&
   !   nall,evsum_final,live_like_final,weight,live_final,live_like_max,live_max)
-  !!USE OMP_LIB
+  USE OMP_LIB
   !USE RNG
 
   ! Parameter module
-  USE MOD_PARAMETERS, ONLY:  nlive, evaccuracy, search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, search_method
+  USE MOD_PARAMETERS, ONLY:  nlive, evaccuracy, search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, nth
   ! Module for likelihood
   USE MOD_LIKELIHOOD
   ! Module for searching new live points
@@ -34,26 +34,26 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   ! Loop variables
   INTEGER(4) :: nstep = 2
   REAL(8), DIMENSION(maxstep) :: tstep, tlnmass, tlnrest, evstep
-  REAL(8) :: live_like_new
-  REAL(8), DIMENSION(npar) :: live_new
   REAL(8), DIMENSION(maxstep) :: live_like_old
   REAL(8), DIMENSION(maxstep,npar) :: live_old
   REAL(8) :: evsum = 0., evrestest = 0., evtotest = 0.
   ! Search variable to monitor efficiency
   INTEGER(4) :: ntries=0
   ! Live points variables parallel
+  REAL(8), ALLOCATABLE, DIMENSION(:) :: live_like_new
+  REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_new
+  LOGICAL, ALLOCATABLE, DIMENSION(:) :: too_many_tries
+  INTEGER(4), ALLOCATABLE, DIMENSION(:) :: icluster
   REAL(8) :: min_live_like = 0.
-  REAL(8), ALLOCATABLE, DIMENSION(:,nlive) :: live_like
-  REAL(8), ALLOCATABLE, DIMENSION(:,nlive,npar) :: live
-  LOGICAL ALLOCATABLE :: too_many_tries(:)
+  REAL(8), DIMENSION(nlive) :: live_like
+  REAL(8), DIMENSION(nlive,npar) :: live
   INTEGER(4) :: icluster_old=0
   ! Final calculations
   INTEGER(4) :: nstep_final
   REAL(8) :: last_likes, live_like_last, evrest_last, evlast
   ! Rest
-  INTEGER(4) :: i,j, l, n, jlim
+  INTEGER(4) :: j, l, n, jlim, it
   REAL(8) :: ADDLOG, RANDN, rn
-  CHARACTER :: out_filename*64
 
   EXTERNAL :: SORTN
 
@@ -71,8 +71,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   par_prior = 0.
   live = 0.
   live_like = 0.
-  live_new = 0.
-  live_like_new = 0.
   live_old = 0.
   live_like_old = 0.
   live_final = 0.
@@ -84,6 +82,11 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   nstep = maxstep - nlive + 1
   !maxtries = 50*njump ! Accept an efficiency of more than 2% for the exploration, otherwise change something
 
+  ALLOCATE(live_like_new(nth),live_new(nth,npar),too_many_tries(nth),icluster(nth))
+  live_new = 0.
+  live_like_new = 0.
+  icluster = 0
+  too_many_tries = .false.
 
   ! ---------- Inintial live points sorting ------------------------------------------------
   WRITE(*,*) 'Sorting live points. N. of points = ', nlive
@@ -180,6 +183,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   evstep(1) = live_like_old(1) + tlnmass(1)
   evsum = evstep(1)
 
+  ! Present minimal value of the likelihood
+  min_live_like = live_like(1)
 
   ! ---------------------------------------------------------------------------------------!
   !                                                                                        !
@@ -192,95 +197,98 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
      ! ##########################################################################
      ! Find a new live point
      ! Parallelism is going to be implemented soon
-     !OMP PARALLEL DO 
-500  DO nt = 1, ntmax
+     !!$OMP PARALLEL DO PRIVATE(it,ntries) SHARED(n,itry,min_live_like,live_like,live,live_like_new,live_new,icluster,too_many_tries)
+     !$OMP PARALLEL DO ORDERED
+     DO it = 1, nth
         CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
-             live_like_new(nt),live_new(nt),icluster(nt),ntries,too_many_tries(nt))
+             live_like_new(it),live_new(it,:),icluster(it),ntries,too_many_tries(it))
+        write(*,*) OMP_GET_THREAD_NUM(), it, min_live_like, live_like_new(it)
      END DO
-     !OMP END PARALLEL DO
-     
+     !$OMP END PARALLEL DO
+
      IF (ANY(too_many_tries)) THEN
         nstep_final = n - 1
         GOTO 601
      END IF
      ! ##########################################################################
 
-     DO nt = 1, ntmax
+     DO it = 1, nth
 
         ! If the parallely computed live point is not good anymore, skip it.
-        ! Otherwise take it for loop calculation 
-        IF ((nt.GT.1).AND.(live_like_new.LE.min_live_like)) THEN
+        ! Otherwise take it for loop calculation
+        IF ((it.GT.1).AND.(live_like_new(it).LE.min_live_like)) THEN
            CYCLE
         ELSE
            n = n +1
         ENDIF
-        
+
         ! Calculate steps, mass and rest each time
         ! trapezoidal rule applied here (Skilling Entropy 2006)
         tlnmass(n) = DLOG(-(tstep(n+1)-tstep(n-1))/2.d0)
         tlnrest(n) = DLOG((tstep(n+1)+tstep(n-1))/2.d0)
-        
-        ! Present minimal value of the likelihood
-        min_live_like = live_like(1)
+
         ! Reorder found point (no parallel here) and make the required calculation for the evidence
         ! Reorder point
         ! Order and exclude last point
         DO j=1,nlive-1
-           IF (live_like_new.GT.live_like(j).AND.live_like_new.LT.live_like(j+1)) THEN
+           IF (live_like_new(it).GT.live_like(j).AND.live_like_new(it).LT.live_like(j+1)) THEN
               jlim = j
-           ELSE IF (live_like_new.GT.live_like(nlive)) THEN
+           ELSE IF (live_like_new(it).GT.live_like(nlive)) THEN
               jlim = nlive
            END IF
         END DO
-        
+
         ! Store old values
         live_like_old(n) = live_like(1)
         live_old(n,:) = live(1,:)
-        
+
+        ! Insert the new one
         IF (jlim.LT.1.OR.jlim.GT.nlive) THEN
            WRITE(*,*) 'Problem in the search method, or in the calculations'
            WRITE(*,*) 'No improvement in the likelihood value after finding the new point'
            WRITE(*,*) 'j = ', jlim, 'old min like = ', min_live_like, 'new min like = ', live_like_new
            STOP
         ELSE IF (jlim.EQ.1) THEN
-           live_like(1) = live_like_new
-           live(1,:) = live_new(:)
+           live_like(1) = live_like_new(it)
+           live(1,:) = live_new(it,:)
         ELSE
            ! Shift values
            live_like(1:jlim-1) =  live_like(2:jlim)
            live(1:jlim-1,:) =  live(2:jlim,:)
            ! Insert new value
-           live_like(jlim) =  live_like_new
-           live(jlim,:) =  live_new
+           live_like(jlim) =  live_like_new(it)
+           live(jlim,:) =  live_new(it,:)
            ! The rest stay as it is
         END IF
-        
-        
+
+        ! Present minimal value of the likelihood
+        min_live_like = live_like(1)
+
         ! Assign to the new point, the same cluster number of the start point
         IF (cluster_on) THEN
            ! Instert new point
            p_cluster(1:jlim-1) =  p_cluster(2:jlim)
-           p_cluster(jlim) = icluster
-           cluster_np(icluster) = cluster_np(icluster) + 1
+           p_cluster(jlim) = icluster(it)
+           cluster_np(icluster(it)) = cluster_np(icluster(it)) + 1
            ! Take out old point
            icluster_old = p_cluster(1)
            cluster_np(icluster_old) = cluster_np(icluster_old) - 1
            ! Call cluster module to recalculate the std of the considered cluster and the cluster of the discarted point
-           CALL REMAKE_CLUSTER_STD(live,icluster,icluster_old)
+           CALL REMAKE_CLUSTER_STD(live,icluster(it),icluster_old)
         END IF
-        
+
         ! Calculate the evidence for this step
         evstep(n) = live_like_old(n) + tlnmass(n)
-        
+
         ! Sum the evidences
         evsum = ADDLOG(evsum,evstep(n))
-        
+
         ! Check if the estimate accuracy is reached
         evrestest = live_like(nlive) + tlnrest(n)
         evtotest = ADDLOG(evsum,evrestest)
-        
+
         IF (evtotest-evsum.LT.evaccuracy) GOTO 301
-        
+
         IF (MOD(n,50).EQ.0) THEN
            !   ! Write status
            WRITE(*,*) 'N. try:', itry, 'N step:', n, &
@@ -416,6 +424,9 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
      cluster_on = .FALSE.
      CALL DEALLOCATE_CLUSTER()
   END IF
+
+  ! Deallocate parallel stuff
+  DEALLOCATE(live_like_new,live_new,too_many_tries,icluster)
 
 
   !------------ Calculate weights and parameter best values and distributions ----------------

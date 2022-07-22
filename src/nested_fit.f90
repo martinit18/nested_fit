@@ -96,7 +96,7 @@ PROGRAM NESTED_FIT
   REAL(8) :: live_like_mean=0., info=0., comp=0.
   INTEGER(8) :: nexp=0
   ! Parallelization variables
-  INTEGER(4) :: itry=1, nth=1
+  INTEGER(4) :: itry=1
   INTEGER(4), DIMENSION(1) :: itrymax
   INTEGER(4), ALLOCATABLE, DIMENSION(:) :: nall_try
   REAL(8), ALLOCATABLE, DIMENSION(:) :: evsum_final_try, live_like_max_try
