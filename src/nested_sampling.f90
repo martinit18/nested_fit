@@ -1,6 +1,6 @@
 SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,&
      live_final,live_like_max,live_max)
-  ! Time-stamp: <Last changed by martino on Wednesday 20 July 2022 at CEST 17:07:02>
+  ! Time-stamp: <Last changed by martino on Saturday 23 July 2022 at CEST 15:10:10>
   ! For parallel tests only
   !SUBROUTINE NESTED_SAMPLING(irnmax,rng,itry,ndata,x,nc,funcname,&
   !   npar,par_fix,par_step,par_in,par_bnd1,par_bnd2,nlive,evaccuracy,sdfraction,&
@@ -196,15 +196,17 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 
      ! ##########################################################################
      ! Find a new live point
-     ! Parallelism is going to be implemented soon
-     !!$OMP PARALLEL DO PRIVATE(it,ntries) SHARED(n,itry,min_live_like,live_like,live,live_like_new,live_new,icluster,too_many_tries)
-     !$OMP PARALLEL DO ORDERED
-     DO it = 1, nth
-        CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
-             live_like_new(it),live_new(it,:),icluster(it),ntries,too_many_tries(it))
-        write(*,*) OMP_GET_THREAD_NUM(), it, min_live_like, live_like_new(it)
-     END DO
-     !$OMP END PARALLEL DO
+     
+     ! Parallisation is on progress, not working yet
+     !$ print *,'Starting parallel computation with ', nth, ' threads' 
+     !$OMP PARALLEL PRIVATE(it,ntries) &
+     !$OMP SHARED(live_like_new,live_new,icluster,too_many_tries)
+     it  = OMP_GET_THREAD_NUM() + 1
+     write(*,*) nth,it,n,itry,min_live_like,live_like(1)
+     CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
+          live_like_new(it),live_new(it,:),icluster(it),ntries,too_many_tries(it))
+     write(*,*) OMP_GET_THREAD_NUM(), it, min_live_like, live_like_new(it)
+     !$OMP END PARALLEL
 
      IF (ANY(too_many_tries)) THEN
         nstep_final = n - 1
