@@ -890,11 +890,11 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     ! Last(maybe useless) check
     IF(LOGLIKELIHOOD(new_jump_comp).LT.min_live_like) GOTO 700
 
-    DO l=1,npar
-      IF (new_jump_comp(l).LT.par_bnd1(l).OR.new_jump_comp(l).GT.par_bnd2(l)) THEN
-        WRITE(*,*) l, .FALSE.
-      END IF
-    END DO
+!    DO l=1,npar
+!      IF (new_jump_comp(l).LT.par_bnd1(l).OR.new_jump_comp(l).GT.par_bnd2(l)) THEN
+!        WRITE(*,*) l, .FALSE.
+!      END IF
+!    END DO
 
     ! Take the last point after jumps as new livepoint
     live_new = new_jump_comp
@@ -1192,11 +1192,11 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     ! Last(maybe useless) check
     IF(LOGLIKELIHOOD(new_jump_comp).LT.min_live_like) GOTO 700
 
-    DO l=1,npar
-      IF (new_jump_comp(l).LT.par_bnd1(l).OR.new_jump_comp(l).GT.par_bnd2(l)) THEN
-        WRITE(*,*) l, .FALSE.
-      END IF
-    END DO
+!    DO l=1,npar
+!      IF (new_jump_comp(l).LT.par_bnd1(l).OR.new_jump_comp(l).GT.par_bnd2(l)) THEN
+!        WRITE(*,*) l, .FALSE.
+!      END IF
+!    END DO
 
     ! Take the last point after jumps as new livepoint
     live_new = new_jump_comp
