@@ -35,7 +35,7 @@ a="""
 # 'an.load_data()'                                        #
 # otherwise specific the path                             #
 # 'an.load_data(path="your path")'                        #
-#                                                        #
+#                                                         #
 # Uses the different functions                            #
 # 'an.function()', (ex: 'an.plot()')                      #
 #                                                         #
