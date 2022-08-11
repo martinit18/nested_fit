@@ -1,5 +1,5 @@
 MODULE MOD_LIKELIHOOD
-  ! Automatic Time-stamp: <Last changed by martino on Wednesday 09 June 2021 at CEST 09:15:31>
+  ! Automatic Time-stamp: <Last changed by martino on Thursday 11 August 2022 at CEST 12:36:09>
   ! Module of the likelihood function for data analysis
 
 
@@ -456,17 +456,7 @@ CONTAINS
           DO i=1, ndata_set(k)
              ! Poisson distribution calculation --------------------------------------------------
              enc = USERFCN(x(i,k),npar,par,funcname)
-             IF (nc(i,k).EQ.0..AND.enc.GT.0.) THEN
-                ll_tmp = ll_tmp - enc
-             ELSE IF(nc(i,k).GT.0..AND.enc.GT.0.) THEN
-                !ll_tmp(i) = nc(i)*DLOG(enc) - enc - DFACTLN(INT(nc(i)))
-                ll_tmp = ll_tmp + nc(i,k)*DLOG(enc) - enc
-             ELSE IF(nc(i,k).GT.0..AND.enc.LE.0.) THEN
-                WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
-                WRITE(*,*) 'number of counts different from 0, model prediction equal 0 or less'
-                WRITE(*,*) 'Function value = ', enc, ' n. counts = ', nc(i,k)
-                STOP
-             END IF
+             ll_tmp = ll_tmp + nc(i,k)*DLOG(enc) - enc
           END DO
           !$OMP END PARALLEL DO
        ELSE IF (data_type.EQ.'1e') THEN
