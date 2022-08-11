@@ -1,5 +1,5 @@
 MODULE MOD_LIKELIHOOD
-  ! Automatic Time-stamp: <Last changed by martino on Wednesday 09 June 2021 at CEST 09:15:31>
+  ! Automatic Time-stamp: <Last changed by martino on Thursday 11 August 2022 at CEST 12:20:04>
   ! Module of the likelihood function for data analysis
 
 
@@ -20,7 +20,7 @@ MODULE MOD_LIKELIHOOD
   ! Data variables
   INTEGER(4) :: ndata
   INTEGER(4), DIMENSION(nsetmax) :: ndata_set=0
-  REAL(8), ALLOCATABLE, DIMENSION(:,:) :: x, nc, nc_err
+  REAL(8), ALLOCATABLE, DIMENSION(:,:) :: x, nc, nc_err, tc
   ! Data variable for 2D images
   INTEGER(4) :: nx=0, ny=0
   INTEGER(4), ALLOCATABLE, DIMENSION(:,:) :: adata
@@ -48,7 +48,7 @@ CONTAINS
   SUBROUTINE READ_DATA()
     ! Subroutine to read data files
     INTEGER(4) :: k=0
-    REAL(8), DIMENSION(maxdata,nsetmax) :: x_tmp=0, y_tmp=0, nc_tmp=0, nc_err_tmp=0
+    REAL(8), DIMENSION(maxdata,nsetmax) :: x_tmp=0, y_tmp=0, nc_tmp=0, nc_err_tmp=0, tc_tmp=0.
 
     ! READ DATA, calculate the constants for the likelihood function
     ! Initialize
@@ -75,11 +75,11 @@ CONTAINS
           x(1:ndata_set(k),k)  = x_tmp(1:ndata_set(k),k)
           nc(1:ndata_set(k),k) = nc_tmp(1:ndata_set(k),k)
        END DO
-    ELSE IF (data_type.EQ.'1e') THEN
-       ! Case 1D with errorbars -------------------------------------------------------------------
+    ELSE IF (data_type.EQ.'1t') THEN
+       ! Case 1D counts and time per channel --------------------------------------------------------
        DO k=1,nset
-          CALL READ_FILE_ERRORBARS(filename(k),xmin(k),xmax(k),ndata_set(k), &
-               x_tmp(:,k),nc_tmp(:,k),nc_err_tmp(:,k))
+          CALL READ_FILE_COUNTS_TIME(filename(k),xmin(k),xmax(k),ndata_set(k), &
+               x_tmp(:,k),nc_tmp(:,k),tc_tmp(:,k))
           WRITE(*,*) 'Number of file = ', k, ' of ', nset
           WRITE(*,*) 'Data file ', filename(k), ' read'
           WRITE(*,*) 'ndata = ', ndata
@@ -87,15 +87,36 @@ CONTAINS
        END DO
        ! Allocate set of data
        ndata = MAXVAL(ndata_set)
-       ALLOCATE(x(ndata,nset),nc(ndata,nset),nc_err(ndata,nset))
+       ALLOCATE(x(ndata,nset),nc(ndata,nset),tc(ndata,nset))
        x = 0.
        nc = 0.
-       nc_err = 0.
+       tc = 0.
        DO k=1,nset
           x(1:ndata_set(k),k)  = x_tmp(1:ndata_set(k),k)
           nc(1:ndata_set(k),k) = nc_tmp(1:ndata_set(k),k)
-          nc_err(1:ndata_set(k),k) = nc_err_tmp(1:ndata_set(k),k)
+          tc(1:ndata_set(k),k) = tc(1:ndata_set(k),k)
        END DO
+     ELSE IF (data_type.EQ.'1e') THEN
+        ! Case 1D with errorbars -------------------------------------------------------------------
+        DO k=1,nset
+           CALL READ_FILE_ERRORBARS(filename(k),xmin(k),xmax(k),ndata_set(k), &
+                x_tmp(:,k),nc_tmp(:,k),nc_err_tmp(:,k))
+           WRITE(*,*) 'Number of file = ', k, ' of ', nset
+           WRITE(*,*) 'Data file ', filename(k), ' read'
+           WRITE(*,*) 'ndata = ', ndata
+           WRITE(*,*) 'constant in evidence calc. = ', const_ll
+        END DO
+        ! Allocate set of data
+        ndata = MAXVAL(ndata_set)
+        ALLOCATE(x(ndata,nset),nc(ndata,nset),nc_err(ndata,nset))
+        x = 0.
+        nc = 0.
+        nc_err = 0.
+        DO k=1,nset
+           x(1:ndata_set(k),k)  = x_tmp(1:ndata_set(k),k)
+           nc(1:ndata_set(k),k) = nc_tmp(1:ndata_set(k),k)
+           nc_err(1:ndata_set(k),k) = nc_err_tmp(1:ndata_set(k),k)
+        END DO
     ELSE IF (data_type.EQ.'2c') THEN
        ! Case 2D with counts in a matrix -------------------------------------------------------------------
        DO k=1,nset
@@ -177,6 +198,69 @@ CONTAINS
     datan = nd
 
   END SUBROUTINE READ_FILE_COUNTS
+
+  !#####################################################################################################################
+
+  SUBROUTINE READ_FILE_COUNTS_TIME(namefile,minx,maxx,datan,x_tmp,nc_tmp,tc_tmp)
+    ! Read one file of data
+
+    USE, INTRINSIC :: IEEE_ARITHMETIC
+
+    CHARACTER, INTENT(IN) :: namefile*64
+    REAL(8), INTENT(IN) :: minx, maxx
+    INTEGER(4), INTENT(OUT) :: datan
+    REAL(8), DIMENSION(maxdata), INTENT(OUT) :: x_tmp, nc_tmp, tc_tmp
+    !
+    INTEGER(4) :: i=0, nd=0
+    REAL(8), DIMENSION(maxdata) :: x_raw=0, nc_raw=0, tc_raw=0
+    REAL(8) :: DLOG_FAC
+
+    ! Initialize
+    x_tmp = 0.
+    nc_tmp = 0.
+    tc_tmp = 0.
+    datan = 0
+    nd=0
+
+    ! Open file and read
+    OPEN(10,file=namefile,status='old')
+    DO i=1, maxdata
+       READ(10,*,END=20) x_raw(i), nc_raw(i), tc_raw(i)
+       ! Make test for integer numbers, NaN and infinites
+       IF (ABS(nc_raw(i)-INT(nc_raw(i))).GT.1E-5) THEN
+          WRITE(*,*) 'Attention, input numbers are not counts and you are using Poisson statistic (no error bar)'
+          WRITE(*,*) 'n. counts = ', nc_raw(i)
+          WRITE(*,*) 'Change something!'
+          STOP
+       ELSE IF (nc_raw(i).LT.0.AND.IEEE_IS_FINITE(nc_raw(i))) THEN
+          ! Check if counts are negative
+          WRITE(*,*) 'Negative counts are not accepted. Change input file'
+          STOP
+       ELSE IF (.NOT.IEEE_IS_FINITE(nc_raw(i)).OR.IEEE_IS_NAN(nc_raw(i))) THEN
+          ! Check infinites and nan
+          WRITE(*,*) 'Infinite or "NaN" counts are not accepted. Change input file'
+          STOP
+       END IF
+
+       ! Select the data
+       IF(x_raw(i).GE.minx.AND.x_raw(i).LE.maxx) THEN
+          nd = nd + 1
+          x_tmp(nd) = x_raw(i)
+          nc_tmp(nd) = nc_raw(i)
+          tc_tmp(nd) = tc_raw(i)
+          ! Calculation of the constant part of the likelihood with Poisson distribution
+          !IF (nc_tmp(nd).GT.0.) const_ll = const_ll - DFAC_LN(INT(nc_tmp(nd)))
+          ! Uses of the gamma function gamma(n) = (n-1)!
+          IF (nc_tmp(nd).GT.0.) const_ll = const_ll - DLOG_FAC(INT(nc_tmp(nd)))
+       END IF
+    ENDDO
+
+20  CONTINUE
+    CLOSE(10)
+    datan = nd
+
+  END SUBROUTINE READ_FILE_COUNTS_TIME
+
 
   !#####################################################################################################################
 
@@ -404,6 +488,25 @@ CONTAINS
           END DO
        END DO
        LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_1D(par)
+    ELSE IF (data_type.EQ.'1t') THEN
+       ! Check if the choosen function assumes zero or negative values
+       DO k=1,nset
+          DO i=1, ndata_set(k)
+             ! Poisson distribution calculation --------------------------------------------------
+             IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
+                enc = USERFCN(x(i,k),npar,par,funcname)/tc(i,k)
+             ELSE
+                enc = USERFCN_SET(x(i,k),npar,par,funcname,k)/tc(i,k)
+             END IF
+             IF (enc.LE.0) THEN
+                WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
+                WRITE(*,*) 'number of counts different from 0, model prediction equal 0 or less'
+                WRITE(*,*) 'Function value = ', enc, ' n. counts = ', nc(i,k)
+                STOP
+             END IF
+          END DO
+       END DO
+       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_1D(par)
     ELSE IF (data_type.EQ.'1e') THEN
       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_1D(par)
     ELSE IF (data_type.EQ.'2c') THEN
@@ -456,17 +559,15 @@ CONTAINS
           DO i=1, ndata_set(k)
              ! Poisson distribution calculation --------------------------------------------------
              enc = USERFCN(x(i,k),npar,par,funcname)
-             IF (nc(i,k).EQ.0..AND.enc.GT.0.) THEN
-                ll_tmp = ll_tmp - enc
-             ELSE IF(nc(i,k).GT.0..AND.enc.GT.0.) THEN
-                !ll_tmp(i) = nc(i)*DLOG(enc) - enc - DFACTLN(INT(nc(i)))
-                ll_tmp = ll_tmp + nc(i,k)*DLOG(enc) - enc
-             ELSE IF(nc(i,k).GT.0..AND.enc.LE.0.) THEN
-                WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
-                WRITE(*,*) 'number of counts different from 0, model prediction equal 0 or less'
-                WRITE(*,*) 'Function value = ', enc, ' n. counts = ', nc(i,k)
-                STOP
-             END IF
+             ll_tmp = ll_tmp + nc(i,k)*DLOG(enc) - enc
+          END DO
+          !$OMP END PARALLEL DO
+       ELSE IF (data_type.EQ.'1t') THEN
+          !$OMP PARALLEL DO PRIVATE(enc) REDUCTION(+:ll_tmp)
+          DO i=1, ndata_set(k)
+             ! Poisson distribution calculation --------------------------------------------------
+             enc = USERFCN(x(i,k),npar,par,funcname)/tc(i,k)
+             ll_tmp = ll_tmp + nc(i,k)*DLOG(enc) - enc
           END DO
           !$OMP END PARALLEL DO
        ELSE IF (data_type.EQ.'1e') THEN
@@ -489,7 +590,15 @@ CONTAINS
                 ll_tmp = ll_tmp + nc(i,k)*DLOG(enc) - enc
              END DO
              !$OMP END PARALLEL DO
-          ELSE
+          ELSE IF (data_type.EQ.'1t') THEN
+             !$OMP PARALLEL DO PRIVATE(i,k,x,enc) REDUCTION(+:ll_tmp)
+             DO i=1, ndata_set(k)
+                ! Poisson distribution calculation --------------------------------------------------
+                enc = USERFCN_SET(x(i,k),npar,par,funcname,k)/tc(i,k)
+                ll_tmp = ll_tmp + nc(i,k)*DLOG(enc) - enc
+             END DO
+             !$OMP END PARALLEL DO
+          ELSE IF (data_type.EQ.'1e') THEN
              !$OMP PARALLEL DO PRIVATE(i,k,x,enc) REDUCTION(+:ll_tmp)
              DO i=1, ndata_set(k)
                 ! Normal (Gaussian) distribution calculation --------------------------------------
@@ -879,6 +988,8 @@ CONTAINS
        DEALLOCATE(x,nc)
     ELSE IF (data_type.EQ.'1e') THEN
        DEALLOCATE(x,nc,nc_err)
+    ELSE IF (data_type.EQ.'1t') THEN
+       DEALLOCATE(x,nc,tc)
     ELSE IF (data_type.EQ.'2c') THEN
        DEALLOCATE(adata)
     END IF

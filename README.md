@@ -74,7 +74,9 @@ n             # Set of files (y/n)
 1c            # Type of data: error bars or not and dimensions (1c,1e,2c,2s,2e)
 ```
 - `1c`: one dimensional spectrum with counts. \
-Input: (x, n. counts)
+Input: (channel, n. counts)
+- `1t`: one dimensional spectrum with counts and time per channel for spectra with non-uniform integration time per channel. \
+Input: (channel, n. counts, time per channel)
 - `1e`: one dimensional spectrum with error bars. \
 Input:  (x, y, error y)
 - `2c`: two dimensional spectrum with counts. \
@@ -126,13 +128,14 @@ Additional information can be found in the reference articles.
 
 ## Present version and history of the past versions
 
-The present version is 4.2
+The present version is 4.3??
 New features:
-- additional search methods : Uniform search around each live point and Slice Sampling  
+- new data format accepted `(channel, n. counts, time per channel)`
 
 Previous versions are:
- - 4.1.1 New cluster recognition methods added
- - 4.0.3 2D data analysis for count-type XY \
+ - 4.2 additional search methods : Uniform search around each live point and Slice Sampling
+ - 4.1 New cluster recognition methods added
+ - 4.0 2D data analysis for count-type XY \
  Computation acceleration for the 1D case introducing a mask instead of IF condition in the likelihood \
  New ERFPEAK function \
  New example files for python analysis with pandas
@@ -205,7 +208,7 @@ In addition to the original files from the main author (M. Trassinelli), nesed_f
 - `WOFZ.f`' for the complex error function from TOMS algorithm n. 680 (included in Fortran 2008)
 - `rinteg.f` to calculate the integral of a function using a nq points quadrature ( nq is any integer between 1 and 14 ). Written by C. C. J. Roothaan (no license)
 
-### Other contributors to the code
+### Other contributors to the code (specific functions)
 (chronological order)
 
 - Anna Lévy (photoemission spectra models)
@@ -218,6 +221,7 @@ In addition to the original files from the main author (M. Trassinelli), nesed_f
 
 ## Other resources
 
-**Articles about nested sampling method**:\   
+**Articles about nested sampling method**:
+
 [1] J. Skilling, *Nested sampling for general Bayesian computation*, Bayesian Anal. **1**, 833-859 (2006)\
 [2] D.S. Sivia and J. Skilling, *Data analysis: a Bayesian tutorial*. Second ed. 2006: Oxford University Press

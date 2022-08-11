@@ -1,7 +1,8 @@
 PROGRAM NESTED_FIT
   ! Time-stamp: <Last changed by martino on Monday 07 June 2021 at CEST 10:29:22>
   !
-  ! Please read README and LICENSE files for more inforamtion
+  ! Please read README and LICENSE files for more inforamtion\
+  ! xxx  New type of input accepted: (channel, counts, time per channel)
   ! 4.2  New search method added: uniform (around each live point) and slice sampling
   ! 4.1  Several cluster recognition methods added.
   ! 4.0  2D data analysis available, new input and output files for future developments
