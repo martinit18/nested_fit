@@ -1,4 +1,4 @@
-#  Automatic Time-stamp: <Last changed by martino on Tuesday 08 June 2021 at CEST 15:08:06>
+#  Automatic Time-stamp: <Last changed by martino on Saturday 13 August 2022 at CEST 22:45:38>
 NAME    = nested_fit4.2alpha_parallel.exe
 
 .SUFFIXES : .f90 .f .o .c .mod
@@ -43,7 +43,7 @@ F90FILES = Mod_parameters.f90 Mod_likelihood.f90 Mod_timestamp.f90 \
 
 
 # for gfortran
-OPT = -O2 -static
+#OPT = -O2 -static
 # For Intel fortran
 #OPT = -O2 -no-wrap-margin
 #OPT = -O2 -heap-arrays -no-wrap-margin
@@ -52,7 +52,7 @@ OPT = -O2 -static
 #OPT = -Ofast -g -xHost -heap-arrays -no-wrap-margin
 
 # other debug options for gfortran
-#OPT = -g  -C -static
+OPT = -g  -C -static
 #OPT = -O0 -g
 #OPT = -O0 -g  -fbounds-check -Wall  -ffpe-trap=invalid,zero,overflow,underflow -fbacktrace -ftrapv
 #OPT = -g -Wall -Wextra -Warray-temporaries -Wconversion -fimplicit-none -fbacktrace -ffree-line-length-0 -fcheck=all -ffpe-trap=zero,overflow,underflow -finit-real=nan

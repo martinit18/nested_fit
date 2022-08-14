@@ -1,5 +1,5 @@
 MODULE MOD_SEARCH_NEW_POINT
-  ! Automatic Time-stamp: <Last changed by martino on Wednesday 20 July 2022 at CEST 15:10:52>
+  ! Automatic Time-stamp: <Last changed by martino on Sunday 14 August 2022 at CEST 23:09:49>
   ! Module for search of new points
 
   ! Module for the input parameter definition
@@ -8,6 +8,8 @@ MODULE MOD_SEARCH_NEW_POINT
   USE MOD_LIKELIHOOD
   ! Module for cluster analysis
   USE MOD_CLUSTER_ANALYSIS
+  
+  USE OMP_LIB !????
 
   IMPLICIT NONE
 
@@ -21,6 +23,7 @@ CONTAINS
           live_like_new,live_new,icluster,ntries,too_many_tries)
     ! Main search function
     USE MOD_PARAMETERS, ONLY: search_method, nlive
+
 
     INTEGER(4), INTENT(IN) :: n, itry
     REAL(8), INTENT(IN) :: min_live_like
@@ -84,6 +87,9 @@ CONTAINS
     INTEGER(4) :: n_call_cluster_it, test
     REAL(8) :: sdfraction
     INTEGER(4) :: njump
+
+     ! The problem is here, but with all variables !!! ????
+    !$OMP THREADPRIVATE(i,istart,live_ave) 
 
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
@@ -168,6 +174,7 @@ CONTAINS
           END IF
        END DO
        !!$OMP END PARALLEL DO
+       write(*,*) OMP_GET_THREAD_NUM(), i, 'in random walk' !???
 
        ! Check if the new point is inside the parameter volume defined by the minimum likelihood of the live points
        IF (LOGLIKELIHOOD(new_jump).GT.min_live_like) THEN
