@@ -1,6 +1,6 @@
 SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,&
      live_final,live_like_max,live_max)
-  ! Time-stamp: <Last changed by martino on Saturday 13 August 2022 at CEST 22:49:53>
+  ! Time-stamp: <Last changed by martino on Sunday 14 August 2022 at CEST 23:47:53>
   ! For parallel tests only
   !SUBROUTINE NESTED_SAMPLING(irnmax,rng,itry,ndata,x,nc,funcname,&
   !   npar,par_fix,par_step,par_in,par_bnd1,par_bnd2,nlive,evaccuracy,sdfraction,&
@@ -200,24 +200,24 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
      ! Parallisation is on progress, not working yet
      !$ print *,'Starting parallel computation with ', nth, ' threads'
      
-!!$     !$OMP PARALLEL PRIVATE(it,ntries) &
-!!$     !$OMP SHARED(live_like_new,live_new,icluster,too_many_tries)
-!!$     it  = OMP_GET_THREAD_NUM() + 1
-!!$     write(*,*) nth,it,n,itry,min_live_like,live_like(1)
-!!$     CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
-!!$          live_like_new(it),live_new(it,:),icluster(it),ntries,too_many_tries(it))
-!!$     write(*,*) OMP_GET_THREAD_NUM(), it, min_live_like, live_like_new(it)
-!!$     !$OMP END PARALLEL
+     !$OMP PARALLEL PRIVATE(it,ntries) &
+     !$OMP SHARED(live_like_new,live_new,icluster,too_many_tries)
+     it  = OMP_GET_THREAD_NUM() + 1
+     write(*,*) 'here', OMP_GET_THREAD_NUM(), n,itry,min_live_like,live_like(1),live(1,1)
+     CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
+          live_like_new(it),live_new(it,:),icluster(it),ntries,too_many_tries(it))
+     write(*,*) 'there', n, OMP_GET_THREAD_NUM(), it, min_live_like, live_like_new(it)
+     !$OMP END PARALLEL
 
-     !$OMP PARALLEL DO PRIVATE(it,ntries) &
-     !$OMP SHARED(n,live_like_new,live_new,icluster,too_many_tries)
-     DO it=1,nth
-        write(*,*) 'here', OMP_GET_THREAD_NUM(), n,itry,min_live_like,live_like(1),live(1,1)
-        CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
-             live_like_new(it),live_new(it,:),icluster(it),ntries,too_many_tries(it))
-        write(*,*) 'there', n, OMP_GET_THREAD_NUM(), it, min_live_like, live_like_new(it)
-     END DO
-     !$OMP END PARALLEL DO
+!!$     !$OMP PARALLEL DO PRIVATE(it,ntries) &
+!!$     !$OMP SHARED(n,live_like_new,live_new,icluster,too_many_tries)
+!!$     DO it=1,nth
+!!$        write(*,*) 'here', OMP_GET_THREAD_NUM(), n,itry,min_live_like,live_like(1),live(1,1)
+!!$        CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
+!!$             live_like_new(it),live_new(it,:),icluster(it),ntries,too_many_tries(it))
+!!$        write(*,*) 'there', n, OMP_GET_THREAD_NUM(), it, min_live_like, live_like_new(it)
+!!$     END DO
+!!$     !$OMP END PARALLEL DO
 
      !!write(*,*) live_like_new
      !!pause

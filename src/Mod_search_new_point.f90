@@ -1,5 +1,5 @@
 MODULE MOD_SEARCH_NEW_POINT
-  ! Automatic Time-stamp: <Last changed by martino on Sunday 14 August 2022 at CEST 23:09:49>
+  ! Automatic Time-stamp: <Last changed by martino on Sunday 14 August 2022 at CEST 23:46:26>
   ! Module for search of new points
 
   ! Module for the input parameter definition
@@ -88,8 +88,8 @@ CONTAINS
     REAL(8) :: sdfraction
     INTEGER(4) :: njump
 
-     ! The problem is here, but with all variables !!! ????
-    !$OMP THREADPRIVATE(i,istart,live_ave) 
+!!$     ! The problem is here, but with all variables !!! ????
+!!$    !$OMP THREADPRIVATE(i,istart,live_ave) 
 
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
