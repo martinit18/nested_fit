@@ -1447,7 +1447,7 @@ class Analysis(object):
             return
 
         g = plots.get_single_plotter()
-        g.plot_1d(self.path+'/nf_output_points.txt',par_name)
+        g.plot_1d(self.path+'/nf_output_points',par_name)
 
         #---------------------------------------------------------------------------------------------------------------------
 
