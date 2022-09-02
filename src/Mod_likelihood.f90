@@ -452,7 +452,7 @@ CONTAINS
        ! No set --------------------------------------------------------------------------------------------------------
        k=1
        IF (data_type.EQ.'1c') THEN
-          !$OMP PARALLEL DO PRIVATE(enc) REDUCTION(+:ll_tmp)
+          !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
           DO i=1, ndata_set(k)
              ! Poisson distribution calculation --------------------------------------------------
              enc = USERFCN(x(i,k),npar,par,funcname)
@@ -472,7 +472,7 @@ CONTAINS
        ! Set ----------------------------------------------------------------------------------------------------------
        DO k=1,nset
           IF (data_type.EQ.'1c') THEN
-             !$OMP PARALLEL DO PRIVATE(i,k,x,enc) REDUCTION(+:ll_tmp)
+             !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
              DO i=1, ndata_set(k)
                 ! Poisson distribution calculation --------------------------------------------------
                 enc = USERFCN_SET(x(i,k),npar,par,funcname,k)
@@ -480,7 +480,7 @@ CONTAINS
              END DO
              !$OMP END PARALLEL DO
           ELSE
-             !$OMP PARALLEL DO PRIVATE(i,k,x,enc) REDUCTION(+:ll_tmp)
+             !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
              DO i=1, ndata_set(k)
                 ! Normal (Gaussian) distribution calculation --------------------------------------
                 enc = USERFCN_SET(x(i,k),npar,par,funcname,k)
