@@ -439,30 +439,30 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
     evsum_final = ADDLOG(evsum,evrest_last)
   ELSE IF(conv_method .EQ. 'ENERGY_ACC') THEN
     ! Sum the last energies  (considering that we are dealing with logs)
-    last_likes = 1./conv_par*live_like(1)
+    last_likes = live_like(1)
     DO j=2,nlive
-       last_likes = ADDLOG(last_likes,1./conv_par*live_like(j))
+       last_likes = ADDLOG(last_likes,live_like(j))
     END DO
     ! Average value of the energies
     live_like_last = last_likes - DLOG(DFLOAT(nlive))
 
     ! Contribution of each last points assuming equal volume spacing (EXP(tlnrest)/nlive)
-    evlast = live_like_last + tlnrest(nstep_final) - DLOG(DFLOAT(nlive))
+    evlast = 1./conv_par*live_like_last + tlnrest(nstep_final) - DLOG(DFLOAT(nlive))
 
     ! The final partion function !!!
     evrest_last = live_like_last + tlnrest(nstep_final)
     evsum_final = ADDLOG(evsum,evrest_last)
   ELSE IF(conv_method .EQ. 'ENERGY_MAX') THEN
     ! Sum the last energies  (considering that we are dealing with logs)
-    last_likes = 1./conv_par*live_like(1)
+    last_likes = live_like(1)
     DO j=2,nlive
-       last_likes = ADDLOG(last_likes,1./conv_par*live_like(j))
+       last_likes = ADDLOG(last_likes,live_like(j))
     END DO
     ! Average value of the energies
     live_like_last = last_likes - DLOG(DFLOAT(nlive))
 
     ! Contribution of each last points assuming equal volume spacing (EXP(tlnrest)/nlive)
-    evlast = live_like_last + tlnrest(nstep_final) - DLOG(DFLOAT(nlive))
+    evlast = 1./conv_par*live_like_last + tlnrest(nstep_final) - DLOG(DFLOAT(nlive))
 
     ! The maximal contribution !!!
     evrest_last = live_like_last + tlnrest(nstep_final)
