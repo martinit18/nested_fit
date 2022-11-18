@@ -312,7 +312,7 @@ class Analysis(object):
 
 
 ####################################################################################################################################
-    def plot(self,path=currentpath,xmin=0,xmax=0,ymin=0,ymax=0,typeof='max',
+    def plot(self,path=currentpath,xmin=0,xmax=0,ymin=0,ymax=0,figsize=(0,0),typeof='max',
                  logscale=False,nset=0,high_definition=False,savefig=False):
         '''
         Plot the fit results present in the file output_data.dat and eventually to the file output_fit.dat.
@@ -376,7 +376,10 @@ class Analysis(object):
 
 
         # Plot the results
-        plt.figure()
+        if figsize==(0,0):
+            plt.figure()
+        else:
+            plt.figure(figsize=figsize)
         plt.clf()
         plt.title('Fit result')
         plt.xlabel('Channel')

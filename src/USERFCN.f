@@ -1,4 +1,4 @@
-c     Automatic Time-stamp: <Last changed by martino on Wednesday 30 June 2021 at CEST 23:17:26>
+c     Automatic Time-stamp: <Last changed by martino on Friday 18 November 2022 at CET 09:56:43>
 c################################### USERFCN DEFINITION #####################################
 
 
@@ -47,6 +47,7 @@ c################################### USERFCN DEFINITION ########################
       REAL*8 SIX_VOIGT_PARA_SHIRBG_SIG_PLEIADES
       REAL*8 ROCKING_CURVE,TWO_INTERP_VOIGT_POLY,THREE_INTERP_VOIGT_POLY
       REAL*8 TWO_INTERP_VOIGT_POLY_X0
+      REAL*8 DECAY, DECAY_SIMP
       REAL*8 x
       CHARACTER*64 funcname
 
@@ -224,6 +225,10 @@ c     Choose your model (see below for definition)
          USERFCN = ROCKING_CURVE(x,npar,val)
       ELSE IF(funcname.EQ.'SIX_VOIGT_PARA_POLY_SIG_PLEIADES') THEN
          USERFCN = SIX_VOIGT_PARA_POLY_SIG_PLEIADES(x,npar,val)
+      ELSE IF(funcname.EQ.'DECAY') THEN
+         USERFCN = DECAY(x,npar,val)
+      ELSE IF(funcname.EQ.'DECAY_SIMP') THEN
+         USERFCN = DECAY_SIMP(x,npar,val)
       ELSE
          WRITE(*,*) 'Error in the function name def. in USERFCN'
          WRITE(*,*) 'Check in the manual and in the input.dat file'
@@ -5819,5 +5824,53 @@ c     Save the different components
       RETURN
       END
 
+c     _________________________________________________________________________________________________
+      
+      FUNCTION DECAY(X,npar,val)
+c     Decay function for lifetime experiments
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 DECAY, x
+      REAL*8 pi
+      REAL*8 R0, lambda, lambda_cc, ratio_cc, gamma
+
+      R0        = val(1)
+      lambda    = val(2)
+      lambda_cc = val(3)
+      ratio_cc  = val(4)
+      gamma     = val(5)
+
+      DECAY = (R0+lambda/gamma/(lambda/gamma+lambda_cc*(1-ratio_cc)))*
+     +     DEXP((lambda/gamma+lambda_cc*(1-ratio_cc))*x)
+     +     -lambda/gamma/(lambda/gamma+lambda_cc*(1-ratio_cc))
+
+      RETURN
+      END
+
+
+c     _________________________________________________________________________________________________
+      
+      FUNCTION DECAY_SIMP(X,npar,val)
+c     Decay function for lifetime experiments
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 DECAY_SIMP, x
+      REAL*8 pi
+      REAL*8 R0, lambda, lambda_cc, ratio_cc, gamma
+
+      R0        = val(1)
+      lambda    = val(2)
+      lambda_cc = val(3)
+      ratio_cc  = val(4)
+      gamma     = val(5)
+
+      DECAY_SIMP = lambda/gamma*x*(1 + lambda_cc*(1-ratio_cc)/2)
+     +     + R0*DEXP(lambda_cc*(1-ratio_cc)*x)
+
+      RETURN
+      END
+     
 
 c ##############################################################################################

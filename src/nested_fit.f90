@@ -3,6 +3,7 @@ PROGRAM NESTED_FIT
   !
   ! Please read README and LICENSE files for more inforamtion
   ! 4.2  New search method added: uniform (around each live point) and slice sampling
+  !      New decay functions added
   ! 4.1  Several cluster recognition methods added.
   ! 4.0  2D data analysis available, new input and output files for future developments
   !      1D parallelization acceleration with masks instead of IF conditions in the likelihood
