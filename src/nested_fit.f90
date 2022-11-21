@@ -4,6 +4,7 @@ PROGRAM NESTED_FIT
   ! Please read README and LICENSE files for more inforamtion
   ! 4.2  New search method added: uniform (around each live point) and slice sampling
   !      New decay functions added
+  !      Faster user function comparison; Default mode reverted to single threaded (Disabled OpenMP)
   ! 4.1  Several cluster recognition methods added.
   ! 4.0  2D data analysis available, new input and output files for future developments
   !      1D parallelization acceleration with masks instead of IF conditions in the likelihood
@@ -112,9 +113,11 @@ PROGRAM NESTED_FIT
 
   ! PARALLEL VARIABLE: PUT ".TRUE." IF YOU WANT TO RUN IN PARALLEL
   ! CHANGE ALSO THE FFLAGS IN THE MAKEFILE
-  LOGICAL, PARAMETER :: parallel_on = .TRUE.
+  LOGICAL, PARAMETER :: parallel_on = .FALSE.
 
   EXTERNAL :: NESTED_SAMPLING, SORTN, MEANVAR
+
+  INTEGER(4) :: SELECT_USERFCN, SELECT_USERFCN_SET
 
 
 
@@ -175,6 +178,13 @@ PROGRAM NESTED_FIT
   READ(77,*) npoint, nwidth, string
   READ(77,*) xmin(1), xmax(1), ymin(1), ymax(1), string
   READ(77,*) npar, string
+
+  IF(set_yn.EQ.'n') THEN
+     funcid = SELECT_USERFCN(funcname)
+  ELSE
+     funcid = SELECT_USERFCN_SET(funcname)
+  END IF
+
   !
   ! Allocate space for parameters and initialize
   ALLOCATE(live_max(npar),par_num(npar),par_name(npar),par_in(npar),par_step(npar), &
