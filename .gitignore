@@ -4,3 +4,6 @@
 *.mod
 nf_output_*
 *.exe
+
+build/
+bin/

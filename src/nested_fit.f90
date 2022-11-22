@@ -73,6 +73,9 @@ PROGRAM NESTED_FIT
   USE MOD_PARAMETERS
   ! Module for likelihood for data analysis
   USE MOD_LIKELIHOOD
+
+  USE MOD_METADATA
+
   !USE RNG
   !
   IMPLICIT NONE
@@ -80,8 +83,7 @@ PROGRAM NESTED_FIT
   INTEGER(4) :: i=0, j=0, k=0
   ! Parameters values and co.
   CHARACTER :: string*128
-  REAL(4) :: version_file
-  REAL(4), PARAMETER :: version = 4.2
+  CHARACTER :: version_file*20
   ! Results from Nested sampling
   INTEGER(4) :: nall=0
   REAL(8) :: evsum_final=0., live_like_max=0.

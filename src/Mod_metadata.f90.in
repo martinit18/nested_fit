@@ -1,0 +1,8 @@
+MODULE MOD_METADATA
+  ! Module for program runtime metadata
+
+  IMPLICIT NONE
+  CHARACTER(LEN=@nested_fit_version_full_str_len@), PARAMETER :: version_full = '@nested_fit_version_full_str@'
+  CHARACTER(LEN=@nested_fit_version_str_len@), PARAMETER :: version = '@nested_fit_version_str@'
+
+END MODULE MOD_METADATA
