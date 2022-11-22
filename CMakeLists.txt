@@ -11,6 +11,11 @@ set(nested_res_name nested_res_V4p2.py)
 # For more info see the 'src/Mod_metadata.f90.in' file
 set(project_version 4.2.4)
 
+# Global options
+option(DEBUG "Enable debug mode." OFF)
+option(NORNG "Uses the same set seed. Useful for testing." OFF)
+option(OPENMP "Enable/Disable OpenMP." OFF) # This replaced the manual parellel_on variable on the nested_fit.f90 file
+
 #####################################
 #####################################
 
@@ -24,9 +29,6 @@ string(LENGTH ${nested_fit_version_full_str} nested_fit_version_full_str_len)
 set(nested_fit_version_str "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}")
 string(LENGTH ${nested_fit_version_str} nested_fit_version_str_len)
 
-option(DEBUG "Enable debug mode." OFF)
-option(NORNG "Uses the same set seed. Useful for testing." OFF)
-option(OPENMP "Enable/Disable OpenMP." OFF)
 
 if(NORNG)
     set(mod_lh_test _tests)
