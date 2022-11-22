@@ -26,6 +26,7 @@ string(LENGTH ${nested_fit_version_str} nested_fit_version_str_len)
 
 option(DEBUG "Enable debug mode." OFF)
 option(NORNG "Uses the same set seed. Useful for testing." OFF)
+option(OPENMP "Enable/Disable OpenMP." OFF)
 
 if(NORNG)
     set(mod_lh_test _tests)
@@ -60,11 +61,37 @@ file(GLOB SRC_CALGO   ${CMAKE_SOURCE_DIR}/src/CALGO.ACM/*.f)
 file(GLOB SRC_DIERCKX ${CMAKE_SOURCE_DIR}/src/DIERCKX/*.f)
 file(GLOB SRC_SLATEC ${CMAKE_SOURCE_DIR}/src/SLATEC/*.f)
 
+if(OPENMP)
+    set(nested_fit_parallel_on ".TRUE.")
+else()
+    set(nested_fit_parallel_on ".FALSE.")
+endif()
+
 configure_file(src/Mod_metadata.f90.in Mod_metadata.f90)
 
 set(CFG_FILES
     ${CMAKE_CURRENT_BINARY_DIR}/Mod_metadata.f90
 )
+
+# HACK(César): This is assuming we are using gfortran!
+if(DEBUG)
+    message(STATUS "Configuring for Debug")
+    set(SRC_FLAGS "-O0 -g")
+else()
+    message(STATUS "Configuring for Release")
+    set(SRC_FLAGS "-O3 -static")
+
+    # NOTE(César): Enable OpenMP only on release (Assuming we want to debug one thread only for now).
+    if(OPENMP)
+        set(SRC_FLAGS "${SRC_FLAGS} -fopenmp")
+    endif()
+endif()
+
+set_source_files_properties(${SRC_CALGO} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
+set_source_files_properties(${SRC_DIERCKX} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
+set_source_files_properties(${SRC_SLATEC} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
+set_source_files_properties(${SRC_FILES} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
+set_source_files_properties(${CFG_FILES} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 
 string(CONCAT nested_fit_target "nested_fit" ${nested_fit_version_full_str})
 add_executable(${nested_fit_target}
@@ -75,13 +102,9 @@ add_executable(${nested_fit_target}
     ${SRC_FILES}
 )
 
-# HACK(César): This is assuming we are using gfortran!
-if(DEBUG)
-    target_compile_definitions(${nested_fit_target} PRIVATE "-O0 -g -static")
-elseif()
-    target_compile_definitions(${nested_fit_target} PRIVATE "-O3 -static")
+if(OPENMP)
+    target_link_options(${nested_fit_target} PRIVATE "-fopenmp")
 endif()
-
 
 # NOTE(César): Don't run these commands for the Windows build.
 if(WIN32)

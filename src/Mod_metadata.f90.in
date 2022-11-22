@@ -5,4 +5,6 @@ MODULE MOD_METADATA
   CHARACTER(LEN=@nested_fit_version_full_str_len@), PARAMETER :: version_full = '@nested_fit_version_full_str@'
   CHARACTER(LEN=@nested_fit_version_str_len@), PARAMETER :: version = '@nested_fit_version_str@'
 
+  LOGICAL, PARAMETER :: parallel_on = @nested_fit_parallel_on@
+
 END MODULE MOD_METADATA

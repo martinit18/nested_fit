@@ -82,6 +82,7 @@ CONTAINS
     INTEGER(4), INTENT(INOUT) :: n_call_cluster
     REAL(8) :: sdfraction
     INTEGER(4) :: njump
+    REAL(8) :: loglike
 
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
@@ -329,11 +330,12 @@ CONTAINS
 
 
     ! Last(maybe useless) check
-    IF (LOGLIKELIHOOD(new_jump).LT.min_live_like) GOTO 500
+    loglike = LOGLIKELIHOOD(new_jump)
+    IF (loglike.LT.min_live_like) GOTO 500
 
     ! Take the last point after jumps as new livepoint
     live_new = new_jump
-    live_like_new = LOGLIKELIHOOD(new_jump)
+    live_like_new = loglike
 
     RETURN
     ! ------------------------------------------------------------------------------------
@@ -367,6 +369,7 @@ CONTAINS
     INTEGER(4) :: n_call_cluster_it, test
     INTEGER(4), INTENT(INOUT) :: n_call_cluster
     INTEGER(4) :: nb_cube, njump
+    REAL(8) :: loglike
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
     new_jump = par_in
@@ -608,11 +611,12 @@ CONTAINS
 
 
     ! Last(maybe useless) check
-    IF(LOGLIKELIHOOD(new_jump).LT.min_live_like) GOTO 700
+    loglike = LOGLIKELIHOOD(new_jump)
+    IF(loglike.LT.min_live_like) GOTO 700
 
     ! Take the last point after jumps as new livepoint
     live_new = new_jump
-    live_like_new = LOGLIKELIHOOD(new_jump)
+    live_like_new = loglike
 
     RETURN
     ! ------------------------------------------------------------------------------------
@@ -655,7 +659,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     REAL(8), DIMENSION(:,:), ALLOCATABLE :: live_nf
     REAL(8), DIMENSION(:), ALLOCATABLE :: start_jump, new_jump, start_jump_t, new_jump_t
     INTEGER(4), DIMENSION(:), ALLOCATABLE :: par_var
-    REAL(8) :: part_like, size_jump, size_jump_save
+    REAL(8) :: part_like, size_jump, size_jump_save, loglike
     LOGICAL :: test_bnd
     INTEGER(4) :: init_fail, test2, njump
     ! Find new live points
@@ -888,7 +892,8 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     END DO
 
     ! Last(maybe useless) check
-    IF(LOGLIKELIHOOD(new_jump_comp).LT.min_live_like) GOTO 700
+    loglike = LOGLIKELIHOOD(new_jump_comp)
+    IF(loglike.LT.min_live_like) GOTO 700
 
 !    DO l=1,npar
 !      IF (new_jump_comp(l).LT.par_bnd1(l).OR.new_jump_comp(l).GT.par_bnd2(l)) THEN
@@ -898,7 +903,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
 
     ! Take the last point after jumps as new livepoint
     live_new = new_jump_comp
-    live_like_new = LOGLIKELIHOOD(new_jump_comp)
+    live_like_new = loglike
     ntries=ntries/dim_eff
 
 END SUBROUTINE SLICE_SAMPLING
@@ -938,7 +943,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     REAL(8), DIMENSION(:,:), ALLOCATABLE :: live_nf
     REAL(8), DIMENSION(:), ALLOCATABLE :: start_jump, new_jump, start_jump_t, new_jump_t
     INTEGER(4), DIMENSION(:), ALLOCATABLE :: par_var
-    REAL(8) :: part_like, size_jump, size_jump_save
+    REAL(8) :: part_like, size_jump, size_jump_save, loglike
     LOGICAL :: test_bnd
     INTEGER(4) :: init_fail, test2, njump
     ! Find new live points
@@ -1190,7 +1195,8 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     END DO
 
     ! Last(maybe useless) check
-    IF(LOGLIKELIHOOD(new_jump_comp).LT.min_live_like) GOTO 700
+    loglike = LOGLIKELIHOOD(new_jump)
+    IF(loglike.LT.min_live_like) GOTO 700
 
 !    DO l=1,npar
 !      IF (new_jump_comp(l).LT.par_bnd1(l).OR.new_jump_comp(l).GT.par_bnd2(l)) THEN
@@ -1200,7 +1206,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
 
     ! Take the last point after jumps as new livepoint
     live_new = new_jump_comp
-    live_like_new = LOGLIKELIHOOD(new_jump_comp)
+    live_like_new = loglike
     ntries=ntries/dim_eff
 
 END SUBROUTINE SLICE_SAMPLING_ADAPT
