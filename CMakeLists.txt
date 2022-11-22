@@ -82,12 +82,17 @@ elseif()
     target_compile_definitions(${nested_fit_target} PRIVATE "-O3 -static")
 endif()
 
-# Install would work well here but lets keep the same copy-after-build scheme of the original makefile
-# TODO(César): Maybe use install later on
-add_custom_command(TARGET ${nested_fit_target} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${nested_fit_target}> $ENV{HOME}/bin)
 
-# Since we do this for the nested fit executable, why not put the latest nested_res_* file in the bin
-# At least while we don't have a custom python caller script
-add_custom_command(TARGET ${nested_fit_target} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/${nested_res_name} $ENV{HOME}/bin)
+# NOTE(César): Don't run these commands for the Windows build.
+if(WIN32)
+    message(STATUS "Configuring to Windows. The executable and python library must be manually copied somewhere and added to the PATH.")
+else()
+    # Install would work well here but lets keep the same copy-after-build scheme of the original makefile
+    # TODO(César): Maybe use install later on
+    add_custom_command(TARGET ${nested_fit_target} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${nested_fit_target}> $ENV{HOME}/bin)
+    # Since we do this for the nested fit executable, why not put the latest nested_res_* file in the bin
+    # At least while we don't have a custom python caller script
+    add_custom_command(TARGET ${nested_fit_target} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/${nested_res_name} $ENV{HOME}/bin)
+endif()
