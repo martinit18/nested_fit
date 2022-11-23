@@ -411,7 +411,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   ELSE IF(conv_method .EQ. 'ENERGY_ACC') THEN
     WRITE(99,*) '# Evidence accuracy =',  ADDLOG(evsum,1./conv_par*live_like(nlive) + tlnrest(n-1)) - evsum
   ELSE IF(conv_method .EQ. 'ENERGY_MAX') THEN
-    WRITE(99,*) '# Evidence accuracy =',  MAX(evsum,1./conv_par*live_like(nlive) + tlnrest(n-1)) - evsum
+    WRITE(99,*) '# Evidence accuracy =',  1./conv_par*live_like(nlive) + tlnmass(n-1) - evsum
   ELSE
     WRITE(*,*) 'Not a convergence method. Change the name'
   END IF
@@ -441,31 +441,31 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
     ! Sum the last energies  (considering that we are dealing with logs)
     last_likes = live_like(1)
     DO j=2,nlive
-       last_likes = ADDLOG(last_likes,live_like(j))
+       last_likes = last_likes+live_like(j)
     END DO
     ! Average value of the energies
-    live_like_last = last_likes - DLOG(DFLOAT(nlive))
+    live_like_last = last_likes/DFLOAT(nlive)
 
     ! Contribution of each last points assuming equal volume spacing (EXP(tlnrest)/nlive)
     evlast = 1./conv_par*live_like_last + tlnrest(nstep_final) - DLOG(DFLOAT(nlive))
 
     ! The final partion function !!!
-    evrest_last = live_like_last + tlnrest(nstep_final)
+    evrest_last = 1./conv_par*live_like_last + tlnrest(nstep_final)
     evsum_final = ADDLOG(evsum,evrest_last)
   ELSE IF(conv_method .EQ. 'ENERGY_MAX') THEN
     ! Sum the last energies  (considering that we are dealing with logs)
     last_likes = live_like(1)
     DO j=2,nlive
-       last_likes = ADDLOG(last_likes,live_like(j))
+       last_likes = last_likes+live_like(j)
     END DO
     ! Average value of the energies
-    live_like_last = last_likes - DLOG(DFLOAT(nlive))
+    live_like_last = last_likes/DFLOAT(nlive)
 
     ! Contribution of each last points assuming equal volume spacing (EXP(tlnrest)/nlive)
     evlast = 1./conv_par*live_like_last + tlnrest(nstep_final) - DLOG(DFLOAT(nlive))
 
     ! The maximal contribution !!!
-    evrest_last = live_like_last + tlnrest(nstep_final)
+    evrest_last = 1./conv_par*live_like_last + tlnrest(nstep_final)
     evsum_final = MAX(evsum,evrest_last)
   ELSE
     WRITE(*,*) 'Not a convergence method. Change the name'
