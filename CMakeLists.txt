@@ -14,7 +14,7 @@ set(project_version 4.2.4)
 # Global options
 option(DEBUG "Enable debug mode." OFF)
 option(NORNG "Uses the same set seed. Useful for testing." OFF)
-option(OPENMP "Enable/Disable OpenMP." OFF) # This replaced the manual parellel_on variable on the nested_fit.f90 file
+option(OPENMP "Enable/Disable OpenMP." OFF) # This replaced the manual parallel_on variable on the nested_fit.f90 file
 
 #####################################
 #####################################
@@ -84,6 +84,7 @@ else()
     set(SRC_FLAGS "-O3 -static")
 
     # NOTE(César): Enable OpenMP only on release (Assuming we want to debug one thread only for now).
+    # TODO(César): OpenMP should be a link only flag, no?
     if(OPENMP)
         set(SRC_FLAGS "${SRC_FLAGS} -fopenmp")
     endif()
@@ -110,7 +111,8 @@ endif()
 
 # NOTE(César): Don't run these commands for the Windows build.
 if(WIN32)
-    message(STATUS "Configuring to Windows. The executable and python library must be manually copied somewhere and added to the PATH.")
+    # TODO(César): Create a automatic configuration for Windows as well
+    message(STATUS "Configuring for Windows. The executable and python library must be manually copied somewhere and added to the PATH.")
 else()
     # Install would work well here but lets keep the same copy-after-build scheme of the original makefile
     # TODO(César): Maybe use install later on
