@@ -44,11 +44,13 @@ make
 > :warning: For Windows you can compile by replacing line of the above commands by `cmake -G"MinGW Makefiles" ..`, for simplicity.
 
 **CMake options**
-| Option | Description | Default |
-|:-------|:------------|:-------:|
-|DEBUG   | "Enable debug mode." | OFF |
-|NORNG   | "Uses the same set seed. Useful for testing." | OFF |
-|OPENMP  | "Enable/Disable OpenMP." | OFF |
+
+| Option | Description                                           | Default |
+|:-------|:------------------------------------------------------|:-------:|
+|DEBUG   | "Enable debug mode."                                  | OFF     |
+|NORNG   | "Uses the tests functions instead of the likelihood." | OFF     |
+|OPENMP  | "Enable/Disable OpenMP."                              | OFF     |
+
 
 > You can pass in options on the cmake step via: `cmake -D<option_name>=<ON/OFF> ..`\
 > These will prevail any time you run the `make` command.
