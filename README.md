@@ -28,17 +28,20 @@ Institute of NanoSciences of Paris, Sorbonne Université, CNRS\
 email: lune.maillard AT insp.upmc.fr
 ## Installation instructions ##
 **Prerequisite**:
+- CMake
 - Fortran compiler (gfortran by default)
 - Python 3 with numpy, scipy, matplotlib, pandas, getdist
 
 **Instruction**:
 1. Download the latest version or clone the repository
-2. Go to the source directory `src`
-3. Edit the Makefile (change the compiler name, the `bin` directory if needed). If you want to run in parallel mode, \
-  a. Uncomment `FFLAGS  = -fopenmp` in the Makefile\
-  b. Put the variable `parallel_on = .TRUE.` in nested_fit.f
-4. Run `make`  
-5. For the python libraries: put in a directory listed in the `PYTHONPATH` in the .bashrc file (or similar) or in the directory of the input files
+2. Run the commands:
+```
+cd nested_fit
+mkdir build && cd build
+cmake ..
+make
+```
+> :warning: For Windows you can compile by replacing line of the above commands by `cmake -G"MinGW Makefiles" ..`, for simplicity.
 
 NOTE for getdist function in the python library:\
 To make it work, change the file  xxx/pythonxx/site-packages/getdist/plots.py
@@ -210,6 +213,7 @@ In addition to the original files from the main author (M. Trassinelli), nesed_f
 
 - Anna Lévy (photoemission spectra models)
 - Nancy Paul (rocking curves and Bragg spectrometer lines)
+- César Godinho (performance optimization and build system refactoring)
 
 ### Thanks for bugs corrections
 (alphabetical order)

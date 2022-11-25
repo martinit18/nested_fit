@@ -1,7 +1,61 @@
 c     Automatic Time-stamp: <Last changed by martino on Tuesday 02 April 2019 at CEST 17:19:46>
 c################################### USERFCN DEFINITION #####################################
 
-      FUNCTION USERFCN_SET(x,npar,val,funcname,j)
+
+      FUNCTION SELECT_USERFCN_SET(funcname)
+      IMPLICIT NONE
+      CHARACTER*64 funcname
+      INTEGER*4 SELECT_USERFCN_SET
+
+ 
+c     Choose your model (see below for definition)
+      IF(funcname.EQ.'GAUSS_BG_SET') THEN
+            SELECT_USERFCN_SET = 0
+      ELSE IF(funcname.EQ.'DOUBLE_EXPSIMP') THEN
+            SELECT_USERFCN_SET = 1
+      ELSE IF(funcname.EQ.'DOUBLE_EXPSIN') THEN
+            SELECT_USERFCN_SET = 2
+      ELSE IF(funcname.EQ.'DOUBLE_EXPSIN_BIS') THEN
+            SELECT_USERFCN_SET = 3
+      ELSE IF(funcname.EQ.'DOUBLE_TWO_EXPSIN') THEN
+            SELECT_USERFCN_SET = 4
+      ELSE IF(funcname.EQ.'TRIPLE_EXPSIMP') THEN
+            SELECT_USERFCN_SET = 5
+      ELSE IF(funcname.EQ.'TRIPLE_EXPSIN') THEN
+            SELECT_USERFCN_SET = 6
+      ELSE IF(funcname.EQ.'TRIPLE_EXPSIN_BIS') THEN
+            SELECT_USERFCN_SET = 7
+      ELSE IF(funcname.EQ.'TRIPLE_EXPSIN_TRIS') THEN
+            SELECT_USERFCN_SET = 8
+      ELSE IF(funcname.EQ.'WEIBULL_EL_LASER') THEN
+            SELECT_USERFCN_SET = 9
+      ELSE IF(funcname.EQ.'SIX_GAUSS_ERF_FREESIG_POLY_SET') THEN
+            SELECT_USERFCN_SET = 10
+      ELSE IF(funcname.EQ.'SIX_GAUSS_ERF_FREESIG_POLY_SET2') THEN
+            SELECT_USERFCN_SET = 11
+      ELSE IF(funcname.EQ.'SIX_GAUSS_ERF_FREESIG_POLY_SET3') THEN
+            SELECT_USERFCN_SET = 12
+      ELSE IF(funcname.EQ.'FOUR_GAUSS_ERF_TWO_GAUSS_SET') THEN
+            SELECT_USERFCN_SET = 13
+      ELSE IF(funcname.EQ.'FOUR_GAUSS_ERF_TWO_GAUSS_STAN_SET') THEN
+            SELECT_USERFCN_SET = 14
+      ELSE IF(funcname.EQ.'FOUR_GAUSS_ERF_TWO_GAUSS_STAN2_SET') THEN
+            SELECT_USERFCN_SET = 15
+      ELSE IF(funcname.EQ.'FOUR_GAUSS_ERF_TWO_GAUSS_STAN3_SET') THEN
+            SELECT_USERFCN_SET = 16
+      ELSE IF(funcname.EQ.'ROCKING_CURVE_SET') THEN
+            SELECT_USERFCN_SET = 17
+      ELSE
+         WRITE(*,*) 'Selected function:', funcname
+         WRITE(*,*) 'Error in the function name def. in USERFCN_SET'
+         WRITE(*,*) 'Check in the manual and in the input.dat file'
+         STOP
+      END IF
+
+      RETURN
+      END
+
+      FUNCTION USERFCN_SET(x,npar,val,funcid,j)
       IMPLICIT NONE
       INTEGER*4 npar, j
       REAL*8 val(npar)
@@ -18,52 +72,48 @@ c################################### USERFCN DEFINITION ########################
       REAL*8 FOUR_GAUSS_ERF_TWO_GAUSS_STAN2_SET
       REAL*8 FOUR_GAUSS_ERF_TWO_GAUSS_STAN3_SET
       REAL*8 ROCKING_CURVE_SET
-      CHARACTER*64 funcname
+      INTEGER*4 funcid
 
  
 c     Choose your model (see below for definition)
-      IF(funcname.EQ.'GAUSS_BG_SET') THEN
+      SELECT CASE (funcid)
+      CASE(0)
          USERFCN_SET = GAUSS_BG_SET(x,npar,val,j)
-      ELSE IF(funcname.EQ.'DOUBLE_EXPSIMP') THEN
+      CASE(1)
          USERFCN_SET = DOUBLE_EXPSIMP(x,npar,val,j)
-      ELSE IF(funcname.EQ.'DOUBLE_EXPSIN') THEN
+      CASE(2)
          USERFCN_SET = DOUBLE_EXPSIN(x,npar,val,j)
-      ELSE IF(funcname.EQ.'DOUBLE_EXPSIN_BIS') THEN
+      CASE(3)
          USERFCN_SET = DOUBLE_EXPSIN_BIS(x,npar,val,j)
-      ELSE IF(funcname.EQ.'DOUBLE_TWO_EXPSIN') THEN
+      CASE(4)
          USERFCN_SET = DOUBLE_TWO_EXPSIN(x,npar,val,j)
-      ELSE IF(funcname.EQ.'TRIPLE_EXPSIMP') THEN
+      CASE(5)
          USERFCN_SET = TRIPLE_EXPSIMP(x,npar,val,j)
-      ELSE IF(funcname.EQ.'TRIPLE_EXPSIN') THEN
+      CASE(6)
          USERFCN_SET = TRIPLE_EXPSIN(x,npar,val,j)
-      ELSE IF(funcname.EQ.'TRIPLE_EXPSIN_BIS') THEN
+      CASE(7)
          USERFCN_SET = TRIPLE_EXPSIN_BIS(x,npar,val,j)
-      ELSE IF(funcname.EQ.'TRIPLE_EXPSIN_TRIS') THEN
+      CASE(8)
          USERFCN_SET = TRIPLE_EXPSIN_TRIS(x,npar,val,j)
-      ELSE IF(funcname.EQ.'WEIBULL_EL_LASER') THEN
+      CASE(9)
          USERFCN_SET = WEIBULL_EL_LASER(x,npar,val,j)
-      ELSE IF(funcname.EQ.'SIX_GAUSS_ERF_FREESIG_POLY_SET') THEN
+      CASE(10)
          USERFCN_SET = SIX_GAUSS_ERF_FREESIG_POLY_SET(x,npar,val,j)
-      ELSE IF(funcname.EQ.'SIX_GAUSS_ERF_FREESIG_POLY_SET2') THEN
+      CASE(11)
          USERFCN_SET = SIX_GAUSS_ERF_FREESIG_POLY_SET2(x,npar,val,j)
-      ELSE IF(funcname.EQ.'SIX_GAUSS_ERF_FREESIG_POLY_SET3') THEN
+      CASE(12)
          USERFCN_SET = SIX_GAUSS_ERF_FREESIG_POLY_SET3(x,npar,val,j)
-      ELSE IF(funcname.EQ.'FOUR_GAUSS_ERF_TWO_GAUSS_SET') THEN
+      CASE(13)
          USERFCN_SET = FOUR_GAUSS_ERF_TWO_GAUSS_SET(x,npar,val,j)
-      ELSE IF(funcname.EQ.'FOUR_GAUSS_ERF_TWO_GAUSS_STAN_SET') THEN
+      CASE(14)
          USERFCN_SET = FOUR_GAUSS_ERF_TWO_GAUSS_STAN_SET(x,npar,val,j)
-      ELSE IF(funcname.EQ.'FOUR_GAUSS_ERF_TWO_GAUSS_STAN2_SET') THEN
+      CASE(15)
          USERFCN_SET = FOUR_GAUSS_ERF_TWO_GAUSS_STAN2_SET(x,npar,val,j)
-      ELSE IF(funcname.EQ.'FOUR_GAUSS_ERF_TWO_GAUSS_STAN3_SET') THEN
+      CASE(16)
          USERFCN_SET = FOUR_GAUSS_ERF_TWO_GAUSS_STAN3_SET(x,npar,val,j)
-      ELSE IF(funcname.EQ.'ROCKING_CURVE_SET') THEN
+      CASE(17)
          USERFCN_SET = ROCKING_CURVE_SET(x,npar,val,j)
-      ELSE
-         WRITE(*,*) 'Selected function:', funcname
-         WRITE(*,*) 'Error in the function name def. in USERFCN_SET'
-         WRITE(*,*) 'Check in the manual and in the input.dat file'
-         STOP
-      END IF
+      END SELECT
 
       RETURN
       END
