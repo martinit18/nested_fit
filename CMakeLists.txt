@@ -15,6 +15,7 @@ set(project_version 4.2.4)
 option(DEBUG "Enable debug mode." OFF)
 option(NORNG "Uses the same set seed. Useful for testing." OFF)
 option(OPENMP "Enable/Disable OpenMP." OFF) # This replaced the manual parallel_on variable on the nested_fit.f90 file
+option(AUTOTESTS "Automatically run tests after compiling." OFF)
 
 #####################################
 #####################################
@@ -123,3 +124,6 @@ else()
     add_custom_command(TARGET ${nested_fit_target} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/${nested_res_name} $ENV{HOME}/bin)
 endif()
+
+enable_testing()
+add_subdirectory(tests)

@@ -1,0 +1,37 @@
+# Testing for gaussian bg
+
+from nf_output_res.dat expect
+{
+    # Split on spaces
+    set split ' '
+
+    # File outputs 1 trial
+    line 2  split[1] as int match 1
+
+    # Check bg value
+    line 11 split[1] as float match range(0.10, 0.12)
+
+    # Check x0 value
+    line 12 split[1] as float match range(453, 456)
+
+    # Check amp value
+    line 13 split[1] as float match range(284, 316)
+
+    # Check sigma value
+    line 14 split[1] as float match range(24, 28)
+}
+
+from nf_output_points.paramnames expect
+{
+    # Check bg name order
+    line 1 match "bg"
+
+    # Check x0 name order
+    line 2 match "x0"
+
+    # Check amp name order
+    line 3 match "amp"
+
+    # Check sigma name order
+    line 4 match "sigma"
+}
