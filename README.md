@@ -90,10 +90,14 @@ LIKE_ACC		 # Method used for convergence
 1.E-05	0.01             # Evidence final accuracy and additional convergence parameter
 ```
 
-For the moment, there are three convergence methods :
-- `LIKE_ACC` : the algorithm stops when the difference between the calculated evidence and the estimated total evidence is below a certain value (first parameter on the above line). Typical value for the parameter : 1.E-05.
-- `ENERGY_ACC` : the algorithm stops when the difference between the calculated partition function and the estimated total partition function is below a certain value (first parameter on the above line). The second parameter corresponds to the temperature at which the partition function is calculated. Typical value for the first parameter : 1.E-05.
-- `ENERGY_MAX` : the algorithm stops when the difference between the current contribution to the partion function and its maximal previous contribution is below a certain value (first parameter on the above line). The second parameter corresponds to the temperature at which the partition function is calculated. Typical value for the first parameter : -10.
+For the moment, there are three convergence methods:
+- `LIKE_ACC`: the algorithm stops when the difference between the calculated evidence and the estimated total evidence is below a certain value (first parameter on the above line). Typical value for the parameter : 1.E-05. In this case, the function that is maximised is the log-likelihood and it is associated to data.
+- `ENERGY_ACC`: the algorithm stops when the difference between the calculated partition function and the estimated total partition function is below a certain value (first parameter on the above line). The second parameter corresponds to the temperature at which the partition function is calculated. Typical value for the first parameter : 1.E-05. In this case, the function that is maximised is the opposite of the energy function.
+- `ENERGY_MAX`: the algorithm stops when the difference between the current contribution to the partion function and its maximal previous contribution is below a certain value (first parameter on the above line). The second parameter corresponds to the temperature at which the partition function is calculated. Typical value for the first parameter : -10.  In this case, the function that is maximised is the opposite of the energy function.
+
+After convergence is reached, all remaining live points are assigned: 
+- the logarithm of the likelihoods averaged over the live points (`LIKE_ACC` case),
+- the opposite of the energies averaged over the live points (`ENERGY_ACC` and `ENERGY_MAX` cases).
 ```
 RANDOM_WALK              # Type of search of live points
 0.1	20	100	10   # Param. search algo.(2), max n. tries, max of max tries
