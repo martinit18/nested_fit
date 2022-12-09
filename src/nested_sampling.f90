@@ -9,7 +9,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   !USE RNG
 
   ! Parameter module
-  USE MOD_PARAMETERS, ONLY:  nlive, evaccuracy, search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, search_method
+  USE MOD_PARAMETERS, ONLY:  nlive, conv_method, evaccuracy, conv_par, &
+        search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, search_method
   ! Module for likelihood
   USE MOD_LIKELIHOOD
   ! Module for searching new live points
@@ -178,8 +179,18 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   live_like_old(1) = live_like(1)
   live_old(1,:) = live(1,:)
   ! First evidence (sum because we are working with logarithms)
-  evstep(1) = live_like_old(1) + tlnmass(1)
-  evsum = evstep(1)
+  IF(conv_method .EQ. 'LIKE_ACC') THEN
+    evstep(1) = live_like_old(1) + tlnmass(1)
+    evsum = evstep(1)
+  ELSE IF(conv_method .EQ. 'ENERGY_ACC') THEN
+    evstep(1) = 1./conv_par*live_like_old(1) + tlnmass(1)
+    evsum = evstep(1)
+  ELSE IF(conv_method .EQ. 'ENERGY_MAX') THEN
+    evstep(1) = 1./conv_par*live_like_old(1) + tlnmass(1)
+    evsum = evstep(1)
+  ELSE
+    WRITE(*,*) 'Not a convergence method. Change the name'
+  END IF
 
 
   ! ---------------------------------------------------------------------------------------!
@@ -264,16 +275,41 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
         CALL REMAKE_CLUSTER_STD(live,icluster,icluster_old)
      END IF
 
-     ! Calculate the evidence for this step
-     evstep(n) = live_like_old(n) + tlnmass(n)
 
-     ! Sum the evidences
-     evsum = ADDLOG(evsum,evstep(n))
+     IF(conv_method .EQ. 'LIKE_ACC') THEN
+       ! Calculate the evidence for this step
+       evstep(n) = live_like_old(n) + tlnmass(n)
 
+       ! Sum the evidences
+       evsum = ADDLOG(evsum,evstep(n))
+
+       ! Check if the estimate accuracy is reached
+       evrestest = live_like(nlive) + tlnrest(n)
+       evtotest = ADDLOG(evsum,evrestest)
+     ELSE IF(conv_method .EQ. 'ENERGY_ACC') THEN
+       ! Calculate the contribution to the partition function at that temperature for this step
+       evstep(n) = 1./conv_par*live_like_old(n) + tlnmass(n)
+
+       ! Sum the contribution with the previous contributions
+       evsum = ADDLOG(evsum,evstep(n))
+
+       ! Check if the estimate accuracy is reached
+       evrestest = 1./conv_par*live_like(nlive) + tlnrest(n)
+       evtotest = ADDLOG(evsum,evrestest)
+     ELSE IF(conv_method .EQ. 'ENERGY_MAX') THEN
+       ! Calculate the contribution to the partition function at that temperature for this step
+       evstep(n) = 1./conv_par*live_like_old(n) + tlnmass(n)
+
+       ! Max between the present contribution and previous ones
+       evsum = MAX(evsum,evstep(n))
+
+       ! Check if the estimate accuracy is reached
+       evtotest = evstep(n)
+     ELSE
+       WRITE(*,*) 'Not a convergence method. Change the name'
+     END IF
+     
      ! Check if the estimate accuracy is reached
-     evrestest = live_like(nlive) + tlnrest(n)
-     evtotest = ADDLOG(evsum,evrestest)
-
      IF (evtotest-evsum.LT.evaccuracy) GOTO 301
 
      IF (MOD(n,50).EQ.0) THEN
@@ -370,7 +406,15 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   OPEN(99,FILE='nf_output_last_live_points.dat',STATUS= 'UNKNOWN')
   WRITE(99,*) '# n step =',  n-1
   WRITE(99,*) '# Evidence of the step =', evstep(n-1)
-  WRITE(99,*) '# Evidence accuracy =',  ADDLOG(evsum,live_like(nlive) + tlnrest(n-1)) - evsum
+  IF(conv_method .EQ. 'LIKE_ACC') THEN
+    WRITE(99,*) '# Evidence accuracy =',  ADDLOG(evsum,live_like(nlive) + tlnrest(n-1)) - evsum
+  ELSE IF(conv_method .EQ. 'ENERGY_ACC') THEN
+    WRITE(99,*) '# Evidence accuracy =',  ADDLOG(evsum,1./conv_par*live_like(nlive) + tlnrest(n-1)) - evsum
+  ELSE IF(conv_method .EQ. 'ENERGY_MAX') THEN
+    WRITE(99,*) '# Evidence accuracy =',  1./conv_par*live_like(nlive) + tlnmass(n-1) - evsum
+  ELSE
+    WRITE(*,*) 'Not a convergence method. Change the name'
+  END IF
   WRITE(99,*) '# n     lnlikelihood     parameters'
   DO j=1,nlive
      WRITE(99,*) j, live_like(j), live(j,:)
@@ -378,21 +422,55 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   CLOSE(99)
 
   ! Calculate the last evidence
-  ! Sum the last loglikelihood  (considering that we are dealing with logs)
-  last_likes = live_like(1)
-  DO j=2,nlive
-     last_likes = ADDLOG(last_likes,live_like(j))
-  END DO
-  ! Average value of the loglikelihood
-  live_like_last = last_likes - DLOG(DFLOAT(nlive))
+  IF(conv_method .EQ. 'LIKE_ACC') THEN
+    ! Sum the last loglikelihood  (considering that we are dealing with logs)
+    last_likes = live_like(1)
+    DO j=2,nlive
+       last_likes = ADDLOG(last_likes,live_like(j))
+    END DO
+    ! Average value of the loglikelihood
+    live_like_last = last_likes - DLOG(DFLOAT(nlive))
 
-  ! Evidence of each last points assuming equal volume spacing (EXP(tlnrest)/nlive)
-  evlast = live_like_last + tlnrest(nstep_final) - DLOG(DFLOAT(nlive))
+    ! Evidence of each last points assuming equal volume spacing (EXP(tlnrest)/nlive)
+    evlast = live_like_last + tlnrest(nstep_final) - DLOG(DFLOAT(nlive))
 
-  ! The final evidence !!!
-  evrest_last = live_like_last + tlnrest(nstep_final)
-  evsum_final = ADDLOG(evsum,evrest_last)
+    ! The final evidence !!!
+    evrest_last = live_like_last + tlnrest(nstep_final)
+    evsum_final = ADDLOG(evsum,evrest_last)
+  ELSE IF(conv_method .EQ. 'ENERGY_ACC') THEN
+    ! Sum the last energies  (considering that we are dealing with logs)
+    last_likes = live_like(1)
+    DO j=2,nlive
+       last_likes = last_likes+live_like(j)
+    END DO
+    ! Average value of the energies
+    live_like_last = last_likes/DFLOAT(nlive)
 
+    ! Contribution of each last points assuming equal volume spacing (EXP(tlnrest)/nlive)
+    evlast = 1./conv_par*live_like_last + tlnrest(nstep_final) - DLOG(DFLOAT(nlive))
+
+    ! The final partion function !!!
+    evrest_last = 1./conv_par*live_like_last + tlnrest(nstep_final)
+    evsum_final = ADDLOG(evsum,evrest_last)
+  ELSE IF(conv_method .EQ. 'ENERGY_MAX') THEN
+    ! Sum the last energies  (considering that we are dealing with logs)
+    last_likes = live_like(1)
+    DO j=2,nlive
+       last_likes = last_likes+live_like(j)
+    END DO
+    ! Average value of the energies
+    live_like_last = last_likes/DFLOAT(nlive)
+
+    ! Contribution of each last points assuming equal volume spacing (EXP(tlnrest)/nlive)
+    evlast = 1./conv_par*live_like_last + tlnrest(nstep_final) - DLOG(DFLOAT(nlive))
+
+    ! The maximal contribution !!!
+    evrest_last = 1./conv_par*live_like_last + tlnrest(nstep_final)
+    evsum_final = MAX(evsum,evrest_last)
+  ELSE
+    WRITE(*,*) 'Not a convergence method. Change the name'
+  END IF
+  
   ! Insert the last live points in the ensemble
   live_old(nstep_final+1:nstep_final+nlive,:) = live(:,:)
   live_like_old(nstep_final+1:nstep_final+nlive) = live_like_last
