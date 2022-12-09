@@ -1,4 +1,4 @@
-# NOTE(César): Testing requires python, I could run if off C++ or even Fortran, but I don't see the need to do so.
+# NOTE(César): Testing requires python, I could run it off C++ or even Fortran, but I don't see the need to do so.
 find_package(Python COMPONENTS Interpreter REQUIRED)
 
 message(STATUS "Tests are enabled.")

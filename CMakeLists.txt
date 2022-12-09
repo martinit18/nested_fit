@@ -15,6 +15,7 @@ set(project_version 4.2.4)
 option(DEBUG "Enable debug mode." OFF)
 option(NORNG "Uses the same set seed. Useful for testing." OFF)
 option(OPENMP "Enable/Disable OpenMP." OFF) # This replaced the manual parallel_on variable on the nested_fit.f90 file
+option(OPENMPI "Enable/Disable OpenMPI." ON)
 option(AUTOTESTS "Automatically run tests after compiling." OFF)
 
 #####################################
@@ -64,10 +65,23 @@ file(GLOB SRC_CALGO   ${CMAKE_SOURCE_DIR}/src/CALGO.ACM/*.f)
 file(GLOB SRC_DIERCKX ${CMAKE_SOURCE_DIR}/src/DIERCKX/*.f)
 file(GLOB SRC_SLATEC ${CMAKE_SOURCE_DIR}/src/SLATEC/*.f)
 
+if(OPENMP and OPENMPI)
+    message(ERROR "Compiling against OpenMP and OpenMPI at the same time is currently not supported.")
+    message(WARNING "Disabling OpenMP.")
+    message(STATUS "Please enable only one feature.")
+    set(OPENMP OFF CACHE BOOL "" FORCE)
+endif()
+
 if(OPENMP)
     set(nested_fit_parallel_on ".TRUE.")
 else()
     set(nested_fit_parallel_on ".FALSE.")
+endif()
+
+if(OPENMPI)
+    set(nested_fit_parallel_mpi_on ".TRUE.")
+else()
+    set(nested_fit_parallel_mpi_on ".FALSE.")
 endif()
 
 configure_file(src/Mod_metadata.f90.in Mod_metadata.f90)
