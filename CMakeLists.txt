@@ -9,11 +9,12 @@ set(nested_res_name nested_res_V4p2.py)
 
 # The nested_fit version being built -> This gets copied everywhere inside the project code
 # For more info see the 'src/Mod_metadata.f90.in' file
-set(project_version 4.2.4)
+set(project_version 4.3.0)
 
 # Global options
 option(DEBUG "Enable debug mode." OFF)
 option(NORNG "Uses the same set seed. Useful for testing." OFF)
+# option(MOD_TEST "Uses another likelihood function." OFF)
 option(OPENMP "Enable/Disable OpenMP." OFF) # This replaced the manual parallel_on variable on the nested_fit.f90 file
 option(OPENMPI "Enable/Disable OpenMPI." ON)
 option(AUTOTESTS "Automatically run tests after compiling." OFF)
@@ -32,9 +33,9 @@ set(nested_fit_version_str "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSI
 string(LENGTH ${nested_fit_version_str} nested_fit_version_str_len)
 
 
-if(NORNG)
-    set(mod_lh_test _tests)
-endif()
+# if(MOD_TEST)
+#     set(mod_lh_test _tests)
+# endif()
 
 set(SRC_FILES
     src/Mod_cluster_analysis.f90
@@ -65,7 +66,7 @@ file(GLOB SRC_CALGO   ${CMAKE_SOURCE_DIR}/src/CALGO.ACM/*.f)
 file(GLOB SRC_DIERCKX ${CMAKE_SOURCE_DIR}/src/DIERCKX/*.f)
 file(GLOB SRC_SLATEC ${CMAKE_SOURCE_DIR}/src/SLATEC/*.f)
 
-if(OPENMP and OPENMPI)
+if(OPENMP AND OPENMPI)
     message(ERROR "Compiling against OpenMP and OpenMPI at the same time is currently not supported.")
     message(WARNING "Disabling OpenMP.")
     message(STATUS "Please enable only one feature.")
@@ -84,6 +85,12 @@ else()
     set(nested_fit_parallel_mpi_on ".FALSE.")
 endif()
 
+if(NORNG)
+    set(nested_fit_static_seed ".TRUE.")
+else()
+    set(nested_fit_static_seed ".FALSE.")
+endif()
+
 configure_file(src/Mod_metadata.f90.in Mod_metadata.f90)
 
 set(CFG_FILES
@@ -93,10 +100,10 @@ set(CFG_FILES
 # HACK(César): This is assuming we are using gfortran!
 if(DEBUG)
     message(STATUS "Configuring for Debug")
-    set(SRC_FLAGS "-O0 -g")
+    set(SRC_FLAGS "-O0 -g -ffree-line-length-0")
 else()
     message(STATUS "Configuring for Release")
-    set(SRC_FLAGS "-O3 -static")
+    set(SRC_FLAGS "-O3 -static -ffree-line-length-0")
 
     # NOTE(César): Enable OpenMP only on release (Assuming we want to debug one thread only for now).
     # TODO(César): OpenMP should be a link only flag, no?
@@ -122,6 +129,20 @@ add_executable(${nested_fit_target}
 
 if(OPENMP)
     target_link_options(${nested_fit_target} PRIVATE "-fopenmp")
+endif()
+
+if(OPENMPI)
+    # Find MPI
+    find_package(MPI REQUIRED)
+    if(MPI_FOUND)
+        if(MPI_Fortran_HAVE_F90_MODULE)
+            target_link_libraries(${nested_fit_target} PUBLIC MPI::MPI_Fortran)
+        else()
+            message(ERROR "This project requires the MPI Fortran 90 module.")
+        endif()
+    else()
+        message(ERROR "OpenMPI option specified, but could not find the MPI package.")
+    endif()
 endif()
 
 # NOTE(César): Don't run these commands for the Windows build.

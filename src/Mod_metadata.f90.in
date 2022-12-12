@@ -7,5 +7,6 @@ MODULE MOD_METADATA
 
   LOGICAL, PARAMETER :: parallel_on = @nested_fit_parallel_on@
   LOGICAL, PARAMETER :: parallel_mpi_on = @nested_fit_parallel_mpi_on@
+  LOGICAL, PARAMETER :: static_seed = @nested_fit_static_seed@
 
 END MODULE MOD_METADATA
