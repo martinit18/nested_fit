@@ -42,6 +42,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   ! Search variable
   INTEGER(4) :: icluster=0, icluster_old=0, ntries=0
   LOGICAL :: too_many_tries = .false.
+  REAL(8) :: gval=0.
   ! Live points variables
   REAL(8) :: min_live_like = 0.
   REAL(8), DIMENSION(nlive) :: live_like
@@ -51,7 +52,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   REAL(8) :: last_likes, live_like_last, evrest_last, evlast
   ! Rest
   INTEGER(4) :: i,j, l, n, jlim
-  REAL(8) :: ADDLOG, RANDN, rn
+  REAL(8) :: ADDLOG, rn
   CHARACTER :: out_filename*64
   INTEGER(4) :: n_call_cluster
 
@@ -105,9 +106,12 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
               !write(*,*) par_bnd1(l), par_bnd2(l), par_prior(l), rn
               IF(par_prior(l).LT.par_bnd1(l).OR.par_prior(l).GT.par_bnd2(l)) GOTO 801
            ELSE
-              ! Gaussian distrigution
-700           par_prior(l) = par_in(l) + par_step(l)*RANDN
-              IF(par_prior(l).LT.par_bnd1(l).OR.par_prior(l).GT.par_bnd2(l)) GOTO 700
+              ! Gaussian distribution
+700           CALL RANDOM_NUMBER(rn)
+              par_prior(l) = par_bnd1(l) + (par_bnd2(l)-par_bnd1(l))*rn
+              gval = dexp(-(par_prior(l)-par_in(l))**2/(2*par_step(l)**2))
+              CALL RANDOM_NUMBER(rn)
+              IF(rn.GT.gval.OR.par_prior(l).LT.par_bnd1(l).OR.par_prior(l).GT.par_bnd2(l)) GOTO 700
            END IF
         ELSE
            ! If fixed, take the value indicated in the file

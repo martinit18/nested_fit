@@ -103,9 +103,6 @@ CONTAINS
     ntries = 0
     CALL RANDOM_NUMBER(rn)
     istart= FLOOR((nlive-1)*rn+1)
-    !istart= FLOOR((nlive-1)*RAND(0)+1)
-    !istart= FLOOR((nlive-1)*rng(irn)+1)
-    !irn = irn + 1
     start_jump = live(istart,:)
 
 
@@ -156,9 +153,6 @@ CONTAINS
           IF (par_fix(l).NE.1) THEN
 502          CALL RANDOM_NUMBER(rn)
              new_jump(l) = start_jump(l) + live_sd(l)*sdfraction*(2.*rn-1.)
-             !new_jump(l) = start_jump(l) + live_sd(l)*sdfraction*(2.*RAND(0)-1.)
-             !new_jump(l) = start_jump(l) + live_sd(l)*sdfraction*(2.*rng(irn)-1.)
-             !irn = irn + 1
              IF (new_jump(l).LT.par_bnd1(l).OR.new_jump(l).GT.par_bnd2(l)) THEN
                 ntries = ntries + 1
                 GOTO 502
@@ -1370,7 +1364,6 @@ SUBROUTINE PART_LIKE_SUB(D,pt,chol,part_like) !calculates the likelihood for a p
       pt_comp(l)=par_in(l)
     END IF
   END DO
-  !write(*,*) pt_comp ! ?????
   part_like=LOGLIKELIHOOD(pt_comp)
 END SUBROUTINE PART_LIKE_SUB
 
