@@ -67,15 +67,15 @@ PROGRAM NESTED_FIT
   !      N. Chopin and C.P. Robert, Biometrika 97, 741-755 (2010)
   ! 0.1: Program developed from D.S. Sivia, "Data Analysis, a Bayesian tutorial" (2006) and Leo's program
 
-  ! Parallelization library !!!CAREFULL to the table dimension in this case!!
-  USE OMP_LIB
-  USE MPI
-  ! Module for the input parameter definition
-  USE MOD_PARAMETERS
-  ! Module for likelihood for data analysis
-  USE MOD_LIKELIHOOD
-
-  USE MOD_METADATA
+   ! Module for the input parameter definition
+   USE MOD_PARAMETERS
+   ! Module for likelihood for data analysis
+   USE MOD_LIKELIHOOD
+   ! Module for metadata
+   USE MOD_METADATA
+   ! Parallelization library !!!CAREFULL to the table dimension in this case!!
+   USE OMP_LIB
+   USE MPI
 
   !USE RNG
   !
@@ -114,6 +114,9 @@ PROGRAM NESTED_FIT
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_final_try_instance
   REAL(8), ALLOCATABLE, DIMENSION(:) :: live_like_final_try_instance, weight_try_instance, live_max_try_instance
 
+  ! OpenMPI stuff
+  INTEGER(4) :: mpi_rank, mpi_cluster_size, mpi_ierror
+
   ! Time measurement variables
   REAL(8) :: seconds, seconds_omp, startt, stopt
 
@@ -123,10 +126,6 @@ PROGRAM NESTED_FIT
   ! Function definitions
   EXTERNAL :: NESTED_SAMPLING, SORTN, MEANVAR
   INTEGER(4) :: SELECT_USERFCN, SELECT_USERFCN_SET
-
-  ! OpenMPI stuff
-  INTEGER :: mpi_rank, mpi_cluster_size, mpi_ierror
-
 
   ! Other variants
   !CALL RANDOM_SEED()
@@ -139,6 +138,7 @@ PROGRAM NESTED_FIT
   !   write(*,*) rng(1:5,itry)
   !END DO
 
+  ! TODO(César): All of the STOP instructions need to be refactored for the MPI scenario
   IF(parallel_mpi_on) THEN
     CALL MPI_INIT(mpi_ierror)
     CALL MPI_COMM_SIZE(MPI_COMM_WORLD, mpi_cluster_size, mpi_ierror)
@@ -149,12 +149,10 @@ PROGRAM NESTED_FIT
 
   !!!!!!!! Initiate random generator with the same seed each time !!!!!!!!!!!
   IF(static_seed.AND.mpi_rank.EQ.0) THEN
-      WRITE(*,*) '#######################################################################################'
-      WRITE(*,*) '#                                      !WARNING!                                      #'
-      WRITE(*,*) '#######################################################################################'
-      WRITE(*,*) '#      Nested_fit is running with a set seed! This is intended for testing only!      #'
-      WRITE(*,*) '# If you are using this as a production setting change the cmake NORNG option to OFF. #'
-      WRITE(*,*) '#######################################################################################'
+      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      WRITE(*,*) '       ATTENTION:           Nested_fit is running with a set seed! This is intended for testing only!'
+      WRITE(*,*) '       ATTENTION:           If you are using this as a production setting change the cmake NORNG option to OFF.'
+      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
       CALL sleep(1)
   ENDIF
 
@@ -392,11 +390,23 @@ PROGRAM NESTED_FIT
      par_median_w = par_in
      ! To check the likelihood function
      evsum_final = LOGLIKELIHOOD(par_in)
-     WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-     WRITE(*,*) '       ATTENTION:           All parameters are fixed'
-     WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+     IF(mpi_rank.EQ.0) THEN
+         WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+         WRITE(*,*) '       ATTENTION:           All parameters are fixed'
+         WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+     ENDIF
      GOTO 501
   END IF
+
+  IF(parallel_mpi_on.AND.mpi_rank.EQ.0) THEN
+      IF(mpi_cluster_size.GT.ntry) THEN
+         WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+         WRITE(*,*) '       ATTENTION:           Specified MPI cluster size is bigger than the number of tries in the input file'
+         WRITE(*,*) '       ATTENTION:           This feature is not supported at the moment'
+         WRITE(*,*) '       ATTENTION:           Killing the unused processes'
+         WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      ENDIF
+  ENDIF
 
   !
   ! Run the Nested sampling
@@ -404,13 +414,16 @@ PROGRAM NESTED_FIT
       DO itry=1,ntry
          CALL NESTED_SAMPLING(itry,maxstep_try,nall_try(itry),evsum_final_try(itry), &
                live_like_final_try(:,itry),weight_try(:,itry),&
-               live_final_try(:,:,itry),live_like_max_try(itry),live_max_try(:,itry))
+               live_final_try(:,:,itry),live_like_max_try(itry),live_max_try(:,itry), 0, 0)
       END DO
   ELSE IF(mpi_rank.LT.ntry) THEN
       CALL NESTED_SAMPLING(mpi_rank,maxstep_try,nall_try_instance,evsum_final_try_instance, &
          live_like_final_try_instance,weight_try_instance,&
-         live_final_try_instance,live_like_max_try_instance,live_max_try_instance)
+         live_final_try_instance,live_like_max_try_instance,live_max_try_instance, mpi_rank, mpi_cluster_size)
       
+      ! Wait for all the calculations to finish
+      CALL MPI_BARRIER(MPI_COMM_WORLD, mpi_ierror)
+
       ! All the code should be refactored really but for now
       ! TODO(César): Refactor this to a function
       IF(mpi_rank.NE.0) THEN
@@ -423,11 +436,6 @@ PROGRAM NESTED_FIT
          CALL MPI_SEND(live_max_try_instance, npar, MPI_DOUBLE, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
       ENDIF
   ENDIF
-
-!   IF(parallel_mpi_on) THEN
-!       ! Idle nodes just wait spinning for now
-!       CALL MPI_BARRIER(MPI_COMM_WORLD, mpi_ierror)
-!   ENDIF
 
   ! Gather all of the runs in the root node back again
   IF(parallel_mpi_on) THEN

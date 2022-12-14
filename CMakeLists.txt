@@ -32,6 +32,9 @@ string(LENGTH ${nested_fit_version_full_str} nested_fit_version_full_str_len)
 set(nested_fit_version_str "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}")
 string(LENGTH ${nested_fit_version_str} nested_fit_version_str_len)
 
+string(CONCAT nested_fit_mpi_child_comm_proc_name "nf_child_proc" ${nested_fit_version_full_str})
+string(LENGTH ${nested_fit_mpi_child_comm_proc_name} nested_fit_mpi_child_comm_proc_name_len)
+
 
 # if(MOD_TEST)
 #     set(mod_lh_test _tests)
@@ -60,6 +63,13 @@ set(SRC_FILES
     src/USERFCN_2D.f90
     src/USERFCN_SET.f
     src/USERFCN.f
+
+    src/Mod_mpi.f90
+)
+
+set(CHILD_SRC_FILES
+    src/helper/mpi_status_process.f90
+    src/Mod_mpi.f90
 )
 
 file(GLOB SRC_CALGO   ${CMAKE_SOURCE_DIR}/src/CALGO.ACM/*.f)
@@ -117,6 +127,7 @@ set_source_files_properties(${SRC_DIERCKX} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS}
 set_source_files_properties(${SRC_SLATEC} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${SRC_FILES} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${CFG_FILES} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
+set_source_files_properties(${CHILD_SRC_FILES} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 
 string(CONCAT nested_fit_target "nested_fit" ${nested_fit_version_full_str})
 add_executable(${nested_fit_target}
@@ -126,6 +137,13 @@ add_executable(${nested_fit_target}
     ${SRC_SLATEC}
     ${SRC_FILES}
 )
+
+if(OPENMPI)
+    add_executable(${nested_fit_mpi_child_comm_proc_name}
+        ${CFG_FILES}
+        ${CHILD_SRC_FILES}
+    )
+endif()
 
 if(OPENMP)
     target_link_options(${nested_fit_target} PRIVATE "-fopenmp")
@@ -137,6 +155,7 @@ if(OPENMPI)
     if(MPI_FOUND)
         if(MPI_Fortran_HAVE_F90_MODULE)
             target_link_libraries(${nested_fit_target} PUBLIC MPI::MPI_Fortran)
+            target_link_libraries(${nested_fit_mpi_child_comm_proc_name} PUBLIC MPI::MPI_Fortran)
         else()
             message(ERROR "This project requires the MPI Fortran 90 module.")
         endif()
@@ -154,10 +173,15 @@ else()
     # TODO(César): Maybe use install later on
     add_custom_command(TARGET ${nested_fit_target} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${nested_fit_target}> $ENV{HOME}/bin)
+
     # Since we do this for the nested fit executable, why not put the latest nested_res_* file in the bin
     # At least while we don't have a custom python caller script
     add_custom_command(TARGET ${nested_fit_target} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/${nested_res_name} $ENV{HOME}/bin)
+
+    # Do the same for the child process in case it was compiled
+    add_custom_command(TARGET ${nested_fit_mpi_child_comm_proc_name} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${nested_fit_mpi_child_comm_proc_name}> $ENV{HOME}/bin)
 endif()
 
 enable_testing()

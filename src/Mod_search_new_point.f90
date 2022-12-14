@@ -13,6 +13,7 @@ MODULE MOD_SEARCH_NEW_POINT
 
 CONTAINS
 
+  ! TODO(César): Remap all of these writes to the mpi_status_process
 
   SUBROUTINE SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
           live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
@@ -184,9 +185,9 @@ CONTAINS
              ntries = 0
 
              !
-             WRITE(*,*) 'Too many tries to find new live points for try n.', &
-             itry,'!!!! More than',maxtries,&
-             'n_ntries =',n_ntries,' over ', maxntries, 'n. step =', n
+            !  WRITE(*,*) 'Too many tries to find new live points for try n.', &
+            !  itry,'!!!! More than',maxtries,&
+            !  'n_ntries =',n_ntries,' over ', maxntries, 'n. step =', n
 
              ! If you already did too much tries, gave up or start a cluster analysis
              IF (n_ntries.GE.maxntries) THEN
@@ -205,7 +206,7 @@ CONTAINS
                      STOP
                    END IF
 
-                   WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
+                  !  WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
                    !
                    CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
                    ! outputs: p_cluster ! flag of number of appartenance cluster for each live point
@@ -222,8 +223,8 @@ CONTAINS
                    GOTO 400
 
                 ELSE
-                   WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries*maxntries
-                   WRITE(*,*) 'We take the data as they are :-~'
+                  !  WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries*maxntries
+                  !  WRITE(*,*) 'We take the data as they are :-~'
                    too_many_tries = .true.
                    RETURN
                 END IF
