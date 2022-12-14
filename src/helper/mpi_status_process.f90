@@ -45,7 +45,7 @@ PROGRAM MPI_STATUS_PROCESS
     ! Move parent_nodes lines up
 
     DO i=1,parent_nodes
-        PRINT *, 'N ', i-1
+        PRINT *, 'N#', i-1
     END DO
 
     WRITE (lines, *) parent_nodes+1
@@ -71,9 +71,19 @@ PROGRAM MPI_STATUS_PROCESS
             lines = ADJUSTL(lines)
             WRITE(*, fmt="(a)", advance='no') ACHAR(27)//"["//TRIM(lines)//"B"
         ENDIF
+
+        IF(mpi_istatus(MPI_TAG).EQ.MPI_TAG_SEARCH_DONE) THEN
+            ! Green color = finished try
+            WRITE(*, fmt="(a)", advance='no') ACHAR(27)//"[32m"
+
+            ! TODO(César): Red color on reaching maxntries before acc. target
+
+            work_done = work_done + 1
+        ENDIF
         
         WRITE(*,1) info_string
 1       FORMAT(A220)
+        WRITE(*, fmt="(a)", advance='no') ACHAR(27)//"[39m"
 
         ! 1 line up
         WRITE (lines, *) 1
@@ -81,9 +91,6 @@ PROGRAM MPI_STATUS_PROCESS
         WRITE(*, fmt="(a)", advance='no') ACHAR(27)//"["//TRIM(lines)//"A"
 
         last_info_node = mpi_istatus(MPI_SOURCE)
-        IF(mpi_istatus(MPI_TAG).EQ.MPI_TAG_SEARCH_DONE) THEN
-            work_done = work_done + 1
-        ENDIF
     END DO
 
     WRITE (lines, *) parent_nodes - last_info_node
