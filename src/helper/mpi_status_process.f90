@@ -8,9 +8,9 @@ PROGRAM MPI_STATUS_PROCESS
     CHARACTER  :: info_string*256, lines*32
     INTEGER(4) :: last_info_node = 0
     INTEGER(4) :: line_diff = 0
-    LOGICAL    :: move_up = .FALSE.
+    LOGICAL    :: acc_reached = .TRUE.
 
-    INTEGER(4) :: i, c
+    INTEGER(4) :: i
     
 
     ! Control variable for parents that completed their work
@@ -72,13 +72,23 @@ PROGRAM MPI_STATUS_PROCESS
             WRITE(*, fmt="(a)", advance='no') ACHAR(27)//"["//TRIM(lines)//"B"
         ENDIF
 
-        IF(mpi_istatus(MPI_TAG).EQ.MPI_TAG_SEARCH_DONE) THEN
-            ! Green color = finished try
+        ! Green color : OK finish
+        IF(mpi_istatus(MPI_TAG).EQ.MPI_TAG_SEARCH_DONE_OK) THEN
             WRITE(*, fmt="(a)", advance='no') ACHAR(27)//"[32m"
-
-            ! TODO(César): Red color on reaching maxntries before acc. target
-
             work_done = work_done + 1
+        ENDIF
+
+        ! Orange color : Many tries finish
+        IF(mpi_istatus(MPI_TAG).EQ.MPI_TAG_SEARCH_DONE_MANY_TRIES) THEN
+            WRITE(*, fmt="(a)", advance='no') ACHAR(27)//"[33m"
+            work_done = work_done + 1
+        ENDIF
+
+        ! Red color : No convergence
+        IF(mpi_istatus(MPI_TAG).EQ.MPI_TAG_SEARCH_ERROR_MAXED_OUT) THEN
+            WRITE(*, fmt="(a)", advance='no') ACHAR(27)//"[31m"
+            work_done = work_done + 1
+            acc_reached = .FALSE.
         ENDIF
         
         WRITE(*,1) info_string
@@ -93,10 +103,20 @@ PROGRAM MPI_STATUS_PROCESS
         last_info_node = mpi_istatus(MPI_SOURCE)
     END DO
 
-    WRITE (lines, *) parent_nodes - last_info_node
+    WRITE (lines, *) parent_nodes - last_info_node + 10 ! + Padding
     lines = ADJUSTL(lines)
     ! parent_nodes - last_info_node lines DOWN
     WRITE(*, fmt="(a)", advance='no') ACHAR(27)//"["//TRIM(lines)//"B"
+
+    IF(.NOT.acc_reached) THEN
+        WRITE(*, fmt="(a)", advance='no') ACHAR(27)//"[31m"
+        WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+        WRITE(*,*) '       ERROR:               ACCURACY NOT REACHED for tries presented in red.'
+        WRITE(*,*) '       ERROR:               Change your parameters (maxstep, nlive, accuracy,...)'
+        WRITE(*,*) ''
+        WRITE(*,*) '       ERROR:               ABORTING EXECUTION'
+        WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+    ENDIF
 
     CALL MPI_FINALIZE(mpi_ierror)
 

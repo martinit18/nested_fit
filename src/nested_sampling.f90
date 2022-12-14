@@ -191,6 +191,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 500  CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
           live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
      IF (too_many_tries) THEN
+        IF(parallel_mpi_on) THEN
+           ! Signal final data MAXED_OUT
+           CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_DONE_MANY_TRIES, mpi_child_writter_comm, mpi_ierror)
+        ENDIF
         nstep_final = n - 1
         GOTO 601
      END IF
@@ -259,16 +263,13 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
      ! This could be turned into a moving average window, it would show whats happening at the current iteration more accurately
      accumulated_eff_avg = accumulated_eff_avg + (search_par2/ntries)
      IF (MOD(n,100).EQ.0) THEN
-         ! For the MPI version, only the master outputs the status
-         ! TODO(César): Create a node for writing only, sice master output might break
-         ! The printing is out of here for the MPI, a printing node is the responsible for doing the stdout
          IF(parallel_mpi_on) THEN
-            WRITE(info_string,21) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, accumulated_eff_avg/(n-1)
+            WRITE(info_string,21) itry+1, n, min_live_like, evsum, evstep(n), evtotest-evsum, accumulated_eff_avg/(n-1)
 21          FORMAT('| N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
                    ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES13.7, ' | Average eff.: ', F6.4, ' |')
             CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_STATUS, mpi_child_writter_comm, mpi_ierror)
          ELSE
-            WRITE(info_string,23) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
+            WRITE(info_string,23) itry+1, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
 23          FORMAT('| N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
                    ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES13.7, ' | Typical eff.: ', F6.4, ' |')
             WRITE(*,24) info_string
@@ -282,18 +283,18 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   !                                 STOP THE MAIN LOOP                                     !
   !                                                                                        !
   !----------------------------------------------------------------------------------------!
-301 CONTINUE
-
-  ! Signal final data
-  CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_DONE, mpi_child_writter_comm, mpi_ierror)
-  CALL MPI_BARRIER(MPI_COMM_WORLD, mpi_ierror)
-
+301 CONTINUE  
 
   IF((evtotest-evsum).GE.evaccuracy) THEN
-     WRITE(*,*) 'Final accuracy not reached in try n.', itry
-     WRITE(*,*) 'Number of steps = ', n, 'Present accuracy = ', evtotest-evsum
-     WRITE(*,*) 'Change your parameters (maxstep, nlive, accuracy,...)'
-     IF (n.GE.nstep) STOP
+     IF(parallel_mpi_on) THEN
+         ! Signal final data MAXED_OUT
+         CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_ERROR_MAXED_OUT, mpi_child_writter_comm, mpi_ierror)
+     ENDIF
+  ELSE
+      IF(parallel_mpi_on) THEN
+         ! Signal final data OK
+         CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_DONE_OK, mpi_child_writter_comm, mpi_ierror)
+      ENDIF
   END IF
 
   ! Store the number of steps
@@ -340,6 +341,14 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 
   !------------ Calculate the total evidence with the last live points ---------------------
 601 CONTINUE
+  IF(parallel_mpi_on) THEN
+      CALL MPI_BARRIER(MPI_COMM_WORLD, mpi_ierror)
+  ENDIF
+
+  IF(((evtotest-evsum).GE.evaccuracy).AND.(n.GE.nstep)) THEN
+      CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+      STOP
+  ENDIF
 
   ! Store the last live points
   OPEN(99,FILE='nf_output_last_live_points.dat',STATUS= 'UNKNOWN')

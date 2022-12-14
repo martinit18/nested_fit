@@ -6,7 +6,7 @@ n				# Set of files (y/n)
 1.E-05		  		# Evidence final accuracy
 RANDOM_WALK     		# Type of search of live points
 0.1	20	100	10	# Fraction of st. dev., n of jumps, max n. tries, max of max tries
-y	f	0.5	0.2	# cluster anaylis or not (y/n), method (f/g), distance, bandwidth
+n	f	0.5	0.2	# cluster anaylis or not (y/n), method (f/g), distance, bandwidth
 10	100000			# Number of tries and maximum of steps
 GAUSS_BG 	  		# Name of the function
 L               		# Additional data: left/right (l/r)
