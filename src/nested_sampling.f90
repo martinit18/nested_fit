@@ -1,5 +1,5 @@
 SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,&
-     live_final,live_like_max,live_max)
+     live_final,live_like_max,live_max,mpi_rank,mpi_cluster_size)
   ! Time-stamp: <Last changed by martino on Monday 03 May 2021 at CEST 11:56:05>
   ! For parallel tests only
   !SUBROUTINE NESTED_SAMPLING(irnmax,rng,itry,ndata,x,nc,funcname,&
@@ -8,14 +8,19 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   !!USE OMP_LIB
   !USE RNG
 
+  USE MPI
+  USE MOD_MPI
+
   ! Parameter module
-  USE MOD_PARAMETERS, ONLY:  nlive, evaccuracy, search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, search_method
+  USE MOD_PARAMETERS, ONLY:  nlive, evaccuracy, search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, search_method, ntry
   ! Module for likelihood
   USE MOD_LIKELIHOOD
   ! Module for searching new live points
   USE MOD_SEARCH_NEW_POINT
   ! Module for cluster analysis
   USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_on
+  ! Module for the metadata
+  USE MOD_METADATA
 
   !
   IMPLICIT NONE
@@ -26,6 +31,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   REAL(8), INTENT(OUT), DIMENSION(maxstep) :: weight
   REAL(8), INTENT(OUT), DIMENSION(maxstep) :: live_like_final
   REAL(8), INTENT(OUT), DIMENSION(maxstep,npar) :: live_final
+  INTEGER(4), INTENT(IN) :: mpi_rank, mpi_cluster_size
   ! Random number variables
   !INTEGER, INTENT(IN) :: irnmax
   !REAL(8), INTENT(IN), DIMENSION(irnmax) :: rng
@@ -54,20 +60,16 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   REAL(8) :: ADDLOG, RANDN, rn
   CHARACTER :: out_filename*64
   INTEGER(4) :: n_call_cluster
+  CHARACTER :: info_string*256
+  INTEGER(4) :: mpi_ierror
+  INTEGER(4) :: mpi_child_spawn_error(1)
+  CHARACTER :: lines*20
+
+  REAL(8) :: accumulated_eff_avg = 0.
 
   EXTERNAL :: SORTN
 
-  ! This is very important
-  !!$OMP THREADPRIVATE(evsum)
-  ! With these nothing change
-  !!$OMP THREADPRIVATE(evrestest,evtotest)
-  ! The other variables gave an error:
-  ! Error: DUMMY attribute conflicts with THREADPRIVATE attribute in 'live_max' at (1)
-
-  !!th_num = omp_get_thread_num()
-
   ! Initialize variables (with different seeds for different processors)
- !irn = 1
   par_prior = 0.
   live = 0.
   live_like = 0.
@@ -82,7 +84,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   tlnrest = 0.
   evstep = 0.
   nstep = maxstep - nlive + 1
-  !maxtries = 50*njump ! Accept an efficiency of more than 2% for the exploration, otherwise change something
 
   n_call_cluster=0
 
@@ -99,10 +100,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
            IF (par_step(l).LE.0.) THEN
 801           CALL RANDOM_NUMBER(rn)
               par_prior(l) = par_bnd1(l) + (par_bnd2(l)-par_bnd1(l))*rn
-              !par_prior(l) = par_bnd1(l) + (par_bnd2(l)-par_bnd1(l))*RAND(0)
-              !par_prior(l) = par_bnd1(l) + (par_bnd2(l)-par_bnd1(l))*rng(irn)
-              !irn = irn + 1
-              !write(*,*) par_bnd1(l), par_bnd2(l), par_prior(l), rn
               IF(par_prior(l).LT.par_bnd1(l).OR.par_prior(l).GT.par_bnd2(l)) GOTO 801
            ELSE
               ! Gaussian distrigution
@@ -117,14 +114,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
      ! If it is good, take it
      live(j,:) = par_prior(:)
      live_like(j) = LOGLIKELIHOOD_WITH_TEST(par_prior)
-     !IF (live_like(j).GT.0) THEN
-     !   WRITE(*,*) 'Attention!! Log(likelihood) strangely large (',live_like(j),'). Change the parameters bouduaries'
-     !WRITE(*,*) 'Live point number:',j, 'Log(likelihood):', live_like(j), 'Parameters:', live(j,:)
-     !   STOP
-     !END IF
   END DO
-
-
 
   ! Calculate average and standard deviation of the parameters
 
@@ -140,35 +130,22 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 
 
   ! --------- Set-up stuff before main loop ------------------------------------------------
-  ! Calculate the intervarls (lograithmic) for the integration
+  ! Calculate the intervarls (logarithmic) for the integration
   ! This is equivalent to the "crude" approximation from Skilling
-  IF (maxstep/nlive.GT.700) THEN
+  IF (maxstep/nlive.GT.700.AND.mpi_rank.EQ.0) THEN
      WRITE(*,*) '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
      WRITE(*,*) '!!! Attention, too few nlive points for too many maxstep !!!'
      WRITE(*,*) '!!! Step volumes cannot be calculated correctly          !!!'
      WRITE(*,*) '!!! Change your input file                               !!!'
      WRITE(*,*) '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+     IF(parallel_mpi_on) THEN
+         CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+     ENDIF
      STOP
   END IF
   DO l=1, maxstep
      tstep(l) = DEXP(-DFLOAT(l)/DFLOAT(nlive))
   ENDDO
-
-
-  ! Alternatively, nlive number should be sorted and the maximum value should be taken as shrinking factor
-  !tstep(0) = 1.d0
-  !!CALL RANDOM_NUMBER(rng)
-  !!tstep(1) = MAXVAL(rng)
-  !
-  !tstep(1) = MAXVAL(rng(irn:irn+nlive))
-  !irn = irn + nlive
-
-  !!CALL RANDOM_NUMBER(rng)
-  !!tstep(2) = MAXVAL(rng)*tstep(1)
-  !
-  !tstep(2) = MAXVAL(rng(irn:irn+nlive))*tstep(1)
-  !irn = irn + nlive
-
 
   ! Calculate the first differential prior mass and the remaining prior mass
   tlnmass(1) = DLOG(-(tstep(1)-1))
@@ -182,6 +159,16 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   evsum = evstep(1)
 
 
+  ! If MPI is active, spawn the writter process
+  IF(parallel_mpi_on) THEN
+      CALL MPI_Comm_spawn(nf_child_proc_name, MPI_ARGV_NULL, 1, MPI_INFO_NULL, 0, MPI_COMM_WORLD, mpi_child_writter_comm, mpi_child_spawn_error, mpi_ierror)
+      IF(mpi_rank.EQ.0) THEN
+            CALL MPI_SEND(mpi_cluster_size, 1, MPI_INT, 0, 0, mpi_child_writter_comm, mpi_ierror)
+      ENDIF
+      CALL MPI_BARRIER(MPI_COMM_WORLD, mpi_ierror)
+  ENDIF
+
+
   ! ---------------------------------------------------------------------------------------!
   !                                                                                        !
   !                                 START THE MAIN LOOP                                    !
@@ -189,14 +176,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   !----------------------------------------------------------------------------------------!
 
   DO n=2, nstep
-
-
-     ! Calculate steps, mass and rest each time without crude approximation
-     !!CALL RANDOM_NUMBER(rng)
-     !!tstep(n+1) = MAXVAL(rng)*tstep(n)
-
-     !tstep(n+1) = MAXVAL(rng(irn:irn+nlive))*tstep(n)
-     !irn = irn + nlive
      ! trapezoidal rule applied here (Skilling Entropy 2006)
      tlnmass(n) = DLOG(-(tstep(n+1)-tstep(n-1))/2.d0)
      tlnrest(n) = DLOG((tstep(n+1)+tstep(n-1))/2.d0)
@@ -206,12 +185,16 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 
      ! ##########################################################################
      ! Find a new live point
-     ! Parallelism not implemented, does not accelerate
-     !!!!OMP PARALLEL DEFAULT(NONE) SHARED(n,itry,min_live_like,live_like,live)
+
+     
+
 500  CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
           live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
-     !!!!OMP END PARALLEL
      IF (too_many_tries) THEN
+        IF(parallel_mpi_on) THEN
+           ! Signal final data MAXED_OUT
+           CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_DONE_MANY_TRIES, mpi_child_writter_comm, mpi_ierror)
+        ENDIF
         nstep_final = n - 1
         GOTO 601
      END IF
@@ -275,50 +258,43 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
      evtotest = ADDLOG(evsum,evrestest)
 
      IF (evtotest-evsum.LT.evaccuracy) GOTO 301
-
-     IF (MOD(n,50).EQ.0) THEN
-     !   ! Write status
-        WRITE(*,*) 'N. try:', itry, 'N step:', n, &
-             'Min. loglike', min_live_like,'Evidence: ',evsum, &
-             'Ev. step:', evstep(n),'Ev. pres. acc.:', evtotest-evsum, &
-             'Typical eff.:', search_par2/ntries
-     !
-     !   ! Store actual live points
-     !   WRITE(out_filename,1000) 'live_points_',itry,'.dat'
-     !   OPEN(22,FILE=out_filename,STATUS= 'UNKNOWN')
-     !   WRITE(22,*) '# n     lnlikelihood     parameters'
-     !   DO l=1,nlive
-     !      WRITE(22,*) l, live_like(l), live(l,:)
-     !   END DO
-     !   CLOSE(22)
-     !   pause
-     !
-     !   ! Write temporal results in a file
-     !   WRITE(out_filename,2000) 'status_',itry,'.dat'
-     !   OPEN(33,FILE='status.dat',STATUS= 'UNKNOWN')
-     !   WRITE(33,*) 'New last live point : ', live_like(1), live(1,:)
-     !   WRITE(33,*) 'New first live point : ', live_like(nlive), live(nlive,:)
-     !   WRITE(33,*) 'N step: ', n, 'Ev. at present: ',evsum, &
-     !        'Ev. of the step: ', evstep(n), 'Diff. with the estimate total ev.: ', evtotest-evsum
-     !   CLOSE(33)
-     !
+     
+     
+     ! This could be turned into a moving average window, it would show whats happening at the current iteration more accurately
+     accumulated_eff_avg = accumulated_eff_avg + (search_par2/ntries)
+     IF (MOD(n,100).EQ.0) THEN
+         IF(parallel_mpi_on) THEN
+            WRITE(info_string,21) itry+1, n, min_live_like, evsum, evstep(n), evtotest-evsum, accumulated_eff_avg/(n-1)
+21          FORMAT('| N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
+                   ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES13.7, ' | Average eff.: ', F6.4, ' |')
+            CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_STATUS, mpi_child_writter_comm, mpi_ierror)
+         ELSE
+            WRITE(info_string,23) itry+1, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
+23          FORMAT('| N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
+                   ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES13.7, ' | Typical eff.: ', F6.4, ' |')
+            WRITE(*,24) info_string
+24          FORMAT(A220)
+         ENDIF
      END IF
   END DO
-
 
   ! ---------------------------------------------------------------------------------------!
   !                                                                                        !
   !                                 STOP THE MAIN LOOP                                     !
   !                                                                                        !
   !----------------------------------------------------------------------------------------!
-301 CONTINUE
-
+301 CONTINUE  
 
   IF((evtotest-evsum).GE.evaccuracy) THEN
-     WRITE(*,*) 'Final accuracy not reached in try n.', itry
-     WRITE(*,*) 'Number of steps = ', n, 'Present accuracy = ', evtotest-evsum
-     WRITE(*,*) 'Change your parameters (maxstep, nlive, accuracy,...)'
-     IF (n.GE.nstep) STOP
+     IF(parallel_mpi_on) THEN
+         ! Signal final data MAXED_OUT
+         CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_ERROR_MAXED_OUT, mpi_child_writter_comm, mpi_ierror)
+     ENDIF
+  ELSE
+      IF(parallel_mpi_on) THEN
+         ! Signal final data OK
+         CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_DONE_OK, mpi_child_writter_comm, mpi_ierror)
+      ENDIF
   END IF
 
   ! Store the number of steps
@@ -365,6 +341,14 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 
   !------------ Calculate the total evidence with the last live points ---------------------
 601 CONTINUE
+  IF(parallel_mpi_on) THEN
+      CALL MPI_BARRIER(MPI_COMM_WORLD, mpi_ierror)
+  ENDIF
+
+  IF(((evtotest-evsum).GE.evaccuracy).AND.(n.GE.nstep)) THEN
+      CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+      STOP
+  ENDIF
 
   ! Store the last live points
   OPEN(99,FILE='nf_output_last_live_points.dat',STATUS= 'UNKNOWN')

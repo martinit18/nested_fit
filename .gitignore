@@ -7,3 +7,4 @@ nf_output_*
 
 build/
 bin/
+.vscode/
