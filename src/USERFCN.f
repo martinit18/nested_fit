@@ -178,6 +178,8 @@ c################################### USERFCN DEFINITION ########################
             SELECT_USERFCN = 84
       ELSE IF(funcname.EQ.'SIX_VOIGT_PARA_POLY_SIG_PLEIADES') THEN
             SELECT_USERFCN = 85
+      ELSE IF(funcname.EQ.'POWER_CONST') THEN
+            SELECT_USERFCN = 86
       ELSE
             WRITE(*,*) 'Error in the function name def. in USERFCN'
             WRITE(*,*) 'Check in the manual and in the input.dat file'
@@ -200,7 +202,7 @@ c################################### USERFCN DEFINITION ########################
       REAL*8 SIX_VOIGT_BG, SIX_VOIGT_XRD, SIX_VOIGT_EXP_BG
       REAL*8 EIGHT_GAUSS_POLYBG_WF, EIGHT_VOIGT_POLYBG_WF
       REAL*8 EXPFCN, ERFFCN,BS_EM, BS_EM2, BS_EM_NM
-      REAL*8 POWER, ND_M_PLEIADES
+      REAL*8 POWER, POWER_CONST, ND_M_PLEIADES
       REAL*8 POLY, SIX_VOIGT_POLYBG,SIX_VOIGT_EXP_POLYBG
       REAL*8 SIX_VOIGT_POLYBG_WF
       REAL*8 MB_BG, GAUSS_EXP_BG, VOIGT, DOUBLE_VOIGT_BG
@@ -409,6 +411,8 @@ c     Choose your model (see below for definition)
             USERFCN = ROCKING_CURVE(x,npar,val)
       CASE (85)
             USERFCN = SIX_VOIGT_PARA_POLY_SIG_PLEIADES(x,npar,val)
+      CASE (86)
+            USERFCN = POWER_CONST(x, npar, val)
       END SELECT
 
       RETURN
@@ -4199,6 +4203,34 @@ c     Simple power function
 c     Save the different components
       IF(plot) THEN
          WRITE(40,*) x, POWER
+      END IF
+
+      RETURN
+      END
+c _______________________________________________________________________________________________
+
+      FUNCTION POWER_CONST(X,npar,val)
+c     Simple power plus constant function
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 POWER_CONST, x
+      REAL*8 x0,a,n,b
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+
+      x0 = val(1)
+      a  = val(2)
+      n  = val(3)
+      b  = val(4)
+
+      POWER_CONST = a*(x-x0)**n + b
+
+c     Save the different components
+      IF(plot) THEN
+            WRITE(40,*) x, POWER_CONST
       END IF
 
       RETURN
