@@ -60,13 +60,16 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   REAL(8) :: ADDLOG, RANDN, rn
   CHARACTER :: out_filename*64
   INTEGER(4) :: n_call_cluster
-  CHARACTER :: info_string*256
+  
+  ! MPI Stuff
+  REAL(8) :: accumulated_eff_avg = 0.
+  INTEGER(4) :: processor_name_size
   INTEGER(4) :: mpi_ierror
   INTEGER(4) :: mpi_child_spawn_error(1)
+  character(LEN=MPI_MAX_PROCESSOR_NAME) :: processor_name
+  CHARACTER :: info_string*256
   CHARACTER :: lines*20
-
-  REAL(8) :: accumulated_eff_avg = 0.
-
+  
   EXTERNAL :: SORTN
 
   ! Initialize variables (with different seeds for different processors)
@@ -165,6 +168,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
       IF(mpi_rank.EQ.0) THEN
             CALL MPI_SEND(mpi_cluster_size, 1, MPI_INT, 0, 0, mpi_child_writter_comm, mpi_ierror)
       ENDIF
+      CALL MPI_Get_processor_name(processor_name, processor_name_size, mpi_ierror)
+      processor_name = TRIM(ADJUSTL(processor_name))
       CALL MPI_BARRIER(MPI_COMM_WORLD, mpi_ierror)
   ENDIF
 
@@ -260,16 +265,16 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
      IF (evtotest-evsum.LT.evaccuracy) GOTO 301
      
      
-     ! This could be turned into a moving average window, it would show whats happening at the current iteration more accurately
+     ! TODO(César): This could be turned into a moving average window, it would show whats happening at the current iteration more accurately
      accumulated_eff_avg = accumulated_eff_avg + (search_par2/ntries)
      IF (MOD(n,100).EQ.0) THEN
          IF(parallel_mpi_on) THEN
-            WRITE(info_string,21) itry+1, n, min_live_like, evsum, evstep(n), evtotest-evsum, accumulated_eff_avg/(n-1)
-21          FORMAT('| N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
+            WRITE(info_string,21) processor_name, itry+1, n, min_live_like, evsum, evstep(n), evtotest-evsum, accumulated_eff_avg/(n-1)
+21          FORMAT('| Machine: ', A10, ' | N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
                    ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES13.7, ' | Average eff.: ', F6.4, ' |')
             CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_STATUS, mpi_child_writter_comm, mpi_ierror)
          ELSE
-            WRITE(info_string,23) itry+1, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
+            WRITE(info_string,23) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
 23          FORMAT('| N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
                    ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES13.7, ' | Typical eff.: ', F6.4, ' |')
             WRITE(*,24) info_string
@@ -283,7 +288,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   !                                 STOP THE MAIN LOOP                                     !
   !                                                                                        !
   !----------------------------------------------------------------------------------------!
-301 CONTINUE  
+301 CONTINUE
 
   IF((evtotest-evsum).GE.evaccuracy) THEN
      IF(parallel_mpi_on) THEN
@@ -346,7 +351,9 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   ENDIF
 
   IF(((evtotest-evsum).GE.evaccuracy).AND.(n.GE.nstep)) THEN
-      CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+      IF(parallel_mpi_on) THEN
+         CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+      ENDIF
       STOP
   ENDIF
 

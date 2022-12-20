@@ -92,7 +92,7 @@ PROGRAM MPI_STATUS_PROCESS
         ENDIF
         
         WRITE(*,1) info_string
-1       FORMAT(A220)
+1       FORMAT(A230)
         WRITE(*, fmt="(a)", advance='no') ACHAR(27)//"[39m"
 
         ! 1 line up

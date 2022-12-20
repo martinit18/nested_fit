@@ -149,19 +149,21 @@ if(OPENMP)
     target_link_options(${nested_fit_target} PRIVATE "-fopenmp")
 endif()
 
-if(OPENMPI)
-    # Find MPI
-    find_package(MPI REQUIRED)
-    if(MPI_FOUND)
-        if(MPI_Fortran_HAVE_F90_MODULE)
-            target_link_libraries(${nested_fit_target} PUBLIC MPI::MPI_Fortran)
+# TODO(César): MPI is needed even for non-MPI builds, since the source code is runtime selecting mpi funcitonality based on a PARAMETER
+# This needs a fix!!!!
+# Find MPI
+find_package(MPI REQUIRED)
+if(MPI_FOUND)
+    if(MPI_Fortran_HAVE_F90_MODULE)
+        target_link_libraries(${nested_fit_target} PUBLIC MPI::MPI_Fortran)
+        if(OPENMPI)
             target_link_libraries(${nested_fit_mpi_child_comm_proc_name} PUBLIC MPI::MPI_Fortran)
-        else()
-            message(ERROR "This project requires the MPI Fortran 90 module.")
         endif()
     else()
-        message(ERROR "OpenMPI option specified, but could not find the MPI package.")
+        message(ERROR "This project requires the MPI Fortran 90 module.")
     endif()
+else()
+    message(ERROR "OpenMPI option specified, but could not find the MPI package.")
 endif()
 
 # NOTE(César): Don't run these commands for the Windows build.
@@ -179,9 +181,11 @@ else()
     add_custom_command(TARGET ${nested_fit_target} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/${nested_res_name} $ENV{HOME}/bin)
 
-    # Do the same for the child process in case it was compiled
-    add_custom_command(TARGET ${nested_fit_mpi_child_comm_proc_name} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${nested_fit_mpi_child_comm_proc_name}> $ENV{HOME}/bin)
+    if(OPENMPI)
+        # Do the same for the child process in case it was compiled
+        add_custom_command(TARGET ${nested_fit_mpi_child_comm_proc_name} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${nested_fit_mpi_child_comm_proc_name}> $ENV{HOME}/bin)
+    endif()
 endif()
 
 enable_testing()
