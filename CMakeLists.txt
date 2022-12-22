@@ -65,6 +65,7 @@ set(SRC_FILES
     src/USERFCN.f
 
     src/Mod_mpi.f90
+    src/Mod_math.f90
 )
 
 set(CHILD_SRC_FILES

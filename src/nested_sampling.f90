@@ -11,6 +11,9 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   USE MPI
   USE MOD_MPI
 
+  ! Additional math module
+  USE MOD_MATH
+
   ! Parameter module
   USE MOD_PARAMETERS, ONLY:  nlive, evaccuracy, search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, search_method, ntry
   ! Module for likelihood
@@ -60,9 +63,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   REAL(8) :: ADDLOG, RANDN, rn
   CHARACTER :: out_filename*64
   INTEGER(4) :: n_call_cluster
+  REAL(8) :: MOVING_AVG
   
   ! MPI Stuff
-  REAL(8) :: accumulated_eff_avg = 0.
+  REAL(8) :: moving_eff_avg = 0.
   INTEGER(4) :: processor_name_size
   INTEGER(4) :: mpi_ierror
   INTEGER(4) :: mpi_child_spawn_error(1)
@@ -264,14 +268,13 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 
      IF (evtotest-evsum.LT.evaccuracy) GOTO 301
      
-     
-     ! TODO(César): This could be turned into a moving average window, it would show whats happening at the current iteration more accurately
-     accumulated_eff_avg = accumulated_eff_avg + (search_par2/ntries)
+     moving_eff_avg = MOVING_AVG(search_par2/ntries)
      IF (MOD(n,100).EQ.0) THEN
          IF(parallel_mpi_on) THEN
-            WRITE(info_string,21) processor_name, itry+1, n, min_live_like, evsum, evstep(n), evtotest-evsum, accumulated_eff_avg/(n-1)
+            WRITE(info_string,21) processor_name, itry+1, n, min_live_like, evsum, evstep(n), evtotest-evsum, &
+                                  moving_eff_avg
 21          FORMAT('| Machine: ', A10, ' | N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
-                   ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES13.7, ' | Average eff.: ', F6.4, ' |')
+                   ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES13.7, ' | Avg eff.: ', F6.4, ' |')
             CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_STATUS, mpi_child_writter_comm, mpi_ierror)
          ELSE
             WRITE(info_string,23) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
@@ -429,6 +432,7 @@ END SUBROUTINE NESTED_SAMPLING
 
 
 ! ___________________________________________________________________________________________
+
 FUNCTION ADDLOG(log1,log2)
   IMPLICIT NONE
   REAL(8) :: log1, log2, ADDLOG
@@ -452,4 +456,19 @@ FUNCTION ADDLOG(log1,log2)
 
 END FUNCTION ADDLOG
 
-!#############################################################################################
+! ___________________________________________________________________________________________
+
+FUNCTION MOVING_AVG(val)
+   USE MOD_MATH
+   IMPLICIT NONE
+   REAL(8) :: val, MOVING_AVG
+
+   MOVING_AVG = 0.
+
+   window_array = CSHIFT(window_array, 1)
+   window_array(moving_avg_window) = val
+
+   MOVING_AVG = SUM(window_array) / moving_avg_window
+END FUNCTION MOVING_AVG
+ 
+ ! ___________________________________________________________________________________________

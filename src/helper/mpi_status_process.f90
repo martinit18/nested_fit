@@ -58,7 +58,8 @@ PROGRAM MPI_STATUS_PROCESS
 
         ! We can use terminal escape codes, since newer windows (>=Win10 I think) support this
         line_diff = last_info_node - mpi_istatus(MPI_SOURCE)
-
+        
+        ! TODO(César): Create display modes based on console width. This is not ideal for a low column count console.
         ! This only works assuming the message has a line span of 1
         IF(line_diff.GT.0) THEN
             ! line_diff lines up

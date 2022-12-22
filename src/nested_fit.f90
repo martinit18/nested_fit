@@ -82,14 +82,17 @@ PROGRAM NESTED_FIT
   IMPLICIT NONE
   ! Data
   INTEGER(4) :: i=0, j=0, k=0
+
   ! Parameters values and co.
   CHARACTER :: string*128
   CHARACTER :: version_file*20
+
   ! Results from Nested sampling
   INTEGER(4) :: nall=0
   REAL(8) :: evsum_final=0., live_like_max=0.
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_final
   REAL(8), ALLOCATABLE, DIMENSION(:) :: weight, live_like_final, live_max
+
   ! Final results
   REAL(8), ALLOCATABLE, DIMENSION(:) :: par_mean, par_sd
   REAL(8), ALLOCATABLE, DIMENSION(:) :: par_median_w, par_m68_w, par_p68_w, par_m95_w
@@ -100,6 +103,7 @@ PROGRAM NESTED_FIT
   REAL(8) :: evsum_err_est=0.
   REAL(8) :: live_like_mean=0., info=0., comp=0.
   INTEGER(8) :: nexp=0
+
   ! Parallelization variables for master mpi node
   INTEGER(4) :: itry=1, nth=1
   INTEGER(4), DIMENSION(1) :: itrymax
@@ -138,7 +142,6 @@ PROGRAM NESTED_FIT
   !   write(*,*) rng(1:5,itry)
   !END DO
 
-  ! TODO(César): All of the STOP instructions need to be refactored for the MPI scenario
   IF(parallel_mpi_on) THEN
     CALL MPI_INIT(mpi_ierror)
     CALL MPI_COMM_SIZE(MPI_COMM_WORLD, mpi_cluster_size, mpi_ierror)
@@ -622,7 +625,7 @@ PROGRAM NESTED_FIT
             par_median_w(j) = par_in(j)
          END IF
       END DO
-   ENDIF
+  ENDIF
 
    501 CONTINUE
 
