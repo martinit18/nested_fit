@@ -66,6 +66,9 @@ set(SRC_FILES
 
     src/Mod_mpi.f90
     src/Mod_math.f90
+
+    src/cli/f90getopt.f90
+    src/Mod_options.f90
 )
 
 set(CHILD_SRC_FILES
@@ -111,10 +114,10 @@ set(CFG_FILES
 # HACK(César): This is assuming we are using gfortran!
 if(DEBUG)
     message(STATUS "Configuring for Debug")
-    set(SRC_FLAGS "-O0 -g -ffree-line-length-0")
+    set(SRC_FLAGS "-cpp -O0 -g -ffree-line-length-0")
 else()
     message(STATUS "Configuring for Release")
-    set(SRC_FLAGS "-O3 -static -ffree-line-length-0")
+    set(SRC_FLAGS "-cpp -O3 -static -ffree-line-length-0")
 
     # NOTE(César): Enable OpenMP only on release (Assuming we want to debug one thread only for now).
     # TODO(César): OpenMP should be a link only flag, no?
@@ -170,7 +173,9 @@ endif()
 # NOTE(César): Don't run these commands for the Windows build.
 if(WIN32)
     # TODO(César): Create a automatic configuration for Windows as well
-    message(STATUS "Configuring for Windows. The executable and python library must be manually copied somewhere and added to the PATH.")
+    message(WARNING "Configuring for Windows. The executable and python library must be manually copied somewhere and added to the PATH.")
+    message(WARNING "--- Future fix ---")
+    message(FATAL_ERROR "Windows build do not support MPI. Current builds are not possible without MPI.")
 else()
     # Install would work well here but lets keep the same copy-after-build scheme of the original makefile
     # TODO(César): Maybe use install later on

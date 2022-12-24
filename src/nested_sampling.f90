@@ -24,6 +24,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_on
   ! Module for the metadata
   USE MOD_METADATA
+  ! Module for optionals
+  USE MOD_OPTIONS
 
   !
   IMPLICIT NONE
@@ -171,6 +173,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
       CALL MPI_Comm_spawn(nf_child_proc_name, MPI_ARGV_NULL, 1, MPI_INFO_NULL, 0, MPI_COMM_WORLD, mpi_child_writter_comm, mpi_child_spawn_error, mpi_ierror)
       IF(mpi_rank.EQ.0) THEN
             CALL MPI_SEND(mpi_cluster_size, 1, MPI_INT, 0, 0, mpi_child_writter_comm, mpi_ierror)
+            CALL MPI_SEND(opt_compact_output, 1, MPI_LOGICAL, 0, 0, mpi_child_writter_comm, mpi_ierror)
       ENDIF
       CALL MPI_Get_processor_name(processor_name, processor_name_size, mpi_ierror)
       processor_name = TRIM(ADJUSTL(processor_name))
@@ -271,17 +274,32 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
      moving_eff_avg = MOVING_AVG(search_par2/ntries)
      IF (MOD(n,100).EQ.0) THEN
          IF(parallel_mpi_on) THEN
-            WRITE(info_string,21) processor_name, itry+1, n, min_live_like, evsum, evstep(n), evtotest-evsum, &
-                                  moving_eff_avg
+            IF(opt_compact_output) THEN
+               WRITE(info_string,20) itry+1, n, min_live_like, evsum, evstep(n), evtotest-evsum, &
+                                    moving_eff_avg
+            ELSE
+               WRITE(info_string,21) processor_name, itry+1, n, min_live_like, evsum, evstep(n), evtotest-evsum, &
+                                    moving_eff_avg
+            ENDIF
+20          FORMAT('| N: ', I2, ' | S: ', I8, ' | MLL: ', F20.12, ' | E: ', F20.12, &
+                   ' | Es: ', F20.12, ' | Ea: ', ES13.7, ' | Ae: ', F6.4, ' |')
 21          FORMAT('| Machine: ', A10, ' | N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
                    ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES13.7, ' | Avg eff.: ', F6.4, ' |')
             CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_STATUS, mpi_child_writter_comm, mpi_ierror)
          ELSE
-            WRITE(info_string,23) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
-23          FORMAT('| N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
-                   ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES13.7, ' | Typical eff.: ', F6.4, ' |')
-            WRITE(*,24) info_string
-24          FORMAT(A220)
+            IF(opt_compact_output) THEN
+               WRITE(info_string,22) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
+22             FORMAT('| N: ', I2, ' | S: ', I8, ' | MLL: ', F20.12, ' | E: ', F20.12, &
+                      ' | Es: ', F20.12, ' | Ea: ', ES13.7, ' | Te: ', F6.4, ' |')
+               WRITE(*,24) info_string
+24             FORMAT(A150)
+            ELSE
+               WRITE(info_string,23) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
+23             FORMAT('| N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
+                        ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES13.7, ' | Typical eff.: ', F6.4, ' |')
+               WRITE(*,25) info_string
+25             FORMAT(A220)
+            ENDIF
          ENDIF
      END IF
   END DO

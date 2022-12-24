@@ -5,6 +5,7 @@ PROGRAM MPI_STATUS_PROCESS
 
     INTEGER(4) :: mpi_rank, mpi_cluster_size, mpi_ierror, mpi_istatus(MPI_STATUS_SIZE)
     INTEGER(4) :: parent_nodes, parent_comm
+    LOGICAL    :: compact_output
     CHARACTER  :: info_string*256, lines*32
     INTEGER(4) :: last_info_node = 0
     INTEGER(4) :: line_diff = 0
@@ -41,6 +42,7 @@ PROGRAM MPI_STATUS_PROCESS
     ENDIF
 
     CALL MPI_RECV(parent_nodes, 1, MPI_INT, 0, MPI_ANY_TAG, parent_comm, MPI_STATUS_IGNORE, mpi_ierror)
+    CALL MPI_RECV(compact_output, 1, MPI_LOGICAL, 0, MPI_ANY_TAG, parent_comm, MPI_STATUS_IGNORE, mpi_ierror)
 
     ! Move parent_nodes lines up
 
@@ -92,8 +94,13 @@ PROGRAM MPI_STATUS_PROCESS
             acc_reached = .FALSE.
         ENDIF
         
-        WRITE(*,1) info_string
-1       FORMAT(A230)
+        IF(compact_output) THEN
+            WRITE(*,1) info_string
+        ELSE
+            WRITE(*,2) info_string
+        ENDIF
+1       FORMAT(A150)
+2       FORMAT(A230)
         WRITE(*, fmt="(a)", advance='no') ACHAR(27)//"[39m"
 
         ! 1 line up

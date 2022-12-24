@@ -67,6 +67,11 @@ PROGRAM NESTED_FIT
   !      N. Chopin and C.P. Robert, Biometrika 97, 741-755 (2010)
   ! 0.1: Program developed from D.S. Sivia, "Data Analysis, a Bayesian tutorial" (2006) and Leo's program
 
+
+   ! Module for CLI lib
+   USE f90getopt
+   ! Module for optional variables
+   USE MOD_OPTIONS
    ! Module for the input parameter definition
    USE MOD_PARAMETERS
    ! Module for likelihood for data analysis
@@ -141,6 +146,26 @@ PROGRAM NESTED_FIT
   !   CALL RNG_SEED(rng(itry), 932117 + 10*itry)
   !   write(*,*) rng(1:5,itry)
   !END DO
+
+   ! Read input arguments (CLI)
+  TYPE(option_s) :: opts(3)
+  opts(1) = option_s("compact-output", .false., "c")
+  opts(3) = option_s("help",  .false., "h")
+
+
+  ! START Processing options
+  DO
+      SELECT CASE(getopt("ch", opts))
+            CASE(CHAR(0)) ! When all options are processed
+               EXIT
+            CASE("c")
+               opt_compact_output = .TRUE.
+            !   trim(optarg)
+            CASE("h")
+               ! TODO(César): Print a help screen for optional arguments
+               PRINT*, "TODO: print help-screen"
+      END SELECT
+  END DO
 
   IF(parallel_mpi_on) THEN
     CALL MPI_INIT(mpi_ierror)
