@@ -1,22 +1,23 @@
-4.2				# Program version
-GE_image_UL_210328_01.dat 	# Name of the (first) data file
+4.3				# Program version
+test_matrix.dat 		# Name of the (first) data file
 n				# Set of files (y/n)
 2c				# Type of data: error bars or not and dimensions (1c,1e,2c,2s,2e)
 1000				# Number of live points
-1.E-05		  		# Evidence final accuracy
-RANDOM_WALK     		# Type of search of live points
-0.2	20	100	10	# Param. of the search algo.(2), max n. tries, max of max tries
+LIKE_ACC			# Method used for convergence 
+1.E-05	0.01		  	# Evidence final accuracy and additional convergence parameters
+SLICE_SAMPLING     		# Type of search of live points
+0.5	3	100	10	# Param. of the search algo.(2), max n. tries, max of max tries
 n	f	0.5	0.2	# Cluster analysis or not (y/n), method (f/g/d/s/k), param. cluster algo. (2)
-1	50000			# Number of runs and maximum of steps
+1	500000			# Number of runs and maximum of steps
 GAUSS_BG_2D   		# Name of the function
 L               		# Additional data: left/right (l/r)
 500     20      		# Additional data:  npoint, nwidth for convolution
 0   12  0 8   		# xmin, xmax, ymin, ymax
 6               		# number of parameters
 # npar  name    	value   step    min     max     fixed
-1	'amp'		10000	-1	1000	100000	1
-2	'x0'		2	-1	0	20	1
-3	'y0'		6	-1	0	60	1
-4	'sigmax'	3.	-1	1	10	1
-5	'sigmay'	1.	-1	1	10	1
-6	'bg'		1	-1	0	10	1
+1	'amp'		10000	-1	1000	100000	0
+2	'x0'		2	-1	0	20	0
+3	'y0'		6	-1	0	60	0
+4	'sigmax'	3.	-1	1	10	0
+5	'sigmay'	1.	-1	1	10	0
+6	'bg'		1	-1	0	10	0

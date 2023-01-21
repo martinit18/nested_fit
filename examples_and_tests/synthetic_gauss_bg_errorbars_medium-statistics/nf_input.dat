@@ -1,11 +1,12 @@
-4.2				# Program version
+4.3				# Program version
 eb_gauss_bg-x0_300-sigma_20-A_20000-p_to_bg_0.05-bin_1.dat # Name of the (first) data file
 n				# Set of files (y/n)
 1e				# Type of data: error bars or not and dimensions (1c,1e,2c,2s,2e)
-1000 				# Number of live points
-1.E-05		  		# Evidence final accuracy
-RANDOM_WALK     		# Type of search of live points
-0.1	20	100	10	# Param. search algo. (2), max n. tries, max of max tries
+1000				# Number of live points
+LIKE_ACC			# Method used for convergence 
+1.E-05	0.01		  	# Evidence final accuracy and additional convergence parameters
+SLICE_SAMPLING     		# Type of search of live points
+0.5	3	100	10	# Param. search algo. (2), max n. tries, max of max tries
 n	g	0.5	0.2	# Cluster analysis or not (y/n), method (f/g/d/s/k), param. cluster algo. (2)
 1	100000			# Number of tries and maximum of steps
 GAUSS_BG  			# Name of the function

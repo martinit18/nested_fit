@@ -1,4 +1,7 @@
 #  Automatic Time-stamp: <Last changed by martino on Tuesday 08 June 2021 at CEST 15:08:06>
+# Copyright M. Trassinelli
+# Last modified: 2023/01/21 14:07:00
+
 NAME    = nested_fit4.3alpha.exe
 
 .SUFFIXES : .f90 .f .o .c .mod
@@ -43,7 +46,7 @@ F90FILES = Mod_parameters.f90 Mod_likelihood.f90 Mod_timestamp.f90 \
 
 
 # for gfortran
-OPT = -O2 -static
+OPT = -O3 -static
 # For Intel fortran
 #OPT = -O2 -no-wrap-margin
 #OPT = -O2 -heap-arrays -no-wrap-margin
