@@ -68,10 +68,10 @@ Together with this file, also the files `nf_output_points.paramnames` and `nf_ou
 
 **Details of the input file line by line**
 ```
-4.1           # Program version
-he-histo.dat  # Name of the (first) data file
-n             # Set of files (y/n)
-1c            # Type of data: error bars or not and dimensions (1c,1e,2c,2s,2e)
+4.3                 # Program version
+he-histo.dat        # Name of the (first) data file
+n                   # Set of files (y/n)
+1c                  # Type of data: error bars or not and dimensions (1c,1e,2c,2s,2e)
 ```
 - `1c`: one dimensional spectrum with counts. \
 Input: (x, n. counts)
@@ -85,9 +85,9 @@ Input: (x, y, n. counts) TO BE IMPLEMENTED
 Input: (x, y, z, error z) TO BE IMPLEMENTED
 
 ```
-200                      # Number of live points
-LIKE_ACC		 # Method used for convergence 
-1.E-05	0.01             # Evidence final accuracy and additional convergence parameter
+200                 # Number of live points
+LIKE_ACC            # Method used for convergence 
+1.E-05    0.01      # Evidence final accuracy and additional convergence parameter
 ```
 
 For the moment, there are three convergence methods:
@@ -99,8 +99,8 @@ After convergence is reached, all remaining live points are assigned:
 - the logarithm of the likelihoods averaged over the live points (`LIKE_ACC` case),
 - the opposite of the energies averaged over the live points (`ENERGY_ACC` and `ENERGY_MAX` cases).
 ```
-RANDOM_WALK              # Type of search of live points
-0.1	20	100	10   # Param. search algo.(2), max n. tries, max of max tries
+RANDOM_WALK         # Type of search of live points
+0.1  20   100  10   # Param. search algo.(2), max n. tries, max of max tries
 ```
 For the moment, a random walk (`RANDOM_WALK`), a uniform search around each live point (`UNIFORM`), slice sampling (`SLICE_SAMPLING`) and slice sampling with an adaptable step (`SLICE_SAMPLING_ADAPT`) are implemented. The first two parameters of the above line are specific to the search algorithm:
 - `RANDOM_WALK` par. 1: fraction of standard deviation for each jump, par. 2: number of jumps. Suggested values: 0.1-0.2, 10-40.
@@ -121,12 +121,12 @@ For the second option:
 - `k`: k nearest neighbours (no parameters)
 
 ```
-1	100000			  # Number of runs and maximum of steps
-GAUSS_BG 	  		  # Name of the function
-L               		 # Additional data: left/right (l/r)
-500     20      		 # Additional data:  npoint, nwidth for convolution
-1   1024  1 1024   	  # xmin, xmax, ymin, ymax
-4               		 # number of parameters
+1    100000         # Number of runs and maximum of steps
+GAUSS_BG            # Name of the function
+L                   # Additional data: left/right (l/r)
+500     20          # Additional data:  npoint, nwidth for convolution
+1   1024  1 1024    # xmin, xmax, ymin, ymax
+4                   # number of parameters
 # npar  name    value   step    min     max     fixed
 1	'bg'	0.11	-1	0.	0.5	0
 2	'x0'	454.6	-1	400	600	0
