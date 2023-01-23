@@ -6,3 +6,7 @@ nf_output_*
 *.exe
 bin
 build
+
+bin
+build
+nf_output_*

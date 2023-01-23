@@ -68,10 +68,10 @@ Together with this file, also the files `nf_output_points.paramnames` and `nf_ou
 
 **Details of the input file line by line**
 ```
-4.1           # Program version
-he-histo.dat  # Name of the (first) data file
-n             # Set of files (y/n)
-1c            # Type of data: error bars or not and dimensions (1c,1e,2c,2s,2e)
+4.3                 # Program version
+he-histo.dat        # Name of the (first) data file
+n                   # Set of files (y/n)
+1c                  # Type of data: error bars or not and dimensions (1c,1e,2c,2s,2e)
 ```
 - `1c`: one dimensional spectrum with counts. \
 Input: (x, n. counts)
@@ -85,15 +85,27 @@ Input: (x, y, n. counts) TO BE IMPLEMENTED
 Input: (x, y, z, error z) TO BE IMPLEMENTED
 
 ```
-200                      # Number of live points
-1.E-05                   # Evidence final accuracy
-RANDOM_WALK              # Type of search of live points
-0.1	20	100	10   # Param. search algo.(2), max n. tries, max of max tries
+200                 # Number of live points
+LIKE_ACC            # Method used for convergence 
+1.E-05    0.01      # Evidence final accuracy and additional convergence parameter
+```
+
+For the moment, there are three convergence methods:
+- `LIKE_ACC`: the algorithm stops when the difference between the calculated evidence and the estimated total evidence is below a certain value (first parameter on the above line). Typical value for the parameter : 1.E-05. In this case, the function that is maximised is the log-likelihood and it is associated to data.
+- `ENERGY_ACC`: the algorithm stops when the difference between the calculated partition function and the estimated total partition function is below a certain value (first parameter on the above line). The second parameter corresponds to the temperature at which the partition function is calculated. Typical value for the first parameter : 1.E-05. In this case, the function that is maximised is the opposite of the energy function.
+- `ENERGY_MAX`: the algorithm stops when the difference between the current contribution to the partion function and its maximal previous contribution is below a certain value (first parameter on the above line). The second parameter corresponds to the temperature at which the partition function is calculated. Typical value for the first parameter : -10.  In this case, the function that is maximised is the opposite of the energy function.
+
+After convergence is reached, all remaining live points are assigned: 
+- the logarithm of the likelihoods averaged over the live points (`LIKE_ACC` case),
+- the opposite of the energies averaged over the live points (`ENERGY_ACC` and `ENERGY_MAX` cases).
+```
+RANDOM_WALK         # Type of search of live points
+0.1  20   100  10   # Param. search algo.(2), max n. tries, max of max tries
 ```
 For the moment, a random walk (`RANDOM_WALK`), a uniform search around each live point (`UNIFORM`), slice sampling (`SLICE_SAMPLING`) and slice sampling with an adaptable step (`SLICE_SAMPLING_ADAPT`) are implemented. The first two parameters of the above line are specific to the search algorithm:
 - `RANDOM_WALK` par. 1: fraction of standard deviation for each jump, par. 2: number of jumps. Suggested values: 0.1-0.2, 10-40.
 - `SLICE_SAMPLING` and `SLICE_SAMPLING_ADAPT` par. 1: fraction of standard deviation for segment exploration, par. 2: number of jumps. Suggested values: ~1, 3-5.
-- `UNIFORM` par. 1: fraction of standard deviation for the box size, par. 2: number of jumps. Suggested values: 0.1-11, 1.
+- `UNIFORM` par. 1: fraction of standard deviation for the box size, par. 2: number of jumps. Suggested values: 0.1-1, 1.
 
 
 ```
@@ -109,12 +121,12 @@ For the second option:
 - `k`: k nearest neighbours (no parameters)
 
 ```
-1	100000			  # Number of runs and maximum of steps
-GAUSS_BG 	  		  # Name of the function
-L               		 # Additional data: left/right (l/r)
-500     20      		 # Additional data:  npoint, nwidth for convolution
-1   1024  1 1024   	  # xmin, xmax, ymin, ymax
-4               		 # number of parameters
+1    100000         # Number of runs and maximum of steps
+GAUSS_BG            # Name of the function
+L                   # Additional data: left/right (l/r)
+500     20          # Additional data:  npoint, nwidth for convolution
+1   1024  1 1024    # xmin, xmax, ymin, ymax
+4                   # number of parameters
 # npar  name    value   step    min     max     fixed
 1	'bg'	0.11	-1	0.	0.5	0
 2	'x0'	454.6	-1	400	600	0
@@ -126,11 +138,13 @@ Additional information can be found in the reference articles.
 
 ## Present version and history of the past versions
 
-The present version is 4.2
+The present version is 4.3alpha
 New features:
-- additional search methods : Uniform search around each live point and Slice Sampling  
+- New (test) function : harmonic potential in 3D
+- Choice between different convergence methods : evidence or partition function  
 
 Previous versions are:
+ - 4.2 Additional search methods : Uniform search around each live point and Slice Sampling
  - 4.1.1 New cluster recognition methods added
  - 4.0.3 2D data analysis for count-type XY \
  Computation acceleration for the 1D case introducing a mask instead of IF condition in the likelihood \

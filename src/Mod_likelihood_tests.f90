@@ -78,7 +78,9 @@ CONTAINS
        LOGLIKELIHOOD = TEST_ROSENBROCK(par)
     ELSE IF (funcname.eq.'TEST_GAUSS_WITH_CORRELATION') THEN
        LOGLIKELIHOOD=TEST_GAUSS_WITH_CORRELATION(par)
-    ELSE
+    ELSE IF(funcname.eq.'ENERGY_HARM_3D') THEN
+       LOGLIKELIHOOD=ENERGY_HARM_3D(par)
+   ELSE
        WRITE(*,*) 'Error of the function name in Mod_likelihood_test module'
        WRITE(*,*) 'Check the manual and the input file'
        STOP
@@ -284,5 +286,32 @@ CONTAINS
 
   END FUNCTION TEST_GAUSS_WITH_CORRELATION
   !#####################################################################################################################
+
+
+  REAL(8) FUNCTION ENERGY_HARM_3D(par)
+    !> The parameters are the positions of the points (...,x_i,y_i,z_i,....)
+    !> Potential of the form eps*SUM(x-i**2+y_i**2+z_i**2)
+
+    REAL(8), DIMENSION(:), INTENT(IN) :: par
+    REAL(8), PARAMETER :: pi=3.141592653589793d0
+    REAL(8), PARAMETER ::  eps=1.
+    REAL(8), DIMENSION(SIZE(par)) :: x     
+    INTEGER(4) :: N, i, j
+    REAL(8) :: rij, ener
+
+    x = par
+    N=INT(SIZE(x)/3)
+    
+    ener=0.
+    DO i=1,N
+      rij=(x(i*3-2))**2+(x(i*3-1))**2+(x(i*3))**2
+      ener=ener+eps*(rij)   
+    END DO
+    
+    ENERGY_HARM_3D=-ener
+  END FUNCTION ENERGY_HARM_3D
+
+!#####################################################################################################################   
+
 
 END MODULE MOD_LIKELIHOOD
