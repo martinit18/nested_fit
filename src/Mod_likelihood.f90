@@ -18,7 +18,7 @@ MODULE MOD_LIKELIHOOD
   IMPLICIT NONE
 
   ! Data variables
-  INTEGER(4) :: ndata
+  INTEGER(4) :: ndata, ncall=0
   INTEGER(4), DIMENSION(nsetmax) :: ndata_set=0
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: x, nc, nc_err
   ! Data variable for 2D images
@@ -363,6 +363,7 @@ CONTAINS
 
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
 
+    ncall=ncall+1
     IF (data_type(1:1).EQ.'1') THEN
        LOGLIKELIHOOD = LOGLIKELIHOOD_1D(par)
     ELSE IF (data_type(1:1).EQ.'2') THEN
@@ -385,6 +386,7 @@ CONTAINS
     INTEGER(4) :: i, j, k=1
     REAL(8) :: USERFCN, USERFCN_SET, USERFCN_2D, xx, yy
 
+    ncall=ncall+1
     IF (data_type.EQ.'1c') THEN
        ! Check if the choosen function assumes zero or negative values
        DO k=1,nset
@@ -546,6 +548,13 @@ CONTAINS
        CALL WRITE_EXPECTED_VALUES_2D(live_max,par_mean,par_median_w)
     END IF
 
+    WRITE(*,*) ' '
+    WRITE(*,*) 'End of likelihood test'
+    WRITE(*,*) 'Number of calls : ', ncall
+    OPEN(11,FILE='n_likelihood_calls.txt',STATUS= 'UNKNOWN')
+    WRITE(11,*) ncall
+    CLOSE(11)
+    
     ! Deallocate variables
     CALL DEALLOCATE_DATA()
 

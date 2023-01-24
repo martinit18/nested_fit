@@ -80,7 +80,9 @@ CONTAINS
        LOGLIKELIHOOD=TEST_GAUSS_WITH_CORRELATION(par)
     ELSE IF(funcname.eq.'ENERGY_HARM_3D') THEN
        LOGLIKELIHOOD=ENERGY_HARM_3D(par)
-   ELSE
+    ELSE IF(funcname.eq.'TEST_LOGGAMMA') THEN
+       LOGLIKELIHOOD=TEST_LOGGAMMA(par)
+    ELSE
        WRITE(*,*) 'Error of the function name in Mod_likelihood_test module'
        WRITE(*,*) 'Check the manual and the input file'
        STOP
@@ -311,6 +313,51 @@ CONTAINS
     ENERGY_HARM_3D=-ener
   END FUNCTION ENERGY_HARM_3D
 
+!#####################################################################################################################   
+  
+  REAL(8) FUNCTION TEST_LOGGAMMA(par)
+    !> Basic multidimensional Gaussian likelihood with mean mu(:) and an uncorrelated covariance sigma(:).
+    !! Inspired from multinest and ultranest code
+    !!
+    !! It is normalised so that it should output an evidence of 1.0 for
+    !! effectively infinite priors.
+    !!
+    !! The mean is set at 0.0 by default, and all sigmas at 0.01
+
+    REAL(8), DIMENSION(:), INTENT(IN) :: par
+    REAL(8), PARAMETER :: pi=3.141592653589793d0
+    REAL(8) :: sigma ! Standard deviation (uncorrelated)
+    REAL(8) :: mu1, mu2    ! Mean
+    REAL(8) :: c    ! Shape
+    REAL(8), DIMENSION(SIZE(par)) :: x     ! Variable to explore
+    REAL(8) :: L1, L2
+    INTEGER(8) :: half, i
+
+    x = par
+
+    ! Initialise the mean and standard deviation
+    mu1    = 1d0/3.
+    mu2    = 2d0/3.  
+    sigma = 1d0/30.  ! all sigma set relatively small
+    c=1.
+    half=INT((SIZE(x)+2d0)/2d0)
+    !WRITE(*,*) mu1, mu2, sigma, c, half,size(x)
+
+    L1=0.5*((EXP(c*((x(1)-mu1)/sigma)-EXP((x(1)-mu1)/sigma))/(GAMMA(c)*sigma)) &
+            +(EXP(c*((x(1)-mu2)/sigma)-EXP((x(1)-mu2)/sigma))/(GAMMA(c)*sigma)))
+    L2=0.5*1/(SQRT(2*pi)*sigma)*(EXP(-((x(2)-mu1)/sigma)**2/2d0)+EXP(-((x(2)-mu2)/sigma)**2/2d0))
+    TEST_LOGGAMMA=LOG(L1)+LOG(L2)
+    
+    DO i=3,half
+       TEST_LOGGAMMA=TEST_LOGGAMMA+c*((x(i)-mu2)/sigma)-EXP((x(i)-mu2)/sigma)-LOG(GAMMA(c))-LOG(sigma)
+    END DO
+    
+    DO i=half+1,SIZE(x)
+        TEST_LOGGAMMA=TEST_LOGGAMMA-LOG(sigma)-LOG(2*pi)/2d0-(((x(i)-mu2)/sigma)**2d0/2d0)
+    END DO
+
+  END FUNCTION TEST_LOGGAMMA
+  
 !#####################################################################################################################   
 
 

@@ -1073,10 +1073,10 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
 200        left_prov=left-basis(:,l)*size_jump
            CALL TEST_BND_SUB(dim_eff,left_prov,par_var,live_chol,test_bnd)
            IF(.NOT. test_bnd) THEN
-             IF(k>3) EXIT
-             size_jump=size_jump/2
-             GOTO 200
+             IF(k>10) EXIT
+             size_jump=size_jump/2.
              k=k+1
+             GOTO 200
            !  EXIT
            END IF
            left=left_prov
@@ -1091,8 +1091,9 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
 201           right_prov=right+basis(:,l)*size_jump
            CALL TEST_BND_SUB(dim_eff,right_prov,par_var,live_chol,test_bnd)
            IF(.NOT. test_bnd) THEN
-             IF(k>3) EXIT
-             size_jump=size_jump/2
+             IF(k>10) EXIT
+             size_jump=size_jump/2.
+             k=k+1
              GOTO 201
            !  EXIT
            END IF
