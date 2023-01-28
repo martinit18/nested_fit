@@ -140,7 +140,7 @@ Additional information can be found in the reference articles.
 
 The present version is 4.3alpha
 New features:
-- New (test) function : harmonic potential in 3D
+- New (test) function : harmonic potential in 3D and loggamma
 - Choice between different convergence methods : evidence or partition function  
 
 Previous versions are:

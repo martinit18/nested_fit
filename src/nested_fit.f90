@@ -2,7 +2,7 @@ PROGRAM NESTED_FIT
   ! Time-stamp: <Last changed by martino on Monday 07 June 2021 at CEST 10:29:22>
   !
   ! Please read README and LICENSE files for more inforamtion
-  ! 4.3  New (test) functions : harmonic potential in 3D
+  ! 4.3  New (test) functions : harmonic potential in 3D and loggamma
   !      Choice between different convergence methods : evidence or partition function
   ! 4.2  New search method added: uniform (around each live point) and slice sampling
   !      New decay functions added

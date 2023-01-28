@@ -1,8 +1,7 @@
-#  Automatic Time-stamp: <Last changed by martino on Tuesday 08 June 2021 at CEST 15:08:06>
-# Copyright M. Trassinelli
-# Last modified: 2023/01/23 09:54:59
+# Copyright M. Trassinelli, L. Maillard
+# Last modified: 2023/01/28 23:10:23
 
-NAME    = nested_fit4.3.0.exe
+NAME    = nested_fit4.3.1.exe
 
 .SUFFIXES : .f90 .f .o .c .mod
 
