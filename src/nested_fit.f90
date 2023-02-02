@@ -163,7 +163,10 @@ PROGRAM NESTED_FIT
             !   trim(optarg)
             CASE("h")
                ! TODO(César): Print a help screen for optional arguments
-               PRINT*, "TODO: print help-screen"
+               WRITE(*,*) '-----------------------------------------------------------------------'
+               WRITE(*,*) ''
+               WRITE(*,*) '-----------------------------------------------------------------------'
+               STOP
       END SELECT
   END DO
 
