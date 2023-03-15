@@ -65,8 +65,8 @@ PROGRAM NESTED_FIT
   !      N. Chopin and C.P. Robert, Biometrika 97, 741-755 (2010)
   ! 0.1: Program developed from D.S. Sivia, "Data Analysis, a Bayesian tutorial" (2006) and Leo's program
 
-  ! Parallelization library !!!CAREFULL to the table dimension in this case!!
-  USE OMP_LIB
+  ! Parallelization library
+  !$ USE OMP_LIB
   ! Module for the input parameter definition
   USE MOD_PARAMETERS
   ! Module for likelihood for data analysis
@@ -111,7 +111,7 @@ PROGRAM NESTED_FIT
 
   ! PARALLEL VARIABLE: PUT ".TRUE." IF YOU WANT TO RUN IN PARALLEL
   ! CHANGE ALSO THE FFLAGS IN THE MAKEFILE
-  LOGICAL, PARAMETER :: parallel_on = .TRUE.
+  !LOGICAL, PARAMETER :: parallel_on = .TRUE.
 
   EXTERNAL :: NESTED_SAMPLING, SORTN, MEANVAR
 
@@ -135,11 +135,10 @@ PROGRAM NESTED_FIT
 
 
   ! Calculate time elapsed !!!!!!!!!!!!!!!!!!!!
-  ! Parallel real time (and number of threads)
-  IF (parallel_on) THEN
-    seconds = omp_get_wtime( )
-    nth = omp_get_max_threads()
-  END IF
+  ! Parallel real time (and number of threads)  
+  !$ seconds = omp_get_wtime( )
+  !$ nth = omp_get_max_threads()
+
   ! Absolute time
   CALL CPU_TIME(startt)
 
@@ -527,7 +526,7 @@ PROGRAM NESTED_FIT
 
   ! Calculate end time
   ! Parallel time
-  IF (parallel_on) seconds_omp = omp_get_wtime( ) - seconds
+  !$ seconds_omp = omp_get_wtime( ) - seconds
   ! Normal time
   CALL CPU_TIME(stopt)
   seconds  = stopt - startt

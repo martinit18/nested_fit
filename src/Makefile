@@ -12,10 +12,6 @@ CFLAGS  =
 #### Uncomment next line to run in parallel and optimize in MAC
 FFLAGS   = -framework accelerate -fopenmp
 ###############################################################
-### ATTENTION!!!!
-### If you do not want to run in parallel,
-### modify the variable "parallel_on" in nested fit file
-###############################################################
 
 CFILES =
 

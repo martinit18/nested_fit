@@ -200,14 +200,16 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
      ! Parallisation is on progress, not working yet
      !$ print *,'Starting parallel computation with ', nth, ' threads'
      
-     !$OMP PARALLEL PRIVATE(it,ntries) &
-     !$OMP SHARED(live_like_new,live_new,icluster,too_many_tries)
-     it  = OMP_GET_THREAD_NUM() + 1
-     write(*,*) 'here', OMP_GET_THREAD_NUM(), n,itry,min_live_like,live_like(1),live(1,1)
-     CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
-          live_like_new(it),live_new(it,:),icluster(it),ntries,too_many_tries(it))
-     write(*,*) 'there', n, OMP_GET_THREAD_NUM(), it, min_live_like, live_like_new(it)
-     !$OMP END PARALLEL
+      it = 1
+      !$OMP PARALLEL DEFAULT(PRIVATE) &
+      !$OMP FIRSTPRIVATE(n,itry,min_live_like,live_like,live) &
+      !$OMP SHARED(live_like_new,live_new,icluster,too_many_tries) 
+      !$ it  = OMP_GET_THREAD_NUM() + 1
+      write(*,*) 'here', OMP_GET_THREAD_NUM(), n,itry,min_live_like,live_like(1),live(1,1)
+      CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
+           live_like_new(it),live_new(it,:),icluster(it),ntries,too_many_tries(it))
+      write(*,*) 'there', n, OMP_GET_THREAD_NUM(), it, min_live_like, live_like_new(it)
+      !$OMP END PARALLEL
 
 !!$     !$OMP PARALLEL DO PRIVATE(it,ntries) &
 !!$     !$OMP SHARED(n,live_like_new,live_new,icluster,too_many_tries)
