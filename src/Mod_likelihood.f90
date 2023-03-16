@@ -382,7 +382,7 @@ CONTAINS
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
     !
     REAL(8) :: enc
-    INTEGER(4) :: i, j, k=1
+    INTEGER(4) :: i, j, k
     REAL(8) :: USERFCN, USERFCN_SET, USERFCN_2D, xx, yy
 
     IF (data_type.EQ.'1c') THEN
@@ -442,7 +442,7 @@ CONTAINS
     !
     REAL(8) :: USERFCN, USERFCN_SET
     REAL(8) :: ll_tmp, enc
-    INTEGER(4) :: i=0, k=0
+    INTEGER(4) :: i, k
 
 
     ! Calculate LIKELIHOOD
@@ -518,12 +518,12 @@ CONTAINS
     !
     REAL(8) :: USERFCN_2D
     REAL(8) :: ll_tmp, enc, xx, yy
-    INTEGER(4) :: i=0, j=0, k=1
+    INTEGER(4) :: i, j, k
 
 
     ! Calculate LIKELIHOOD
-    ll_tmp = 0.
-
+    ll_tmp = 0
+    k = 1
     !!$OMP PARALLEL DO PRIVATE(i,j,xx,yy,enc) REDUCTION(+:ll_tmp)
     DO i=1, nx
        DO j=1, ny

@@ -9,7 +9,7 @@ MODULE MOD_SEARCH_NEW_POINT
   ! Module for cluster analysis
   USE MOD_CLUSTER_ANALYSIS
   
-  USE OMP_LIB !????
+  !$ USE OMP_LIB
 
   IMPLICIT NONE
 
@@ -77,12 +77,12 @@ CONTAINS
     INTEGER(4), INTENT(OUT) :: icluster, ntries
     LOGICAL, INTENT(OUT) :: too_many_tries
     ! MCMC new point search variables
-    REAL(8) :: gval=0.
+    REAL(8) :: gval
     REAL(8), DIMENSION(npar) :: live_ave, live_var, live_sd, start_jump, new_jump
-    INTEGER(4) :: istart=0, n_ntries=0
+    INTEGER(4) :: istart, n_ntries
     REAL(8), DIMENSION(nlive,npar) :: live_selected
     ! Other variables
-    INTEGER(4) :: i=0, l=0, irn=0
+    INTEGER(4) :: i, l, irn
     REAL(8) :: rn
     INTEGER(4) :: n_call_cluster_it, test
     REAL(8) :: sdfraction
@@ -100,8 +100,10 @@ CONTAINS
     live_var = 0.
     live_sd  = 0.
     ntries   = 0
+    istart   = 0
     n_ntries = 0
     too_many_tries = .false.
+    gval = 0.
 
     n_call_cluster_it=0
     sdfraction=search_par1
@@ -174,7 +176,6 @@ CONTAINS
           END IF
        END DO
        !!$OMP END PARALLEL DO
-       write(*,*) OMP_GET_THREAD_NUM(), i, 'in random walk' !???
 
        ! Check if the new point is inside the parameter volume defined by the minimum likelihood of the live points
        IF (LOGLIKELIHOOD(new_jump).GT.min_live_like) THEN
@@ -366,12 +367,12 @@ CONTAINS
     INTEGER(4), INTENT(OUT) :: icluster, ntries
     LOGICAL, INTENT(OUT) :: too_many_tries
     ! MCMC new point search variables
-    REAL(8) :: gval=0.
+    REAL(8) :: gval
     REAL(8), DIMENSION(npar) :: live_ave, live_var, live_sd, start_jump, new_jump
-    INTEGER(4) :: istart=0, n_ntries=0
+    INTEGER(4) :: istart, n_ntries
     REAL(8), DIMENSION(nlive,npar) :: live_selected
     ! Other variables
-    INTEGER(4) :: i=0, l=0, irn=0, j
+    INTEGER(4) :: i, l, irn, j
     REAL(8) :: rn, sd_mean, frac
     INTEGER(4) :: n_call_cluster_it, test
     INTEGER(4) :: nb_cube, njump
@@ -384,8 +385,10 @@ CONTAINS
     live_var = 0.
     live_sd  = 0.
     ntries   = 0
+    istart   = 0
     n_ntries = 0
     too_many_tries = .false.
+    gval = 0.
     frac=search_par1
     n_call_cluster_it=0
     nb_cube=0
@@ -646,12 +649,12 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     INTEGER(4), INTENT(OUT) :: icluster, ntries
     LOGICAL, INTENT(OUT) :: too_many_tries
     ! MCMC new point search variables
-    REAL(8) :: gval=0.
+    REAL(8) :: gval
     REAL(8), DIMENSION(npar) :: live_ave, live_var, live_sd, start_jump_comp, new_jump_comp
-    INTEGER(4) :: istart=0, n_ntries=0
+    INTEGER(4) :: istart, n_ntries
     REAL(8), DIMENSION(nlive,npar) :: live_selected
     ! Other variables
-    INTEGER(4) :: i=0, l=0, irn=0,j=0, kr=0, kl=0
+    INTEGER(4) :: i, l, irn, j, kr, kl
     REAL(8) :: rn, sd_mean
     INTEGER(4) :: n_call_cluster_it, test
     INTEGER(4) :: dim_eff
@@ -673,9 +676,11 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     live_var = 0.
     live_sd  = 0.
     ntries   = 0
+    istart   = 0
     n_ntries = 0
     too_many_tries = .false.
     n_call_cluster_it=0
+    gval = 0.
     dim_eff=npar-SUM(par_fix) !number of parameters not fixed
     size_jump=search_par1
     init_fail=0
@@ -928,12 +933,12 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     INTEGER(4), INTENT(OUT) :: icluster, ntries
     LOGICAL, INTENT(OUT) :: too_many_tries
     ! MCMC new point search variables
-    REAL(8) :: gval=0.
+    REAL(8) :: gval
     REAL(8), DIMENSION(npar) :: live_ave, live_var, live_sd, start_jump_comp, new_jump_comp
-    INTEGER(4) :: istart=0, n_ntries=0
+    INTEGER(4) :: istart, n_ntries
     REAL(8), DIMENSION(nlive,npar) :: live_selected
     ! Other variables
-    INTEGER(4) :: i=0, l=0, irn=0,j=0, k=0
+    INTEGER(4) :: i, l, irn,j, k
     REAL(8) :: rn, sd_mean
     INTEGER(4) :: n_call_cluster_it, test
     INTEGER(4) :: dim_eff
@@ -955,9 +960,11 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     live_var = 0.
     live_sd  = 0.
     ntries   = 0
+    istart   = 0
     n_ntries = 0
     too_many_tries = .false.
     n_call_cluster_it=0
+    gval = 0.
     dim_eff=npar-SUM(par_fix) !number of parameters not fixed
     size_jump=search_par1
     init_fail=0

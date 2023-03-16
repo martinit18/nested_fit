@@ -1,15 +1,10 @@
 SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,&
      live_final,live_like_max,live_max)
-  ! Time-stamp: <Last changed by martino on Sunday 14 August 2022 at CEST 23:47:53>
-  ! For parallel tests only
-  !SUBROUTINE NESTED_SAMPLING(irnmax,rng,itry,ndata,x,nc,funcname,&
-  !   npar,par_fix,par_step,par_in,par_bnd1,par_bnd2,nlive,evaccuracy,sdfraction,&
-  !   nall,evsum_final,live_like_final,weight,live_final,live_like_max,live_max)
-  USE OMP_LIB
-  !USE RNG
+
+  !$ USE OMP_LIB
 
   ! Parameter module
-  USE MOD_PARAMETERS, ONLY:  nlive, evaccuracy, search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, nth
+  USE MOD_PARAMETERS, ONLY:  nlive, evaccuracy, search_par2, npar, par_in, par_step, par_bnd1, par_bnd2, par_fix, nth
   ! Module for likelihood
   USE MOD_LIKELIHOOD
   ! Module for searching new live points
@@ -197,32 +192,17 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
      ! ##########################################################################
      ! Find a new live point
      
-     ! Parallisation is on progress, not working yet
-     !$ print *,'Starting parallel computation with ', nth, ' threads'
-     
       it = 1
-      !$OMP PARALLEL DEFAULT(PRIVATE) &
-      !$OMP FIRSTPRIVATE(n,itry,min_live_like,live_like,live) &
-      !$OMP SHARED(live_like_new,live_new,icluster,too_many_tries) 
-      !$ it  = OMP_GET_THREAD_NUM() + 1
-      write(*,*) 'here', OMP_GET_THREAD_NUM(), n,itry,min_live_like,live_like(1),live(1,1)
-      CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
+      !$OMP PARALLEL  
+      !$OMP DO
+      DO it=1,nth
+         !write(*,*) 'here', OMP_GET_THREAD_NUM(), it, min_live_like,live_like(1),live(1,1)
+         CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
            live_like_new(it),live_new(it,:),icluster(it),ntries,too_many_tries(it))
-      write(*,*) 'there', n, OMP_GET_THREAD_NUM(), it, min_live_like, live_like_new(it)
+         !write(*,*) 'there', OMP_GET_THREAD_NUM(), it, min_live_like, live_like_new(it)
+      END DO
+      !$OMP END DO
       !$OMP END PARALLEL
-
-!!$     !$OMP PARALLEL DO PRIVATE(it,ntries) &
-!!$     !$OMP SHARED(n,live_like_new,live_new,icluster,too_many_tries)
-!!$     DO it=1,nth
-!!$        write(*,*) 'here', OMP_GET_THREAD_NUM(), n,itry,min_live_like,live_like(1),live(1,1)
-!!$        CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
-!!$             live_like_new(it),live_new(it,:),icluster(it),ntries,too_many_tries(it))
-!!$        write(*,*) 'there', n, OMP_GET_THREAD_NUM(), it, min_live_like, live_like_new(it)
-!!$     END DO
-!!$     !$OMP END PARALLEL DO
-
-     !!write(*,*) live_like_new
-     !!pause
 
      IF (ANY(too_many_tries)) THEN
         nstep_final = n - 1
@@ -307,7 +287,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 
         IF (evtotest-evsum.LT.evaccuracy) GOTO 301
 
-        IF (MOD(n,1).EQ.0) THEN !!MOD(n,50) normally
+        IF (MOD(n,100).EQ.0) THEN !!MOD(n,50) normally
            !   ! Write status
            WRITE(*,*) 'N. try:', itry, 'N step:', n, &
                 'Min. loglike', min_live_like,'Evidence: ',evsum, &
