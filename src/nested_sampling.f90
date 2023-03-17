@@ -228,14 +228,18 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
         ! Reorder found point (no parallel here) and make the required calculation for the evidence
         ! Reorder point
         ! Order and exclude last point
-        DO j=1,nlive-1
-           IF (live_like_new(it).GT.live_like(j).AND.live_like_new(it).LT.live_like(j+1)) THEN
-              jlim = j
-           ELSE IF (live_like_new(it).GT.live_like(nlive)) THEN
-              jlim = nlive
-           END IF
-        END DO
-
+        IF (live_like_new(it).GT.live_like(nlive)) THEN
+            jlim = nlive
+        ELSE
+            !!$OMP PARALLEL DO
+            DO j=1,nlive-1
+              IF (live_like_new(it).GT.live_like(j).AND.live_like_new(it).LT.live_like(j+1)) THEN
+                 jlim = j
+               END IF
+            END DO
+            !!$OMP END PARALLEL DO
+         END IF
+         
         ! Store old values
         live_like_old(n) = live_like(1)
         live_old(n,:) = live(1,:)

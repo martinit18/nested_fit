@@ -453,6 +453,7 @@ CONTAINS
        k=1
        IF (data_type.EQ.'1c') THEN
           !!$OMP PARALLEL DO PRIVATE(enc) REDUCTION(+:ll_tmp)
+          ! $OMP SIMD REDUCTION (+: ll_tmp )
           DO i=1, ndata_set(k)
              ! Poisson distribution calculation --------------------------------------------------
              enc = USERFCN(x(i,k),npar,par,funcname)
