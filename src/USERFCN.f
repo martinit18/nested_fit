@@ -1,9 +1,194 @@
 c     Automatic Time-stamp: <Last changed by martino on Friday 18 November 2022 at CET 09:56:43>
 c################################### USERFCN DEFINITION #####################################
 
+      FUNCTION SELECT_USERFCN(funcname)
+      IMPLICIT NONE
+      INTEGER*4 SELECT_USERFCN
+      CHARACTER*64 funcname
 
+      IF(funcname.EQ.'GAUSS') THEN
+            SELECT_USERFCN = 0
+      ELSE IF(funcname.EQ.'SUPERGAUSS') THEN
+            SELECT_USERFCN = 1
+      ELSE IF(funcname.EQ.'ERFPEAK') THEN
+            SELECT_USERFCN = 2
+      ELSE IF(funcname.EQ.'GAUSS_BG') THEN
+            SELECT_USERFCN = 3
+      ELSE IF(funcname.EQ.'LORE') THEN
+            SELECT_USERFCN = 4
+      ELSE IF(funcname.EQ.'LORENORM') THEN
+            SELECT_USERFCN = 5
+      ELSE IF(funcname.EQ.'LORE_BG') THEN
+            SELECT_USERFCN = 6
+      ELSE IF(funcname.EQ.'DOUBLE_LORE_WF_BG') THEN
+            SELECT_USERFCN = 7
+      ELSE IF(funcname.EQ.'SIX_LORE_WF_BG') THEN
+            SELECT_USERFCN = 8
+      ELSE IF(funcname.EQ.'SIX_LORE_WF_REL_BG') THEN
+            SELECT_USERFCN = 9
+      ELSE IF(funcname.EQ.'CONS') THEN
+            SELECT_USERFCN = 10
+      ELSE IF(funcname.EQ.'DOUBLE_GAUSS_BG') THEN
+            SELECT_USERFCN = 11
+      ELSE IF(funcname.EQ.'DOUBLET_GAUSS_BG') THEN
+            SELECT_USERFCN = 12
+      ELSE IF(funcname.EQ.'TRIPLE_GAUSS_BG') THEN
+            SELECT_USERFCN = 13
+      ELSE IF(funcname.EQ.'QUAD_GAUSS_BG') THEN
+            SELECT_USERFCN = 14
+      ELSE IF(funcname.EQ.'QUINT_GAUSS_BG') THEN
+            SELECT_USERFCN = 15
+      ELSE IF(funcname.EQ.'SIX_GAUSS_BG') THEN
+            SELECT_USERFCN = 16
+      ELSE IF(funcname.EQ.'SIX_GAUSS_EXPBG_WF') THEN
+            SELECT_USERFCN = 17
+      ELSE IF(funcname.EQ.'SIX_GAUSS_DBEXPBG_WF') THEN
+            SELECT_USERFCN = 18
+      ELSE IF(funcname.EQ.'EIGHT_GAUSS_POLYBG_WF') THEN
+            SELECT_USERFCN = 19
+      ELSE IF(funcname.EQ.'EIGHT_VOIGT_POLYBG_WF') THEN
+            SELECT_USERFCN = 20
+      ELSE IF(funcname.EQ.'EXPFCN') THEN
+            SELECT_USERFCN = 21
+      ELSE IF(funcname.EQ.'ERFFCN') THEN
+            SELECT_USERFCN = 22
+      ELSE IF(funcname.EQ.'MB_BG') THEN
+            SELECT_USERFCN = 23
+      ELSE IF(funcname.EQ.'GAUSS_EXP_BG') THEN
+            SELECT_USERFCN = 24
+      ELSE IF(funcname.EQ.'GAUSS_GAUSS_EXP_BG') THEN
+            SELECT_USERFCN = 25
+      ELSE IF(funcname.EQ.'GAUSS_EXP_BG_CONV') THEN
+            SELECT_USERFCN = 26
+      ELSE IF(funcname.EQ.'VOIGT') THEN
+            SELECT_USERFCN = 27
+      ELSE IF(funcname.EQ.'VOIGT_BG') THEN
+            SELECT_USERFCN = 28
+      ELSE IF(funcname.EQ.'VOIGT_EXP') THEN
+            SELECT_USERFCN = 29
+      ELSE IF(funcname.EQ.'VOIGT_ERF') THEN
+            SELECT_USERFCN = 30
+      ELSE IF(funcname.EQ.'VOIGT_EXP_BG') THEN
+            SELECT_USERFCN = 31
+      ELSE IF(funcname.EQ.'DOUBLE_VOIGT_BG') THEN
+            SELECT_USERFCN = 32
+      ELSE IF(funcname.EQ.'DOUBLE_VOIGT_EXP_BG') THEN
+            SELECT_USERFCN = 33
+      ELSE IF(funcname.EQ.'SIX_VOIGT_BG') THEN
+            SELECT_USERFCN = 34
+      ELSE IF(funcname.EQ.'SIX_VOIGT_POLYBG') THEN
+            SELECT_USERFCN = 35
+      ELSE IF(funcname.EQ.'SIX_VOIGT_XRD') THEN
+            SELECT_USERFCN = 36
+      ELSE IF(funcname.EQ.'SIX_VOIGT_POLYBG_WF') THEN
+            SELECT_USERFCN = 37
+      ELSE IF(funcname.EQ.'SIX_VOIGT_EXP_BG') THEN
+            SELECT_USERFCN = 38
+      ELSE IF(funcname.EQ.'SIX_VOIGT_FREEGAMMA_BG') THEN
+            SELECT_USERFCN = 39
+      ELSE IF(funcname.EQ.'SIX_GAUSS_ERF_FREESIG_POLY') THEN
+            SELECT_USERFCN = 40
+      ELSE IF(funcname.EQ.'SIX_GAUSS_ERF_FREESIG_POLY2') THEN
+            SELECT_USERFCN = 41
+      ELSE IF(funcname.EQ.'SIX_VOIGT_EXP_POLYBG') THEN
+            SELECT_USERFCN = 42
+      ELSE IF(funcname.EQ.'SIX_VOIGT_EXPBG_WF') THEN
+            SELECT_USERFCN = 43
+      ELSE IF(funcname.EQ.'TWO_INTERP_VOIGT_POLY') THEN
+            SELECT_USERFCN = 44
+      ELSE IF(funcname.EQ.'TWO_INTERP_VOIGT_POLY_X0') THEN
+            SELECT_USERFCN = 45
+      ELSE IF(funcname.EQ.'THREE_INTERP_VOIGT_POLY') THEN
+            SELECT_USERFCN = 46
+      ELSE IF(funcname.EQ.'WEIBULL') THEN
+            SELECT_USERFCN = 47
+      ELSE IF(funcname.EQ.'WEIBULL_BG') THEN
+            SELECT_USERFCN = 48
+      ELSE IF(funcname.EQ.'WEIBULL_ERFBG') THEN
+            SELECT_USERFCN = 49
+      ELSE IF(funcname.EQ.'LASER') THEN
+            SELECT_USERFCN = 50
+      ELSE IF(funcname.EQ.'THRESHOLD') THEN
+            SELECT_USERFCN = 51
+      ELSE IF(funcname.EQ.'GAUSS_ERF') THEN
+            SELECT_USERFCN = 52
+      ELSE IF(funcname.EQ.'TWO_GAUSS_ERF_EXPBG') THEN
+            SELECT_USERFCN = 53
+      ELSE IF(funcname.EQ.'TWO_DOUBL_GAUSS_ERF_POLY') THEN
+            SELECT_USERFCN = 54
+      ELSE IF(funcname.EQ.'TWO_DOUBL_GAUSS_ERF_FREESIG_POLY') THEN
+            SELECT_USERFCN = 35
+      ELSE IF(funcname.EQ.'TWO_DOUBL_VOIGT_ERF_POLY') THEN
+            SELECT_USERFCN = 56
+      ELSE IF(funcname.EQ.'POLY') THEN
+            SELECT_USERFCN = 57
+      ELSE IF(funcname.EQ.'POWER') THEN
+            SELECT_USERFCN = 58
+      ELSE IF(funcname.EQ.'ND_M_PLEIADES') THEN
+            SELECT_USERFCN = 59
+      ELSE IF(funcname.EQ.'BS_EM') THEN
+            SELECT_USERFCN = 60
+      ELSE IF(funcname.EQ.'BS_EM2') THEN
+            SELECT_USERFCN = 61
+      ELSE IF(funcname.EQ.'BS_EM_NM') THEN
+            SELECT_USERFCN = 62
+      ELSE IF(funcname.EQ.'EXPCOS') THEN
+            SELECT_USERFCN = 63
+      ELSE IF(funcname.EQ.'EXPSIN') THEN
+            SELECT_USERFCN = 64
+      ELSE IF(funcname.EQ.'EXPSIMP') THEN
+            SELECT_USERFCN = 65
+      ELSE IF(funcname.EQ.'TWO_EXPSIN') THEN
+            SELECT_USERFCN = 66
+      ELSE IF(funcname.EQ.'FOUR_VOIGT_BG') THEN
+            SELECT_USERFCN = 67
+      ELSE IF(funcname.EQ.'FOUR_GAUSS_ERF_TWO_GAUSS') THEN
+            SELECT_USERFCN = 68
+      ELSE IF(funcname.EQ.'FOUR_GAUSS_ERF_TWO_GAUSS_STAN') THEN
+            SELECT_USERFCN = 69
+      ELSE IF(funcname.EQ.'GAUSS_ERF_CST') THEN
+            SELECT_USERFCN = 70
+      ELSE IF(funcname.EQ.'GAUSSERF_CST') THEN
+            SELECT_USERFCN = 71
+      ELSE IF(funcname.EQ.'FOUR_VOIGT_BG_PLEIADES') THEN
+            SELECT_USERFCN = 72
+      ELSE IF(funcname.EQ.'FOUR_GAUSS_BG_PLEIADES') THEN
+            SELECT_USERFCN = 73
+      ELSE IF(funcname.EQ.'FOUR_PSEUDOVOIGT_BG_PLEIADES') THEN
+            SELECT_USERFCN = 74
+      ELSE IF(funcname.EQ.'FOUR_GAUSS_PARAMETER_BG_PLEIADES') THEN
+            SELECT_USERFCN = 75
+      ELSE IF(funcname.EQ.'FOUR_VOIGT_PARAMETER_BG_PLEIADES') THEN
+            SELECT_USERFCN = 76
+      ELSE IF(funcname.EQ.'SIX_VOIGT_PARAMETER_BG_PLEIADES') THEN
+            SELECT_USERFCN = 77
+      ELSE IF(funcname.EQ.'SIX_GAUSS_PARAMETER_BG_PLEIADES') THEN
+            SELECT_USERFCN = 78
+      ELSE IF(funcname.EQ.'SIX_PSEUDOVOIGT_PARAMETER_BG_PLEIADES') THEN
+            SELECT_USERFCN = 79
+      ELSE IF(funcname.EQ.'SIX_GAUSS_SHIRLEYBG') THEN
+            SELECT_USERFCN = 80
+      ELSE IF(funcname.EQ.'SIX_VOIGT_SHIRLEYBG') THEN
+            SELECT_USERFCN = 81
+      ELSE IF(funcname.EQ.'SIX_VOIGT_PARA_SHIRBG_SIG_PLEIADES') THEN
+            SELECT_USERFCN = 82
+      ELSE IF(funcname.EQ.'SIX_VOIGT_PARAMETER_SHIRLEYBG_PLEIADES') THEN
+            SELECT_USERFCN = 83
+      ELSE IF(funcname.EQ.'ROCKING_CURVE') THEN
+            SELECT_USERFCN = 84
+      ELSE IF(funcname.EQ.'SIX_VOIGT_PARA_POLY_SIG_PLEIADES') THEN
+            SELECT_USERFCN = 85
+      ELSE IF(funcname.EQ.'POWER_CONST') THEN
+            SELECT_USERFCN = 86
+      ELSE
+            WRITE(*,*) 'Error in the function name def. in USERFCN'
+            WRITE(*,*) 'Check in the manual and in the input.dat file'
+            STOP
+      END IF
+      RETURN
+      END
 
-      FUNCTION USERFCN(x,npar,val,funcname)
+      FUNCTION USERFCN(x,npar,val,funcid)
       IMPLICIT NONE
       INTEGER*4 npar
       REAL*8 val(npar)
@@ -17,7 +202,7 @@ c################################### USERFCN DEFINITION ########################
       REAL*8 SIX_VOIGT_BG, SIX_VOIGT_XRD, SIX_VOIGT_EXP_BG
       REAL*8 EIGHT_GAUSS_POLYBG_WF, EIGHT_VOIGT_POLYBG_WF
       REAL*8 EXPFCN, ERFFCN,BS_EM, BS_EM2, BS_EM_NM
-      REAL*8 POWER, ND_M_PLEIADES
+      REAL*8 POWER, POWER_CONST, ND_M_PLEIADES
       REAL*8 POLY, SIX_VOIGT_POLYBG,SIX_VOIGT_EXP_POLYBG
       REAL*8 SIX_VOIGT_POLYBG_WF
       REAL*8 MB_BG, GAUSS_EXP_BG, VOIGT, DOUBLE_VOIGT_BG
@@ -49,191 +234,186 @@ c################################### USERFCN DEFINITION ########################
       REAL*8 TWO_INTERP_VOIGT_POLY_X0
       REAL*8 DECAY, DECAY_SIMP
       REAL*8 x
-      CHARACTER*64 funcname
+      INTEGER*4 funcid
 
 
 c     Choose your model (see below for definition)
-      IF(funcname.EQ.'GAUSS') THEN
-         USERFCN = GAUSS(x,npar,val)
-      ELSE IF(funcname.EQ.'SUPERGAUSS') THEN
-         USERFCN = SUPERGAUSS(x,npar,val)
-      ELSE IF(funcname.EQ.'ERFPEAK') THEN
-         USERFCN = ERFPEAK(x,npar,val)
-      ELSE IF(funcname.EQ.'GAUSS_BG') THEN
-         USERFCN = GAUSS_BG(x,npar,val)
-      ELSE IF(funcname.EQ.'LORE') THEN
-         USERFCN = LORE(x,npar,val)
-      ELSE IF(funcname.EQ.'LORENORM') THEN
-         USERFCN = LORENORM(x,npar,val)
-      ELSE IF(funcname.EQ.'LORE_BG') THEN
-         USERFCN = LORE_BG(x,npar,val)
-      ELSE IF(funcname.EQ.'DOUBLE_LORE_WF_BG') THEN
-         USERFCN = DOUBLE_LORE_WF_BG(x,npar,val)
-      ELSE IF(funcname.EQ.'SIX_LORE_WF_BG') THEN
-         USERFCN = SIX_LORE_WF_BG(x,npar,val)
-      ELSE IF(funcname.EQ.'SIX_LORE_WF_REL_BG') THEN
-         USERFCN = SIX_LORE_WF_REL_BG(x,npar,val)
-      ELSE IF(funcname.EQ.'CONS') THEN
-         USERFCN = CONS(x,npar,val)
-      ELSE IF(funcname.EQ.'DOUBLE_GAUSS_BG') THEN
-         USERFCN = DOUBLE_GAUSS_BG(x,npar,val)
-      ELSE IF(funcname.EQ.'DOUBLET_GAUSS_BG') THEN
-         USERFCN = DOUBLET_GAUSS_BG(x,npar,val)
-      ELSE IF(funcname.EQ.'TRIPLE_GAUSS_BG') THEN
-         USERFCN = TRIPLE_GAUSS_BG(x,npar,val)
-      ELSE IF(funcname.EQ.'QUAD_GAUSS_BG') THEN
-         USERFCN = QUAD_GAUSS_BG(x,npar,val)
-      ELSE IF(funcname.EQ.'QUINT_GAUSS_BG') THEN
-         USERFCN = QUINT_GAUSS_BG(x,npar,val)
-      ELSE IF(funcname.EQ.'SIX_GAUSS_BG') THEN
-         USERFCN = SIX_GAUSS_BG(x,npar,val)
-      ELSE IF(funcname.EQ.'SIX_GAUSS_EXPBG_WF') THEN
-         USERFCN = SIX_GAUSS_EXPBG_WF(x,npar,val)
-      ELSE IF(funcname.EQ.'SIX_GAUSS_DBEXPBG_WF') THEN
-         USERFCN = SIX_GAUSS_DBEXPBG_WF(x,npar,val)
-      ELSE IF(funcname.EQ.'EIGHT_GAUSS_POLYBG_WF') THEN
-         USERFCN = EIGHT_GAUSS_POLYBG_WF(x,npar,val)
-      ELSE IF(funcname.EQ.'EIGHT_VOIGT_POLYBG_WF') THEN
-         USERFCN = EIGHT_VOIGT_POLYBG_WF(x,npar,val)
-      ELSE IF(funcname.EQ.'EXPFCN') THEN
-         USERFCN = EXPFCN(x,npar,val)
-      ELSE IF(funcname.EQ.'ERFFCN') THEN
-         USERFCN = ERFFCN(x,npar,val)
-      ELSE IF(funcname.EQ.'MB_BG') THEN
-         USERFCN = MB_BG(x,npar,val)
-      ELSE IF(funcname.EQ.'GAUSS_EXP_BG') THEN
-         USERFCN = GAUSS_EXP_BG(x,npar,val)
-      ELSE IF(funcname.EQ.'GAUSS_GAUSS_EXP_BG') THEN
-         USERFCN = GAUSS_GAUSS_EXP_BG(x,npar,val)
-      ELSE IF(funcname.EQ.'GAUSS_EXP_BG_CONV') THEN
-         USERFCN = GAUSS_EXP_BG_CONV(x,npar,val)
-      ELSE IF(funcname.EQ.'VOIGT') THEN
-         USERFCN = VOIGT(x,npar,val)
-      ELSE IF(funcname.EQ.'VOIGT_BG') THEN
-         USERFCN = VOIGT_BG(x,npar,val)
-      ELSE IF(funcname.EQ.'VOIGT_EXP') THEN
-         USERFCN = VOIGT_EXP(x,npar,val)
-      ELSE IF(funcname.EQ.'VOIGT_ERF') THEN
-         USERFCN = VOIGT_ERF(x,npar,val)
-      ELSE IF(funcname.EQ.'VOIGT_EXP_BG') THEN
-         USERFCN = VOIGT_EXP_BG(x,npar,val)
-      ELSE IF(funcname.EQ.'DOUBLE_VOIGT_BG') THEN
-         USERFCN = DOUBLE_VOIGT_BG(x,npar,val)
-      ELSE IF(funcname.EQ.'DOUBLE_VOIGT_EXP_BG') THEN
-         USERFCN = DOUBLE_VOIGT_EXP_BG(x,npar,val)
-      ELSE IF(funcname.EQ.'SIX_VOIGT_BG') THEN
-         USERFCN = SIX_VOIGT_BG(x,npar,val)
-      ELSE IF(funcname.EQ.'SIX_VOIGT_POLYBG') THEN
-         USERFCN = SIX_VOIGT_POLYBG(x,npar,val)
-      ELSE IF(funcname.EQ.'SIX_VOIGT_XRD') THEN
-         USERFCN = SIX_VOIGT_XRD(x,npar,val)
-      ELSE IF(funcname.EQ.'SIX_VOIGT_POLYBG_WF') THEN
-         USERFCN = SIX_VOIGT_POLYBG_WF(x,npar,val)
-      ELSE IF(funcname.EQ.'SIX_VOIGT_EXP_BG') THEN
-         USERFCN = SIX_VOIGT_EXP_BG(x,npar,val)
-      ELSE IF(funcname.EQ.'SIX_VOIGT_FREEGAMMA_BG') THEN
-         USERFCN = SIX_VOIGT_FREEGAMMA_BG(x,npar,val)
-      ELSE IF(funcname.EQ.'SIX_GAUSS_ERF_FREESIG_POLY') THEN
-         USERFCN = SIX_GAUSS_ERF_FREESIG_POLY(x,npar,val)
-      ELSE IF(funcname.EQ.'SIX_GAUSS_ERF_FREESIG_POLY2') THEN
-         USERFCN = SIX_GAUSS_ERF_FREESIG_POLY2(x,npar,val)
-      ELSE IF(funcname.EQ.'SIX_VOIGT_EXP_POLYBG') THEN
-         USERFCN = SIX_VOIGT_EXP_POLYBG(x,npar,val)
-      ELSE IF(funcname.EQ.'SIX_VOIGT_EXPBG_WF') THEN
-         USERFCN =SIX_VOIGT_EXPBG_WF(x,npar,val)
-      ELSE IF(funcname.EQ.'TWO_INTERP_VOIGT_POLY') THEN
-         USERFCN =TWO_INTERP_VOIGT_POLY(x,npar,val)
-      ELSE IF(funcname.EQ.'TWO_INTERP_VOIGT_POLY_X0') THEN
-         USERFCN =TWO_INTERP_VOIGT_POLY_X0(x,npar,val)
-      ELSE IF(funcname.EQ.'THREE_INTERP_VOIGT_POLY') THEN
-         USERFCN =THREE_INTERP_VOIGT_POLY(x,npar,val)
-      ELSE IF(funcname.EQ.'WEIBULL') THEN
-         USERFCN = WEIBULL(x,npar,val)
-      ELSE IF(funcname.EQ.'WEIBULL_BG') THEN
-         USERFCN = WEIBULL_BG(x,npar,val)
-      ELSE IF(funcname.EQ.'WEIBULL_ERFBG') THEN
-         USERFCN = WEIBULL_ERFBG(x,npar,val)
-      ELSE IF(funcname.EQ.'LASER') THEN
-         USERFCN = LASER(x,npar,val)
-      ELSE IF(funcname.EQ.'THRESHOLD') THEN
-         USERFCN = THRESHOLD(x,npar,val)
-      ELSE IF(funcname.EQ.'GAUSS_ERF') THEN
-         USERFCN = GAUSS_ERF(x,npar,val)
-      ELSE IF(funcname.EQ.'TWO_GAUSS_ERF_EXPBG') THEN
-         USERFCN = TWO_GAUSS_ERF_EXPBG(x,npar,val)
-      ELSE IF(funcname.EQ.'TWO_DOUBL_GAUSS_ERF_POLY') THEN
-         USERFCN = TWO_DOUBL_GAUSS_ERF_POLY(x,npar,val)
-      ELSE IF(funcname.EQ.'TWO_DOUBL_GAUSS_ERF_FREESIG_POLY') THEN
-         USERFCN = TWO_DOUBL_GAUSS_ERF_FREESIG_POLY(x,npar,val)
-      ELSE IF(funcname.EQ.'TWO_DOUBL_VOIGT_ERF_POLY') THEN
-         USERFCN = TWO_DOUBL_VOIGT_ERF_POLY(x,npar,val)
-      ELSE IF(funcname.EQ.'POLY') THEN
-         USERFCN = POLY(x,npar,val)
-      ELSE IF(funcname.EQ.'POWER') THEN
-         USERFCN = POWER(x,npar,val)
-      ELSE IF(funcname.EQ.'ND_M_PLEIADES') THEN
-         USERFCN = ND_M_PLEIADES(x,npar,val)
-      ELSE IF(funcname.EQ.'BS_EM') THEN
-         USERFCN = BS_EM(x,npar,val)
-      ELSE IF(funcname.EQ.'BS_EM2') THEN
-         USERFCN = BS_EM2(x,npar,val)
-      ELSE IF(funcname.EQ.'BS_EM_NM') THEN
-         USERFCN = BS_EM_NM(x,npar,val)
-      ELSE IF(funcname.EQ.'EXPCOS') THEN
-         USERFCN = EXPCOS(x,npar,val)
-      ELSE IF(funcname.EQ.'EXPSIN') THEN
-         USERFCN = EXPSIN(x,npar,val)
-      ELSE IF(funcname.EQ.'EXPSIMP') THEN
-         USERFCN = EXPSIMP(x,npar,val)
-      ELSE IF(funcname.EQ.'TWO_EXPSIN') THEN
-         USERFCN = TWO_EXPSIN(x,npar,val)
-      ELSE IF(funcname.EQ.'FOUR_VOIGT_BG') THEN
-         USERFCN = FOUR_VOIGT_BG(x,npar,val)
-      ELSE IF(funcname.EQ.'FOUR_GAUSS_ERF_TWO_GAUSS') THEN
-         USERFCN = FOUR_GAUSS_ERF_TWO_GAUSS(x,npar,val)
-      ELSE IF(funcname.EQ.'FOUR_GAUSS_ERF_TWO_GAUSS_STAN') THEN
-         USERFCN = FOUR_GAUSS_ERF_TWO_GAUSS_STAN(x,npar,val)
-      ELSE IF(funcname.EQ.'GAUSS_ERF_CST') THEN
-         USERFCN = GAUSS_ERF_CST(x,npar,val)
-      ELSE IF(funcname.EQ.'GAUSSERF_CST') THEN
-         USERFCN = GAUSSERF_CST(x,npar,val)
-      ELSE IF(funcname.EQ.'FOUR_VOIGT_BG_PLEIADES') THEN
-         USERFCN = FOUR_VOIGT_BG_PLEIADES(x,npar,val)
-      ELSE IF(funcname.EQ.'FOUR_GAUSS_BG_PLEIADES') THEN
-         USERFCN = FOUR_GAUSS_BG_PLEIADES(x,npar,val)
-      ELSE IF(funcname.EQ.'FOUR_PSEUDOVOIGT_BG_PLEIADES') THEN
-         USERFCN = FOUR_PSEUDOVOIGT_BG_PLEIADES(x,npar,val)
-      ELSE IF(funcname.EQ.'FOUR_GAUSS_PARAMETER_BG_PLEIADES') THEN
-         USERFCN = FOUR_GAUSS_PARAMETER_BG_PLEIADES(x,npar,val)
-      ELSE IF(funcname.EQ.'FOUR_VOIGT_PARAMETER_BG_PLEIADES') THEN
-         USERFCN = FOUR_VOIGT_PARAMETER_BG_PLEIADES(x,npar,val)
-      ELSE IF(funcname.EQ.'SIX_VOIGT_PARAMETER_BG_PLEIADES') THEN
-         USERFCN = SIX_VOIGT_PARAMETER_BG_PLEIADES(x,npar,val)
-      ELSE IF(funcname.EQ.'SIX_GAUSS_PARAMETER_BG_PLEIADES') THEN
-         USERFCN = SIX_GAUSS_PARAMETER_BG_PLEIADES(x,npar,val)
-      ELSE IF(funcname.EQ.'SIX_PSEUDOVOIGT_PARAMETER_BG_PLEIADES') THEN
-         USERFCN = SIX_PSEUDOVOIGT_PARAMETER_BG_PLEIADES(x,npar,val)
-      ELSE IF(funcname.EQ.'SIX_GAUSS_SHIRLEYBG') THEN
-         USERFCN = SIX_GAUSS_SHIRLEYBG(x,npar,val)
-      ELSE IF(funcname.EQ.'SIX_VOIGT_SHIRLEYBG') THEN
-         USERFCN = SIX_VOIGT_SHIRLEYBG(x,npar,val)
-      ELSE IF(funcname.EQ.'SIX_VOIGT_PARA_SHIRBG_SIG_PLEIADES') THEN
-         USERFCN = SIX_VOIGT_PARA_SHIRBG_SIG_PLEIADES(x,npar,val)
-      ELSE IF(funcname.EQ.'SIX_VOIGT_PARAMETER_SHIRLEYBG_PLEIADES') THEN
-         USERFCN = SIX_VOIGT_PARAMETER_SHIRLEYBG_PLEIADES(x,npar,val)
-      ELSE IF(funcname.EQ.'ROCKING_CURVE') THEN
-         USERFCN = ROCKING_CURVE(x,npar,val)
-      ELSE IF(funcname.EQ.'SIX_VOIGT_PARA_POLY_SIG_PLEIADES') THEN
-         USERFCN = SIX_VOIGT_PARA_POLY_SIG_PLEIADES(x,npar,val)
-      ELSE IF(funcname.EQ.'DECAY') THEN
-         USERFCN = DECAY(x,npar,val)
-      ELSE IF(funcname.EQ.'DECAY_SIMP') THEN
-         USERFCN = DECAY_SIMP(x,npar,val)
-      ELSE
-         WRITE(*,*) 'Error in the function name def. in USERFCN'
-         WRITE(*,*) 'Check in the manual and in the input.dat file'
-         STOP
-      END IF
+      SELECT CASE (funcid)
+      CASE (0)
+            USERFCN = GAUSS(x,npar,val)
+      CASE (1)
+            USERFCN = SUPERGAUSS(x,npar,val)
+      CASE (2)
+            USERFCN = ERFPEAK(x,npar,val)
+      CASE (3)
+            USERFCN = GAUSS_BG(x,npar,val)
+      CASE (4)
+            USERFCN = LORE(x,npar,val)
+      CASE (5)
+            USERFCN = LORENORM(x,npar,val)
+      CASE (6)
+            USERFCN = LORE_BG(x,npar,val)
+      CASE (7)
+            USERFCN = DOUBLE_LORE_WF_BG(x,npar,val)
+      CASE (8)
+            USERFCN = SIX_LORE_WF_BG(x,npar,val)
+      CASE (9)
+            USERFCN = SIX_LORE_WF_REL_BG(x,npar,val)
+      CASE (10)
+            USERFCN = CONS(x,npar,val)
+      CASE (11)
+            USERFCN = DOUBLE_GAUSS_BG(x,npar,val)
+      CASE (12)
+            USERFCN = DOUBLET_GAUSS_BG(x,npar,val)
+      CASE (13)
+            USERFCN = TRIPLE_GAUSS_BG(x,npar,val)
+      CASE (14)
+            USERFCN = QUAD_GAUSS_BG(x,npar,val)
+      CASE (15)
+            USERFCN = QUINT_GAUSS_BG(x,npar,val)
+      CASE (16)
+            USERFCN = SIX_GAUSS_BG(x,npar,val)
+      CASE (17)
+            USERFCN = SIX_GAUSS_EXPBG_WF(x,npar,val)
+      CASE (18)
+            USERFCN = SIX_GAUSS_DBEXPBG_WF(x,npar,val)
+      CASE (19)
+            USERFCN = EIGHT_GAUSS_POLYBG_WF(x,npar,val)
+      CASE (20)
+            USERFCN = EIGHT_VOIGT_POLYBG_WF(x,npar,val)
+      CASE (21)
+            USERFCN = EXPFCN(x,npar,val)
+      CASE (22)
+            USERFCN = ERFFCN(x,npar,val)
+      CASE (23)
+            USERFCN = MB_BG(x,npar,val)
+      CASE (24)
+            USERFCN = GAUSS_EXP_BG(x,npar,val)
+      CASE (25)
+            USERFCN = GAUSS_GAUSS_EXP_BG(x,npar,val)
+      CASE (26)
+            USERFCN = GAUSS_EXP_BG_CONV(x,npar,val)
+      CASE (27)
+            USERFCN = VOIGT(x,npar,val)
+      CASE (28)
+            USERFCN = VOIGT_BG(x,npar,val)
+      CASE (29)
+            USERFCN = VOIGT_EXP(x,npar,val)
+      CASE (30)
+            USERFCN = VOIGT_ERF(x,npar,val)
+      CASE (31)
+            USERFCN = VOIGT_EXP_BG(x,npar,val)
+      CASE (32)
+            USERFCN = DOUBLE_VOIGT_BG(x,npar,val)
+      CASE (33)
+            USERFCN = DOUBLE_VOIGT_EXP_BG(x,npar,val)
+      CASE (34)
+            USERFCN = SIX_VOIGT_BG(x,npar,val)
+      CASE (35)
+            USERFCN = SIX_VOIGT_POLYBG(x,npar,val)
+      CASE (36)
+            USERFCN = SIX_VOIGT_XRD(x,npar,val)
+      CASE (37)
+            USERFCN = SIX_VOIGT_POLYBG_WF(x,npar,val)
+      CASE (38)
+            USERFCN = SIX_VOIGT_EXP_BG(x,npar,val)
+      CASE (39)
+            USERFCN = SIX_VOIGT_FREEGAMMA_BG(x,npar,val)
+      CASE (40)
+            USERFCN = SIX_GAUSS_ERF_FREESIG_POLY(x,npar,val)
+      CASE (41)
+            USERFCN = SIX_GAUSS_ERF_FREESIG_POLY2(x,npar,val)
+      CASE (42)
+            USERFCN = SIX_VOIGT_EXP_POLYBG(x,npar,val)
+      CASE (43)
+            USERFCN = SIX_VOIGT_EXPBG_WF(x,npar,val)
+      CASE (44)
+            USERFCN = TWO_INTERP_VOIGT_POLY(x,npar,val)
+      CASE (45)
+            USERFCN = TWO_INTERP_VOIGT_POLY_X0(x,npar,val)
+      CASE (46)
+            USERFCN = THREE_INTERP_VOIGT_POLY(x,npar,val)
+      CASE (47)
+            USERFCN = WEIBULL(x,npar,val)
+      CASE (48)
+            USERFCN = WEIBULL_BG(x,npar,val)
+      CASE (49)
+            USERFCN = WEIBULL_ERFBG(x,npar,val)
+      CASE (50)
+            USERFCN = LASER(x,npar,val)
+      CASE (51)
+            USERFCN = THRESHOLD(x,npar,val)
+      CASE (52)
+            USERFCN = GAUSS_ERF(x,npar,val)
+      CASE (53)
+            USERFCN = TWO_GAUSS_ERF_EXPBG(x,npar,val)
+      CASE (54)
+            USERFCN = TWO_DOUBL_GAUSS_ERF_POLY(x,npar,val)
+      CASE (55)
+            USERFCN = TWO_DOUBL_GAUSS_ERF_FREESIG_POLY(x,npar,val)
+      CASE (56)
+            USERFCN = TWO_DOUBL_VOIGT_ERF_POLY(x,npar,val)
+      CASE (57)
+            USERFCN = POLY(x,npar,val)
+      CASE (58)
+            USERFCN = POWER(x,npar,val)
+      CASE (59)
+            USERFCN = ND_M_PLEIADES(x,npar,val)
+      CASE (60)
+            USERFCN = BS_EM(x,npar,val)
+      CASE (61)
+            USERFCN = BS_EM2(x,npar,val)
+      CASE (62)
+            USERFCN = BS_EM_NM(x,npar,val)
+      CASE (63)
+            USERFCN = EXPCOS(x,npar,val)
+      CASE (64)
+            USERFCN = EXPSIN(x,npar,val)
+      CASE (65)
+            USERFCN = EXPSIMP(x,npar,val)
+      CASE (66)
+            USERFCN = TWO_EXPSIN(x,npar,val)
+      CASE (67)
+            USERFCN = FOUR_VOIGT_BG(x,npar,val)
+      CASE (68)
+            USERFCN = FOUR_GAUSS_ERF_TWO_GAUSS(x,npar,val)
+      CASE (69)
+            USERFCN = FOUR_GAUSS_ERF_TWO_GAUSS_STAN(x,npar,val)
+      CASE (70)
+            USERFCN = GAUSS_ERF_CST(x,npar,val)
+      CASE (71)
+            USERFCN = GAUSSERF_CST(x,npar,val)
+      CASE (72)
+            USERFCN = FOUR_VOIGT_BG_PLEIADES(x,npar,val)
+      CASE (73)
+            USERFCN = FOUR_GAUSS_BG_PLEIADES(x,npar,val)
+      CASE (74)
+            USERFCN = FOUR_PSEUDOVOIGT_BG_PLEIADES(x,npar,val)
+      CASE (75)
+            USERFCN = FOUR_GAUSS_PARAMETER_BG_PLEIADES(x,npar,val)
+      CASE (76)
+            USERFCN = FOUR_VOIGT_PARAMETER_BG_PLEIADES(x,npar,val)
+      CASE (77)
+            USERFCN = SIX_VOIGT_PARAMETER_BG_PLEIADES(x,npar,val)
+      CASE (78)
+            USERFCN = SIX_GAUSS_PARAMETER_BG_PLEIADES(x,npar,val)
+      CASE (79)
+            USERFCN = SIX_PSEUDOVOIGT_PARAMETER_BG_PLEIADES(x,npar,val)
+      CASE (80)
+            USERFCN = SIX_GAUSS_SHIRLEYBG(x,npar,val)
+      CASE (81)
+            USERFCN = SIX_VOIGT_SHIRLEYBG(x,npar,val)
+      CASE (82)
+            USERFCN = SIX_VOIGT_PARA_SHIRBG_SIG_PLEIADES(x,npar,val)
+      CASE (83)
+            USERFCN = SIX_VOIGT_PARAMETER_SHIRLEYBG_PLEIADES(x,npar,val)
+      CASE (84)
+            USERFCN = ROCKING_CURVE(x,npar,val)
+      CASE (85)
+            USERFCN = SIX_VOIGT_PARA_POLY_SIG_PLEIADES(x,npar,val)
+      CASE (86)
+            USERFCN = POWER_CONST(x, npar, val)
+      END SELECT
 
       RETURN
       END
@@ -4023,6 +4203,34 @@ c     Simple power function
 c     Save the different components
       IF(plot) THEN
          WRITE(40,*) x, POWER
+      END IF
+
+      RETURN
+      END
+c _______________________________________________________________________________________________
+
+      FUNCTION POWER_CONST(X,npar,val)
+c     Simple power plus constant function
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar)
+      REAL*8 POWER_CONST, x
+      REAL*8 x0,a,n,b
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+
+
+      x0 = val(1)
+      a  = val(2)
+      n  = val(3)
+      b  = val(4)
+
+      POWER_CONST = a*(x-x0)**n + b
+
+c     Save the different components
+      IF(plot) THEN
+            WRITE(40,*) x, POWER_CONST
       END IF
 
       RETURN
