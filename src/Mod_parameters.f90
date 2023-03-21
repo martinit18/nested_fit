@@ -28,6 +28,9 @@ MODULE MOD_PARAMETERS
   CHARACTER,  ALLOCATABLE, DIMENSION(:) :: par_name*10
   REAL(8), ALLOCATABLE, DIMENSION(:) :: par_step, par_in, par_bnd1, par_bnd2
 
+  ! Calculated variables
+  INTEGER(4) :: funcid=0
+
 
   COMMON /func_exp/ lr
   COMMON /func_conv/ npoint, nwidth

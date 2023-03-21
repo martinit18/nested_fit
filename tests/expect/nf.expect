@@ -1,0 +1,14 @@
+# expect files syntax
+
+from expect_test.dat expect
+{
+    # Using regex to match a line
+    line 1 match "^something"
+
+    set split ' '
+    line 2 split[1] as float match range(0.1, 0.2)
+
+    line 3 as float match range(0.0, 100.0)
+
+    line 3 as float match -5.0
+}

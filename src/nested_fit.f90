@@ -6,6 +6,7 @@ PROGRAM NESTED_FIT
   !      Choice between different convergence methods : evidence or partition function
   ! 4.2  New search method added: uniform (around each live point) and slice sampling
   !      New decay functions added
+  !      Faster user function comparison; Default mode reverted to single threaded (Disabled OpenMP)
   ! 4.1  Several cluster recognition methods added.
   ! 4.0  2D data analysis available, new input and output files for future developments
   !      1D parallelization acceleration with masks instead of IF conditions in the likelihood
@@ -68,26 +69,37 @@ PROGRAM NESTED_FIT
   !      N. Chopin and C.P. Robert, Biometrika 97, 741-755 (2010)
   ! 0.1: Program developed from D.S. Sivia, "Data Analysis, a Bayesian tutorial" (2006) and Leo's program
 
-  ! Parallelization library !!!CAREFULL to the table dimension in this case!!
-  USE OMP_LIB
-  ! Module for the input parameter definition
-  USE MOD_PARAMETERS
-  ! Module for likelihood for data analysis
-  USE MOD_LIKELIHOOD
+
+   ! Module for CLI lib
+   USE f90getopt
+   ! Module for optional variables
+   USE MOD_OPTIONS
+   ! Module for the input parameter definition
+   USE MOD_PARAMETERS
+   ! Module for likelihood for data analysis
+   USE MOD_LIKELIHOOD
+   ! Module for metadata
+   USE MOD_METADATA
+   ! Parallelization library !!!CAREFULL to the table dimension in this case!!
+   USE OMP_LIB
+   USE MPI
+
   !USE RNG
   !
   IMPLICIT NONE
   ! Data
   INTEGER(4) :: i=0, j=0, k=0
+
   ! Parameters values and co.
   CHARACTER :: string*128
-  REAL(4) :: version_file
-  REAL(4), PARAMETER :: version = 4.3
+  CHARACTER :: version_file*20
+
   ! Results from Nested sampling
   INTEGER(4) :: nall=0
   REAL(8) :: evsum_final=0., live_like_max=0.
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_final
   REAL(8), ALLOCATABLE, DIMENSION(:) :: weight, live_like_final, live_max
+
   ! Final results
   REAL(8), ALLOCATABLE, DIMENSION(:) :: par_mean, par_sd
   REAL(8), ALLOCATABLE, DIMENSION(:) :: par_median_w, par_m68_w, par_p68_w, par_m95_w
@@ -98,31 +110,33 @@ PROGRAM NESTED_FIT
   REAL(8) :: evsum_err_est=0.
   REAL(8) :: live_like_mean=0., info=0., comp=0.
   INTEGER(8) :: nexp=0
-  ! Parallelization variables
+
+  ! Parallelization variables for master mpi node
   INTEGER(4) :: itry=1, nth=1
   INTEGER(4), DIMENSION(1) :: itrymax
   INTEGER(4), ALLOCATABLE, DIMENSION(:) :: nall_try
   REAL(8), ALLOCATABLE, DIMENSION(:) :: evsum_final_try, live_like_max_try
   REAL(8), ALLOCATABLE, DIMENSION(:,:,:) :: live_final_try
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_like_final_try, weight_try, live_max_try
+
+  ! Parallelization variables for each mpi instance
+  INTEGER(4) :: nall_try_instance
+  REAL(8) :: evsum_final_try_instance, live_like_max_try_instance
+  REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_final_try_instance
+  REAL(8), ALLOCATABLE, DIMENSION(:) :: live_like_final_try_instance, weight_try_instance, live_max_try_instance
+
+  ! OpenMPI stuff
+  INTEGER(4) :: mpi_rank, mpi_cluster_size, mpi_ierror
+
   ! Time measurement variables
   REAL(8) :: seconds, seconds_omp, startt, stopt
 
   ! Random number variables
   INTEGER(4) :: seed_array(33) = 1
 
-
-  ! PARALLEL VARIABLE: PUT ".TRUE." IF YOU WANT TO RUN IN PARALLEL
-  ! CHANGE ALSO THE FFLAGS IN THE MAKEFILE
-  LOGICAL, PARAMETER :: parallel_on = .TRUE.
-
+  ! Function definitions
   EXTERNAL :: NESTED_SAMPLING, SORTN, MEANVAR
-
-
-
-  !!!!!!!! Initiate random generator with the same seed each time !!!!!!!!!!!
-  !CALL RANDOM_SEED(PUT=seed_array)
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  INTEGER(4) :: SELECT_USERFCN, SELECT_USERFCN_SET
 
   ! Other variants
   !CALL RANDOM_SEED()
@@ -135,7 +149,55 @@ PROGRAM NESTED_FIT
   !   write(*,*) rng(1:5,itry)
   !END DO
 
+   ! Read input arguments (CLI)
+  TYPE(option_s) :: opts(3)
+  opts(1) = option_s("compact-output", .false., "c")
+  opts(3) = option_s("help",  .false., "h")
 
+
+  ! START Processing options
+  DO
+      SELECT CASE(getopt("ch", opts))
+            CASE(CHAR(0)) ! When all options are processed
+               EXIT
+            CASE("c")
+               opt_compact_output = .TRUE.
+            !   trim(optarg)
+            CASE("h")
+               ! TODO(César): Print a help screen for optional arguments
+               WRITE(*,*) '-----------------------------------------------------------------------'
+               WRITE(*,*) ''
+               WRITE(*,*) '-----------------------------------------------------------------------'
+               STOP
+      END SELECT
+  END DO
+
+  IF(parallel_mpi_on) THEN
+    CALL MPI_INIT(mpi_ierror)
+    CALL MPI_COMM_SIZE(MPI_COMM_WORLD, mpi_cluster_size, mpi_ierror)
+    CALL MPI_COMM_RANK(MPI_COMM_WORLD, mpi_rank, mpi_ierror)
+  ELSE
+    mpi_rank = 0
+  ENDIF
+
+  !!!!!!!! Initiate random generator with the same seed each time !!!!!!!!!!!
+  IF(static_seed.AND.mpi_rank.EQ.0) THEN
+      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      WRITE(*,*) '       ATTENTION:           Nested_fit is running with a set seed! This is intended for testing only!'
+      WRITE(*,*) '       ATTENTION:           If you are using this as a production setting change the cmake NORNG option to OFF.'
+      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      CALL sleep(1)
+  ENDIF
+
+  IF(static_seed) THEN
+      CALL RANDOM_SEED(PUT=seed_array)
+  ENDIF
+
+  IF(parallel_mpi_on) THEN
+      CALL MPI_BARRIER(MPI_COMM_WORLD, mpi_ierror)
+  ENDIF
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ! Calculate time elapsed !!!!!!!!!!!!!!!!!!!!
   ! Parallel real time (and number of threads)
@@ -147,104 +209,193 @@ PROGRAM NESTED_FIT
   CALL CPU_TIME(startt)
 
   ! Print program version
-  WRITE(*,*) 'Current program version = ', version
+  IF(mpi_rank.EQ.0) THEN
+      WRITE(*,*) 'Current program version = ', version
 
-  ! Initialize values --------------------------------------------------------------------------------------------------------------
-  filename = ' '
-  funcname = ' '
+      ! Initialize values --------------------------------------------------------------------------------------------------------------
+      filename = ' '
+      funcname = ' '
 
+      ! Read parameter file ------------------------------------------------------------------------------------------------------------
+      OPEN (UNIT=77, FILE='nf_input.dat', STATUS='old')
+      READ(77,*) version_file, string
+      IF(version.NE.version_file) THEN
+         WRITE(*,*) 'Program version not corresponding to the input type'
+         WRITE(*,*) 'Please change your input.dat'
+         IF(parallel_mpi_on) THEN
+            CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+         ENDIF
+         STOP
+      END IF
+      READ(77,*) filename(1), string
+      READ(77,*) set_yn, string
+      READ(77,*) data_type, string
+      READ(77,*) nlive, string
+      READ(77,*) conv_method, string
+      READ(77,*) evaccuracy, conv_par string
+      READ(77,*) search_method, string
+      READ(77,*) search_par1, search_par2, maxtries, maxntries, string
+      READ(77,*) cluster_yn, cluster_method, cluster_par1, cluster_par2
+      READ(77,*) ntry, maxstep_try, string
+      READ(77,*) funcname, string
+      READ(77,*) lr, string
+      READ(77,*) npoint, nwidth, string
+      READ(77,*) xmin(1), xmax(1), ymin(1), ymax(1), string
+      READ(77,*) npar, string
+      READ(77,*) string
 
+      !
+      ! Allocate space for parameters and initialize
+      ALLOCATE(live_max(npar),par_num(npar),par_name(npar),par_in(npar),par_step(npar), &
+         par_bnd1(npar),par_bnd2(npar),par_fix(npar), &
+         par_mean(npar),par_sd(npar), &
+         par_median_w(npar), &
+         par_m68_w(npar),par_p68_w(npar),par_m95_w(npar),par_p95_w(npar),par_m99_w(npar),par_p99_w(npar))
+      live_max = 0.
+      par_num = 0
+      par_name = ' '
+      par_in = 0.
+      par_step = 0.
+      par_bnd1 = 0.
+      par_bnd2 = 0.
+      par_fix = 0
+      par_mean = 0.
+      par_sd = 0.
+      par_median_w = 0.
+      par_m68_w = 0.
+      par_p68_w = 0.
+      par_m95_w = 0.
+      par_p95_w = 0.
+      par_m99_w = 0.
+      par_p99_w = 0.
 
-  ! Read parameter file ------------------------------------------------------------------------------------------------------------
-  OPEN (UNIT=77, FILE='nf_input.dat', STATUS='old')
-  READ(77,*) version_file, string
-  IF(version.NE.version_file) THEN
-     WRITE(*,*) 'Program version not corresponding to the input type'
-     WRITE(*,*) 'Please change your input.dat'
-     STOP
-  END IF
-  READ(77,*) filename(1), string
-  READ(77,*) set_yn, string
-  READ(77,*) data_type, string
-  READ(77,*) nlive, string
-  READ(77,*) conv_method, string
-  READ(77,*) evaccuracy, conv_par, string
-  READ(77,*) search_method, string
-  READ(77,*) search_par1, search_par2, maxtries, maxntries, string
-  READ(77,*) cluster_yn, cluster_method, cluster_par1, cluster_par2
-  READ(77,*) ntry, maxstep_try, string
-  READ(77,*) funcname, string
-  READ(77,*) lr, string
-  READ(77,*) npoint, nwidth, string
-  READ(77,*) xmin(1), xmax(1), ymin(1), ymax(1), string
-  READ(77,*) npar, string
-  !
-  ! Allocate space for parameters and initialize
-  ALLOCATE(live_max(npar),par_num(npar),par_name(npar),par_in(npar),par_step(npar), &
-       par_bnd1(npar),par_bnd2(npar),par_fix(npar), &
-       par_mean(npar),par_sd(npar), &
-       par_median_w(npar), &
-       par_m68_w(npar),par_p68_w(npar),par_m95_w(npar),par_p95_w(npar),par_m99_w(npar),par_p99_w(npar))
-  live_max = 0.
-  par_num = 0
-  par_name = ' '
-  par_in = 0.
-  par_step = 0.
-  par_bnd1 = 0.
-  par_bnd2 = 0.
-  par_fix = 0
-  par_mean = 0.
-  par_sd = 0.
-  par_median_w = 0.
-  par_m68_w = 0.
-  par_p68_w = 0.
-  par_m95_w = 0.
-  par_p95_w = 0.
-  par_m99_w = 0.
-  par_p99_w = 0.
-  !
-  !
-  READ(77,*) string
-  DO i = 1, npar
-     READ(77,*,ERR=10,END=10) par_num(i),par_name(i),par_in(i),par_step(i),par_bnd1(i),par_bnd2(i),par_fix(i)
-     IF (par_bnd1(i).GE.par_bnd2(i)) THEN
-        WRITE(*,*) 'Bad limits in parameter n.', i, ' (low bound1 >= high bound!!!) Change it and restart'
-        WRITE(*,*) 'Low bound:',par_bnd1(i), 'High bound:', par_bnd2(i)
-        STOP
-     END IF
-  END DO
-10 CONTINUE
-  CLOSE(77)
+      DO i = 1, npar
+         READ(77,*,ERR=10,END=10) par_num(i),par_name(i),par_in(i),par_step(i),par_bnd1(i),par_bnd2(i),par_fix(i)
+         IF (par_bnd1(i).GE.par_bnd2(i)) THEN
+            WRITE(*,*) 'Bad limits in parameter n.', i, ' (low bound1 >= high bound!!!) Change it and restart'
+            WRITE(*,*) 'Low bound:',par_bnd1(i), 'High bound:', par_bnd2(i)
+            ! TODO: Change this to work with defines instead
+            IF(parallel_mpi_on) THEN
+               CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+            ENDIF
+            STOP
+         END IF
+      END DO
+      10 CONTINUE
+      CLOSE(77)
 
+      ! Read set of spectra file parameter
+      IF (set_yn.EQ.'y'.OR.set_yn.EQ.'Y') THEN
+         OPEN (UNIT=88, FILE='nf_input_set.dat', STATUS='old')
+         READ(88,*,ERR=11,END=11) nset
+         DO k = 2, nset
+            READ(88,*,ERR=11,END=11) xmin(k), xmax(k), string
+         END DO
+         DO k = 2, nset
+            READ(88,*,ERR=11,END=11) filename(k)
+         END DO
+      11   CONTINUE
+         CLOSE(88)
+      ENDIF
 
-  ! Read set of spectra file parameter
-  IF (set_yn.EQ.'y'.OR.set_yn.EQ.'Y') THEN
-     OPEN (UNIT=88, FILE='nf_input_set.dat', STATUS='old')
-     READ(88,*,ERR=11,END=11) nset
-     DO k = 2, nset
-        READ(88,*,ERR=11,END=11) xmin(k), xmax(k), string
-     END DO
-     DO k = 2, nset
-        READ(88,*,ERR=11,END=11) filename(k)
-     END DO
-11   CONTINUE
-     CLOSE(88)
+      IF(set_yn.EQ.'n') THEN
+         funcid = SELECT_USERFCN(funcname)
+      ELSE
+         funcid = SELECT_USERFCN_SET(funcname)
+      END IF
+  ENDIF
+
+  ! Receive data from the mpi root node
+  ! All the code should be refactored really but for now
+  ! TODO(César): Refactor this to a function
+  IF(parallel_mpi_on) THEN
+      CALL MPI_Bcast(filename(1), 64, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(set_yn, 1, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(data_type, 3, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(nlive, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(evaccuracy, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(search_method, 64, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(search_par1, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(search_par2, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(maxtries, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(maxntries, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(cluster_yn, 1, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(cluster_method, 1, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(cluster_par1, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(cluster_par2, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(ntry, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(maxstep_try, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(funcname, 64, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(lr, 1, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(npoint, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(nwidth, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(xmin(1), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(xmax(1), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(ymin(1), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(ymax(1), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
+
+      CALL MPI_Bcast(npar, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
+  ENDIF
+
+  IF(mpi_rank.NE.0) THEN
+   !
+   ! Allocate space for parameters and initialize
+   ALLOCATE(live_max(npar),par_num(npar),par_name(npar),par_in(npar),par_step(npar), &
+      par_bnd1(npar),par_bnd2(npar),par_fix(npar), &
+      par_mean(npar),par_sd(npar), &
+      par_median_w(npar), &
+      par_m68_w(npar),par_p68_w(npar),par_m95_w(npar),par_p95_w(npar),par_m99_w(npar),par_p99_w(npar))
+      live_max = 0.
+      par_num = 0
+      par_name = ' '
+      par_in = 0.
+      par_step = 0.
+      par_bnd1 = 0.
+      par_bnd2 = 0.
+      par_fix = 0
+      par_mean = 0.
+      par_sd = 0.
+      par_median_w = 0.
+      par_m68_w = 0.
+      par_p68_w = 0.
+      par_m95_w = 0.
+      par_p95_w = 0.
+      par_m99_w = 0.
+      par_p99_w = 0.
+  ENDIF
+
+  IF(parallel_mpi_on) THEN
+      CALL MPI_Bcast(par_num, npar, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(par_fix, npar, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(par_name,npar*10, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(par_step, npar, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(par_in, npar, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(par_bnd1, npar, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(par_bnd2, npar, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
+
+      CALL MPI_Bcast(funcid, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
+
+      CALL MPI_BARRIER(MPI_COMM_WORLD, mpi_ierror)
   ENDIF
 
  !----------------------------------------------------------------------------------------------------------------------------------
 
-
   ! Some tests and messages
-  WRITE(*,*) 'Parameter file read'
-  WRITE(*,*) 'Filenames = ', filename(1:nset)
-  WRITE(*,*) 'Funcname = ', funcname
+  IF(mpi_rank.EQ.0) THEN
+      WRITE(*,*) 'Parameter file read'
+      WRITE(*,*) 'Filenames = ', filename(1:nset)
+      WRITE(*,*) 'Funcname = ', funcname
 
-  ! Not implemented combination of inputs
-  IF (data_type(1:1).EQ.'2'.AND.set_yn.EQ.'y') THEN
-     WRITE(*,*)
-     WRITE(*,*) 'ERROR'
-     WRITE(*,*) 'Set of 2D files not yet implemented. Change your input file.'
-     STOP
+      ! Not implemented combination of inputs
+      IF (data_type(1:1).EQ.'2'.AND.set_yn.EQ.'y') THEN
+         WRITE(*,*)
+         WRITE(*,*) 'ERROR'
+         WRITE(*,*) 'Set of 2D files not yet implemented. Change your input file.'
+         IF(parallel_mpi_on) THEN
+            CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+         ENDIF
+         STOP
+      END IF
   END IF
 
 
@@ -253,19 +404,27 @@ PROGRAM NESTED_FIT
   CALL INIT_LIKELIHOOD()
 
 
-  ! Allocate parallel stuff ---------------------------------------------------------------------------------------------------------
-  ALLOCATE(live_like_final_try(maxstep_try,ntry),weight_try(maxstep_try,ntry),&
-       live_final_try(maxstep_try,npar,ntry),live_max_try(npar,ntry),&
-       nall_try(ntry),evsum_final_try(ntry),live_like_max_try(ntry))
-  live_like_final_try = 0.
-  weight_try = 0.
-  live_final_try = 0.
-  live_max_try = 0.
-  nall_try = 0
-  evsum_final_try = 0.
-  live_like_max_try = -100000.
-  !
-
+  IF(mpi_rank.EQ.0) THEN
+     ! Allocate parallel stuff ---------------------------------------------------------------------------------------------------------
+     ALLOCATE(live_like_final_try(maxstep_try,ntry),weight_try(maxstep_try,ntry),&
+          live_final_try(maxstep_try,npar,ntry),live_max_try(npar,ntry),&
+          nall_try(ntry),evsum_final_try(ntry),live_like_max_try(ntry))
+     live_like_final_try = 0.
+     weight_try = 0.
+     live_final_try = 0.
+     live_max_try = 0.
+     nall_try = 0
+     evsum_final_try = 0.
+     live_like_max_try = -100000.
+     IF(parallel_mpi_on) THEN
+         ALLOCATE(live_final_try_instance(maxstep_try,npar))
+         ALLOCATE(live_like_final_try_instance(maxstep_try), weight_try_instance(maxstep_try), live_max_try_instance(npar))
+     ENDIF
+     !
+  ELSE
+     ALLOCATE(live_final_try_instance(maxstep_try,npar))
+     ALLOCATE(live_like_final_try_instance(maxstep_try), weight_try_instance(maxstep_try), live_max_try_instance(npar))
+  ENDIF
 
 
 
@@ -276,348 +435,392 @@ PROGRAM NESTED_FIT
      par_median_w = par_in
      ! To check the likelihood function
      evsum_final = LOGLIKELIHOOD(par_in)
-     WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-     WRITE(*,*) '       ATTENTION:           All parameters are fixed'
-     WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+     IF(mpi_rank.EQ.0) THEN
+         WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+         WRITE(*,*) '       ATTENTION:           All parameters are fixed'
+         WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+     ENDIF
      GOTO 501
   END IF
 
-
-  ! Parallel Nested sampling.
-  ! Compute nth ensemble of live point in parallel and recombine them at the end
-  !
-  !!!$OMP PARALLEL  SHARED(ndata,x,nc,funcname,npar,fix,step,val,bnd1,bnd2,nlive,evaccuracy,sdfraction)
-  !!!$OMP SHARED(nall_try,evsum_final_try,live_like_final_try,weight_try, &
-  !!!$OMP live_final_try,live_like_max_try,live_max_try)
-  !nth = omp_get_num_threads()
-  !IF(nth.GT.nthmax) THEN
-  !   WRITE(*,*) 'Number of threads largr of number max of threads', nthmax, 'Change something'
-  !   STOP
-  !END IF
+  IF(parallel_mpi_on.AND.mpi_rank.EQ.0) THEN
+      IF(mpi_cluster_size.GT.ntry) THEN
+         WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+         WRITE(*,*) '       ATTENTION:           Specified MPI cluster size is bigger than the number of tries in the input file'
+         WRITE(*,*) '       ATTENTION:           This feature is not supported at the moment'
+         WRITE(*,*) '       ATTENTION:           Killing the unused processes'
+         WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      ENDIF
+  ENDIF
 
   !
   ! Run the Nested sampling
+  IF(.NOT.parallel_mpi_on) THEN
+      DO itry=1,ntry
+         CALL NESTED_SAMPLING(itry,maxstep_try,nall_try(itry),evsum_final_try(itry), &
+               live_like_final_try(:,itry),weight_try(:,itry),&
+               live_final_try(:,:,itry),live_like_max_try(itry),live_max_try(:,itry), 0, 0)
+      END DO
+  ELSE IF(mpi_rank.LT.ntry) THEN
+      CALL NESTED_SAMPLING(mpi_rank,maxstep_try,nall_try_instance,evsum_final_try_instance, &
+         live_like_final_try_instance,weight_try_instance,&
+         live_final_try_instance,live_like_max_try_instance,live_max_try_instance, mpi_rank, mpi_cluster_size)
+      
+      ! Wait for all the calculations to finish
+      CALL MPI_BARRIER(MPI_COMM_WORLD, mpi_ierror)
+
+      ! All the code should be refactored really but for now
+      ! TODO(César): Refactor this to a function
+      IF(mpi_rank.NE.0) THEN
+         CALL MPI_SEND(nall_try_instance, 1, MPI_INT, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
+         CALL MPI_SEND(evsum_final_try_instance, 1, MPI_DOUBLE, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
+         CALL MPI_SEND(live_like_final_try_instance, maxstep_try, MPI_DOUBLE, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
+         CALL MPI_SEND(weight_try_instance, maxstep_try, MPI_DOUBLE, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
+         CALL MPI_SEND(live_final_try_instance, maxstep_try*npar, MPI_DOUBLE, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
+         CALL MPI_SEND(live_like_max_try_instance, 1, MPI_DOUBLE, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
+         CALL MPI_SEND(live_max_try_instance, npar, MPI_DOUBLE, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
+      ENDIF
+  ENDIF
+
+  ! Gather all of the runs in the root node back again
+  IF(parallel_mpi_on) THEN
+      IF(mpi_rank.EQ.0) THEN
+            nall_try(1) = nall_try_instance
+            evsum_final_try(1) = evsum_final_try_instance
+            live_like_final_try(:,1) = live_like_final_try_instance
+            weight_try(:,1) = weight_try_instance
+            live_final_try(:,:,1) = live_final_try_instance
+            live_like_max_try(1) = live_like_max_try_instance
+            live_max_try(:,1) = live_max_try_instance
+            DO itry=1,ntry-1
+               CALL MPI_RECV(nall_try(itry+1), 1, MPI_INT, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
+               CALL MPI_RECV(evsum_final_try(itry+1), 1, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
+               CALL MPI_RECV(live_like_final_try(:,itry+1), maxstep_try, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
+               CALL MPI_RECV(weight_try(:,itry+1), maxstep_try, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
+               CALL MPI_RECV(live_final_try(:,:,itry+1), maxstep_try*npar, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
+               CALL MPI_RECV(live_like_max_try(itry+1), 1, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
+               CALL MPI_RECV(live_max_try(:,itry+1), npar, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
+            END DO
+      ENDIF
+  ENDIF
+
+  IF(mpi_rank.EQ.0) THEN
+      ! Re-assemble the points ---------------------------------------------------------------
+      ! Final number of points
+      nall = SUM(nall_try)
+      ALLOCATE(weight(nall),live_like_final(nall),live_final(nall,npar),weight_par(nall,2))
+      weight = 0.
+      live_final = 0.
+      live_like_final = 0.
+      live_final = 0.
+      weight_par = 0.
+
+      ! Final evidence and dispersion
+      !evsum_final = SUM(evsum_final_try)/ntry
+      IF(ntry.GT.1) THEN
+         CALL MEANVAR(evsum_final_try(:ntry),ntry,evsum_final,evsum_err)
+         evsum_err = SQRT(evsum_err)
+
+         WRITE(*,*) ' '
+         WRITE(*,*) 'Results of the singles try ----------------------------------------------------'
+         DO itry=1,ntry
+            WRITE(*,*) 'N. try', itry , 'n. steps', nall_try(itry), 'Final evidence', evsum_final_try(itry), &
+                  'Max loglikelihood', live_like_max_try(itry)
+         END DO
+         WRITE(*,*) 'Evidence average:', evsum_final
+         WRITE(*,*) 'Evidence standard deviation:', evsum_err
+         WRITE(*,*) '-----------------------------------------------------------------------------------'
 
 
-  !!!$OMP PARALLEL DO
-  ! IT IS NOT WORKING
-  DO itry=1,ntry
-     !CALL RANDOM_SEED()
-     !CALL SRAND(932117 +10*itry)
-     !CALL RANDOM_NUMBER(rn)
+         !IF(arg.EQ. ' ') THEN
+         OPEN(23,FILE='nf_output_tries.dat',STATUS= 'UNKNOWN')
+         WRITE(23,*) 'Number_of_tries ', ntry
+         WRITE(23,*) 'Evidence_average:', evsum_final
+         WRITE(23,*) 'Evidence_standard_deviation:', evsum_err
+         WRITE(23,*) '# N. try   n. steps    Final evidence   Max loglikelihood'
+         DO itry=1,ntry
+            WRITE(23,*)  itry , nall_try(itry), evsum_final_try(itry), live_like_max_try(itry)
+         END DO
+         CLOSE(23)
+         !END IF
 
-     CALL NESTED_SAMPLING(itry,maxstep_try,nall_try(itry),evsum_final_try(itry), &
-          live_like_final_try(:,itry),weight_try(:,itry),&
-          live_final_try(:,:,itry),live_like_max_try(itry),live_max_try(:,itry))
-
-  END DO
-!!!$OMP END PARALLEL DO
-
-  ! Re-assemble the points ---------------------------------------------------------------
-  ! Final number of points
-  nall = SUM(nall_try)
-  ALLOCATE(weight(nall),live_like_final(nall),live_final(nall,npar),weight_par(nall,2))
-  weight = 0.
-  live_final = 0.
-  live_like_final = 0.
-  live_final = 0.
-  weight_par = 0.
-
-  ! Final evidence and dispersion
-  !evsum_final = SUM(evsum_final_try)/ntry
-  IF(ntry.GT.1) THEN
-     CALL MEANVAR(evsum_final_try(:ntry),ntry,evsum_final,evsum_err)
-     evsum_err = SQRT(evsum_err)
-
-     WRITE(*,*) ' '
-     WRITE(*,*) 'Results of the singles try ----------------------------------------------------'
-     DO itry=1,ntry
-        WRITE(*,*) 'N. try', itry , 'n. steps', nall_try(itry), 'Final evidence', evsum_final_try(itry), &
-             'Max loglikelihood', live_like_max_try(itry)
-     END DO
-     WRITE(*,*) 'Evidence average:', evsum_final
-     WRITE(*,*) 'Evidence standard deviation:', evsum_err
-     WRITE(*,*) '-----------------------------------------------------------------------------------'
+         ! Assemble all points and weights
+         DO itry=1,ntry
+            !WRITE(*,*) 'Sum from', SUM(nall_try(:itry-1))+1, 'to', SUM(nall_try(:itry))
+            live_like_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = live_like_final_try(:nall_try(itry),itry)
+            weight(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = weight_try(:nall_try(itry),itry)*nall_try(itry)/nall
+            live_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry)),:) = live_final_try(:nall_try(itry),:,itry)
+         END DO
+         ! Reorder them (not necessary maybe, but finally yes for plotting)
+         !CALL SORTN2(nall,npar,1,live_like_final(:nall),live_final(:nall,:),weight(:nall))
 
 
-     !IF(arg.EQ. ' ') THEN
-     OPEN(23,FILE='nf_output_tries.dat',STATUS= 'UNKNOWN')
-     WRITE(23,*) 'Number_of_tries ', ntry
-     WRITE(23,*) 'Evidence_average:', evsum_final
-     WRITE(23,*) 'Evidence_standard_deviation:', evsum_err
-     WRITE(23,*) '# N. try   n. steps    Final evidence   Max loglikelihood'
-     DO itry=1,ntry
-        WRITE(23,*)  itry , nall_try(itry), evsum_final_try(itry), live_like_max_try(itry)
-     END DO
-     CLOSE(23)
-     !END IF
+         !Take the maximum of the maximum
+         itrymax = MAXLOC(live_like_max_try)
+         live_like_max = live_like_max_try(itrymax(1))
+         live_max = live_max_try(:,itrymax(1))
 
-     ! Assemble all points and weights
-     DO itry=1,ntry
-        !WRITE(*,*) 'Sum from', SUM(nall_try(:itry-1))+1, 'to', SUM(nall_try(:itry))
-        live_like_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = live_like_final_try(:nall_try(itry),itry)
-        weight(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = weight_try(:nall_try(itry),itry)*nall_try(itry)/nall
-        live_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry)),:) = live_final_try(:nall_try(itry),:,itry)
-     END DO
-     ! Reorder them (not necessary maybe, but finally yes for plotting)
-     !CALL SORTN2(nall,npar,1,live_like_final(:nall),live_final(:nall,:),weight(:nall))
+      ELSE
+         ! Just one try, much more simple!
+         evsum_final = evsum_final_try(1)
+         evsum_err = 0.
+
+         live_like_final = live_like_final_try(:nall,1)
+         weight          = weight_try(:nall,1)
+         live_final      = live_final_try(:nall,:,1)
+         live_like_max   = live_like_max_try(1)
+         live_max        = live_max_try(:,1)
+      END IF
 
 
-     !Take the maximum of the maximum
-     itrymax = MAXLOC(live_like_max_try)
-     live_like_max = live_like_max_try(itrymax(1))
-     live_max = live_max_try(:,itrymax(1))
+      ! ------------Calculate the final parameters, errors and data  --------------------------
 
-  ELSE
-     ! Just one try, much more simple!
-     evsum_final = evsum_final_try(1)
-     evsum_err = 0.
+      ! Calculate the uncertanity of the evidence calculation
+      ! (See J. Veitch and A. Vecchio, Phys. Rev. D 81, 062003 (2010))
+      evsum_err_est = DSQRT(DBLE(nall))/(nlive*ntry)
 
-     live_like_final = live_like_final_try(:nall,1)
-     weight          = weight_try(:nall,1)
-     live_final      = live_final_try(:nall,:,1)
-     live_like_max   = live_like_max_try(1)
-     live_max        = live_max_try(:,1)
-  END IF
+      ! Calculate the mean and the standard deviation for each parameter
 
+      ! print arrays sizes
+      !write(*,*) 'nall', nall
+      !write(*,*) 'weight_par dimensions', shape(weight_par)
+      !write(*,*) 'weight dimensions', shape(weight)
 
-  ! ------------Calculate the final parameters, errors and data  --------------------------
+      ! Normalize the weights
+      weight_tot = 0.
+      DO i=1,nall
+         weight_tot = weight_tot + weight(i)
+      END DO
+      weight = weight/weight_tot
 
-  ! Calculate the uncertanity of the evidence calculation
-  ! (See J. Veitch and A. Vecchio, Phys. Rev. D 81, 062003 (2010))
-  evsum_err_est = DSQRT(DBLE(nall))/(nlive*ntry)
+      DO j=1,npar
+         IF (par_fix(j).NE.1) THEN
+            mean_tmp = 0.
+            mean2_tmp = 0.
 
-  ! Calculate the mean and the standard deviation for each parameter
+            ! Mean calculation
+            DO i=1,nall
+               mean_tmp = mean_tmp + live_final(i,j)*weight(i)
+            END DO
+            par_mean(j) = mean_tmp
 
-  ! print arrays sizes
-  !write(*,*) 'nall', nall
-  !write(*,*) 'weight_par dimensions', shape(weight_par)
-  !write(*,*) 'weight dimensions', shape(weight)
-
-  ! Normalize the weights
-  weight_tot = 0.
-  DO i=1,nall
-     weight_tot = weight_tot + weight(i)
-  END DO
-  weight = weight/weight_tot
-
-  DO j=1,npar
-     IF (par_fix(j).NE.1) THEN
-        mean_tmp = 0.
-        mean2_tmp = 0.
-
-        ! Mean calculation
-        DO i=1,nall
-           mean_tmp = mean_tmp + live_final(i,j)*weight(i)
-        END DO
-        par_mean(j) = mean_tmp
-
-        !! Standard deviation calculation
-        DO i=1,nall
-           mean2_tmp = mean2_tmp + (live_final(i,j)-par_mean(j))**2*weight(i)
-        END DO
-        par_sd(j) = DSQRT(mean2_tmp)
+            !! Standard deviation calculation
+            DO i=1,nall
+               mean2_tmp = mean2_tmp + (live_final(i,j)-par_mean(j))**2*weight(i)
+            END DO
+            par_sd(j) = DSQRT(mean2_tmp)
 
 
-        ! Median and confidence levels
-        ! Order a defined parameter with his weight
-        weight_par(:,1) = weight
-        weight_par(:,2) = live_final(:,j)
-        CALL SORTN(nall,2,weight_par(:,2),weight_par)
-        ! Look for confidential levels and median
-        weight_int = 0.
-        DO i=1,nall-1
-           weight_int = weight_int + weight_par(i,1)
-           weight_int_next = weight_int + weight_par(i+1,1)
-           !write(*,*) j, i, nall, weight_int, weight_int_next, weight_par(i,2)
-           ! Low limit 99%
-           IF(weight_int.LT.0.005d0.AND.weight_int_next.GT.0.005) THEN
-              par_m99_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
-              !write(*,*) 'par_m99_w found', j, i, par_m99_w(j)
-              ! Low limit 95%
-           ELSE IF(weight_int.LT.0.025d0.AND.weight_int_next.GT.0.025) THEN
-              par_m95_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
-              !write(*,*) 'par_m95_w found', j, i, par_m95_w(j)
-              ! Low limit 68%
-           ELSE IF(weight_int.LT.0.16d0.AND.weight_int_next.GT.0.16) THEN
-              par_m68_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
-              !write(*,*) 'par_m68_w found', j, i, par_m68_w(j)
-              ! Median
-           ELSE IF(weight_int.LT.0.5d0.AND.weight_int_next.GT.0.5) THEN
-              par_median_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
-              !write(*,*) 'median found', j, i, par_median_w(j)
-              ! High limit 68%
-           ELSE IF(weight_int.LT.0.84d0.AND.weight_int_next.GT.0.84) THEN
-              par_p68_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
-              !write(*,*) 'par_p68_w found', j, i, par_p68_w(j)
-              ! High limit 95%
-           ELSE IF(weight_int.LT.0.975d0.AND.weight_int_next.GT.0.975) THEN
-              par_p95_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
-              !write(*,*) 'par_p95_w found', j, i, par_p95_w(j)
-              ! High limit 99%
-           ELSE IF(weight_int.LT.0.995d0.AND.weight_int_next.GT.0.995) THEN
-              par_p99_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
-              !write(*,*) 'par_p99_w found', j, i, par_p99_w(j)
-           END IF
-        END DO
-     ELSE
-        par_mean(j) =  par_in(j)
-        par_median_w(j) = par_in(j)
-     END IF
-  END DO
+            ! Median and confidence levels
+            ! Order a defined parameter with his weight
+            weight_par(:,1) = weight
+            weight_par(:,2) = live_final(:,j)
+            CALL SORTN(nall,2,weight_par(:,2),weight_par)
+            ! Look for confidential levels and median
+            weight_int = 0.
+            DO i=1,nall-1
+               weight_int = weight_int + weight_par(i,1)
+               weight_int_next = weight_int + weight_par(i+1,1)
+               !write(*,*) j, i, nall, weight_int, weight_int_next, weight_par(i,2)
+               ! Low limit 99%
+               IF(weight_int.LT.0.005d0.AND.weight_int_next.GT.0.005) THEN
+                  par_m99_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
+                  !write(*,*) 'par_m99_w found', j, i, par_m99_w(j)
+                  ! Low limit 95%
+               ELSE IF(weight_int.LT.0.025d0.AND.weight_int_next.GT.0.025) THEN
+                  par_m95_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
+                  !write(*,*) 'par_m95_w found', j, i, par_m95_w(j)
+                  ! Low limit 68%
+               ELSE IF(weight_int.LT.0.16d0.AND.weight_int_next.GT.0.16) THEN
+                  par_m68_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
+                  !write(*,*) 'par_m68_w found', j, i, par_m68_w(j)
+                  ! Median
+               ELSE IF(weight_int.LT.0.5d0.AND.weight_int_next.GT.0.5) THEN
+                  par_median_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
+                  !write(*,*) 'median found', j, i, par_median_w(j)
+                  ! High limit 68%
+               ELSE IF(weight_int.LT.0.84d0.AND.weight_int_next.GT.0.84) THEN
+                  par_p68_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
+                  !write(*,*) 'par_p68_w found', j, i, par_p68_w(j)
+                  ! High limit 95%
+               ELSE IF(weight_int.LT.0.975d0.AND.weight_int_next.GT.0.975) THEN
+                  par_p95_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
+                  !write(*,*) 'par_p95_w found', j, i, par_p95_w(j)
+                  ! High limit 99%
+               ELSE IF(weight_int.LT.0.995d0.AND.weight_int_next.GT.0.995) THEN
+                  par_p99_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
+                  !write(*,*) 'par_p99_w found', j, i, par_p99_w(j)
+               END IF
+            END DO
+         ELSE
+            par_mean(j) =  par_in(j)
+            par_median_w(j) = par_in(j)
+         END IF
+      END DO
+  ENDIF
+
+   501 CONTINUE
+
+   IF(mpi_rank.EQ.0) THEN
+      ! Final actions for the likelihood function
+      CALL FINAL_LIKELIHOOD(live_max,par_mean,par_median_w)
 
 
-501 CONTINUE
-
-  ! Final actions for the likelihood function
-  CALL FINAL_LIKELIHOOD(live_max,par_mean,par_median_w)
-
-
-  !END IF
-  !-----------------Calculate information and bayesian complexity --------------------------
-  ! Calculation of the mean loglikelihood
-  live_like_mean = 0.
-  weight_tot = 0.
-  DO i=1,nall
-     live_like_mean = live_like_mean + weight(i)*live_like_final(i)
-  END DO
-  live_like_mean = live_like_mean
+      !END IF
+      !-----------------Calculate information and bayesian complexity --------------------------
+      ! Calculation of the mean loglikelihood
+      live_like_mean = 0.
+      weight_tot = 0.
+      DO i=1,nall
+         live_like_mean = live_like_mean + weight(i)*live_like_final(i)
+      END DO
+      live_like_mean = live_like_mean
 
 
-  ! Calculation of the information (see Sivia page 186)
-  info = live_like_mean - evsum_final
-  ! Calculation of the complexity (Trotta 06 + Sivia)
-  comp = -2*(live_like_mean - live_like_max)
-  ! Calculation of the minimal number of iteration (Veitch and Vecchio 2010)
-  ! (Skilling in Sivia suggest EXP(nlive*info) per process)
-  ! Test overflow
-  IF(DABS(info).LT.700) THEN
-     nexp = FLOOR(DEXP(info)*ntry)
-  ELSE
-     nexp= 0
-  END IF
-  !write(*,*) info, DEXP(info), ntry, FLOOR(DEXP(info)*ntry), nexp, live_like_mean,  evsum_final
-  !pause
+      ! Calculation of the information (see Sivia page 186)
+      info = live_like_mean - evsum_final
+      ! Calculation of the complexity (Trotta 06 + Sivia)
+      comp = -2*(live_like_mean - live_like_max)
+      ! Calculation of the minimal number of iteration (Veitch and Vecchio 2010)
+      ! (Skilling in Sivia suggest EXP(nlive*info) per process)
+      ! Test overflow
+      IF(DABS(info).LT.700) THEN
+         nexp = FLOOR(DEXP(info)*ntry)
+      ELSE
+         nexp= 0
+      END IF
+      !write(*,*) info, DEXP(info), ntry, FLOOR(DEXP(info)*ntry), nexp, live_like_mean,  evsum_final
+      !pause
 
-  ! ---------------- Write results on screen and files -------------------------------------
-  !OPEN(23,FILE='nf_output_points.dat',STATUS= 'UNKNOWN')
-  !WRITE(23,*) '# n     lnlikelihood     weight      parameters'
-  !DO j=1,nall
-  !   WRITE(23,*) j, live_like_final(j), weight(j), live_final(j,:)
-  !END DO
-  !CLOSE(23)
+      ! ---------------- Write results on screen and files -------------------------------------
+      !OPEN(23,FILE='nf_output_points.dat',STATUS= 'UNKNOWN')
+      !WRITE(23,*) '# n     lnlikelihood     weight      parameters'
+      !DO j=1,nall
+      !   WRITE(23,*) j, live_like_final(j), weight(j), live_final(j,:)
+      !END DO
+      !CLOSE(23)
 
-  ! Write files in the format for GetDist
-  ! Data
-  OPEN(23,FILE='nf_output_points.txt',STATUS= 'UNKNOWN')
-  !WRITE(23,*) '# weight   lnlikelihood      parameters'
-  DO j=1,nall
-     WRITE(23,*) weight(j), live_like_final(j), live_final(j,:)
-  END DO
-  CLOSE(23)
-  ! Names of parameters
-  OPEN(23,FILE='nf_output_points.paramnames',STATUS= 'UNKNOWN')
-  DO i=1,npar
-     WRITE(23,*) par_name(i)
-  END DO
-  CLOSE(23)
-  ! Range of parameters
-  OPEN(23,FILE='nf_output_points.ranges',STATUS= 'UNKNOWN')
-  DO i=1,npar
-     WRITE(23,*) par_name(i), par_bnd1(i),par_bnd2(i)
-  END DO
-  CLOSE(23)
+      ! Write files in the format for GetDist
+      ! Data
+      OPEN(23,FILE='nf_output_points.txt',STATUS= 'UNKNOWN')
+      !WRITE(23,*) '# weight   lnlikelihood      parameters'
+      DO j=1,nall
+         WRITE(23,*) weight(j), live_like_final(j), live_final(j,:)
+      END DO
+      CLOSE(23)
+      ! Names of parameters
+      OPEN(23,FILE='nf_output_points.paramnames',STATUS= 'UNKNOWN')
+      DO i=1,npar
+         WRITE(23,*) par_name(i)
+      END DO
+      CLOSE(23)
+      ! Range of parameters
+      OPEN(23,FILE='nf_output_points.ranges',STATUS= 'UNKNOWN')
+      DO i=1,npar
+         WRITE(23,*) par_name(i), par_bnd1(i),par_bnd2(i)
+      END DO
+      CLOSE(23)
+   ENDIF
 
+   ! Calculate end time
+   ! Parallel time
+   IF (parallel_on) seconds_omp = omp_get_wtime( ) - seconds
+   ! Normal time
+   CALL CPU_TIME(stopt)
+   seconds  = stopt - startt
+   
+   IF(mpi_rank.EQ.0) THEN
+      !IF(arg.EQ. ' ') THEN
+      OPEN(22,FILE='nf_output_res.dat',STATUS= 'UNKNOWN')
+      WRITE(22,*) '#############_FINAL_RESULTS_#####################################################################################'
+      WRITE(22,*) 'N._of_trials:                          ', ntry
+      WRITE(22,*) 'N._of_total_iteration:                 ', nall
+      WRITE(22,*) 'N._of_used_livepoints:                 ', nlive
+      WRITE(22,*) 'Final_evidence_(log):                  ', evsum_final
+      WRITE(22,*) 'Evidence_estimated_uncertainty_(log):  ', evsum_err_est
+      WRITE(22,*) 'Evidence_standard_deviation_(log):     ', evsum_err
+      WRITE(22,*) '------------------------------------------------------------------------------------------------------------------'
+      WRITE(22,*) 'Max_likelihood_(log):', live_like_max
+      WRITE(22,*) 'Max_parameter_set: '
+      DO i=1,npar
+         WRITE(22,*) par_name(i), live_max(i)
+      END DO
+      WRITE(22,*) '-------------------------------------------------------------------------------------------------------------------'
+      WRITE(22,*) 'Mean_value_and_standard_deviation_of_the_parameters'
+      DO i=1,npar
+         WRITE(22,*) par_name(i), par_mean(i), '+/-', par_sd(i)
+      END DO
+      WRITE(22,*) '-------------------------------------------------------------------------------------------------------------------'
+      WRITE(22,*) 'Median_and_confidence_levels: low_99%,     low_95%,     low_68%,     median,     high_68%,    high_95%,   high_99%'
+      DO i=1,npar
+         WRITE(22,*) par_name(i), par_m99_w(i),par_m95_w(i),par_m68_w(i),par_median_w(i),&
+               par_p68_w(i),par_p95_w(i),par_p99_w(i)
+      END DO
+      WRITE(22,*) '-------------------------------------------------------------------------------------------------------------------'
+      WRITE(22,*) 'Additional_information'
+      WRITE(22,*) 'Information:                                ', info
+      WRITE(22,*) 'Minimal_required_iteration_(ntry*exp[info]):', nexp
+      WRITE(22,*) 'Bayesian_complexity:                        ', comp
+      WRITE(22,*) '###################################################################################################################'
+      WRITE(22,*) 'Number_of_used_cores:                       ', nth
+      WRITE(22,*) 'Time_elapsed_(tot_and_real_in_s):           ', seconds, seconds_omp
+      CLOSE(22)
 
-  ! Calculate end time
-  ! Parallel time
-  IF (parallel_on) seconds_omp = omp_get_wtime( ) - seconds
-  ! Normal time
-  CALL CPU_TIME(stopt)
-  seconds  = stopt - startt
+      WRITE(*,*) ' '
+      WRITE(*,*) ' '
+      WRITE(*,*) '############## FINAL RESULTS #####################################################################################'
+      WRITE(*,*) 'N. of trials:                         ', ntry
+      WRITE(*,*) 'N. of total iteration:                ', nall
+      WRITE(*,*) 'N._of_used_livepoints:               ', nlive
+      WRITE(*,*) 'Final evidence (log):                 ', evsum_final
+      WRITE(*,*) 'Evidence estimated uncertainty (log): ', evsum_err_est
+      WRITE(*,*) 'Evidence standard deviation (log):    ', evsum_err
 
-  !IF(arg.EQ. ' ') THEN
-  OPEN(22,FILE='nf_output_res.dat',STATUS= 'UNKNOWN')
-  WRITE(22,*) '#############_FINAL_RESULTS_#####################################################################################'
-  WRITE(22,*) 'N._of_trials:                          ', ntry
-  WRITE(22,*) 'N._of_total_iteration:                 ', nall
-  WRITE(22,*) 'N._of_used_livepoints:                 ', nlive
-  WRITE(22,*) 'Final_evidence_(log):                  ', evsum_final
-  WRITE(22,*) 'Evidence_estimated_uncertainty_(log):  ', evsum_err_est
-  WRITE(22,*) 'Evidence_standard_deviation_(log):     ', evsum_err
-  WRITE(22,*) '------------------------------------------------------------------------------------------------------------------'
-  WRITE(22,*) 'Max_likelihood_(log):', live_like_max
-  WRITE(22,*) 'Max_parameter_set: '
-  DO i=1,npar
-     WRITE(22,*) par_name(i), live_max(i)
-  END DO
-  WRITE(22,*) '-------------------------------------------------------------------------------------------------------------------'
-  WRITE(22,*) 'Mean_value_and_standard_deviation_of_the_parameters'
-  DO i=1,npar
-     WRITE(22,*) par_name(i), par_mean(i), '+/-', par_sd(i)
-  END DO
-  WRITE(22,*) '-------------------------------------------------------------------------------------------------------------------'
-  WRITE(22,*) 'Median_and_confidence_levels: low_99%,     low_95%,     low_68%,     median,     high_68%,    high_95%,   high_99%'
-  DO i=1,npar
-     WRITE(22,*) par_name(i), par_m99_w(i),par_m95_w(i),par_m68_w(i),par_median_w(i),&
-          par_p68_w(i),par_p95_w(i),par_p99_w(i)
-  END DO
-  WRITE(22,*) '-------------------------------------------------------------------------------------------------------------------'
-  WRITE(22,*) 'Additional_information'
-  WRITE(22,*) 'Information:                                ', info
-  WRITE(22,*) 'Minimal_required_iteration_(ntry*exp[info]):', nexp
-  WRITE(22,*) 'Bayesian_complexity:                        ', comp
-  WRITE(22,*) '###################################################################################################################'
-  WRITE(22,*) 'Number_of_used_cores:                       ', nth
-  WRITE(22,*) 'Time_elapsed_(tot_and_real_in_s):           ', seconds, seconds_omp
-  CLOSE(22)
-
-  WRITE(*,*) ' '
-  WRITE(*,*) ' '
-  WRITE(*,*) '############## FINAL RESULTS #####################################################################################'
-  WRITE(*,*) 'N. of trials:                         ', ntry
-  WRITE(*,*) 'N. of total iteration:                ', nall
-  WRITE(*,*) 'N._of_used_livepoints:               ', nlive
-  WRITE(*,*) 'Final evidence (log):                 ', evsum_final
-  WRITE(*,*) 'Evidence estimated uncertainty (log): ', evsum_err_est
-  WRITE(*,*) 'Evidence standard deviation (log):    ', evsum_err
-
-  WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-  WRITE(*,*) 'Max likelihood (log):', live_like_max
-  WRITE(*,*) 'Max parameter set : '
-  DO i=1,npar
-     WRITE(*,*) par_name(i), ':', live_max(i)
-  END DO
-  WRITE(*,*) '-------------------------------------------------------------------------------------------------------------------'
-  WRITE(*,*) 'Mean value and standard deviation of the parameters'
-  DO i=1,npar
-     WRITE(*,*) par_name(i), ':', par_mean(i), '+/-', par_sd(i)
-  END DO
-  WRITE(*,*) '--------------------------------------------------------------------------------------------------------------------'
-  WRITE(*,*) 'Median and confidence levels: low 99%,     low 95%,     low68%,     median,     high 68%,     high 95%,     high 99%'
-  DO i=1,npar
-     WRITE(*,*) par_name(i), ':', par_m99_w(i),par_m95_w(i),par_m68_w(i),par_median_w(i),&
-          par_p68_w(i),par_p95_w(i),par_p99_w(i)
-  END DO
-  WRITE(*,*) '-------------------------------------------------------------------------------------------------------------------'
-  WRITE(*,*) 'Additional information'
-  WRITE(*,*) 'Information:                                ', info
-  WRITE(*,*) 'Minimal required iteration (ntry*exp[info]):', nexp
-  WRITE(*,*) 'Bayesian complexity:                        ', comp
-  WRITE(*,*) '####################################################################################################################'
-  WRITE(*,*) 'Number of used cores:                       ', nth
-  WRITE(*,*) 'Time elapsed (tot and real in s):           ', seconds, seconds_omp
-
+      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      WRITE(*,*) 'Max likelihood (log):', live_like_max
+      WRITE(*,*) 'Max parameter set : '
+      DO i=1,npar
+         WRITE(*,*) par_name(i), ':', live_max(i)
+      END DO
+      WRITE(*,*) '-------------------------------------------------------------------------------------------------------------------'
+      WRITE(*,*) 'Mean value and standard deviation of the parameters'
+      DO i=1,npar
+         WRITE(*,*) par_name(i), ':', par_mean(i), '+/-', par_sd(i)
+      END DO
+      WRITE(*,*) '--------------------------------------------------------------------------------------------------------------------'
+      WRITE(*,*) 'Median and confidence levels: low 99%,     low 95%,     low68%,     median,     high 68%,     high 95%,     high 99%'
+      DO i=1,npar
+         WRITE(*,*) par_name(i), ':', par_m99_w(i),par_m95_w(i),par_m68_w(i),par_median_w(i),&
+               par_p68_w(i),par_p95_w(i),par_p99_w(i)
+      END DO
+      WRITE(*,*) '-------------------------------------------------------------------------------------------------------------------'
+      WRITE(*,*) 'Additional information'
+      WRITE(*,*) 'Information:                                ', info
+      WRITE(*,*) 'Minimal required iteration (ntry*exp[info]):', nexp
+      WRITE(*,*) 'Bayesian complexity:                        ', comp
+      WRITE(*,*) '####################################################################################################################'
+      WRITE(*,*) 'Number of used cores:                       ', nth
+      WRITE(*,*) 'Time elapsed (tot and real in s):           ', seconds, seconds_omp
+  
+      DEALLOCATE(weight,live_like_final,live_final,weight_par)
+   ENDIF
 
   ! Deallocate stuff
   DEALLOCATE(par_num,par_name,par_in,par_step,par_bnd1,par_bnd2,par_fix, &
        live_max,par_mean,par_sd, &
        par_median_w, &
        par_m68_w,par_p68_w,par_m95_w,par_p95_w,par_m99_w,par_p99_w)
-  DEALLOCATE(weight,live_like_final,live_final,weight_par)
   ! Dellocate parallel stuff
-  DEALLOCATE(live_like_final_try,weight_try,live_final_try,live_max_try, &
-       nall_try,evsum_final_try,live_like_max_try)
+  IF(mpi_rank.EQ.0) THEN
+      DEALLOCATE(live_like_final_try,weight_try,live_final_try,live_max_try, &
+            nall_try,evsum_final_try,live_like_max_try)
+  ENDIF
+
+  IF(parallel_mpi_on) THEN
+      DEALLOCATE(live_final_try_instance)
+      DEALLOCATE(live_like_final_try_instance, weight_try_instance, live_max_try_instance)
+      CALL MPI_FINALIZE(mpi_ierror)
+  ENDIF
 
 
   !IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN

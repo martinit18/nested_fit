@@ -393,9 +393,9 @@ CONTAINS
           DO i=1, ndata_set(k)
              ! Poisson distribution calculation --------------------------------------------------
              IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
-                enc = USERFCN(x(i,k),npar,par,funcname)
+                enc = USERFCN(x(i,k),npar,par,funcid)
              ELSE
-                enc = USERFCN_SET(x(i,k),npar,par,funcname,k)
+                enc = USERFCN_SET(x(i,k),npar,par,funcid,k)
              END IF
              IF (enc.LE.0) THEN
                 WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
@@ -457,7 +457,7 @@ CONTAINS
           !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
           DO i=1, ndata_set(k)
              ! Poisson distribution calculation --------------------------------------------------
-             enc = USERFCN(x(i,k),npar,par,funcname)
+             enc = USERFCN(x(i,k),npar,par,funcid)
              ll_tmp = ll_tmp + nc(i,k)*DLOG(enc) - enc
           END DO
           !$OMP END PARALLEL DO
@@ -465,7 +465,7 @@ CONTAINS
           !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
           DO i=1, ndata_set(k)
              ! Normal (Gaussian) distribution calculation --------------------------------------
-             enc = USERFCN(x(i,k),npar,par,funcname)
+             enc = USERFCN(x(i,k),npar,par,funcid)
              ll_tmp = ll_tmp - (nc(i,k) - enc)**2/(2*nc_err(i,k)**2)
           ENDDO
           !$OMP END PARALLEL DO
@@ -477,7 +477,7 @@ CONTAINS
              !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
              DO i=1, ndata_set(k)
                 ! Poisson distribution calculation --------------------------------------------------
-                enc = USERFCN_SET(x(i,k),npar,par,funcname,k)
+                enc = USERFCN_SET(x(i,k),npar,par,funcid,k)
                 ll_tmp = ll_tmp + nc(i,k)*DLOG(enc) - enc
              END DO
              !$OMP END PARALLEL DO
@@ -485,7 +485,7 @@ CONTAINS
              !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
              DO i=1, ndata_set(k)
                 ! Normal (Gaussian) distribution calculation --------------------------------------
-                enc = USERFCN_SET(x(i,k),npar,par,funcname,k)
+                enc = USERFCN_SET(x(i,k),npar,par,funcid,k)
                 ll_tmp = ll_tmp - (nc(i,k) - enc)**2/(2*nc_err(i,k)**2)
              ENDDO
              !$OMP END PARALLEL DO
@@ -588,7 +588,7 @@ CONTAINS
        OPEN (UNIT=20, FILE='nf_output_data_max.dat', STATUS='unknown')
        WRITE(20,*)'# x    y data    y theory      y diff    y err'
        DO i=1, ndata
-          enc = USERFCN(x(i,k),npar,live_max,funcname)
+          enc = USERFCN(x(i,k),npar,live_max,funcid)
           IF (data_type.EQ.'1e') THEN
              WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)
           ELSE IF (data_type.EQ.'1c') THEN
@@ -600,7 +600,7 @@ CONTAINS
        OPEN (UNIT=20, FILE='nf_output_data_mean.dat', STATUS='unknown')
        WRITE(20,*)'# x    y data    y theory      y diff    y err'
        DO i=1, ndata
-          enc = USERFCN(x(i,k),npar,par_mean,funcname)
+          enc = USERFCN(x(i,k),npar,par_mean,funcid)
           IF (data_type.EQ.'1e') THEN
              WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)
           ELSE IF (data_type.EQ.'1c') THEN
@@ -612,7 +612,7 @@ CONTAINS
        OPEN (UNIT=20, FILE='nf_output_data_median.dat', STATUS='unknown')
        WRITE(20,*)'# x    y data    y theory      y diff    y err'
        DO i=1, ndata
-          enc = USERFCN(x(i,k),npar,par_median_w,funcname)
+          enc = USERFCN(x(i,k),npar,par_median_w,funcid)
           IF (data_type.EQ.'1e') THEN
              WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)
           ELSE IF (data_type.EQ.'1c') THEN
@@ -629,7 +629,7 @@ CONTAINS
           OPEN (UNIT=30, FILE=out_filename, STATUS='unknown')
           WRITE(30,*)'# x    y data    y theory      y diff    y err'
           DO i=1, ndata_set(k)
-             enc = USERFCN_SET(x(i,k),npar,live_max,funcname,k)
+             enc = USERFCN_SET(x(i,k),npar,live_max,funcid,k)
              IF (data_type.EQ.'1e') THEN
                 WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ',  nc_err(i,k)
              ELSE IF (data_type.EQ.'1c') THEN
@@ -642,7 +642,7 @@ CONTAINS
           OPEN (UNIT=30, FILE=out_filename, STATUS='unknown')
           WRITE(30,*)'# x    y data    y theory      y diff    y err'
           DO i=1, ndata_set(k)
-             enc = USERFCN_SET(x(i,k),npar,live_max,funcname,k)
+             enc = USERFCN_SET(x(i,k),npar,live_max,funcid,k)
              IF (data_type.EQ.'1e') THEN
                 WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ',  nc_err(i,k)
              ELSE IF (data_type.EQ.'1c') THEN
@@ -655,7 +655,7 @@ CONTAINS
           OPEN (UNIT=30, FILE=out_filename, STATUS='unknown')
           WRITE(30,*)'# x    y data    y theory      y diff    y err'
           DO i=1, ndata_set(k)
-             enc = USERFCN_SET(x(i,k),npar,live_max,funcname,k)
+             enc = USERFCN_SET(x(i,k),npar,live_max,funcid,k)
              IF (data_type.EQ.'1e') THEN
                 WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ',  nc_err(i,k)
              ELSE IF (data_type.EQ.'1c') THEN
@@ -681,7 +681,7 @@ CONTAINS
        WRITE(40,*)'# x    y fit'
        DO i=1, maxfit
           xfit = minx + (i-1)*dx
-          yfit = USERFCN(xfit,npar,live_max,funcname)
+          yfit = USERFCN(xfit,npar,live_max,funcid)
        ENDDO
        CLOSE(40)
 
@@ -690,7 +690,7 @@ CONTAINS
        WRITE(40,*)'# x    y fit'
        DO i=1, maxfit
           xfit = minx + (i-1)*dx
-          yfit = USERFCN(xfit,npar,par_mean,funcname)
+          yfit = USERFCN(xfit,npar,par_mean,funcid)
        ENDDO
        CLOSE(40)
 
@@ -699,7 +699,7 @@ CONTAINS
        WRITE(40,*)'# x    y fit'
        DO i=1, maxfit
           xfit = minx + (i-1)*dx
-          yfit = USERFCN(xfit,npar,par_median_w,funcname)
+          yfit = USERFCN(xfit,npar,par_median_w,funcid)
        ENDDO
        CLOSE(40)
     ELSE
@@ -717,7 +717,7 @@ CONTAINS
           DO i=1, maxfit
              xfit = minx + (i-1)*dx
              !WRITE(30, *) xfit, USERFCN_SET(xfit,npar,live_max,funcname,k)
-             yfit = USERFCN_SET(xfit,npar,live_max,funcname,k)
+             yfit = USERFCN_SET(xfit,npar,live_max,funcid,k)
           ENDDO
           CLOSE(40)
 
@@ -727,7 +727,7 @@ CONTAINS
           DO i=1, maxfit
              xfit = minx + (i-1)*dx
              !WRITE(30, *) xfit, USERFCN_SET(xfit,npar,live_max,funcname,k)
-             yfit = USERFCN_SET(xfit,npar,par_mean,funcname,k)
+             yfit = USERFCN_SET(xfit,npar,par_mean,funcid,k)
           ENDDO
           CLOSE(40)
 
@@ -737,7 +737,7 @@ CONTAINS
           DO i=1, maxfit
              xfit = minx + (i-1)*dx
              !WRITE(30, *) xfit, USERFCN_SET(xfit,npar,live_max,funcname,k)
-             yfit = USERFCN_SET(xfit,npar,par_median_w,funcname,k)
+             yfit = USERFCN_SET(xfit,npar,par_median_w,funcid,k)
           ENDDO
           CLOSE(40)
        END DO

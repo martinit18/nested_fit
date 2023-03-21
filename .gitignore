@@ -2,11 +2,7 @@
 .DS_Store
 *.o
 *.mod
-nf_output_*
-*.exe
-bin
-build
-
-bin
-build
+build/
+bin/
+.vscode/
 nf_output_*

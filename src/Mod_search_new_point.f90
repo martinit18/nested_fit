@@ -13,6 +13,7 @@ MODULE MOD_SEARCH_NEW_POINT
 
 CONTAINS
 
+  ! TODO(César): Remap all of these writes to the mpi_status_process
 
   SUBROUTINE SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
           live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
@@ -32,7 +33,7 @@ CONTAINS
     ! Select the search method
     IF (search_method.eq.'RANDOM_WALK') THEN
         CALL RANDOM_WALK(n,itry,min_live_like,live_like,live, &
-       live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
+          live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
     ELSE IF(search_method .EQ. 'UNIFORM') THEN
         CALL UNIFORM(n,itry,min_live_like,live_like,live, &
           live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
@@ -82,6 +83,7 @@ CONTAINS
     INTEGER(4), INTENT(INOUT) :: n_call_cluster
     REAL(8) :: sdfraction
     INTEGER(4) :: njump
+    REAL(8) :: loglike
 
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
@@ -177,9 +179,9 @@ CONTAINS
              ntries = 0
 
              !
-             WRITE(*,*) 'Too many tries to find new live points for try n.', &
-             itry,'!!!! More than',maxtries,&
-             'n_ntries =',n_ntries,' over ', maxntries, 'n. step =', n
+            !  WRITE(*,*) 'Too many tries to find new live points for try n.', &
+            !  itry,'!!!! More than',maxtries,&
+            !  'n_ntries =',n_ntries,' over ', maxntries, 'n. step =', n
 
              ! If you already did too much tries, gave up or start a cluster analysis
              IF (n_ntries.GE.maxntries) THEN
@@ -198,7 +200,7 @@ CONTAINS
                      STOP
                    END IF
 
-                   WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
+                  !  WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
                    !
                    CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
                    ! outputs: p_cluster ! flag of number of appartenance cluster for each live point
@@ -215,8 +217,8 @@ CONTAINS
                    GOTO 400
 
                 ELSE
-                   WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries*maxntries
-                   WRITE(*,*) 'We take the data as they are :-~'
+                  !  WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries*maxntries
+                  !  WRITE(*,*) 'We take the data as they are :-~'
                    too_many_tries = .true.
                    RETURN
                 END IF
@@ -323,11 +325,12 @@ CONTAINS
 
 
     ! Last(maybe useless) check
-    IF (LOGLIKELIHOOD(new_jump).LT.min_live_like) GOTO 500
+    loglike = LOGLIKELIHOOD(new_jump)
+    IF (loglike.LT.min_live_like) GOTO 500
 
     ! Take the last point after jumps as new livepoint
     live_new = new_jump
-    live_like_new = LOGLIKELIHOOD(new_jump)
+    live_like_new = loglike
 
     RETURN
     ! ------------------------------------------------------------------------------------
@@ -361,6 +364,7 @@ CONTAINS
     INTEGER(4) :: n_call_cluster_it, test
     INTEGER(4), INTENT(INOUT) :: n_call_cluster
     INTEGER(4) :: nb_cube, njump
+    REAL(8) :: loglike
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
     new_jump = par_in
@@ -602,11 +606,12 @@ CONTAINS
 
 
     ! Last(maybe useless) check
-    IF(LOGLIKELIHOOD(new_jump).LT.min_live_like) GOTO 700
+    loglike = LOGLIKELIHOOD(new_jump)
+    IF(loglike.LT.min_live_like) GOTO 700
 
     ! Take the last point after jumps as new livepoint
     live_new = new_jump
-    live_like_new = LOGLIKELIHOOD(new_jump)
+    live_like_new = loglike
 
     RETURN
     ! ------------------------------------------------------------------------------------
@@ -649,7 +654,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     REAL(8), DIMENSION(:,:), ALLOCATABLE :: live_nf
     REAL(8), DIMENSION(:), ALLOCATABLE :: start_jump, new_jump, start_jump_t, new_jump_t
     INTEGER(4), DIMENSION(:), ALLOCATABLE :: par_var
-    REAL(8) :: part_like, size_jump, size_jump_save
+    REAL(8) :: part_like, size_jump, size_jump_save, loglike
     LOGICAL :: test_bnd
     INTEGER(4) :: init_fail, test2, njump
     ! Find new live points
@@ -882,7 +887,8 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     END DO
 
     ! Last(maybe useless) check
-    IF(LOGLIKELIHOOD(new_jump_comp).LT.min_live_like) GOTO 700
+    loglike = LOGLIKELIHOOD(new_jump_comp)
+    IF(loglike.LT.min_live_like) GOTO 700
 
 !    DO l=1,npar
 !      IF (new_jump_comp(l).LT.par_bnd1(l).OR.new_jump_comp(l).GT.par_bnd2(l)) THEN
@@ -892,7 +898,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
 
     ! Take the last point after jumps as new livepoint
     live_new = new_jump_comp
-    live_like_new = LOGLIKELIHOOD(new_jump_comp)
+    live_like_new = loglike
     ntries=ntries/dim_eff
 
 END SUBROUTINE SLICE_SAMPLING
@@ -932,7 +938,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     REAL(8), DIMENSION(:,:), ALLOCATABLE :: live_nf
     REAL(8), DIMENSION(:), ALLOCATABLE :: start_jump, new_jump, start_jump_t, new_jump_t
     INTEGER(4), DIMENSION(:), ALLOCATABLE :: par_var
-    REAL(8) :: part_like, size_jump, size_jump_save
+    REAL(8) :: part_like, size_jump, size_jump_save, loglike
     LOGICAL :: test_bnd
     INTEGER(4) :: init_fail, test2, njump
     ! Find new live points
@@ -1185,7 +1191,8 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     END DO
 
     ! Last(maybe useless) check
-    IF(LOGLIKELIHOOD(new_jump_comp).LT.min_live_like) GOTO 700
+    loglike = LOGLIKELIHOOD(new_jump)
+    IF(loglike.LT.min_live_like) GOTO 700
 
 !    DO l=1,npar
 !      IF (new_jump_comp(l).LT.par_bnd1(l).OR.new_jump_comp(l).GT.par_bnd2(l)) THEN
@@ -1195,7 +1202,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
 
     ! Take the last point after jumps as new livepoint
     live_new = new_jump_comp
-    live_like_new = LOGLIKELIHOOD(new_jump_comp)
+    live_like_new = loglike
     ntries=ntries/dim_eff
 
 END SUBROUTINE SLICE_SAMPLING_ADAPT
