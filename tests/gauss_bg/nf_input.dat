@@ -1,4 +1,4 @@
-4.3				# Program version
+4.4				# Program version
 he-histo.dat			# Name of the (first) data file
 n				# Set of files (y/n)
 1c				# Type of data: error bars or not and dimensions (1c,1e,2c,2s,2e)

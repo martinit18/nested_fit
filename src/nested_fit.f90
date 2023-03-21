@@ -232,7 +232,7 @@ PROGRAM NESTED_FIT
       READ(77,*) data_type, string
       READ(77,*) nlive, string
       READ(77,*) conv_method, string
-      READ(77,*) evaccuracy, conv_par string
+      READ(77,*) evaccuracy, conv_par, string
       READ(77,*) search_method, string
       READ(77,*) search_par1, search_par2, maxtries, maxntries, string
       READ(77,*) cluster_yn, cluster_method, cluster_par1, cluster_par2
@@ -298,11 +298,12 @@ PROGRAM NESTED_FIT
          CLOSE(88)
       ENDIF
 
-      IF(set_yn.EQ.'n') THEN
-         funcid = SELECT_USERFCN(funcname)
-      ELSE
-         funcid = SELECT_USERFCN_SET(funcname)
-      END IF
+      
+      ! IF(set_yn.EQ.'n') THEN
+      !    funcid = SELECT_USERFCN(funcname)
+      ! ELSE
+      !    funcid = SELECT_USERFCN_SET(funcname)
+      ! END IF
   ENDIF
 
   ! Receive data from the mpi root node
@@ -313,7 +314,9 @@ PROGRAM NESTED_FIT
       CALL MPI_Bcast(set_yn, 1, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(data_type, 3, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(nlive, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(conv_method, 64, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(evaccuracy, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(conv_par, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(search_method, 64, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(search_par1, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(search_par2, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)

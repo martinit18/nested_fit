@@ -5,18 +5,18 @@ cmake_minimum_required(VERSION 3.16)
 #####################################
 
 # The latest nested_res -> This gets copied to the user bin/
-set(nested_res_name nested_res_V4p2.py)
+set(nested_res_name nested_res_V4p3.py)
 
 # The nested_fit version being built -> This gets copied everywhere inside the project code
 # For more info see the 'src/Mod_metadata.f90.in' file
-set(project_version 4.3.0)
+set(project_version 4.4.0)
 
 # Global options
 option(DEBUG "Enable debug mode." OFF)
 option(NORNG "Uses the same set seed. Useful for testing." OFF)
 # option(MOD_TEST "Uses another likelihood function." OFF)
 option(OPENMP "Enable/Disable OpenMP." OFF) # This replaced the manual parallel_on variable on the nested_fit.f90 file
-option(OPENMPI "Enable/Disable OpenMPI." ON)
+option(OPENMPI "Enable/Disable OpenMPI." OFF)
 option(AUTOTESTS "Automatically run tests after compiling." OFF)
 
 #####################################
@@ -36,14 +36,8 @@ string(CONCAT nested_fit_mpi_child_comm_proc_name "nf_child_proc" ${nested_fit_v
 string(LENGTH ${nested_fit_mpi_child_comm_proc_name} nested_fit_mpi_child_comm_proc_name_len)
 
 
-# if(MOD_TEST)
-#     set(mod_lh_test _tests)
-# endif()
-
-set(SRC_FILES
+set(SRC_FILES_COMM
     src/Mod_cluster_analysis.f90
-    # src/Mod_likelihood_tests.f90
-    src/Mod_likelihood${mod_lh_test}.f90
     src/Mod_parameters.f90
     src/Mod_search_new_point.f90
     src/Mod_timestamp.f90
@@ -60,15 +54,25 @@ set(SRC_FILES
     src/shirley_fitpack.f90
     src/sortn_slatec.f90
 
-    src/USERFCN_2D.f90
-    src/USERFCN_SET.f
-    src/USERFCN.f
-
     src/Mod_mpi.f90
     src/Mod_math.f90
 
     src/cli/f90getopt.f90
     src/Mod_options.f90
+)
+
+set(SRC_FILES_DATA
+
+    src/Mod_likelihood.f90
+
+    src/USERFCN_2D.f90
+    src/USERFCN_SET.f
+    src/USERFCN.f
+)
+
+set(SRC_FILES_FUNC
+
+    src/Mod_likelihood_tests.f90
 )
 
 set(CHILD_SRC_FILES
@@ -129,7 +133,9 @@ endif()
 set_source_files_properties(${SRC_CALGO} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${SRC_DIERCKX} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${SRC_SLATEC} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
-set_source_files_properties(${SRC_FILES} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
+set_source_files_properties(${SRC_FILES_COMM} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
+set_source_files_properties(${SRC_FILES_DATA} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
+set_source_files_properties(${SRC_FILES_FUNC} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${CFG_FILES} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${CHILD_SRC_FILES} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 
@@ -139,7 +145,17 @@ add_executable(${nested_fit_target}
     ${SRC_CALGO}
     ${SRC_DIERCKX}
     ${SRC_SLATEC}
-    ${SRC_FILES}
+    ${SRC_FILES_COMM}
+    ${SRC_FILES_DATA}
+)
+
+add_executable(${nested_fit_target}_func
+    ${CFG_FILES}
+    ${SRC_CALGO}
+    ${SRC_DIERCKX}
+    ${SRC_SLATEC}
+    ${SRC_FILES_COMM}
+    ${SRC_FILES_FUNC}
 )
 
 if(OPENMPI)
@@ -160,6 +176,7 @@ find_package(MPI REQUIRED)
 if(MPI_FOUND)
     if(MPI_Fortran_HAVE_F90_MODULE)
         target_link_libraries(${nested_fit_target} PUBLIC MPI::MPI_Fortran)
+        target_link_libraries(${nested_fit_target}_func PUBLIC MPI::MPI_Fortran)
         if(OPENMPI)
             target_link_libraries(${nested_fit_mpi_child_comm_proc_name} PUBLIC MPI::MPI_Fortran)
         endif()
@@ -181,6 +198,9 @@ else()
     # TODO(César): Maybe use install later on
     add_custom_command(TARGET ${nested_fit_target} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${nested_fit_target}> $ENV{HOME}/bin)
+
+    add_custom_command(TARGET ${nested_fit_target}_func POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${nested_fit_target}_func> $ENV{HOME}/bin)
 
     # Since we do this for the nested fit executable, why not put the latest nested_res_* file in the bin
     # At least while we don't have a custom python caller script
