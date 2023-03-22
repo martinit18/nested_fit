@@ -136,7 +136,6 @@ PROGRAM NESTED_FIT
 
   ! Function definitions
   EXTERNAL :: NESTED_SAMPLING, SORTN, MEANVAR
-  INTEGER(4) :: SELECT_USERFCN, SELECT_USERFCN_SET
 
   ! Other variants
   !CALL RANDOM_SEED()
@@ -297,13 +296,6 @@ PROGRAM NESTED_FIT
       11   CONTINUE
          CLOSE(88)
       ENDIF
-
-      
-      ! IF(set_yn.EQ.'n') THEN
-      !    funcid = SELECT_USERFCN(funcname)
-      ! ELSE
-      !    funcid = SELECT_USERFCN_SET(funcname)
-      ! END IF
   ENDIF
 
   ! Receive data from the mpi root node

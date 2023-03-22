@@ -319,7 +319,16 @@ CONTAINS
 
 
   SUBROUTINE INIT_FUNCTIONS()
-    ! Subroutine to initialize the user functions if needed
+    ! Subroutine to initialize the user functions and functions id
+
+
+    INTEGER(4) :: SELECT_USERFCN, SELECT_USERFCN_SET
+         
+    IF(set_yn.EQ.'n') THEN
+       funcid = SELECT_USERFCN(funcname)
+    ELSE
+       funcid = SELECT_USERFCN_SET(funcname)
+    END IF
 
     ! Initialise functions if needed
     IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
