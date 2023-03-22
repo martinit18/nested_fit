@@ -88,8 +88,6 @@ CONTAINS
     REAL(8) :: sdfraction
     INTEGER(4) :: njump
 
-!!$     ! The problem is here, but with all variables !!! ????
-!!$    !$OMP THREADPRIVATE(i,istart,live_ave) 
 
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
@@ -99,7 +97,7 @@ CONTAINS
     live_ave = 0.
     live_var = 0.
     live_sd  = 0.
-    ntries   = 0
+    ntries   = 1
     istart   = 0
     n_ntries = 0
     too_many_tries = .false.
@@ -110,7 +108,6 @@ CONTAINS
     njump=INT(search_par2)
 
     ! Select a live point as starting point
-    ntries = 0
     CALL RANDOM_NUMBER(rn)
     istart= FLOOR((nlive-1)*rn+1)
     !istart= FLOOR((nlive-1)*RAND(0)+1)
@@ -158,9 +155,13 @@ CONTAINS
 
     ! Make several consecutive casual jumps in the region with loglikelyhood > minlogll
 500 CONTINUE
+    ntries = 0
     DO i=1,njump
 501    CONTINUE
        ntries = ntries + 1
+       !$OMP MASTER   
+       write(*,*)  OMP_GET_THREAD_NUM(), i, ntries, new_jump   ! Tests?????
+       !$OMP END MASTER 
        !!$OMP PARALLEL DO
        DO l=1,npar
           IF (par_fix(l).NE.1) THEN
@@ -190,7 +191,7 @@ CONTAINS
           IF (ntries.GT.maxtries) THEN   ! Loop for ntries > maxtries
              n_ntries = n_ntries + 1
              ! If nothing is found, restart from a livepoint
-             ntries = 0
+             ntries = 1
 
              !
              WRITE(*,*) 'Too many tries to find new live points for try n.', &
@@ -318,7 +319,7 @@ CONTAINS
           END IF    ! End loop for ntries > maxtries
 
           GOTO 501  ! Restart looking for new points without changing the starting point
-
+ 
        END IF  ! End of loop with failure for likelihood value
     END DO
 
