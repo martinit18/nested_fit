@@ -10,7 +10,7 @@ CFLAGS  =
 #### Uncomment next line to optimize in MAC
 #FFLAGS   = -framework accelerate
 #### Uncomment next line to run in parallel and optimize in MAC
-FFLAGS   = -framework accelerate -fopenmp
+#FFLAGS   = -framework accelerate -fopenmp
 ###############################################################
 
 CFILES =
@@ -52,7 +52,7 @@ F90FILES = Mod_parameters.f90 Mod_likelihood_tests.f90 Mod_timestamp.f90 \
 #OPT = -O0 -g
 #OPT = -O0 -g  -fbounds-check -Wall  -ffpe-trap=invalid,zero,overflow,underflow -fbacktrace -ftrapv
 #OPT = -g -Wall -Wextra -Warray-temporaries -Wconversion -fimplicit-none -fbacktrace -ffree-line-length-0 -fcheck=all -ffpe-trap=zero,overflow,underflow -finit-real=nan
-OPT = -g -Wall -Wextra -Warray-temporaries -Wconversion -fbacktrace -ffree-line-length-0 -fcheck=all -ffpe-trap=zero,overflow -finit-real=nan
+#OPT = -g -Wall -Wextra -Warray-temporaries -Wconversion -fbacktrace -ffree-line-length-0 -fcheck=all -ffpe-trap=zero,overflow -finit-real=nan
 
 # other debug options for ifort
 #OPT = -O0 -g -debug all -check bounds -traceback -check all -check uninit -ftrapuv -gen-interfaces -no-wrap-margin

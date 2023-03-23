@@ -193,16 +193,18 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
      ! Find a new live point
      
       it = 1
-      !$OMP PARALLEL  
-      !$OMP DO
+      !!$OMP DO SCHEDULE(STATIC) LASTPRIVATE(ntries) 
+      !$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) FIRSTPRIVATE(ntries) PRIVATE(p_cluster,too_many_tries) &
+        !$OMP SHARED(n,itry,min_live_like,live_like,live,nth,live_like_new,live_new,icluster) LASTPRIVATE(ntries)  
       DO it=1,nth
          !write(*,*) 'here', OMP_GET_THREAD_NUM(), it, min_live_like,live_like(1),live(1,1)
          CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
            live_like_new(it),live_new(it,:),icluster(it),ntries,too_many_tries(it))
          !write(*,*) 'there', OMP_GET_THREAD_NUM(), it, min_live_like, live_like_new(it)
       END DO
-      !$OMP END DO
-      !$OMP END PARALLEL
+      !$OMP END PARALLEL DO
+      !!$OMP END DO
+      
 
      IF (ANY(too_many_tries)) THEN
         nstep_final = n - 1
@@ -418,7 +420,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   live_like_final = live_like_old
 
   nall = nstep_final + nlive
-
 
   ! Deallocate variables for cluster analysis
   IF (cluster_on) THEN
