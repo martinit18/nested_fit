@@ -43,15 +43,18 @@ mkdir build && cd build
 cmake ..
 make
 ```
-> :warning: For Windows you can compile by replacing line of the above commands by `cmake -G"MinGW Makefiles" ..`, for simplicity.
+> :warning: For Windows you can compile by replacing the second line of the above commands with `cmake -G"MinGW Makefiles" ..`, for simplicity.
 
 **CMake options**
 
-| Option | Description                                           | Default |
-|:-------|:------------------------------------------------------|:-------:|
-|DEBUG   | "Enable debug mode."                                  | OFF     |
-|NORNG   | "Uses the tests functions instead of the likelihood." | OFF     |
-|OPENMP  | "Enable/Disable OpenMP."                              | OFF     |
+| Option   | Description                                                     | Default |
+|:---------|:----------------------------------------------------------------|:-------:|
+|DEBUG     | Enable debug mode.                                              | OFF     |
+|NORNG     | Set the nested_fit to use a set seed. Internal test use mainly. | OFF     |
+|OPENMP    | Enable/Disable OpenMP support.                                  | OFF     |
+|OPENMPI   | Enable/Disable OpenMPI support.                                 | OFF     |
+|AUTOTESTS | Automatically run tests after compiling.                        | OFF     |
+
 
 
 > You can pass in options on the cmake step via: `cmake -D<option_name>=<ON/OFF> ..`\
@@ -85,7 +88,7 @@ Together with this file, also the files `nf_output_points.paramnames` and `nf_ou
 
 **Details of the input file line by line**
 ```
-4.3                 # Program version
+4.4                 # Program version
 he-histo.dat        # Name of the (first) data file
 n                   # Set of files (y/n)
 1c                  # Type of data: error bars or not and dimensions (1c,1e,2c,2s,2e)
@@ -155,12 +158,18 @@ Additional information can be found in the reference articles.
 
 ## Present version and history of the past versions
 
-The present version is 4.3.1
+The present version is 4.4.0
 New features:
-- New (test) function : harmonic potential in 3D and loggamma
-- Choice between different convergence methods : evidence or partition function  
+- OpenMPI support (only available for number of tries)
+- New user function calling method
+- Add Windows support
+- New build system generator (CMake)
+- Improved performance
+
 
 Previous versions are:
+ - 4.3 New (test) function : harmonic potential in 3D and loggamma \
+ Choice between different convergence methods : evidence or partition function  
  - 4.2 Additional search methods : Uniform search around each live point and Slice Sampling
  - 4.1.1 New cluster recognition methods added
  - 4.0.3 2D data analysis for count-type XY \
