@@ -4,6 +4,7 @@ PROGRAM NESTED_FIT
   ! Please read README and LICENSE files for more inforamtion
   ! 4.4  OpenMPI support (only available for number of tries)
   !      New user function calling method
+  !      Add Windows support
   !      New build system generator (CMake)
   !      Improved performance
   ! 4.3  New (test) functions : harmonic potential in 3D and loggamma
