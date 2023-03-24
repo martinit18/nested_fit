@@ -6,7 +6,7 @@ MODULE MOD_CLUSTER_ANALYSIS
 
 
   IMPLICIT NONE
-
+  
   LOGICAL :: cluster_on = .false.
   INTEGER(4) :: np=0, ndim=0, ncluster=0
   INTEGER(4), PARAMETER :: ncluster_max=500
@@ -86,7 +86,7 @@ CONTAINS
     p_fix = .FALSE.
 
     ! Allocate the variables if needed
-    IF(.NOT.cluster_on) ALLOCATE(p_cluster(np))
+    IF(.NOT.cluster_on .AND. .NOT. ALLOCATED(p_cluster)) ALLOCATE(p_cluster(np))
     p_cluster = 0
 
 
@@ -121,10 +121,10 @@ CONTAINS
 
        ! Calculate the neighbor point mean value for the selected point
        max_accuracy = 0.
-       !$OMP PARALLEL DO &
-       !$OMP PRIVATE(num,dem,nn,k,dist,weight,l,actual_accuracy) &
-       !$OMP REDUCTION(min:min_nn) &
-       !$OMP REDUCTION(max:max_accuracy)
+       !!$OMP PARALLEL DO &
+       !!$OMP PRIVATE(num,dem,nn,k,dist,weight,l,actual_accuracy) &
+       !!$OMP REDUCTION(min:min_nn) &
+       !!$OMP REDUCTION(max:max_accuracy)
        DO j=1,np
           ! Scan all other points for calculating the mean....
           num = 0.
@@ -173,7 +173,7 @@ CONTAINS
           !write(*,*) i,j,nn, actual_accuracy, max_accuracy
           !pause
        END DO
-       !$OMP END PARALLEL DO
+       !!$OMP END PARALLEL DO
 
        WRITE(*,*) 'n_iteration = ', i, 'present accuracy = ', max_accuracy
 
@@ -295,7 +295,7 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     not_cluster=1
     ncluster=0
     ! Allocate the variables if needed
-    IF(.NOT.cluster_on) ALLOCATE(p_cluster(np))
+    IF(.NOT.cluster_on .AND. .NOT. ALLOCATED(p_cluster)) ALLOCATE(p_cluster(np))
     p_cluster = 0
 
 
@@ -312,15 +312,15 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
 
     DO i=1,np
       IF(not_cluster(i)==1) THEN    ! if the point is not in a cluster yet
-        !$OMP PARALLEL DO &
-        !$OMP REDUCTION(+:nn)
+        !!$OMP PARALLEL DO &
+        !!$OMP REDUCTION(+:nn)
         DO j=1,np
           IF(NORM2(p(i,:)-p(j,:))<=distance_limit) THEN
             neighb(j)=1
             nn=nn+1
           ENDIF
         END DO
-        !$OMP END PARALLEL DO
+        !!$OMP END PARALLEL DO
         min_nn=min(min_nn,nn)
         ! a point is in its own neighbourood
         IF(nn>=min_neighb) THEN
@@ -334,13 +334,13 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
           END IF
           not_cluster(i)=0
           p_cluster(i)=ncluster
-          !$OMP PARALLEL DO
+          !!$OMP PARALLEL DO
           DO j=1,np
             IF(not_cluster(j)==1 .AND. neighb(j)==1) THEN
               selected(j)=1 ! select the point if it is not in a cluster and is a neighbor of i
             END IF
           END DO
-          !$OMP END PARALLEL DO
+          !!$OMP END PARALLEL DO
           neighb=0
           DO
             IF(SUM(selected(:))==0) EXIT ! no more point to put in the cluster
@@ -349,24 +349,24 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
                 not_cluster(j)=0
                 selected(j)=0
                 p_cluster(j)=ncluster
-                !$OMP PARALLEL DO &
-                !$OMP REDUCTION(+:nn)
+                !!$OMP PARALLEL DO &
+                !!$OMP REDUCTION(+:nn)
                 DO k=1,np
                   IF(NORM2(p(j,:)-p(k,:))<=distance_limit) THEN
                     neighb(k)=1
                     nn=nn+1
                   END IF
                 END DO
-                !$OMP END PARALLEL DO
+                !!$OMP END PARALLEL DO
                 min_nn=min(min_nn,nn)
                 IF(nn>=min_neighb) THEN
-                  !$OMP PARALLEL DO
+                  !!$OMP PARALLEL DO
                   DO k=1,np
                     IF(not_cluster(k)==1 .AND. neighb(k)==1) THEN
                       selected(k)=1 ! select the point if it is not in a cluster and is a neighbor of j
                     END IF
                   END DO
-                  !$OMP END PARALLEL DO
+                  !!$OMP END PARALLEL DO
                 END IF
                 nn=0
                 neighb=0
@@ -470,14 +470,14 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     ncluster=np_in
 
     ! Allocate the variables if needed
-    IF(.NOT.cluster_on) ALLOCATE(p_cluster(np))
+    IF(.NOT.cluster_on .AND. .NOT. ALLOCATED(p_cluster)) ALLOCATE(p_cluster(np))
     DO i=1,np
       p_cluster(i)= i
     END DO
 
     WRITE(*,*) 'Starting agglomerative cluster analysis'
 
-    !$OMP PARALLEL DO PRIVATE(j)
+    !!$OMP PARALLEL DO PRIVATE(j)
     DO i=1,ndim
       val_max = maxval(p(:,i))
       val_min = minval(p(:,i))
@@ -488,7 +488,7 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
       ENDIF
     END DO
 
-    !$OMP PARALLEL DO PRIVATE(j)
+    !!$OMP PARALLEL DO PRIVATE(j)
     DO i=1,np ! calculate the distance matrix
     dist_pt(i,i)=-1
       DO j=i+1,np
@@ -496,7 +496,7 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
         dist_pt(j,i)=-1
       END DO
     END DO
-    !$OMP END PARALLEL DO
+    !!$OMP END PARALLEL DO
 
     max_dist=distance_limit*maxval(dist_pt) !the maximum distance to join two clusters
 
@@ -506,7 +506,7 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
       clust_min=min(p_cluster(minval(clusters_to_concat)),p_cluster(maxval(clusters_to_concat)))
       clust_max=max(p_cluster(minval(clusters_to_concat)),p_cluster(maxval(clusters_to_concat))) !finding the two clusters that are the closest
       IF(dist_min>=max_dist .OR. ncluster==1) EXIT !checking if the maximum distance has been reached or if there is only one cluster
-      !$OMP PARALLEL DO PRIVATE(j)
+      !!$OMP PARALLEL DO PRIVATE(j)
       DO i=1,np
         DO j=1,np
           IF(p_cluster(i)==clust_min .AND. p_cluster(j)==clust_max) THEN !set the distance of two points in the same clusters at -1
@@ -515,23 +515,23 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
           END IF
         END DO
       END DO
-      !$OMP END PARALLEL DO
-      !$OMP PARALLEL DO
+      !!$OMP END PARALLEL DO
+      !!$OMP PARALLEL DO
       DO i=1,np
         IF(p_cluster(i)==clust_max) THEN ! put the two clusters together
           p_cluster(i)=clust_min
         END IF
       END DO
-      !$OMP END PARALLEL DO
+      !!$OMP END PARALLEL DO
 
       DO i=clust_max+1,ncluster ! change the labels of the other clusters
-        !$OMP PARALLEL DO
+        !!$OMP PARALLEL DO
         DO j=1,np
           IF(p_cluster(j)==i) THEN
             p_cluster(j)=i-1
           END IF
         END DO
-        !$OMP END PARALLEL DO
+        !!$OMP END PARALLEL DO
       END DO
       ncluster=ncluster-1
     END DO
@@ -602,14 +602,14 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
 
     WRITE(*,*) 'Starting KNN cluster analysis'
 
-    !$OMP PARALLEL DO
+    !!$OMP PARALLEL DO
     DO i=1,np
       p_cluster_new(i) = i
       p_cluster_old(i) = i
     END DO
-    !$OMP END PARALLEL DO
+    !!$OMP END PARALLEL DO
 
-    !$OMP PARALLEL DO PRIVATE(j)
+    !!$OMP PARALLEL DO PRIVATE(j)
     DO i=1,np  ! distance matrix
     dist_pt(i,i)=0
       DO j=i+1,np
@@ -617,7 +617,7 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
         dist_pt(j,i)=dist_pt(i,j)
       END DO
     END DO
-    !$OMP END PARALLEL DO
+    !!$OMP END PARALLEL DO
 
 
     DO k=2,np
@@ -655,11 +655,11 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
       icluster=1
       DO WHILE(icluster<=ncluster_new)
 400     CONTINUE
-        !$OMP PARALLEL DO REDUCTION(+:np_temp)
+        !!$OMP PARALLEL DO REDUCTION(+:np_temp)
         DO i=1,np
           IF(p_cluster_new(i)==icluster) np_temp=np_temp+1
         END DO
-        !$OMP END PARALLEL DO
+        !!$OMP END PARALLEL DO
         IF(np_temp>=3) THEN
           IF(ALLOCATED(dist_pt_temp)) DEALLOCATE(dist_pt_temp)
           IF(ALLOCATED(p_cluster_temp)) DEALLOCATE(p_cluster_temp)
@@ -711,7 +711,7 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     WRITE(*,*) 'Number of cluster found = ', ncluster
 
 
-    IF(.NOT.cluster_on) ALLOCATE(p_cluster(np))
+    IF(.NOT.cluster_on .AND. .NOT. ALLOCATED(p_cluster)) ALLOCATE(p_cluster(np))
     p_cluster=p_cluster_new
 
     OPEN (UNIT=10, FILE='nf_output_cluster_final_'//timestamp()//'.dat', STATUS='unknown')
@@ -753,11 +753,11 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
 
     knn(:,1)=MINLOC(dist, DIM=1)
     DO i=2,k
-      !$OMP PARALLEL DO
+      !!$OMP PARALLEL DO
       DO j=1,nb_pt
         knn(j,i)=MINLOC(dist(:,j), MASK=(dist(:,j)>dist(knn(j,i-1),j)),DIM=1)
       END DO
-      !$OMP END PARALLEL DO
+      !!$OMP END PARALLEL DO
     END DO
 
 
