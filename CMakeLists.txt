@@ -14,8 +14,8 @@ set(project_version 4.4.0)
 # Global options
 option(DEBUG "Enable debug mode." OFF)
 option(NORNG "Uses the same set seed. Useful for testing." OFF)
-# option(MOD_TEST "Uses another likelihood function." OFF)
-option(OPENMP "Enable/Disable OpenMP." OFF) # This replaced the manual parallel_on variable on the nested_fit.f90 file
+
+option(OPENMP "Enable/Disable OpenMP." OFF)
 option(OPENMPI "Enable/Disable OpenMPI." OFF)
 option(AUTOTESTS "Automatically run tests after compiling." OFF)
 
@@ -62,7 +62,6 @@ set(SRC_FILES_COMM
 )
 
 set(SRC_FILES_DATA
-
     src/Mod_likelihood.f90
 
     src/USERFCN_2D.f90
@@ -71,7 +70,6 @@ set(SRC_FILES_DATA
 )
 
 set(SRC_FILES_FUNC
-
     src/Mod_likelihood_tests.f90
 )
 
@@ -82,7 +80,7 @@ set(CHILD_SRC_FILES
 
 file(GLOB SRC_CALGO   ${CMAKE_SOURCE_DIR}/src/CALGO.ACM/*.f)
 file(GLOB SRC_DIERCKX ${CMAKE_SOURCE_DIR}/src/DIERCKX/*.f)
-file(GLOB SRC_SLATEC ${CMAKE_SOURCE_DIR}/src/SLATEC/*.f)
+file(GLOB SRC_SLATEC  ${CMAKE_SOURCE_DIR}/src/SLATEC/*.f)
 
 if(OPENMP AND OPENMPI)
     message(ERROR "Compiling against OpenMP and OpenMPI at the same time is currently not supported.")
@@ -140,6 +138,8 @@ set_source_files_properties(${CFG_FILES} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${CHILD_SRC_FILES} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 
 string(CONCAT nested_fit_target "nested_fit" ${nested_fit_version_full_str})
+string(CONCAT nested_fit_target_func "nested_fit_func" ${nested_fit_version_full_str})
+
 add_executable(${nested_fit_target}
     ${CFG_FILES}
     ${SRC_CALGO}
@@ -149,7 +149,7 @@ add_executable(${nested_fit_target}
     ${SRC_FILES_DATA}
 )
 
-add_executable(${nested_fit_target}_func
+add_executable(${nested_fit_target_func}
     ${CFG_FILES}
     ${SRC_CALGO}
     ${SRC_DIERCKX}
@@ -166,7 +166,8 @@ if(OPENMPI)
 endif()
 
 if(OPENMP)
-    target_link_options(${nested_fit_target} PRIVATE "-fopenmp")
+    target_link_options(${nested_fit_target}      PRIVATE "-fopenmp")
+    target_link_options(${nested_fit_target_func} PRIVATE "-fopenmp")
 endif()
 
 # TODO(César): MPI is needed even for non-MPI builds, since the source code is runtime selecting mpi funcitonality based on a PARAMETER
@@ -175,8 +176,8 @@ endif()
 find_package(MPI REQUIRED)
 if(MPI_FOUND)
     if(MPI_Fortran_HAVE_F90_MODULE)
-        target_link_libraries(${nested_fit_target} PUBLIC MPI::MPI_Fortran)
-        target_link_libraries(${nested_fit_target}_func PUBLIC MPI::MPI_Fortran)
+        target_link_libraries(${nested_fit_target}      PUBLIC MPI::MPI_Fortran)
+        target_link_libraries(${nested_fit_target_func} PUBLIC MPI::MPI_Fortran)
         if(OPENMPI)
             target_link_libraries(${nested_fit_mpi_child_comm_proc_name} PUBLIC MPI::MPI_Fortran)
         endif()
@@ -199,7 +200,7 @@ else()
     add_custom_command(TARGET ${nested_fit_target} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${nested_fit_target}> $ENV{HOME}/bin)
 
-    add_custom_command(TARGET ${nested_fit_target}_func POST_BUILD
+    add_custom_command(TARGET ${nested_fit_target_func} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${nested_fit_target}_func> $ENV{HOME}/bin)
 
     # Since we do this for the nested fit executable, why not put the latest nested_res_* file in the bin
