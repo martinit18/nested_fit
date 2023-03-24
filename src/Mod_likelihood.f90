@@ -324,17 +324,9 @@ CONTAINS
 #define BIT_CHECK_IF(what) IAND(dataid, what).GT.0
   
   SUBROUTINE INIT_FUNCTIONS()
-    ! Subroutine to initialize the user functions and functions id
+    ! Subroutine to initialize the user functions, functions id and data ids
 
-
-    INTEGER(4) :: SELECT_USERFCN, SELECT_USERFCN_SET
-
-    ! Init the funcid for function names
-    IF(set_yn.EQ.'n') THEN
-       funcid = SELECT_USERFCN(funcname)
-    ELSE
-       funcid = SELECT_USERFCN_SET(funcname)
-    END IF
+    INTEGER(4) :: SELECT_USERFCN, SELECT_USERFCN_SET, SELECT_USERFCN_2D
 
     ! Init the dataid for data types !
     ! ------------------------------ !
@@ -367,6 +359,22 @@ CONTAINS
     ! Is this a set ?
     IF(set_yn.EQ.'y'.OR.set_yn.EQ.'Y') THEN
        dataid = IOR(dataid, DATA_IS_SET)
+    END IF
+
+
+    ! Init the funcid for function names
+    IF(.NOT.(BIT_CHECK_IF(DATA_IS_SET))) THEN
+       IF(BIT_CHECK_IF(DATA_IS_1D)) THEN
+          funcid = SELECT_USERFCN(funcname)
+       ELSE
+          funcid = SELECT_USERFCN_2D(funcname)
+       END IF
+    ELSE
+       IF(BIT_CHECK_IF(DATA_IS_2D)) THEN
+          WRITE(*,*) 'Sets for 2D functions are not yet implemented.'
+          STOP
+       END IF
+       funcid = SELECT_USERFCN_SET(funcname)
     END IF
 
     ! Initialise functions if needed
@@ -417,9 +425,7 @@ CONTAINS
     ELSE IF (BIT_CHECK_IF(DATA_IS_2D)) THEN
        LOGLIKELIHOOD = LOGLIKELIHOOD_2D(par)
     END IF
-
-
-
+    
   END FUNCTION LOGLIKELIHOOD
 
   !#####################################################################################################################
@@ -570,7 +576,7 @@ CONTAINS
           ! Poisson distribution calculation --------------------------------------------------
           xx = i - 0.5 + xmin(k) ! Real coordinates are given by the bins, the center of the bin.
           yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin
-          enc = USERFCN_2D(xx,yy,npar,par,funcname)
+          enc = USERFCN_2D(xx,yy,npar,par,funcid)
           ll_tmp = ll_tmp + adata_mask(i,j)*(adata(i,j)*DLOG(enc) - enc)
        END DO
     END DO

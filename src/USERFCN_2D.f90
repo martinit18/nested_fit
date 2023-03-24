@@ -1,13 +1,54 @@
 ! Time-stamp: <Last changed by martino on Monday 21 June 2021 at CEST 17:56:10>
 
-REAL(8) FUNCTION USERFCN_2D(x,y,npar,val,funcname)
+FUNCTION SELECT_USERFCN_2D(funcname)
+   IMPLICIT NONE
+   CHARACTER*64 funcname
+   INTEGER*4 SELECT_USERFCN_2D
+
+   ! Choose your model (see below for definition)
+   IF(funcname.EQ.'GAUSS_SIMPLE_2D') THEN
+      SELECT_USERFCN_2D = 0
+   ELSE IF(funcname.EQ.'GAUSS_BG_2D') THEN
+      SELECT_USERFCN_2D = 1
+   ELSE IF(funcname.EQ.'GAUSS_LINE_BG_2D') THEN
+      SELECT_USERFCN_2D = 2
+   ELSE IF(funcname.EQ.'LORE_LINE_BG_2D') THEN
+      SELECT_USERFCN_2D = 3
+   ELSE IF(funcname.EQ.'VOIGT_LINE_BG_2D') THEN
+      SELECT_USERFCN_2D = 4
+   ELSE IF(funcname.EQ.'SUPERGAUSS_LINE_BG_2D') THEN
+      SELECT_USERFCN_2D = 5
+   ELSE IF(funcname.EQ.'ERFPEAK_LINE_BG_2D') THEN
+      SELECT_USERFCN_2D = 6
+   ELSE IF(funcname.EQ.'TWO_ERFPEAK_LINE_BG_2D') THEN
+      SELECT_USERFCN_2D = 7
+   ELSE IF(funcname.EQ.'TWO_LORE_LINE_BG_2D') THEN
+      SELECT_USERFCN_2D = 8
+   ELSE IF(funcname.EQ.'TWO_LORE_LINE_BG_2D') THEN
+      SELECT_USERFCN_2D = 9
+   ELSE IF(funcname.EQ.'TWO_LORE_WF_LINE_BG_2D') THEN
+      SELECT_USERFCN_2D = 10
+   ELSE IF(funcname.EQ.'FOUR_LORE_WF_LINE_BG_2D') THEN
+      SELECT_USERFCN_2D = 11
+   ELSE IF(funcname.EQ.'TWO_VOIGT_LINE_BG_2D') THEN
+      SELECT_USERFCN_2D = 12
+   ELSE
+      WRITE(*,*) 'Selected function:', funcname
+      WRITE(*,*) 'Error in the function name def. in SELECT_USERFCN_2D'
+      WRITE(*,*) 'Check in the manual and in the input.dat file'
+      STOP
+   END IF
+   RETURN
+END
+
+REAL(8) FUNCTION USERFCN_2D(x,y,npar,val,funcid)
   ! Library of 2D functions
 
   IMPLICIT NONE
   REAL(8), INTENT(IN) :: x, y
   INTEGER(4), INTENT(IN) :: npar
   REAL(8), DIMENSION(npar), INTENT(IN) :: val
-  CHARACTER, INTENT(IN) :: funcname*64
+  INTEGER(4), INTENT(IN) :: funcid
   !
   REAL(8) :: GAUSS_SIMPLE_2D, GAUSS_BG_2D
   REAL(8) :: GAUSS_LINE_BG_2D, SUPERGAUSS_LINE_BG_2D
@@ -17,36 +58,34 @@ REAL(8) FUNCTION USERFCN_2D(x,y,npar,val,funcname)
   REAL(8) :: FOUR_LORE_WF_LINE_BG_2D
 
   ! Choose your model (see below for definition)
-  IF(funcname.EQ.'GAUSS_SIMPLE_2D') THEN
+  SELECT CASE (funcid)
+  CASE (0)
      USERFCN_2D = GAUSS_SIMPLE_2D(x,y,npar,val)
-  ELSE IF(funcname.EQ.'GAUSS_BG_2D') THEN
+  CASE(1)
      USERFCN_2D = GAUSS_BG_2D(x,y,npar,val)
-  ELSE IF(funcname.EQ.'GAUSS_LINE_BG_2D') THEN
+  CASE(2)
      USERFCN_2D = GAUSS_LINE_BG_2D(x,y,npar,val)
-  ELSE IF(funcname.EQ.'LORE_LINE_BG_2D') THEN
+  CASE(3)
      USERFCN_2D = LORE_LINE_BG_2D(x,y,npar,val)
-  ELSE IF(funcname.EQ.'VOIGT_LINE_BG_2D') THEN
+  CASE(4)
      USERFCN_2D = VOIGT_LINE_BG_2D(x,y,npar,val)
-  ELSE IF(funcname.EQ.'SUPERGAUSS_LINE_BG_2D') THEN
+  CASE(5)
      USERFCN_2D = SUPERGAUSS_LINE_BG_2D(x,y,npar,val)
-  ELSE IF(funcname.EQ.'ERFPEAK_LINE_BG_2D') THEN
+  CASE(6)
      USERFCN_2D = ERFPEAK_LINE_BG_2D(x,y,npar,val)
-  ELSE IF(funcname.EQ.'TWO_ERFPEAK_LINE_BG_2D') THEN
+  CASE(7)
      USERFCN_2D = TWO_ERFPEAK_LINE_BG_2D(x,y,npar,val)
-  ELSE IF(funcname.EQ.'TWO_LORE_LINE_BG_2D') THEN
+  CASE(8)
      USERFCN_2D = TWO_LORE_LINE_BG_2D(x,y,npar,val)
-  ELSE IF(funcname.EQ.'TWO_LORE_LINE_BG_2D') THEN
+  CASE(9)
      USERFCN_2D = TWO_LORE_LINE_BG_2D(x,y,npar,val)
-  ELSE IF(funcname.EQ.'TWO_LORE_WF_LINE_BG_2D') THEN
+  CASE(10)
      USERFCN_2D = TWO_LORE_WF_LINE_BG_2D(x,y,npar,val)
-  ELSE IF(funcname.EQ.'FOUR_LORE_WF_LINE_BG_2D') THEN
-     USERFCN_2D = FOUR_LORE_WF_LINE_BG_2D(x,y,npar,val)
-  ELSE
-     WRITE(*,*) 'Error in the function name def. in USERFCN_2D'
-     WRITE(*,*) 'Check in the manual and in the nf_input.dat file'
-     STOP
-  END IF
-
+   CASE(11)
+      USERFCN_2D = FOUR_LORE_WF_LINE_BG_2D(x,y,npar,val)
+   CASE(12)
+      USERFCN_2D = TWO_VOIGT_LINE_BG_2D(x,y,npar,val)
+  END SELECT
 
   RETURN
 
