@@ -316,18 +316,57 @@ CONTAINS
 
   !#####################################################################################################################
 
-
-
+#define DATA_IS_C   B'00000001'
+#define DATA_IS_E   B'00000010'
+#define DATA_IS_1D  B'00010000'
+#define DATA_IS_2D  B'00100000'
+#define DATA_IS_SET B'10000000'
+#define BIT_CHECK_IF(what) IAND(dataid, what).GT.0
+  
   SUBROUTINE INIT_FUNCTIONS()
     ! Subroutine to initialize the user functions and functions id
 
 
     INTEGER(4) :: SELECT_USERFCN, SELECT_USERFCN_SET
-         
+
+    ! Init the funcid for function names
     IF(set_yn.EQ.'n') THEN
        funcid = SELECT_USERFCN(funcname)
     ELSE
        funcid = SELECT_USERFCN_SET(funcname)
+    END IF
+
+    ! Init the dataid for data types !
+    ! ------------------------------ !
+    ! This integer works like this:  !
+    !  yn ud 2  1     ud ud e  c     !
+    !  b7 b6 b5 b4    b3 b2 b1 b0    !
+    !  ~~ ~~~~~~~~    ~~~~~~~~~~~    !
+    !  ^      ^            ^         !
+    ! set  Data dim    Data type     !
+    ! ------------------------------ !
+    ! ud = undefined (space for a 3d analysis [b6] and other distributions [b2, b3])
+    ! yn = 0/1 -> n/y
+    ! TODO: The e/c 1/2 could live in the same bit, making comparisons even faster
+    ! TODO: But there wouldn't be much space for working with other values in the future
+    
+    ! Is the data 1 or 2-D ?
+    IF(data_type(1:1).EQ.'1') THEN
+       dataid = IOR(dataid, DATA_IS_1D)
+    ELSE IF(data_type(1:1).EQ.'2') THEN
+       dataid = IOR(dataid, DATA_IS_2D)
+    END IF
+
+    ! Should we use a poisson distribution or do we have the error bars ?
+    IF(data_type(2:2).EQ.'c') THEN
+       dataid = IOR(dataid, DATA_IS_C)
+    ELSE IF(data_type(2:2).EQ.'e') THEN
+       dataid = IOR(dataid, DATA_IS_E)
+    END IF
+
+    ! Is this a set ?
+    IF(set_yn.EQ.'y'.OR.set_yn.EQ.'Y') THEN
+       dataid = IOR(dataid, DATA_IS_SET)
     END IF
 
     ! Initialise functions if needed
@@ -373,9 +412,9 @@ CONTAINS
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
 
     ncall=ncall+1
-    IF (data_type(1:1).EQ.'1') THEN
+    IF (BIT_CHECK_IF(DATA_IS_1D)) THEN
        LOGLIKELIHOOD = LOGLIKELIHOOD_1D(par)
-    ELSE IF (data_type(1:1).EQ.'2') THEN
+    ELSE IF (BIT_CHECK_IF(DATA_IS_2D)) THEN
        LOGLIKELIHOOD = LOGLIKELIHOOD_2D(par)
     END IF
 
@@ -459,10 +498,10 @@ CONTAINS
     ! Calculate LIKELIHOOD
     ll_tmp = 0.
 
-    IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
+    IF (.NOT.(BIT_CHECK_IF(DATA_IS_SET))) THEN
        ! No set --------------------------------------------------------------------------------------------------------
        k=1
-       IF (data_type.EQ.'1c') THEN
+       IF (BIT_CHECK_IF(DATA_IS_C)) THEN
           !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
           DO i=1, ndata_set(k)
              ! Poisson distribution calculation --------------------------------------------------
@@ -470,7 +509,7 @@ CONTAINS
              ll_tmp = ll_tmp + nc(i,k)*DLOG(enc) - enc
           END DO
           !$OMP END PARALLEL DO
-       ELSE IF (data_type.EQ.'1e') THEN
+       ELSE !IF (BIT_CHECK_IF(DATA_IS_E)) THEN
           !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
           DO i=1, ndata_set(k)
              ! Normal (Gaussian) distribution calculation --------------------------------------
@@ -482,7 +521,7 @@ CONTAINS
     ELSE
        ! Set ----------------------------------------------------------------------------------------------------------
        DO k=1,nset
-          IF (data_type.EQ.'1c') THEN
+          IF (BIT_CHECK_IF(DATA_IS_C)) THEN
              !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
              DO i=1, ndata_set(k)
                 ! Poisson distribution calculation --------------------------------------------------
