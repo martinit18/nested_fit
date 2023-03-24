@@ -321,7 +321,7 @@ CONTAINS
 #define DATA_IS_1D  B'00010000'
 #define DATA_IS_2D  B'00100000'
 #define DATA_IS_SET B'10000000'
-#define BIT_CHECK_IF(what) IAND(dataid, what).GT.0
+#define BIT_CHECK_IF(what) (IAND(dataid, what).GT.0)
   
   SUBROUTINE INIT_FUNCTIONS()
     ! Subroutine to initialize the user functions, functions id and data ids
@@ -363,7 +363,7 @@ CONTAINS
 
 
     ! Init the funcid for function names
-    IF(.NOT.(BIT_CHECK_IF(DATA_IS_SET))) THEN
+    IF(.NOT.BIT_CHECK_IF(DATA_IS_SET)) THEN
        IF(BIT_CHECK_IF(DATA_IS_1D)) THEN
           funcid = SELECT_USERFCN(funcname)
        ELSE
@@ -378,7 +378,7 @@ CONTAINS
     END IF
 
     ! Initialise functions if needed
-    IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
+    IF (.NOT.BIT_CHECK_IF(DATA_IS_SET)) THEN
        IF(funcname.EQ.'ROCKING_CURVE') THEN
           ! Passing as argument the smoothing factors to be adjusted case by case
           ! Suggestion for the values: s between m-sqrt(2*m),m+sqrt(2*m)
@@ -425,7 +425,7 @@ CONTAINS
     ELSE IF (BIT_CHECK_IF(DATA_IS_2D)) THEN
        LOGLIKELIHOOD = LOGLIKELIHOOD_2D(par)
     END IF
-    
+
   END FUNCTION LOGLIKELIHOOD
 
   !#####################################################################################################################
@@ -441,12 +441,12 @@ CONTAINS
     REAL(8) :: USERFCN, USERFCN_SET, USERFCN_2D, xx, yy
 
     ncall=ncall+1
-    IF (data_type.EQ.'1c') THEN
+    IF (BIT_CHECK_IF(DATA_IS_C).AND.BIT_CHECK_IF(DATA_IS_1D)) THEN
        ! Check if the choosen function assumes zero or negative values
        DO k=1,nset
           DO i=1, ndata_set(k)
              ! Poisson distribution calculation --------------------------------------------------
-             IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
+             IF (.NOT.BIT_CHECK_IF(DATA_IS_SET)) THEN
                 enc = USERFCN(x(i,k),npar,par,funcid)
              ELSE
                 enc = USERFCN_SET(x(i,k),npar,par,funcid,k)
@@ -455,14 +455,14 @@ CONTAINS
                 WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
                 WRITE(*,*) 'number of counts different from 0, model prediction equal 0 or less'
                 WRITE(*,*) 'Function value = ', enc, ' n. counts = ', nc(i,k)
-                STOP
+                STOP ! TODO: Handle all of these errors for the case of MPI
              END IF
           END DO
        END DO
        LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_1D(par)
-    ELSE IF (data_type.EQ.'1e') THEN
-      LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_1D(par)
-    ELSE IF (data_type.EQ.'2c') THEN
+    ELSE IF (BIT_CHECK_IF(DATA_IS_E).AND.BIT_CHECK_IF(DATA_IS_1D)) THEN
+       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_1D(par)
+    ELSE IF (BIT_CHECK_IF(DATA_IS_C).AND.BIT_CHECK_IF(DATA_IS_2D)) THEN
        ! Check if the choosen function assumes zero or negative values
        DO i=1, nx
           DO j=1, ny
@@ -478,8 +478,8 @@ CONTAINS
           END DO
        END DO
        LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_2D(par)
-    ELSE IF (data_type.EQ.'2e') THEN
-      LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_2D(par)
+    ELSE IF (BIT_CHECK_IF(DATA_IS_E).AND.BIT_CHECK_IF(DATA_IS_2D)) THEN
+       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_2D(par)
 
     END IF
 
@@ -504,7 +504,7 @@ CONTAINS
     ! Calculate LIKELIHOOD
     ll_tmp = 0.
 
-    IF (.NOT.(BIT_CHECK_IF(DATA_IS_SET))) THEN
+    IF (.NOT.BIT_CHECK_IF(DATA_IS_SET)) THEN
        ! No set --------------------------------------------------------------------------------------------------------
        k=1
        IF (BIT_CHECK_IF(DATA_IS_C)) THEN
