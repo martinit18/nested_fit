@@ -30,6 +30,7 @@ MODULE MOD_PARAMETERS
 
   ! Calculated variables
   INTEGER(4) :: funcid=0
+  INTEGER(4) :: dataid=0
 
 
   COMMON /func_exp/ lr

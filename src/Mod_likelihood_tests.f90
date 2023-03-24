@@ -2,19 +2,9 @@ MODULE MOD_LIKELIHOOD
   ! Automatic Time-stamp: <Last changed by martino on Monday 03 May 2021 at CEST 13:23:14>
   ! Module of likelihood test function, no real data are involved here
 
-
-
   !#####################################################################################################################
 
-  ! IMPORTANT: to switch between likelihood types for test and others,
-  ! change the name of the file to compile in the Makefile,
-  ! Mod_likeihood.f90 or Mod_likeihood_tests.f90
-
-  !#####################################################################################################################
-
-  !#####################################################################################################################
-
-  ! OTHER IMPORTANT NOTE: because of the intrinsic construction of nested samplig, change of range can change the result
+  ! IMPORTANT NOTE: because of the intrinsic construction of nested samplig, change of range can change the result
   ! It is the case also in Polychord. In polychord you change the sigma, it is not changing the result. In Nested Fit,
   ! the search algorithm has to be optimized. FA CACARE!!!! NON FUNZIONA !!!!?????
 
@@ -22,7 +12,7 @@ MODULE MOD_LIKELIHOOD
 
 
   ! Module for the input parameter definition
-  USE MOD_PARAMETERS, ONLY: npar, funcname
+  USE MOD_PARAMETERS, ONLY: npar, funcname, funcid
 
   IMPLICIT NONE
   INTEGER(8) :: ncall=0
@@ -39,6 +29,8 @@ CONTAINS
     !IF (funcname.eq.'TEST_ROSENBROCK') THEN
     !   CALL INIT_ROSENBROCK()
     !END IF
+    
+    funcid = SELECT_LIKELIHOODFCN(funcname)
 
   END SUBROUTINE INIT_LIKELIHOOD
 
@@ -56,7 +48,36 @@ CONTAINS
   END FUNCTION LOGLIKELIHOOD_WITH_TEST
 
   !------------------------------------------------------------------------------------------------------------------------
+  ! TODO(Cesar): In reality this should be in another file, but I am following the previous "rules"...
+  FUNCTION SELECT_LIKELIHOODFCN(funcname)
+    IMPLICIT NONE
+    INTEGER*4 SELECT_LIKELIHOODFCN
+    CHARACTER*64 funcname
 
+    IF (funcname.eq.'TEST_SIMPLE_GAUSS') THEN
+      SELECT_LIKELIHOODFCN = 0
+    ELSE IF (funcname.eq.'TEST_GAUSS') THEN
+      SELECT_LIKELIHOODFCN = 1
+    ELSE IF (funcname.eq.'TEST_GAUSSIAN_SHELLS') THEN
+      SELECT_LIKELIHOODFCN = 2
+    ELSE IF (funcname.eq.'TEST_EGGBOX') THEN
+      SELECT_LIKELIHOODFCN = 3
+    ELSE IF (funcname.eq.'TEST_ROSENBROCK') THEN
+      SELECT_LIKELIHOODFCN = 4
+    ELSE IF (funcname.eq.'TEST_GAUSS_WITH_CORRELATION') THEN
+      SELECT_LIKELIHOODFCN = 5
+    ELSE IF(funcname.eq.'ENERGY_HARM_3D') THEN
+      SELECT_LIKELIHOODFCN = 6
+    ELSE IF(funcname.eq.'TEST_LOGGAMMA') THEN
+      SELECT_LIKELIHOODFCN = 7
+    ELSE
+       WRITE(*,*) 'Error of the function name in Mod_likelihood_test module'
+       WRITE(*,*) 'Check the manual and the input file'
+       STOP
+    END IF
+
+    RETURN
+  END
 
   REAL(8) FUNCTION LOGLIKELIHOOD(par)
     ! Main likelihood function
@@ -66,27 +87,24 @@ CONTAINS
     ncall = ncall + 1
 
     ! Select the test function
-    IF (funcname.eq.'TEST_SIMPLE_GAUSS') THEN
+    SELECT CASE (funcid)
+    CASE (0)
        LOGLIKELIHOOD = TEST_SIMPLE_GAUSS(par)
-    ELSE IF (funcname.eq.'TEST_GAUSS') THEN
+    CASE (1)
        LOGLIKELIHOOD = TEST_GAUSS(par)
-    ELSE IF (funcname.eq.'TEST_GAUSSIAN_SHELLS') THEN
+    CASE (2)
        LOGLIKELIHOOD = TEST_GAUSSIAN_SHELLS(par)
-    ELSE IF (funcname.eq.'TEST_EGGBOX') THEN
+    CASE (3)
        LOGLIKELIHOOD = TEST_EGGBOX(par)
-    ELSE IF (funcname.eq.'TEST_ROSENBROCK') THEN
+    CASE (4)
        LOGLIKELIHOOD = TEST_ROSENBROCK(par)
-    ELSE IF (funcname.eq.'TEST_GAUSS_WITH_CORRELATION') THEN
-       LOGLIKELIHOOD=TEST_GAUSS_WITH_CORRELATION(par)
-    ELSE IF(funcname.eq.'ENERGY_HARM_3D') THEN
-       LOGLIKELIHOOD=ENERGY_HARM_3D(par)
-    ELSE IF(funcname.eq.'TEST_LOGGAMMA') THEN
-       LOGLIKELIHOOD=TEST_LOGGAMMA(par)
-    ELSE
-       WRITE(*,*) 'Error of the function name in Mod_likelihood_test module'
-       WRITE(*,*) 'Check the manual and the input file'
-       STOP
-    END IF
+    CASE (5)
+       LOGLIKELIHOOD = TEST_GAUSS_WITH_CORRELATION(par)
+    CASE (6)
+       LOGLIKELIHOOD = ENERGY_HARM_3D(par)
+    CASE (7)
+       LOGLIKELIHOOD = TEST_LOGGAMMA(par)
+    END SELECT
 
 
   END FUNCTION LOGLIKELIHOOD

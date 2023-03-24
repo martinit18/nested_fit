@@ -316,22 +316,69 @@ CONTAINS
 
   !#####################################################################################################################
 
-
-
+#define DATA_IS_C   B'00000001'
+#define DATA_IS_E   B'00000010'
+#define DATA_IS_1D  B'00010000'
+#define DATA_IS_2D  B'00100000'
+#define DATA_IS_SET B'10000000'
+#define BIT_CHECK_IF(what) (IAND(dataid, what).GT.0)
+  
   SUBROUTINE INIT_FUNCTIONS()
-    ! Subroutine to initialize the user functions and functions id
+    ! Subroutine to initialize the user functions, functions id and data ids
+
+    INTEGER(4) :: SELECT_USERFCN, SELECT_USERFCN_SET, SELECT_USERFCN_2D
+
+    ! Init the dataid for data types !
+    ! ------------------------------ !
+    ! This integer works like this:  !
+    !  yn ud 2  1     ud ud e  c     !
+    !  b7 b6 b5 b4    b3 b2 b1 b0    !
+    !  ~~ ~~~~~~~~    ~~~~~~~~~~~    !
+    !  ^      ^            ^         !
+    ! set  Data dim    Data type     !
+    ! ------------------------------ !
+    ! ud = undefined (space for a 3d analysis [b6] and other distributions [b2, b3])
+    ! yn = 0/1 -> n/y
+    ! TODO(Cesar): The e/c 1/2 could live in the same bit, making comparisons even faster
+    ! TODO(Cesar): But there wouldn't be much space for working with other values in the future
+    
+    ! Is the data 1 or 2-D ?
+    IF(data_type(1:1).EQ.'1') THEN
+       dataid = IOR(dataid, DATA_IS_1D)
+    ELSE IF(data_type(1:1).EQ.'2') THEN
+       dataid = IOR(dataid, DATA_IS_2D)
+    END IF
+
+    ! Should we use a poisson distribution or do we have the error bars ?
+    IF(data_type(2:2).EQ.'c') THEN
+       dataid = IOR(dataid, DATA_IS_C)
+    ELSE IF(data_type(2:2).EQ.'e') THEN
+       dataid = IOR(dataid, DATA_IS_E)
+    END IF
+
+    ! Is this a set ?
+    IF(set_yn.EQ.'y'.OR.set_yn.EQ.'Y') THEN
+       dataid = IOR(dataid, DATA_IS_SET)
+    END IF
 
 
-    INTEGER(4) :: SELECT_USERFCN, SELECT_USERFCN_SET
-         
-    IF(set_yn.EQ.'n') THEN
-       funcid = SELECT_USERFCN(funcname)
+    ! Init the funcid for function names
+    IF(.NOT.BIT_CHECK_IF(DATA_IS_SET)) THEN
+       IF(BIT_CHECK_IF(DATA_IS_1D)) THEN
+          funcid = SELECT_USERFCN(funcname)
+       ELSE
+          funcid = SELECT_USERFCN_2D(funcname)
+       END IF
     ELSE
+       IF(BIT_CHECK_IF(DATA_IS_2D)) THEN
+          WRITE(*,*) 'Sets for 2D functions are not yet implemented.'
+          STOP
+       END IF
        funcid = SELECT_USERFCN_SET(funcname)
     END IF
 
     ! Initialise functions if needed
-    IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
+    IF (.NOT.BIT_CHECK_IF(DATA_IS_SET)) THEN
        IF(funcname.EQ.'ROCKING_CURVE') THEN
           ! Passing as argument the smoothing factors to be adjusted case by case
           ! Suggestion for the values: s between m-sqrt(2*m),m+sqrt(2*m)
@@ -373,13 +420,11 @@ CONTAINS
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
 
     ncall=ncall+1
-    IF (data_type(1:1).EQ.'1') THEN
+    IF (BIT_CHECK_IF(DATA_IS_1D)) THEN
        LOGLIKELIHOOD = LOGLIKELIHOOD_1D(par)
-    ELSE IF (data_type(1:1).EQ.'2') THEN
+    ELSE IF (BIT_CHECK_IF(DATA_IS_2D)) THEN
        LOGLIKELIHOOD = LOGLIKELIHOOD_2D(par)
     END IF
-
-
 
   END FUNCTION LOGLIKELIHOOD
 
@@ -396,12 +441,12 @@ CONTAINS
     REAL(8) :: USERFCN, USERFCN_SET, USERFCN_2D, xx, yy
 
     ncall=ncall+1
-    IF (data_type.EQ.'1c') THEN
+    IF (BIT_CHECK_IF(DATA_IS_C).AND.BIT_CHECK_IF(DATA_IS_1D)) THEN
        ! Check if the choosen function assumes zero or negative values
        DO k=1,nset
           DO i=1, ndata_set(k)
              ! Poisson distribution calculation --------------------------------------------------
-             IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
+             IF (.NOT.BIT_CHECK_IF(DATA_IS_SET)) THEN
                 enc = USERFCN(x(i,k),npar,par,funcid)
              ELSE
                 enc = USERFCN_SET(x(i,k),npar,par,funcid,k)
@@ -410,14 +455,14 @@ CONTAINS
                 WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
                 WRITE(*,*) 'number of counts different from 0, model prediction equal 0 or less'
                 WRITE(*,*) 'Function value = ', enc, ' n. counts = ', nc(i,k)
-                STOP
+                STOP ! TODO(Cesar): Handle all of these errors for the case of MPI
              END IF
           END DO
        END DO
        LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_1D(par)
-    ELSE IF (data_type.EQ.'1e') THEN
-      LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_1D(par)
-    ELSE IF (data_type.EQ.'2c') THEN
+    ELSE IF (BIT_CHECK_IF(DATA_IS_E).AND.BIT_CHECK_IF(DATA_IS_1D)) THEN
+       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_1D(par)
+    ELSE IF (BIT_CHECK_IF(DATA_IS_C).AND.BIT_CHECK_IF(DATA_IS_2D)) THEN
        ! Check if the choosen function assumes zero or negative values
        DO i=1, nx
           DO j=1, ny
@@ -433,8 +478,8 @@ CONTAINS
           END DO
        END DO
        LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_2D(par)
-    ELSE IF (data_type.EQ.'2e') THEN
-      LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_2D(par)
+    ELSE IF (BIT_CHECK_IF(DATA_IS_E).AND.BIT_CHECK_IF(DATA_IS_2D)) THEN
+       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_2D(par)
 
     END IF
 
@@ -459,10 +504,10 @@ CONTAINS
     ! Calculate LIKELIHOOD
     ll_tmp = 0.
 
-    IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
+    IF (.NOT.BIT_CHECK_IF(DATA_IS_SET)) THEN
        ! No set --------------------------------------------------------------------------------------------------------
        k=1
-       IF (data_type.EQ.'1c') THEN
+       IF (BIT_CHECK_IF(DATA_IS_C)) THEN
           !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
           DO i=1, ndata_set(k)
              ! Poisson distribution calculation --------------------------------------------------
@@ -470,7 +515,7 @@ CONTAINS
              ll_tmp = ll_tmp + nc(i,k)*DLOG(enc) - enc
           END DO
           !$OMP END PARALLEL DO
-       ELSE IF (data_type.EQ.'1e') THEN
+       ELSE !IF (BIT_CHECK_IF(DATA_IS_E)) THEN
           !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
           DO i=1, ndata_set(k)
              ! Normal (Gaussian) distribution calculation --------------------------------------
@@ -482,7 +527,7 @@ CONTAINS
     ELSE
        ! Set ----------------------------------------------------------------------------------------------------------
        DO k=1,nset
-          IF (data_type.EQ.'1c') THEN
+          IF (BIT_CHECK_IF(DATA_IS_C)) THEN
              !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
              DO i=1, ndata_set(k)
                 ! Poisson distribution calculation --------------------------------------------------
@@ -531,7 +576,7 @@ CONTAINS
           ! Poisson distribution calculation --------------------------------------------------
           xx = i - 0.5 + xmin(k) ! Real coordinates are given by the bins, the center of the bin.
           yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin
-          enc = USERFCN_2D(xx,yy,npar,par,funcname)
+          enc = USERFCN_2D(xx,yy,npar,par,funcid)
           ll_tmp = ll_tmp + adata_mask(i,j)*(adata(i,j)*DLOG(enc) - enc)
        END DO
     END DO
