@@ -339,8 +339,8 @@ CONTAINS
     ! ------------------------------ !
     ! ud = undefined (space for a 3d analysis [b6] and other distributions [b2, b3])
     ! yn = 0/1 -> n/y
-    ! TODO: The e/c 1/2 could live in the same bit, making comparisons even faster
-    ! TODO: But there wouldn't be much space for working with other values in the future
+    ! TODO(Cesar): The e/c 1/2 could live in the same bit, making comparisons even faster
+    ! TODO(Cesar): But there wouldn't be much space for working with other values in the future
     
     ! Is the data 1 or 2-D ?
     IF(data_type(1:1).EQ.'1') THEN
@@ -455,7 +455,7 @@ CONTAINS
                 WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
                 WRITE(*,*) 'number of counts different from 0, model prediction equal 0 or less'
                 WRITE(*,*) 'Function value = ', enc, ' n. counts = ', nc(i,k)
-                STOP ! TODO: Handle all of these errors for the case of MPI
+                STOP ! TODO(Cesar): Handle all of these errors for the case of MPI
              END IF
           END DO
        END DO

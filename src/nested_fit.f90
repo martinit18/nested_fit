@@ -273,7 +273,7 @@ PROGRAM NESTED_FIT
          IF (par_bnd1(i).GE.par_bnd2(i)) THEN
             WRITE(*,*) 'Bad limits in parameter n.', i, ' (low bound1 >= high bound!!!) Change it and restart'
             WRITE(*,*) 'Low bound:',par_bnd1(i), 'High bound:', par_bnd2(i)
-            ! TODO: Change this to work with defines instead
+            ! TODO(Cesar): Change this to work with defines instead
             IF(parallel_mpi_on) THEN
                CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
             ENDIF

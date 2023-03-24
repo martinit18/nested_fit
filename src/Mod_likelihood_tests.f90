@@ -2,19 +2,9 @@ MODULE MOD_LIKELIHOOD
   ! Automatic Time-stamp: <Last changed by martino on Monday 03 May 2021 at CEST 13:23:14>
   ! Module of likelihood test function, no real data are involved here
 
-
-
   !#####################################################################################################################
 
-  ! IMPORTANT: to switch between likelihood types for test and others,
-  ! change the name of the file to compile in the Makefile,
-  ! Mod_likeihood.f90 or Mod_likeihood_tests.f90
-
-  !#####################################################################################################################
-
-  !#####################################################################################################################
-
-  ! OTHER IMPORTANT NOTE: because of the intrinsic construction of nested samplig, change of range can change the result
+  ! IMPORTANT NOTE: because of the intrinsic construction of nested samplig, change of range can change the result
   ! It is the case also in Polychord. In polychord you change the sigma, it is not changing the result. In Nested Fit,
   ! the search algorithm has to be optimized. FA CACARE!!!! NON FUNZIONA !!!!?????
 
@@ -56,7 +46,7 @@ CONTAINS
   END FUNCTION LOGLIKELIHOOD_WITH_TEST
 
   !------------------------------------------------------------------------------------------------------------------------
-
+  ! TODO(Cesar): In reality this should be in another file, but I am following the previous "rules"
 
   REAL(8) FUNCTION LOGLIKELIHOOD(par)
     ! Main likelihood function
