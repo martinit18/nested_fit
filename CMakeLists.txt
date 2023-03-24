@@ -201,7 +201,7 @@ else()
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${nested_fit_target}> $ENV{HOME}/bin)
 
     add_custom_command(TARGET ${nested_fit_target_func} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${nested_fit_target}_func> $ENV{HOME}/bin)
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${nested_fit_target_func}> $ENV{HOME}/bin)
 
     # Since we do this for the nested fit executable, why not put the latest nested_res_* file in the bin
     # At least while we don't have a custom python caller script
