@@ -468,7 +468,7 @@ CONTAINS
           DO j=1, ny
              xx = i - 0.5 + xmin(k) ! Real coordinates are given by the bins, the center of the bin.
              yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin
-             enc = USERFCN_2D(xx,yy,npar,par,funcname)
+             enc = USERFCN_2D(xx,yy,npar,par,funcid)
              IF (enc.LE.0) THEN
                 WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
                 WRITE(*,*) 'number of counts different from 0, model prediction equal 0 or less'
@@ -867,7 +867,7 @@ CONTAINS
                 IF (adata(i,j).GE.0) THEN
                    ! Poisson distribution calculation --------------------------------------------------
                    yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin
-                   aenc(i,j) = USERFCN_2D(xx,yy,npar,live_max,funcname)
+                   aenc(i,j) = USERFCN_2D(xx,yy,npar,live_max,funcid)
                    ares(i,j) = adata(i,j) - aenc(i,j)
                    IF (INDEX(funcname,"_LINE").NE.0) THEN
                       ix = CEILING(xx - b*(yy-y0) - c*(yy-y0)**2 - xmin(k))
@@ -901,7 +901,7 @@ CONTAINS
              WRITE(40,*)'# x    y fit'
              DO i=1, maxfit
                 xfit = minx + (i-1)*dx
-                yfit = Dy*USERFCN_2D(xfit,y0,npar,live_max,funcname)
+                yfit = Dy*USERFCN_2D(xfit,y0,npar,live_max,funcid)
                 WRITE(40,*) xfit, yfit
              ENDDO
              CLOSE(40)

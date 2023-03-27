@@ -9,7 +9,7 @@ set(nested_res_name nested_res_V4p3.py)
 
 # The nested_fit version being built -> This gets copied everywhere inside the project code
 # For more info see the 'src/Mod_metadata.f90.in' file
-set(project_version 4.4.0)
+set(project_version 4.4.1)
 
 # Global options
 option(DEBUG "Enable debug mode." OFF)
@@ -70,7 +70,7 @@ set(SRC_FILES_DATA
 )
 
 set(SRC_FILES_FUNC
-    src/Mod_likelihood_tests.f90
+    src/Mod_likelihood_func.f90
 )
 
 set(CHILD_SRC_FILES

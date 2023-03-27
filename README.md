@@ -28,6 +28,11 @@ email: m.trassinelli AT gmail.com
 Lune Maillard\
 Institute of NanoSciences of Paris, Sorbonne Université, CNRS\
 email: lune.maillard AT insp.upmc.fr
+
+César Godinho\
+LIBPhys / University of Nova de Lisboa\
+email: c.godinho AT campus.fct.unl.pt
+
 ## Installation instructions ##
 **Prerequisite**:
 - CMake
@@ -250,7 +255,6 @@ In addition to the original files from the main author (M. Trassinelli), nesed_f
 
 - Anna Lévy (photoemission spectra models)
 - Nancy Paul (rocking curves and Bragg spectrometer lines)
-- César Godinho (performance optimization and build system refactoring)
 
 ### Thanks for bugs corrections
 (alphabetical order)
