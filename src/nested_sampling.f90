@@ -4,7 +4,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   !$ USE OMP_LIB
 
   ! Parameter module
-  USE MOD_PARAMETERS, ONLY:  nlive, evaccuracy, search_par2, npar, par_in, par_step, par_bnd1, par_bnd2, par_fix, nth
+  USE MOD_PARAMETERS, ONLY:  nlive, evaccuracy, search_par2, npar, par_in, par_step, par_bnd1, &
+              par_bnd2, par_fix, nth, search_method, cluster_yn, maxtries, maxntries
   ! Module for likelihood
   USE MOD_LIKELIHOOD
   ! Module for searching new live points
@@ -49,6 +50,9 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   ! Rest
   INTEGER(4) :: j, l, n, jlim, it
   REAL(8) :: ADDLOG, RANDN, rn
+  LOGICAL :: make_cluster, need_cluster
+  INTEGER(4) :: n_call_cluster, n_call_cluster_it
+  INTEGER(4), PARAMETER :: n_call_cluster_it_max=3, n_call_cluster_max=10
 
   EXTERNAL :: SORTN
 
@@ -75,6 +79,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   tlnrest = 0.
   evstep = 0.
   nstep = maxstep - nlive + 1
+  n_call_cluster=0
+  n_call_cluster_it=0
   !maxtries = 50*njump ! Accept an efficiency of more than 2% for the exploration, otherwise change something
 
   ALLOCATE(live_like_new(nth),live_new(nth,npar),too_many_tries(nth),icluster(nth))
@@ -82,6 +88,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   live_like_new = 0.
   icluster = 0
   too_many_tries = .false.
+  make_cluster=.false.
+  need_cluster=.false.
 
   ! ---------- Inintial live points sorting ------------------------------------------------
   WRITE(*,*) 'Sorting live points. N. of points = ', nlive
@@ -191,11 +199,24 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 
      ! ##########################################################################
      ! Find a new live point
-     
+      
+901   IF(make_cluster) THEN
+         WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
+         CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
+         cluster_on = .true.
+         make_cluster=.false.
+         IF(need_cluster) THEN
+            n_call_cluster_it=n_call_cluster_it+1
+            n_call_cluster=n_call_cluster+1
+            need_cluster=.false.
+         END IF
+    !         n_ntries = 0
+      END IF
+      
       it = 1
       !!$OMP DO SCHEDULE(STATIC) LASTPRIVATE(ntries) 
-      !$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) FIRSTPRIVATE(ntries) PRIVATE(p_cluster,too_many_tries) &
-        !$OMP SHARED(n,itry,min_live_like,live_like,live,nth,live_like_new,live_new,icluster) LASTPRIVATE(ntries)  
+      !$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) FIRSTPRIVATE(ntries) PRIVATE(p_cluster) &
+        !$OMP SHARED(n,itry,min_live_like,live_like,live,nth,live_like_new,live_new,icluster,too_many_tries) LASTPRIVATE(ntries)  
       DO it=1,nth
          !write(*,*) 'here', OMP_GET_THREAD_NUM(), it, min_live_like,live_like(1),live(1,1)
          CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
@@ -205,21 +226,65 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
       !$OMP END PARALLEL DO
       !!$OMP END DO
       
+      !IF(MOD(n,100)==0) WRITE(*,*) too_many_tries, ANY(too_many_tries)
 
-     IF (ANY(too_many_tries)) THEN
-        nstep_final = n - 1
-        GOTO 601
+     !IF (ANY(too_many_tries)) THEN
+     !   nstep_final = n - 1
+     !   GOTO 601
+     !END IF
+     IF(ANY(too_many_tries)) THEN
+        IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+           IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
+              WRITE(*,*) 'Too many cluster analysis for an iteration'
+              WRITE(*,*) 'Change cluster recognition parameters'
+              STOP
+           END IF
+           IF(n_call_cluster>=n_call_cluster_max) THEN
+              WRITE(*,*) 'Too many cluster analysis'
+              WRITE(*,*) 'Change cluster recognition parameters'
+              STOP
+           END IF
+           make_cluster=.true.
+           need_cluster=.true.
+        ELSE
+           WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries*maxntries
+           WRITE(*,*) 'We take the data as they are :-~'
+           nstep_final = n - 1
+           GOTO 601
+        END IF
+     ELSE IF(ALL(too_many_tries)) THEN
+        IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+           IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
+              WRITE(*,*) 'Too many cluster analysis for an iteration'
+              WRITE(*,*) 'Change cluster recognition parameters'
+              STOP
+           END IF
+           IF(n_call_cluster>=n_call_cluster_max) THEN
+              WRITE(*,*) 'Too many cluster analysis'
+              WRITE(*,*) 'Change cluster recognition parameters'
+              STOP
+           END IF
+           make_cluster=.true.
+           need_cluster=.true.
+           GOTO 901
+        ELSE
+           WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries
+           WRITE(*,*) 'We take the data as they are :-~'
+           nstep_final = n - 1
+           GOTO 601
+        END IF
      END IF
      ! ##########################################################################
 
      DO it = 1, nth
-
+        
         ! If the parallely computed live point is not good anymore, skip it.
         ! Otherwise take it for loop calculation
-        IF ((it.GT.1).AND.(live_like_new(it).LE.min_live_like)) THEN
+        IF ((it.GE.1).AND.(live_like_new(it).LE.min_live_like)) THEN !(it.GT.1)
            CYCLE
         ELSE
            n = n +1
+           n_call_cluster_it=0
         ENDIF
 
         ! Calculate steps, mass and rest each time
@@ -267,6 +332,14 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 
         ! Present minimal value of the likelihood
         min_live_like = live_like(1)
+
+        IF(search_method.EQ.'SLICE_SAMPLING' .OR. search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
+           IF(cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+              IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
+                 make_cluster=.true.
+              END IF
+          END IF
+        END IF
 
         ! Assign to the new point, the same cluster number of the start point
         IF (cluster_on) THEN
