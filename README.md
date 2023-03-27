@@ -30,7 +30,7 @@ Institute of NanoSciences of Paris, Sorbonne Université, CNRS\
 email: lune.maillard AT insp.upmc.fr
 
 César Godinho\
-LIBPhys / University of Nova de Lisboa\
+LIBPhys / NOVA University of Lisbon\
 email: c.godinho AT campus.fct.unl.pt
 
 ## Installation instructions ##
