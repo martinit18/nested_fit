@@ -9,7 +9,7 @@ set(failRegex "Test FAIL")
 
 function(add_test_dir tname)
     add_test(
-        NAME ${tname} 
+        NAME ${tname}
         COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/testing.py ${tname} ${nested_fit_target} 
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${tname}/
     )
@@ -18,12 +18,10 @@ function(add_test_dir tname)
     set_property(TEST ${tname} PROPERTY FAIL_REGULAR_EXPRESSION "${failRegex}")
 
     if(AUTOTESTS)
-        add_custom_command(
-            TARGET ${tname}
-            COMMENT "Run test -> ${tname}"
-            POST_BUILD 
+        add_custom_target(test_${tname} ALL
             COMMAND ${CMAKE_CTEST_COMMAND} -C $<CONFIGURATION> -R "^${tname}$" --output-on-failures
         )
+        add_dependencies(test_${tname} ${nested_fit_target} ${nested_fit_target_func})
     endif()
 endfunction()
 
@@ -35,5 +33,5 @@ set_property(TEST expect PROPERTY PASS_REGULAR_EXPRESSION "Test FAIL -> 3/4 pass
 
 
 # Add test directories
-# add_test_dir(4gauss_bg)
+add_test_dir(4gauss_bg)
 add_test_dir(gauss_bg)
