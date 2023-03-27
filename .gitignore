@@ -1,8 +1,16 @@
+# Mac stuff
 **/.DS_Store
 .DS_Store
+
+# Build files and objects
 *.o
 *.mod
 build/
 bin/
+
+# vscode settings
 .vscode/
+
+# tests / manual run output files
 nf_output_*
+n_likelihood_calls.txt
