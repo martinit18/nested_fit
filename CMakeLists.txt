@@ -14,7 +14,6 @@ set(project_version 4.4.1)
 # Global options
 option(DEBUG "Enable debug mode." OFF)
 option(NORNG "Uses the same set seed. Useful for testing." OFF)
-
 option(OPENMP "Enable/Disable OpenMP." OFF)
 option(OPENMPI "Enable/Disable OpenMPI." OFF)
 option(AUTOTESTS "Automatically run tests after compiling." OFF)
@@ -113,19 +112,18 @@ set(CFG_FILES
     ${CMAKE_CURRENT_BINARY_DIR}/Mod_metadata.f90
 )
 
-# HACK(César): This is assuming we are using gfortran!
+# TODO(César): This assumes we are using gfortran!
 if(DEBUG)
     message(STATUS "Configuring for Debug")
     set(SRC_FLAGS "-cpp -O0 -g -ffree-line-length-0")
 else()
     message(STATUS "Configuring for Release")
     set(SRC_FLAGS "-cpp -O3 -static -ffree-line-length-0")
+endif()
 
-    # NOTE(César): Enable OpenMP only on release (Assuming we want to debug one thread only for now).
-    # TODO(César): OpenMP should be a link only flag, no?
-    if(OPENMP)
-        set(SRC_FLAGS "${SRC_FLAGS} -fopenmp")
-    endif()
+# NOTE(César): This is required to preprocessor the OpenMP comments
+if(OPENMP)
+    set(SRC_FLAGS "${SRC_FLAGS} -fopenmp")
 endif()
 
 set_source_files_properties(${SRC_CALGO} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
@@ -158,34 +156,36 @@ add_executable(${nested_fit_target_func}
     ${SRC_FILES_FUNC}
 )
 
-if(OPENMPI)
-    add_executable(${nested_fit_mpi_child_comm_proc_name}
-        ${CFG_FILES}
-        ${CHILD_SRC_FILES}
-    )
-endif()
-
 if(OPENMP)
     target_link_options(${nested_fit_target}      PRIVATE "-fopenmp")
     target_link_options(${nested_fit_target_func} PRIVATE "-fopenmp")
 endif()
 
-# TODO(César): MPI is needed even for non-MPI builds, since the source code is runtime selecting mpi funcitonality based on a PARAMETER
-# This needs a fix!!!!
 # Find MPI
-find_package(MPI REQUIRED)
-if(MPI_FOUND)
-    if(MPI_Fortran_HAVE_F90_MODULE)
-        target_link_libraries(${nested_fit_target}      PUBLIC MPI::MPI_Fortran)
-        target_link_libraries(${nested_fit_target_func} PUBLIC MPI::MPI_Fortran)
-        if(OPENMPI)
+if(OPENMPI)
+    # Set the OPENMPI_ON flag for the preprocessor
+    target_compile_definitions(${nested_fit_target}      PUBLIC -DOPENMPI_ON)
+    target_compile_definitions(${nested_fit_target_func} PUBLIC -DOPENMPI_ON)
+
+    # Add the required console writter (monitor) executable
+    # This runs on a separate OpenMPI COMM
+    add_executable(${nested_fit_mpi_child_comm_proc_name}
+        ${CFG_FILES}
+        ${CHILD_SRC_FILES}
+    )
+
+    find_package(MPI REQUIRED)
+    if(MPI_FOUND)
+        if(MPI_Fortran_HAVE_F90_MODULE)
+            target_link_libraries(${nested_fit_target}                   PUBLIC MPI::MPI_Fortran)
+            target_link_libraries(${nested_fit_target_func}              PUBLIC MPI::MPI_Fortran)
             target_link_libraries(${nested_fit_mpi_child_comm_proc_name} PUBLIC MPI::MPI_Fortran)
+        else()
+            message(FATAL_ERROR "This project requires the MPI Fortran 90 module.")
         endif()
     else()
-        message(ERROR "This project requires the MPI Fortran 90 module.")
+        message(FATAL_ERROR "OpenMPI option specified, but could not find the MPI package.")
     endif()
-else()
-    message(ERROR "OpenMPI option specified, but could not find the MPI package.")
 endif()
 
 # NOTE(César): Don't run these commands for the Windows build.
@@ -193,7 +193,7 @@ if(WIN32)
     # TODO(César): Create a automatic configuration for Windows as well
     message(WARNING "Configuring for Windows. The executable and python library must be manually copied somewhere and added to the PATH.")
     message(WARNING "--- Future fix ---")
-    message(FATAL_ERROR "Windows build do not support MPI. Current builds are not possible without MPI.")
+    message(WARNING "Windows builds do not support MPI.")
 else()
     # Install would work well here but lets keep the same copy-after-build scheme of the original makefile
     # TODO(César): Maybe use install later on

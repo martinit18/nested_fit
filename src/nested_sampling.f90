@@ -8,8 +8,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   !!USE OMP_LIB
   !USE RNG
 
+#ifdef OPENMPI_ON
   USE MPI
   USE MOD_MPI
+#endif
 
   ! Additional math module
   USE MOD_MATH
@@ -74,7 +76,9 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   INTEGER(4) :: processor_name_size
   INTEGER(4) :: mpi_ierror
   INTEGER(4) :: mpi_child_spawn_error(1)
+#ifdef OPENMPI_ON
   character(LEN=MPI_MAX_PROCESSOR_NAME) :: processor_name
+#endif
   CHARACTER :: info_string*256
   CHARACTER :: lines*20
   
@@ -152,9 +156,9 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
      WRITE(*,*) '!!! Step volumes cannot be calculated correctly          !!!'
      WRITE(*,*) '!!! Change your input file                               !!!'
      WRITE(*,*) '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-     IF(parallel_mpi_on) THEN
-         CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-     ENDIF
+#ifdef OPENMPI_ON
+     CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+#endif
      STOP
   END IF
   DO l=1, maxstep
@@ -184,16 +188,16 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 
 
   ! If MPI is active, spawn the writter process
-  IF(parallel_mpi_on) THEN
-      CALL MPI_Comm_spawn(nf_child_proc_name, MPI_ARGV_NULL, 1, MPI_INFO_NULL, 0, MPI_COMM_WORLD, mpi_child_writter_comm, mpi_child_spawn_error, mpi_ierror)
-      IF(mpi_rank.EQ.0) THEN
-            CALL MPI_SEND(mpi_cluster_size, 1, MPI_INT, 0, 0, mpi_child_writter_comm, mpi_ierror)
-            CALL MPI_SEND(opt_compact_output, 1, MPI_LOGICAL, 0, 0, mpi_child_writter_comm, mpi_ierror)
-      ENDIF
-      CALL MPI_Get_processor_name(processor_name, processor_name_size, mpi_ierror)
-      processor_name = TRIM(ADJUSTL(processor_name))
-      CALL MPI_BARRIER(MPI_COMM_WORLD, mpi_ierror)
-  ENDIF
+#ifdef OPENMPI_ON
+   CALL MPI_Comm_spawn(nf_child_proc_name, MPI_ARGV_NULL, 1, MPI_INFO_NULL, 0, MPI_COMM_WORLD, mpi_child_writter_comm, mpi_child_spawn_error, mpi_ierror)
+   IF(mpi_rank.EQ.0) THEN
+         CALL MPI_SEND(mpi_cluster_size, 1, MPI_INT, 0, 0, mpi_child_writter_comm, mpi_ierror)
+         CALL MPI_SEND(opt_compact_output, 1, MPI_LOGICAL, 0, 0, mpi_child_writter_comm, mpi_ierror)
+   ENDIF
+   CALL MPI_Get_processor_name(processor_name, processor_name_size, mpi_ierror)
+   processor_name = TRIM(ADJUSTL(processor_name))
+   CALL MPI_BARRIER(MPI_COMM_WORLD, mpi_ierror)
+#endif
 
 
   ! ---------------------------------------------------------------------------------------!
@@ -218,10 +222,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 500  CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
           live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
      IF (too_many_tries) THEN
-        IF(parallel_mpi_on) THEN
-           ! Signal final data MAXED_OUT
-           CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_DONE_MANY_TRIES, mpi_child_writter_comm, mpi_ierror)
-        ENDIF
+#ifdef OPENMPI_ON
+        ! Signal final data MAXED_OUT
+        CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_DONE_MANY_TRIES, mpi_child_writter_comm, mpi_ierror)
+#endif
         nstep_final = n - 1
         GOTO 601
      END IF
@@ -313,35 +317,35 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
      
      moving_eff_avg = MOVING_AVG(search_par2/ntries)
      IF (MOD(n,100).EQ.0) THEN
-         IF(parallel_mpi_on) THEN
-            IF(opt_compact_output) THEN
-               WRITE(info_string,20) itry+1, n, min_live_like, evsum, evstep(n), evtotest-evsum, &
-                                    moving_eff_avg
-            ELSE
-               WRITE(info_string,21) processor_name, itry+1, n, min_live_like, evsum, evstep(n), evtotest-evsum, &
-                                    moving_eff_avg
-            ENDIF
-20          FORMAT('| N: ', I2, ' | S: ', I8, ' | MLL: ', F20.12, ' | E: ', F20.12, &
-                   ' | Es: ', F20.12, ' | Ea: ', ES13.7, ' | Ae: ', F6.4, ' |')
-21          FORMAT('| Machine: ', A10, ' | N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
-                   ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES13.7, ' | Avg eff.: ', F6.4, ' |')
-            CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_STATUS, mpi_child_writter_comm, mpi_ierror)
+#ifdef OPENMPI_ON
+         IF(opt_compact_output) THEN
+            WRITE(info_string,20) itry+1, n, min_live_like, evsum, evstep(n), evtotest-evsum, &
+                                 moving_eff_avg
          ELSE
-            IF(opt_compact_output) THEN
-               WRITE(info_string,22) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
-22             FORMAT('| N: ', I2, ' | S: ', I8, ' | MLL: ', F20.12, ' | E: ', F20.12, &
-                      ' | Es: ', F20.12, ' | Ea: ', ES13.7, ' | Te: ', F6.4, ' |')
-               WRITE(*,24) info_string
-24             FORMAT(A150)
-            ELSE
-               WRITE(info_string,23) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
-23             FORMAT('| N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
-                        ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES13.7, ' | Typical eff.: ', F6.4, ' |')
-               WRITE(*,25) info_string
-25             FORMAT(A220)
-            ENDIF
+            WRITE(info_string,21) processor_name, itry+1, n, min_live_like, evsum, evstep(n), evtotest-evsum, &
+                                 moving_eff_avg
          ENDIF
-     END IF
+20       FORMAT('| N: ', I2, ' | S: ', I8, ' | MLL: ', F20.12, ' | E: ', F20.12, &
+               ' | Es: ', F20.12, ' | Ea: ', ES13.7, ' | Ae: ', F6.4, ' |')
+21       FORMAT('| Machine: ', A10, ' | N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
+               ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES13.7, ' | Avg eff.: ', F6.4, ' |')
+         CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_STATUS, mpi_child_writter_comm, mpi_ierror)
+#else
+         IF(opt_compact_output) THEN
+            WRITE(info_string,22) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
+22          FORMAT('| N: ', I2, ' | S: ', I8, ' | MLL: ', F20.12, ' | E: ', F20.12, &
+                  ' | Es: ', F20.12, ' | Ea: ', ES13.7, ' | Te: ', F6.4, ' |')
+            WRITE(*,24) info_string
+24          FORMAT(A150)
+         ELSE
+            WRITE(info_string,23) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
+23          FORMAT('| N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
+                  ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES13.7, ' | Typical eff.: ', F6.4, ' |')
+            WRITE(*,25) info_string
+25          FORMAT(A220)
+         ENDIF
+#endif
+      ENDIF
   END DO
 
   ! ---------------------------------------------------------------------------------------!
@@ -351,17 +355,15 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   !----------------------------------------------------------------------------------------!
 301 CONTINUE
 
+#ifdef OPENMPI_ON
   IF((evtotest-evsum).GE.evaccuracy) THEN
-     IF(parallel_mpi_on) THEN
-         ! Signal final data MAXED_OUT
-         CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_ERROR_MAXED_OUT, mpi_child_writter_comm, mpi_ierror)
-     ENDIF
+      ! Signal final data MAXED_OUT
+      CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_ERROR_MAXED_OUT, mpi_child_writter_comm, mpi_ierror)
   ELSE
-      IF(parallel_mpi_on) THEN
-         ! Signal final data OK
-         CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_DONE_OK, mpi_child_writter_comm, mpi_ierror)
-      ENDIF
+      ! Signal final data OK
+      CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_DONE_OK, mpi_child_writter_comm, mpi_ierror)
   END IF
+#endif
 
   ! Store the number of steps
   nstep_final = n
@@ -407,14 +409,14 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 
   !------------ Calculate the total evidence with the last live points ---------------------
 601 CONTINUE
-  IF(parallel_mpi_on) THEN
-      CALL MPI_BARRIER(MPI_COMM_WORLD, mpi_ierror)
-  ENDIF
+#ifdef OPENMPI_ON
+  CALL MPI_BARRIER(MPI_COMM_WORLD, mpi_ierror)
+#endif
 
   IF(((evtotest-evsum).GE.evaccuracy).AND.(n.GE.nstep)) THEN
-      IF(parallel_mpi_on) THEN
-         CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-      ENDIF
+#ifdef OPENMPI_ON
+      CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+#endif
       STOP
   ENDIF
 

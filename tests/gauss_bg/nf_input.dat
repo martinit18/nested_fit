@@ -8,7 +8,7 @@ LIKE_ACC			# Method used for convergence
 SLICE_SAMPLING     		# Type of search of live points
 0.5	3	100	10	# Param. search algo. (2), max n. tries, max of max tries
 n	k	0.5	0.2	# cluster anaylis or not (y/n), method (f/g), distance, bandwidth
-1	100000			# Number of tries and maximum of steps
+10	100000			# Number of tries and maximum of steps
 GAUSS_BG 	  		# Name of the function
 L               		# Additional data: left/right (l/r)
 500     20      		# Additional data:  npoint, nwidth for convolution

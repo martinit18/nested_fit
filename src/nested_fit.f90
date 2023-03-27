@@ -87,7 +87,10 @@ PROGRAM NESTED_FIT
    USE MOD_METADATA
    ! Parallelization library !!!CAREFULL to the table dimension in this case!!
    USE OMP_LIB
+
+#ifdef OPENMPI_ON
    USE MPI
+#endif
 
   !USE RNG
   !
@@ -153,6 +156,9 @@ PROGRAM NESTED_FIT
   !   write(*,*) rng(1:5,itry)
   !END DO
 
+#ifdef TEST_VAR
+  error
+#endif
    ! Read input arguments (CLI)
   TYPE(option_s) :: opts(3)
   opts(1) = option_s("compact-output", .false., "c")
@@ -172,17 +178,18 @@ PROGRAM NESTED_FIT
                WRITE(*,*) '-----------------------------------------------------------------------'
                WRITE(*,*) ''
                WRITE(*,*) '-----------------------------------------------------------------------'
+               ! Note(Cesar): This is before initializing mpi (if we have it on) so we should be good
                STOP
       END SELECT
   END DO
 
-  IF(parallel_mpi_on) THEN
+#ifdef OPENMPI_ON
     CALL MPI_INIT(mpi_ierror)
     CALL MPI_COMM_SIZE(MPI_COMM_WORLD, mpi_cluster_size, mpi_ierror)
     CALL MPI_COMM_RANK(MPI_COMM_WORLD, mpi_rank, mpi_ierror)
-  ELSE
+#else
     mpi_rank = 0
-  ENDIF
+#endif
 
   !!!!!!!! Initiate random generator with the same seed each time !!!!!!!!!!!
   IF(static_seed.AND.mpi_rank.EQ.0) THEN
@@ -197,9 +204,9 @@ PROGRAM NESTED_FIT
       CALL RANDOM_SEED(PUT=seed_array)
   ENDIF
 
-  IF(parallel_mpi_on) THEN
-      CALL MPI_BARRIER(MPI_COMM_WORLD, mpi_ierror)
-  ENDIF
+#ifdef OPENMPI_ON
+   CALL MPI_BARRIER(MPI_COMM_WORLD, mpi_ierror)
+#endif
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -226,9 +233,9 @@ PROGRAM NESTED_FIT
       IF(version.NE.version_file) THEN
          WRITE(*,*) 'Program version not corresponding to the input type'
          WRITE(*,*) 'Please change your input.dat'
-         IF(parallel_mpi_on) THEN
-            CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-         ENDIF
+#ifdef OPENMPI_ON
+         CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+#endif
          STOP
       END IF
       READ(77,*) filename(1), string
@@ -278,10 +285,9 @@ PROGRAM NESTED_FIT
          IF (par_bnd1(i).GE.par_bnd2(i)) THEN
             WRITE(*,*) 'Bad limits in parameter n.', i, ' (low bound1 >= high bound!!!) Change it and restart'
             WRITE(*,*) 'Low bound:',par_bnd1(i), 'High bound:', par_bnd2(i)
-            ! TODO(Cesar): Change this to work with defines instead
-            IF(parallel_mpi_on) THEN
-               CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-            ENDIF
+#ifdef OPENMPI_ON
+            CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+#endif
             STOP
          END IF
       END DO
@@ -306,7 +312,7 @@ PROGRAM NESTED_FIT
   ! Receive data from the mpi root node
   ! All the code should be refactored really but for now
   ! TODO(César): Refactor this to a function
-  IF(parallel_mpi_on) THEN
+#ifdef OPENMPI_ON
       CALL MPI_Bcast(filename(1), 64, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(set_yn, 1, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(data_type, 3, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
@@ -333,37 +339,35 @@ PROGRAM NESTED_FIT
       CALL MPI_Bcast(xmax(1), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(ymin(1), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(ymax(1), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
-
       CALL MPI_Bcast(npar, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
-  ENDIF
 
-  IF(mpi_rank.NE.0) THEN
-   !
-   ! Allocate space for parameters and initialize
-   ALLOCATE(live_max(npar),par_num(npar),par_name(npar),par_in(npar),par_step(npar), &
-      par_bnd1(npar),par_bnd2(npar),par_fix(npar), &
-      par_mean(npar),par_sd(npar), &
-      par_median_w(npar), &
-      par_m68_w(npar),par_p68_w(npar),par_m95_w(npar),par_p95_w(npar),par_m99_w(npar),par_p99_w(npar))
-      live_max = 0.
-      par_num = 0
-      par_name = ' '
-      par_in = 0.
-      par_step = 0.
-      par_bnd1 = 0.
-      par_bnd2 = 0.
-      par_fix = 0
-      par_mean = 0.
-      par_sd = 0.
-      par_median_w = 0.
-      par_m68_w = 0.
-      par_p68_w = 0.
-      par_m95_w = 0.
-      par_p95_w = 0.
-      par_m99_w = 0.
-      par_p99_w = 0.
-  ENDIF
-
+   IF(mpi_rank.NE.0) THEN
+      !
+      ! Allocate space for parameters and initialize
+      ALLOCATE(live_max(npar),par_num(npar),par_name(npar),par_in(npar),par_step(npar), &
+         par_bnd1(npar),par_bnd2(npar),par_fix(npar), &
+         par_mean(npar),par_sd(npar), &
+         par_median_w(npar), &
+         par_m68_w(npar),par_p68_w(npar),par_m95_w(npar),par_p95_w(npar),par_m99_w(npar),par_p99_w(npar))
+         live_max = 0.
+         par_num = 0
+         par_name = ' '
+         par_in = 0.
+         par_step = 0.
+         par_bnd1 = 0.
+         par_bnd2 = 0.
+         par_fix = 0
+         par_mean = 0.
+         par_sd = 0.
+         par_median_w = 0.
+         par_m68_w = 0.
+         par_p68_w = 0.
+         par_m95_w = 0.
+         par_p95_w = 0.
+         par_m99_w = 0.
+         par_p99_w = 0.
+   ENDIF
+#endif
 
  !----------------------------------------------------------------------------------------------------------------------------------
 
@@ -378,9 +382,9 @@ PROGRAM NESTED_FIT
          WRITE(*,*)
          WRITE(*,*) 'ERROR'
          WRITE(*,*) 'Set of 2D files not yet implemented. Change your input file.'
-         IF(parallel_mpi_on) THEN
-            CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-         ENDIF
+#ifdef OPENMPI_ON
+         CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+#endif
          STOP
       END IF
   END IF
@@ -388,7 +392,7 @@ PROGRAM NESTED_FIT
   ! Initialize likelihood function
   CALL INIT_LIKELIHOOD()
 
-  IF(parallel_mpi_on) THEN
+#ifdef OPENMPI_ON
    CALL MPI_Bcast(par_num, npar, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
    CALL MPI_Bcast(par_fix, npar, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
    CALL MPI_Bcast(par_name,npar*10, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
@@ -400,7 +404,7 @@ PROGRAM NESTED_FIT
    CALL MPI_Bcast(funcid, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
 
    CALL MPI_BARRIER(MPI_COMM_WORLD, mpi_ierror)
-  ENDIF 
+#endif
 
 
   IF(mpi_rank.EQ.0) THEN
@@ -415,10 +419,10 @@ PROGRAM NESTED_FIT
      nall_try = 0
      evsum_final_try = 0.
      live_like_max_try = -100000.
-     IF(parallel_mpi_on) THEN
-         ALLOCATE(live_final_try_instance(maxstep_try,npar))
-         ALLOCATE(live_like_final_try_instance(maxstep_try), weight_try_instance(maxstep_try), live_max_try_instance(npar))
-     ENDIF
+#ifdef OPENMPI_ON
+     ALLOCATE(live_final_try_instance(maxstep_try,npar))
+     ALLOCATE(live_like_final_try_instance(maxstep_try), weight_try_instance(maxstep_try), live_max_try_instance(npar))
+#endif
      !
   ELSE
      ALLOCATE(live_final_try_instance(maxstep_try,npar))
@@ -442,25 +446,28 @@ PROGRAM NESTED_FIT
      GOTO 501
   END IF
 
-  IF(parallel_mpi_on.AND.mpi_rank.EQ.0) THEN
+#ifdef OPENMPI_ON
+  IF(mpi_rank.EQ.0) THEN
       IF(mpi_cluster_size.GT.ntry) THEN
          WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
          WRITE(*,*) '       ATTENTION:           Specified MPI cluster size is bigger than the number of tries in the input file'
          WRITE(*,*) '       ATTENTION:           This feature is not supported at the moment'
-         WRITE(*,*) '       ATTENTION:           Killing the unused processes'
+         WRITE(*,*) '       ATTENTION:           Idling the unused processes'
          WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
       ENDIF
   ENDIF
+#endif
 
   !
   ! Run the Nested sampling
-  IF(.NOT.parallel_mpi_on) THEN
-      DO itry=1,ntry
-         CALL NESTED_SAMPLING(itry,maxstep_try,nall_try(itry),evsum_final_try(itry), &
-               live_like_final_try(:,itry),weight_try(:,itry),&
-               live_final_try(:,:,itry),live_like_max_try(itry),live_max_try(:,itry), 0, 0)
-      END DO
-  ELSE IF(mpi_rank.LT.ntry) THEN
+#ifndef OPENMPI_ON
+   DO itry=1,ntry
+      CALL NESTED_SAMPLING(itry,maxstep_try,nall_try(itry),evsum_final_try(itry), &
+            live_like_final_try(:,itry),weight_try(:,itry),&
+            live_final_try(:,:,itry),live_like_max_try(itry),live_max_try(:,itry), 0, 0)
+   END DO
+#else
+   IF(mpi_rank.LT.ntry) THEN
       CALL NESTED_SAMPLING(mpi_rank,maxstep_try,nall_try_instance,evsum_final_try_instance, &
          live_like_final_try_instance,weight_try_instance,&
          live_final_try_instance,live_like_max_try_instance,live_max_try_instance, mpi_rank, mpi_cluster_size)
@@ -479,29 +486,30 @@ PROGRAM NESTED_FIT
          CALL MPI_SEND(live_like_max_try_instance, 1, MPI_DOUBLE, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
          CALL MPI_SEND(live_max_try_instance, npar, MPI_DOUBLE, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
       ENDIF
-  ENDIF
+   ENDIF
+#endif
 
-  ! Gather all of the runs in the root node back again
-  IF(parallel_mpi_on) THEN
-      IF(mpi_rank.EQ.0) THEN
-            nall_try(1) = nall_try_instance
-            evsum_final_try(1) = evsum_final_try_instance
-            live_like_final_try(:,1) = live_like_final_try_instance
-            weight_try(:,1) = weight_try_instance
-            live_final_try(:,:,1) = live_final_try_instance
-            live_like_max_try(1) = live_like_max_try_instance
-            live_max_try(:,1) = live_max_try_instance
-            DO itry=1,ntry-1
-               CALL MPI_RECV(nall_try(itry+1), 1, MPI_INT, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
-               CALL MPI_RECV(evsum_final_try(itry+1), 1, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
-               CALL MPI_RECV(live_like_final_try(:,itry+1), maxstep_try, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
-               CALL MPI_RECV(weight_try(:,itry+1), maxstep_try, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
-               CALL MPI_RECV(live_final_try(:,:,itry+1), maxstep_try*npar, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
-               CALL MPI_RECV(live_like_max_try(itry+1), 1, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
-               CALL MPI_RECV(live_max_try(:,itry+1), npar, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
-            END DO
-      ENDIF
-  ENDIF
+#ifdef OPENMPI_ON
+   ! Gather all of the runs in the root node back again
+   IF(mpi_rank.EQ.0) THEN
+         nall_try(1) = nall_try_instance
+         evsum_final_try(1) = evsum_final_try_instance
+         live_like_final_try(:,1) = live_like_final_try_instance
+         weight_try(:,1) = weight_try_instance
+         live_final_try(:,:,1) = live_final_try_instance
+         live_like_max_try(1) = live_like_max_try_instance
+         live_max_try(:,1) = live_max_try_instance
+         DO itry=1,ntry-1
+            CALL MPI_RECV(nall_try(itry+1), 1, MPI_INT, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
+            CALL MPI_RECV(evsum_final_try(itry+1), 1, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
+            CALL MPI_RECV(live_like_final_try(:,itry+1), maxstep_try, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
+            CALL MPI_RECV(weight_try(:,itry+1), maxstep_try, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
+            CALL MPI_RECV(live_final_try(:,:,itry+1), maxstep_try*npar, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
+            CALL MPI_RECV(live_like_max_try(itry+1), 1, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
+            CALL MPI_RECV(live_max_try(:,itry+1), npar, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
+         END DO
+   ENDIF
+#endif
 
   IF(mpi_rank.EQ.0) THEN
       ! Re-assemble the points ---------------------------------------------------------------
@@ -815,11 +823,11 @@ PROGRAM NESTED_FIT
             nall_try,evsum_final_try,live_like_max_try)
   ENDIF
 
-  IF(parallel_mpi_on) THEN
-      DEALLOCATE(live_final_try_instance)
-      DEALLOCATE(live_like_final_try_instance, weight_try_instance, live_max_try_instance)
-      CALL MPI_FINALIZE(mpi_ierror)
-  ENDIF
+#ifdef OPENMPI_ON
+   DEALLOCATE(live_final_try_instance)
+   DEALLOCATE(live_like_final_try_instance, weight_try_instance, live_max_try_instance)
+   CALL MPI_FINALIZE(mpi_ierror)
+#endif
 
 
   !IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
