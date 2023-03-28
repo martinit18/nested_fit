@@ -497,42 +497,44 @@ CONTAINS
              IF (n_ntries.GE.maxntries) THEN
 
 
-                IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+                !IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
 
-                   IF(n_call_cluster_itj>=n_call_cluster_it_maxj) THEN
-                     WRITE(*,*) 'Too many cluster analysis for an iteration'
-                     WRITE(*,*) 'Change cluster recognition parameters'
-                     STOP
-                   END IF
-                   IF(n_call_clusterj>=n_call_cluster_maxj) THEN
-                     WRITE(*,*) 'Too many cluster analysis'
-                     WRITE(*,*) 'Change cluster recognition parameters'
-                     STOP
-                   END IF
-                   WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
+                !   IF(n_call_cluster_itj>=n_call_cluster_it_maxj) THEN
+                !     WRITE(*,*) 'Too many cluster analysis for an iteration'
+                !     WRITE(*,*) 'Change cluster recognition parameters'
+                !     STOP
+                !   END IF
+                !   IF(n_call_clusterj>=n_call_cluster_maxj) THEN
+                !     WRITE(*,*) 'Too many cluster analysis'
+                !     WRITE(*,*) 'Change cluster recognition parameters'
+                !     STOP
+                !   END IF
+                !   WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
                    !
 
-                   CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
+                !   CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
                    ! outputs: p_cluster ! flag of number of appartenance cluster for each live point
-                   cluster_on = .true.
-                   n_ntries = 0
-                   n_call_cluster_itj=n_call_cluster_itj+1
-                   n_call_clusterj=n_call_clusterj+1
+                !   cluster_on = .true.
+                !   n_ntries = 0
+                !   n_call_cluster_itj=n_call_cluster_itj+1
+                !   n_call_clusterj=n_call_clusterj+1
 
 
                    ! Choose a new random live point and restart all
-                   CALL RANDOM_NUMBER(rn)
-                   istart= FLOOR((nlive-1)*rn+1)
-                   start_jump = live(istart,:)
+                !   CALL RANDOM_NUMBER(rn)
+                !   istart= FLOOR((nlive-1)*rn+1)
+                !   start_jump = live(istart,:)
 
-                   GOTO 600
+                !   GOTO 600
 
-                ELSE
-                   WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries*maxntries
-                   WRITE(*,*) 'We take the data as they are :-~'
-                   too_many_tries = .true.
-                   RETURN
-                END IF
+                !ELSE
+                !   WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries*maxntries
+                !   WRITE(*,*) 'We take the data as they are :-~'
+                !   too_many_tries = .true.
+                !   RETURN
+                !END IF
+                too_many_tries=.true.
+                live_like_new=min_live_like
              END IF
              ! Some test for desesperate seeking (for presence of several maxima)
 
@@ -1143,30 +1145,32 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
              'n_ntries =',n_ntries,' over ', maxntries, 'n. step =', n
 
              IF(n_ntries .GE. maxntries) THEN
-               IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
-                 IF(n_call_cluster_itj>=n_call_cluster_it_maxj) THEN
-                   WRITE(*,*) 'Too many cluster analysis for an iteration'
-                   WRITE(*,*) 'Change cluster recognition parameters'
-                   STOP
-                 END IF
-                 IF(n_call_clusterj>=n_call_cluster_maxj) THEN
-                   WRITE(*,*) 'Too many cluster analysis'
-                   WRITE(*,*) 'Change cluster recognition parameters'
-                   STOP
-                 END IF
-                 WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
-                 CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
-                 cluster_on = .true.
-                 n_ntries = 0
-                 n_call_cluster_itj=n_call_cluster_itj+1
-                 n_call_clusterj=n_call_clusterj+1
-                 GOTO 500
-               ELSE
-                 WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries
-                 WRITE(*,*) 'We take the data as they are :-~'
-                 too_many_tries = .true.
-                 RETURN
-               END IF
+               !IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+               !  IF(n_call_cluster_itj>=n_call_cluster_it_maxj) THEN
+               !    WRITE(*,*) 'Too many cluster analysis for an iteration'
+               !    WRITE(*,*) 'Change cluster recognition parameters'
+               !    STOP
+               !  END IF
+               !  IF(n_call_clusterj>=n_call_cluster_maxj) THEN
+               !    WRITE(*,*) 'Too many cluster analysis'
+               !    WRITE(*,*) 'Change cluster recognition parameters'
+               !    STOP
+               !  END IF
+               !  WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
+               !  CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
+               !  cluster_on = .true.
+               !  n_ntries = 0
+               !  n_call_cluster_itj=n_call_cluster_itj+1
+               !  n_call_clusterj=n_call_clusterj+1
+               !  GOTO 500
+               !ELSE
+               !  WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries
+               !  WRITE(*,*) 'We take the data as they are :-~'
+               !  too_many_tries = .true.
+               !  RETURN
+               !END IF
+               too_many_tries=.true.
+                live_like_new=min_live_like
              END IF
              GOTO 500
            END IF

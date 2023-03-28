@@ -121,10 +121,10 @@ CONTAINS
 
        ! Calculate the neighbor point mean value for the selected point
        max_accuracy = 0.
-       !!$OMP PARALLEL DO &
-       !!$OMP PRIVATE(num,dem,nn,k,dist,weight,l,actual_accuracy) &
-       !!$OMP REDUCTION(min:min_nn) &
-       !!$OMP REDUCTION(max:max_accuracy)
+       !$OMP PARALLEL DO &
+       !$OMP PRIVATE(num,dem,nn,k,dist,weight,l,actual_accuracy) &
+       !$OMP REDUCTION(min:min_nn) &
+       !$OMP REDUCTION(max:max_accuracy)
        DO j=1,np
           ! Scan all other points for calculating the mean....
           num = 0.
@@ -173,7 +173,7 @@ CONTAINS
           !write(*,*) i,j,nn, actual_accuracy, max_accuracy
           !pause
        END DO
-       !!$OMP END PARALLEL DO
+       !$OMP END PARALLEL DO
 
        WRITE(*,*) 'n_iteration = ', i, 'present accuracy = ', max_accuracy
 
@@ -602,14 +602,15 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
 
     WRITE(*,*) 'Starting KNN cluster analysis'
 
-    !!$OMP PARALLEL DO
+    !$OMP PARALLEL
+    !$OMP DO
     DO i=1,np
       p_cluster_new(i) = i
       p_cluster_old(i) = i
     END DO
-    !!$OMP END PARALLEL DO
+    !$OMP END DO
 
-    !!$OMP PARALLEL DO PRIVATE(j)
+    !$OMP DO PRIVATE(j)
     DO i=1,np  ! distance matrix
     dist_pt(i,i)=0
       DO j=i+1,np
@@ -617,7 +618,8 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
         dist_pt(j,i)=dist_pt(i,j)
       END DO
     END DO
-    !!$OMP END PARALLEL DO
+    !$OMP END DO
+    !$OMP END PARALLEL
 
 
     DO k=2,np
@@ -628,11 +630,13 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
             clust_min=min(p_cluster_new(i),p_cluster_new(j))
             clust_max=max(p_cluster_new(i),p_cluster_new(j))
             IF(clust_min/=clust_max) THEN
+              !$OMP PARALLEL WORKSHARE
               WHERE(p_cluster_new==clust_max)
                 p_cluster_new=clust_min
               ELSEWHERE(p_cluster_new>clust_max) !new label for the other clusters
                 p_cluster_new=p_cluster_new-1
               END WHERE
+              !$OMP END PARALLEL WORKSHARE
             END IF
           END IF
         END DO
@@ -655,11 +659,11 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
       icluster=1
       DO WHILE(icluster<=ncluster_new)
 400     CONTINUE
-        !!$OMP PARALLEL DO REDUCTION(+:np_temp)
+        !$OMP PARALLEL DO REDUCTION(+:np_temp)
         DO i=1,np
           IF(p_cluster_new(i)==icluster) np_temp=np_temp+1
         END DO
-        !!$OMP END PARALLEL DO
+        !$OMP END PARALLEL DO
         IF(np_temp>=3) THEN
           IF(ALLOCATED(dist_pt_temp)) DEALLOCATE(dist_pt_temp)
           IF(ALLOCATED(p_cluster_temp)) DEALLOCATE(p_cluster_temp)
@@ -676,11 +680,11 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
           END DO
           dist_pt_temp=dist_pt(in_cluster,in_cluster)
           CALL MAKE_SUB_CLUSTERS(dist_pt_temp,np_temp,ncluster_temp,p_cluster_temp)
-          IF(ncluster_temp==1) THEN
+          IF(ncluster_temp==1) THEN !if only one subcluster found
             icluster=icluster+1
             np_temp=0
-          ELSE
-            DO j=1,np_temp
+          ELSE     
+            DO j=1,np_temp    !update cluster number of elements in split cluster
               l=in_cluster(j)
               IF(p_cluster_temp(j)/=1) p_cluster_new(l)=ncluster_new+p_cluster_temp(j)-1
             END DO
