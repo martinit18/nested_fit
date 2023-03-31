@@ -571,8 +571,8 @@ CONTAINS
     ll_tmp = 0.
 
     !$OMP PARALLEL DO PRIVATE(i,j,xx,yy,enc) REDUCTION(+:ll_tmp)
-    DO i=1, nx
-       DO j=1, ny
+    DO j=1, ny ! inversion of i,j for increasing memory administration efficency (but not differences noticed for te moment)
+       DO i=1, nx
           ! Poisson distribution calculation --------------------------------------------------
           xx = i - 0.5 + xmin(k) ! Real coordinates are given by the bins, the center of the bin.
           yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin
