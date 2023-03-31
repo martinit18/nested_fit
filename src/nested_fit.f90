@@ -211,11 +211,10 @@ PROGRAM NESTED_FIT
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ! Calculate time elapsed !!!!!!!!!!!!!!!!!!!!
-  ! Parallel real time (and number of threads)
-  IF (parallel_on) THEN
-    seconds = omp_get_wtime( )
-    nth = omp_get_max_threads()
-  END IF
+  ! Parallel real time (and number of threads)  
+  !$ seconds = omp_get_wtime( )
+  !$ nth = omp_get_max_threads()
+
   ! Absolute time
   CALL CPU_TIME(startt)
 
@@ -730,11 +729,12 @@ PROGRAM NESTED_FIT
    ENDIF
 
    ! Calculate end time
-   ! Parallel time
-   IF (parallel_on) seconds_omp = omp_get_wtime( ) - seconds
    ! Normal time
    CALL CPU_TIME(stopt)
    seconds  = stopt - startt
+   ! Parallel time
+   seconds_omp = seconds
+   !$ seconds_omp = omp_get_wtime( ) - seconds
    
    IF(mpi_rank.EQ.0) THEN
       !IF(arg.EQ. ' ') THEN

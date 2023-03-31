@@ -9,6 +9,7 @@ MODULE MOD_CLUSTER_ANALYSIS
 
   LOGICAL :: cluster_on = .false.
   INTEGER(4) :: np=0, ndim=0, ncluster=0
+  INTEGER(4), PARAMETER :: ncluster_max=500
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: cluster_std, cluster_mean
   INTEGER(4), ALLOCATABLE, DIMENSION(:) :: p_cluster, cluster_np
 
@@ -66,7 +67,7 @@ CONTAINS
     REAL(8) :: dist, weight, val_max, val_min, actual_accuracy, max_accuracy=0.
     REAL(8) :: distance_limit=0., bandwidth=0.
     REAL(8), DIMENSION(ndim_in) :: num, dem
-    INTEGER(4), PARAMETER :: iter_max=30, ncluster_max=500
+    INTEGER(4), PARAMETER :: iter_max=30
     INTEGER(4) :: i, j, k, l, nn, min_nn
     REAL(8), DIMENSION(ncluster_max,ndim_in) :: mean_cluster
     LOGICAL :: accuracy_reached
@@ -276,7 +277,6 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     INTEGER(4), INTENT(IN) :: np_in, ndim_in
     REAL(8), INTENT(IN), DIMENSION(np_in,ndim_in) :: p_in
     REAL(8) :: distance_limit=0.
-    INTEGER(4), PARAMETER :: ncluster_max=500
     INTEGER(4) :: i, j, k, nn, min_nn, min_neighb
     INTEGER(4), DIMENSION(np_in) :: neighb, selected, not_cluster
     REAL(8), DIMENSION(np_in,ndim_in) :: p
@@ -457,7 +457,6 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     INTEGER(4), INTENT(IN) :: np_in, ndim_in
     REAL(8), INTENT(IN), DIMENSION(np_in,ndim_in) :: p_in
     REAL(8) :: distance_limit=0.
-    INTEGER(4), PARAMETER :: ncluster_max=500
     INTEGER(4) :: i, j, k, l, clust_min, clust_max
     REAL(8), DIMENSION(np_in,ndim_in) :: p
     REAL(8) :: val_max, val_min, dist_min, dist, max_dist
@@ -585,7 +584,6 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     USE MOD_TIMESTAMP, ONLY: timestamp
     INTEGER(4), INTENT(IN) :: np_in, ndim_in
     REAL(8), INTENT(IN), DIMENSION(np_in,ndim_in) :: p_in
-    INTEGER(4), PARAMETER :: ncluster_max=500
     INTEGER(4) :: i, j, k, l, clust_min, clust_max, icluster
     REAL(8), DIMENSION(np_in,ndim_in) :: p
     INTEGER(4), DIMENSION(np_in) :: p_cluster_new, p_cluster_old
