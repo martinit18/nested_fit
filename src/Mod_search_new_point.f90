@@ -13,8 +13,8 @@ MODULE MOD_SEARCH_NEW_POINT
 
   IMPLICIT NONE
 
-  INTEGER(4) :: n_call_cluster=0
-  INTEGER(4), PARAMETER :: n_call_cluster_it_max=3, n_call_cluster_max=10
+  INTEGER(4) :: n_call_clusterj=0
+  INTEGER(4), PARAMETER :: n_call_cluster_it_maxj=3, n_call_cluster_maxj=10
 
 CONTAINS
 
@@ -85,7 +85,7 @@ CONTAINS
     ! Other variables
     INTEGER(4) :: i, l, irn
     REAL(8) :: rn
-    INTEGER(4) :: n_call_cluster_it, test
+    INTEGER(4) :: n_call_cluster_itj, test
     REAL(8) :: sdfraction
     INTEGER(4) :: njump
     REAL(8) :: loglike
@@ -104,7 +104,7 @@ CONTAINS
     too_many_tries = .false.
     gval = 0.
 
-    n_call_cluster_it=0
+    n_call_cluster_itj=0
     sdfraction=search_par1
     njump=INT(search_par2)
 
@@ -197,41 +197,44 @@ CONTAINS
              IF (n_ntries.GE.maxntries) THEN
 
 
-                IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+                !IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
 
-                   IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
-                     WRITE(*,*) 'Too many cluster analysis for an iteration'
-                     WRITE(*,*) 'Change cluster recognition parameters'
-                     STOP
-                   END IF
-                   IF(n_call_cluster>=n_call_cluster_max) THEN
-                     WRITE(*,*) 'Too many cluster analysis'
-                     WRITE(*,*) 'Change cluster recognition parameters'
-                     STOP
-                   END IF
+                !   IF(n_call_cluster_itj>=n_call_cluster_it_maxj) THEN
+                !     WRITE(*,*) 'Too many cluster analysis for an iteration'
+                !     WRITE(*,*) 'Change cluster recognition parameters'
+                !     STOP
+                !   END IF
+                !   IF(n_call_clusterj>=n_call_cluster_maxj) THEN
+                !     WRITE(*,*) 'Too many cluster analysis'
+                !     WRITE(*,*) 'Change cluster recognition parameters'
+                !     STOP
+                !   END IF
 
-                  !  WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
-                   !
-                   CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
-                   ! outputs: p_cluster ! flag of number of appartenance cluster for each live point
-                   cluster_on = .true.
-                   n_ntries = 0
-                   n_call_cluster_it=n_call_cluster_it+1
-                   n_call_cluster=n_call_cluster+1
+                !   WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
+                !   !
+                !   CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
+                !   ! outputs: p_cluster ! flag of number of appartenance cluster for each live point
+                !   cluster_on = .true.
+                !   n_ntries = 0
+                !   n_call_cluster_itj=n_call_cluster_itj+1
+                !   n_call_clusterj=n_call_clusterj+1
 
                    ! Choose a new random live point and restart all
-                   CALL RANDOM_NUMBER(rn)
-                   istart= FLOOR((nlive-1)*rn+1)
-                   start_jump = live(istart,:)
+                !   CALL RANDOM_NUMBER(rn)
+                !   istart= FLOOR((nlive-1)*rn+1)
+                !   start_jump = live(istart,:)
 
-                   GOTO 400
+                !   GOTO 400
+                
 
-                ELSE
-                  !  WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries*maxntries
-                  !  WRITE(*,*) 'We take the data as they are :-~'
-                   too_many_tries = .true.
-                   RETURN
-                END IF
+                !ELSE
+                !   WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries*maxntries
+                !   WRITE(*,*) 'We take the data as they are :-~'
+                !   too_many_tries = .true.
+                !   RETURN
+                !END IF
+                too_many_tries=.true.
+                live_like_new=min_live_like
              END IF
              ! Some test for desesperate seeking (for presence of several maxima)
 
@@ -371,7 +374,7 @@ CONTAINS
     ! Other variables
     INTEGER(4) :: i, l, irn, j
     REAL(8) :: rn, sd_mean, frac
-    INTEGER(4) :: n_call_cluster_it, test
+    INTEGER(4) :: n_call_cluster_itj, test
     INTEGER(4) :: nb_cube, njump
     REAL(8) :: loglike
     ! Find new live points
@@ -388,7 +391,7 @@ CONTAINS
     too_many_tries = .false.
     gval = 0.
     frac=search_par1
-    n_call_cluster_it=0
+    n_call_cluster_itj=0
     nb_cube=0
     njump=INT(search_par2)
 
@@ -492,42 +495,44 @@ CONTAINS
              IF (n_ntries.GE.maxntries) THEN
 
 
-                IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+                !IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
 
-                   IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
-                     WRITE(*,*) 'Too many cluster analysis for an iteration'
-                     WRITE(*,*) 'Change cluster recognition parameters'
-                     STOP
-                   END IF
-                   IF(n_call_cluster>=n_call_cluster_max) THEN
-                     WRITE(*,*) 'Too many cluster analysis'
-                     WRITE(*,*) 'Change cluster recognition parameters'
-                     STOP
-                   END IF
-                   WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
+                !   IF(n_call_cluster_itj>=n_call_cluster_it_maxj) THEN
+                !     WRITE(*,*) 'Too many cluster analysis for an iteration'
+                !     WRITE(*,*) 'Change cluster recognition parameters'
+                !     STOP
+                !   END IF
+                !   IF(n_call_clusterj>=n_call_cluster_maxj) THEN
+                !     WRITE(*,*) 'Too many cluster analysis'
+                !     WRITE(*,*) 'Change cluster recognition parameters'
+                !     STOP
+                !   END IF
+                !   WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
                    !
 
-                   CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
+                !   CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
                    ! outputs: p_cluster ! flag of number of appartenance cluster for each live point
-                   cluster_on = .true.
-                   n_ntries = 0
-                   n_call_cluster_it=n_call_cluster_it+1
-                   n_call_cluster=n_call_cluster+1
+                !   cluster_on = .true.
+                !   n_ntries = 0
+                !   n_call_cluster_itj=n_call_cluster_itj+1
+                !   n_call_clusterj=n_call_clusterj+1
 
 
                    ! Choose a new random live point and restart all
-                   CALL RANDOM_NUMBER(rn)
-                   istart= FLOOR((nlive-1)*rn+1)
-                   start_jump = live(istart,:)
+                !   CALL RANDOM_NUMBER(rn)
+                !   istart= FLOOR((nlive-1)*rn+1)
+                !   start_jump = live(istart,:)
 
-                   GOTO 600
+                !   GOTO 600
 
-                ELSE
-                   WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries*maxntries
-                   WRITE(*,*) 'We take the data as they are :-~'
-                   too_many_tries = .true.
-                   RETURN
-                END IF
+                !ELSE
+                !   WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries*maxntries
+                !   WRITE(*,*) 'We take the data as they are :-~'
+                !   too_many_tries = .true.
+                !   RETURN
+                !END IF
+                too_many_tries=.true.
+                live_like_new=min_live_like
              END IF
              ! Some test for desesperate seeking (for presence of several maxima)
 
@@ -655,7 +660,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     ! Other variables
     INTEGER(4) :: i, l, irn, j, kr, kl
     REAL(8) :: rn, sd_mean
-    INTEGER(4) :: n_call_cluster_it, test
+    INTEGER(4) :: n_call_cluster_itj, test
     INTEGER(4) :: dim_eff
     REAL(8), DIMENSION(:,:),ALLOCATABLE :: basis
     !REAL(8), DIMENSION(:,:), ALLOCATABLE :: basis
@@ -678,7 +683,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     istart   = 0
     n_ntries = 0
     too_many_tries = .false.
-    n_call_cluster_it=0
+    n_call_cluster_itj=0
     gval = 0.
     dim_eff=npar-SUM(par_fix) !number of parameters not fixed
     size_jump=search_par1
@@ -698,15 +703,16 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     ! Select a live point as starting point
     ntries = 0
 
-
-    IF(cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
-       IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
-             WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
-             CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
-            cluster_on = .true.
-             n_ntries = 0
-       END IF
-    END IF
+    !!$OMP SINGLE
+    !IF(cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+    !   IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
+    !         WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
+    !         CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
+    !        cluster_on = .true.
+    !         n_ntries = 0
+    !   END IF
+    !END IF
+    !!$OMP END SINGLE
 
 
     j=1
@@ -832,30 +838,32 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
              'n_ntries =',n_ntries,' over ', maxntries, 'n. step =', n
 
              IF(n_ntries .GE. maxntries) THEN
-               IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
-                 IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
-                   WRITE(*,*) 'Too many cluster analysis for an iteration'
-                   WRITE(*,*) 'Change cluster recognition parameters'
-                   STOP
-                 END IF
-                 IF(n_call_cluster>=n_call_cluster_max) THEN
-                   WRITE(*,*) 'Too many cluster analysis'
-                   WRITE(*,*) 'Change cluster recognition parameters'
-                   STOP
-                 END IF
-                 WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
-                 CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
-                 cluster_on = .true.
-                 n_ntries = 0
-                 n_call_cluster_it=n_call_cluster_it+1
-                 n_call_cluster=n_call_cluster+1
-                 GOTO 500
-               ELSE
-                 WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries
-                 WRITE(*,*) 'We take the data as they are :-~'
-                 too_many_tries = .true.
-                 RETURN
-               END IF
+               !IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+               !  IF(n_call_cluster_itj>=n_call_cluster_it_maxj) THEN
+               !    WRITE(*,*) 'Too many cluster analysis for an iteration'
+               !    WRITE(*,*) 'Change cluster recognition parameters'
+               !    STOP
+               !  END IF
+               !  IF(n_call_clusterj>=n_call_cluster_maxj) THEN
+               !    WRITE(*,*) 'Too many cluster analysis'
+               !    WRITE(*,*) 'Change cluster recognition parameters'
+               !    STOP
+               !  END IF
+               !  WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
+               !  CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
+               !  cluster_on = .true.
+               !  n_ntries = 0
+               !  n_call_cluster_itj=n_call_cluster_itj+1
+               !  n_call_clusterj=n_call_clusterj+1
+               !  GOTO 500
+               !ELSE
+               !  WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries
+               !  WRITE(*,*) 'We take the data as they are :-~'
+               !  too_many_tries = .true.
+               !  RETURN
+               !END IF
+               too_many_tries=.true.
+               live_like_new=min_live_like
              END IF
              GOTO 500
            END IF
@@ -940,7 +948,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     ! Other variables
     INTEGER(4) :: i, l, irn,j, k
     REAL(8) :: rn, sd_mean
-    INTEGER(4) :: n_call_cluster_it, test
+    INTEGER(4) :: n_call_cluster_itj, test
     INTEGER(4) :: dim_eff
     REAL(8), DIMENSION(:,:),ALLOCATABLE :: basis
     !REAL(8), DIMENSION(:,:), ALLOCATABLE :: basis
@@ -963,7 +971,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     istart   = 0
     n_ntries = 0
     too_many_tries = .false.
-    n_call_cluster_it=0
+    n_call_cluster_itj=0
     gval = 0.
     dim_eff=npar-SUM(par_fix) !number of parameters not fixed
     size_jump=search_par1
@@ -984,14 +992,14 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     ntries = 0
 
 
-    IF(cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
-       IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
-             WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
-             CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
-            cluster_on = .true.
-             n_ntries = 0
-       END IF
-    END IF
+    !IF(cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+    !   IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
+    !         WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
+    !         CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
+    !        cluster_on = .true.
+    !         n_ntries = 0
+    !   END IF
+    !END IF
 
 
     j=1
@@ -1138,30 +1146,32 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
              'n_ntries =',n_ntries,' over ', maxntries, 'n. step =', n
 
              IF(n_ntries .GE. maxntries) THEN
-               IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
-                 IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
-                   WRITE(*,*) 'Too many cluster analysis for an iteration'
-                   WRITE(*,*) 'Change cluster recognition parameters'
-                   STOP
-                 END IF
-                 IF(n_call_cluster>=n_call_cluster_max) THEN
-                   WRITE(*,*) 'Too many cluster analysis'
-                   WRITE(*,*) 'Change cluster recognition parameters'
-                   STOP
-                 END IF
-                 WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
-                 CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
-                 cluster_on = .true.
-                 n_ntries = 0
-                 n_call_cluster_it=n_call_cluster_it+1
-                 n_call_cluster=n_call_cluster+1
-                 GOTO 500
-               ELSE
-                 WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries
-                 WRITE(*,*) 'We take the data as they are :-~'
-                 too_many_tries = .true.
-                 RETURN
-               END IF
+               !IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+               !  IF(n_call_cluster_itj>=n_call_cluster_it_maxj) THEN
+               !    WRITE(*,*) 'Too many cluster analysis for an iteration'
+               !    WRITE(*,*) 'Change cluster recognition parameters'
+               !    STOP
+               !  END IF
+               !  IF(n_call_clusterj>=n_call_cluster_maxj) THEN
+               !    WRITE(*,*) 'Too many cluster analysis'
+               !    WRITE(*,*) 'Change cluster recognition parameters'
+               !    STOP
+               !  END IF
+               !  WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
+               !  CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
+               !  cluster_on = .true.
+               !  n_ntries = 0
+               !  n_call_cluster_itj=n_call_cluster_itj+1
+               !  n_call_clusterj=n_call_clusterj+1
+               !  GOTO 500
+               !ELSE
+               !  WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries
+               !  WRITE(*,*) 'We take the data as they are :-~'
+               !  too_many_tries = .true.
+               !  RETURN
+               !END IF
+               too_many_tries=.true.
+                live_like_new=min_live_like
              END IF
              GOTO 500
            END IF
