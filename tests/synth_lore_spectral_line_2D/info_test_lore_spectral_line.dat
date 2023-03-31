@@ -1,0 +1,11 @@
+# Size
+120x160
+
+# Parameters
+x0 = 40.7
+y0 = 80
+gamma = 10
+a = x0
+b = 0.3
+counts_peak = 400000
+peak_to_background = 1000

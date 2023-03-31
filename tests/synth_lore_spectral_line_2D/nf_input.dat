@@ -1,0 +1,25 @@
+4.4				# Program version
+test_matrix_lore_spectral_line.dat 	# Name of the (first) data file
+n				# Set of files (y/n)
+2c				# Type of data: error bars or not and dimensions (1c,1e,2c,2s,2e)
+200				# Number of live points
+LIKE_ACC			# Method used for convergence 
+1.E-05	0.01		  	# Evidence final accuracy and additional convergence parameters
+RANDOM_WALK     		# Type of search of live points
+0.2	10	100	10	# Param. of the search algo. (2), max n. tries, max of max tries
+n	f	0.5	0.2	# cluster analysis or not (y/n), method (f/g), distance, bandwidth
+1	50000			# Number of runs and maximum of steps
+LORE_LINE_BG_2D  		# Name of the function
+L               		# Additional data: left/right (l/r)
+500     20      		# Additional data:  npoint, nwidth for convolution
+0   120  0 160  		# xmin, xmax, ymin, ymax
+8               		# number of parameters
+# npar  name    	value   step    min     max     fixed
+1	'a'		60	-1	0	120	0
+2	'b'		0.5	-1	-1	1	0
+3	'c'		0	-1	0	1	1
+4	'y0'		80	-1	0	160	1
+5	'Dy'		160	-1	0	160	1
+6	'amp'		10000	-1	1	1000000	0
+7	'gamma'		1	-1	0	200	0
+8	'bg'		2	-1	0	200	0

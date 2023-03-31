@@ -115,7 +115,7 @@ set(CFG_FILES
 # TODO(César): This assumes we are using gfortran!
 if(DEBUG)
     message(STATUS "Configuring for Debug")
-    set(SRC_FLAGS "-cpp -O0 -g -ffree-line-length-0")
+    set(SRC_FLAGS "-cpp -O0 -Wall -g -ffree-line-length-0")
 else()
     message(STATUS "Configuring for Release")
     set(SRC_FLAGS "-cpp -O3 -static -ffree-line-length-0")

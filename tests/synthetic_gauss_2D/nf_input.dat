@@ -1,4 +1,4 @@
-4.3				# Program version
+4.4				# Program version
 test_matrix.dat 		# Name of the (first) data file
 n				# Set of files (y/n)
 2c				# Type of data: error bars or not and dimensions (1c,1e,2c,2s,2e)
@@ -18,6 +18,6 @@ L               		# Additional data: left/right (l/r)
 1	'amp'		10000	-1	1000	100000	0
 2	'x0'		2	-1	0	20	0
 3	'y0'		6	-1	0	60	0
-4	'sigmax'	3.	-1	1	10	0
-5	'sigmay'	1.	-1	1	10	0
+4	'sigmax'	3.	-1	0.	10	0
+5	'sigmay'	1.	-1	0.	10	0
 6	'bg'		1	-1	0	10	0

@@ -1,4 +1,4 @@
-4.3				# Program version
+4.4				# Program version
 whatever			# Name of the (first) data file
 n				# Set of files (y/n)
 1c				# Type of data: error bars or not and dimensions (1c,1e,2c,2s,2e)
@@ -7,7 +7,7 @@ LIKE_ACC			# Method used for convergence
 1.E-05	0.01		  	# Evidence final accuracy and additional convergence parameters
 SLICE_SAMPLING     		# Type of search of live points
 0.5	3	500	3	# Param. search algo. (2), max n. tries, max of max tries
-y	k	0.3	0.05	# Cluster analysis or not (y/n), method (f/g/d/s/k), param. cluster algo. (2)
+y	g	0.3	0.05	# Cluster analysis or not (y/n), method (f/g/d/s/k), param. cluster algo. (2)
 1	100000			# Number of tries and maximum of steps
 TEST_EGGBOX 	  		# Name of the function
 L               		# Additional data: left/right (l/r)

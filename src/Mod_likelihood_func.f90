@@ -120,7 +120,7 @@ CONTAINS
     WRITE(*,*) ' '
     WRITE(*,*) 'End of likelihood test'
     WRITE(*,*) 'Number of calls : ', ncall
-    OPEN(11,FILE='n_likelihood_calls.txt',STATUS= 'UNKNOWN')
+    OPEN(11,FILE='nf_output_n_likelihood_calls.txt',STATUS= 'UNKNOWN')
     WRITE(11,*) ncall
     CLOSE(11)
 
