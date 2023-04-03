@@ -137,7 +137,7 @@ PROGRAM NESTED_FIT
   INTEGER(4) :: mpi_rank, mpi_cluster_size, mpi_ierror
 
   ! Time measurement variables
-  REAL(8) :: seconds, seconds_omp, startt, stopt
+  REAL(8) :: seconds, seconds_omp, startt, stopt, startt_omp, stopt_omp
 
   ! Random number variables
   INTEGER(4) :: seed_array(33) = 1
@@ -217,6 +217,7 @@ PROGRAM NESTED_FIT
 
   ! Absolute time
   CALL CPU_TIME(startt)
+  !$ startt_omp = omp_get_wtime( )
 
   ! Print program version
   IF(mpi_rank.EQ.0) THEN
@@ -734,7 +735,8 @@ PROGRAM NESTED_FIT
    seconds  = stopt - startt
    ! Parallel time
    seconds_omp = seconds
-   !$ seconds_omp = omp_get_wtime( ) - seconds
+   !$ stopt_omp = omp_get_wtime( )
+   !$ seconds_omp =  stopt_omp - startt_omp
    
    IF(mpi_rank.EQ.0) THEN
       !IF(arg.EQ. ' ') THEN

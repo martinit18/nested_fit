@@ -157,10 +157,6 @@ CONTAINS
     DO i=1,njump
 501    CONTINUE
        ntries = ntries + 1
-       !$ OMP MASTER   
-       !$ write(*,*)  OMP_GET_THREAD_NUM(), i, ntries, new_jump   ! Tests?????
-       !$ OMP END MASTER 
-       !!$OMP PARALLEL DO
        DO l=1,npar
           IF (par_fix(l).NE.1) THEN
 502          CALL RANDOM_NUMBER(rn)
