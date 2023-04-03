@@ -120,7 +120,7 @@ PROGRAM NESTED_FIT
   INTEGER(8) :: nexp=0
 
   ! Parallelization variables for master mpi node
-  INTEGER(4) :: itry=1, nth=1
+  INTEGER(4) :: itry=1
   INTEGER(4), DIMENSION(1) :: itrymax
   INTEGER(4), ALLOCATABLE, DIMENSION(:) :: nall_try
   REAL(8), ALLOCATABLE, DIMENSION(:) :: evsum_final_try, live_like_max_try

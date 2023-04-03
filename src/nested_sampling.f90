@@ -69,7 +69,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   INTEGER(4) :: i,j, l, n, jlim, it
   REAL(8) :: ADDLOG, rn
   CHARACTER :: out_filename*64
-  INTEGER(4) :: n_call_cluster
   REAL(8) :: MOVING_AVG
   
   ! MPI Stuff
