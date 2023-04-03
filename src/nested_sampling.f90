@@ -18,7 +18,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 
   ! Parameter module
   USE MOD_PARAMETERS, ONLY:  npar, nlive, conv_method, evaccuracy, conv_par, &
-        search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, search_method, ntry, nth, maxtries, maxntries
+        search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, &
+        cluster_yn,search_method, ntry, nth, maxtries, maxntries
   ! Module for likelihood
   USE MOD_LIKELIHOOD
   ! Module for searching new live points
@@ -67,7 +68,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   REAL(8) :: last_likes, live_like_last, evrest_last, evlast
   ! Rest
   INTEGER(4) :: i,j, l, n, jlim, it
-  REAL(8) :: ADDLOG, rn
+  REAL(8) :: ADDLOG, rn, gval
   CHARACTER :: out_filename*64
   REAL(8) :: MOVING_AVG
   
@@ -89,6 +90,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   EXTERNAL :: SORTN
 
   ! Initialize variables (with different seeds for different processors)
+  gval = 0.
   par_prior = 0.
   live = 0.
   live_like = 0.
@@ -133,7 +135,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
               par_prior(l) = par_bnd1(l) + (par_bnd2(l)-par_bnd1(l))*rn
               gval = dexp(-(par_prior(l)-par_in(l))**2/(2*par_step(l)**2))
               CALL RANDOM_NUMBER(rn)
-              IF(rn.GT.gval.OR.par_prior(l).LT.par_bnd1(l).OR.par_prior(l).GT.par_bnd2(l)) GOTO 700
+              IF(rn.GT.gval) GOTO 700
            END IF
         ELSE
            ! If fixed, take the value indicated in the file
@@ -385,6 +387,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
            ! Call cluster module to recalculate the std of the considered cluster and the cluster of the discarted point
            CALL REMAKE_CLUSTER_STD(live,icluster(it),icluster_old)
         END IF
+     END DO
 
 
      IF(conv_method .EQ. 'LIKE_ACC') THEN
