@@ -13,4 +13,4 @@ bin/
 
 # tests / manual run output files
 nf_output_*
-n_likelihood_calls.txt
+tests/*/nf_input.dat

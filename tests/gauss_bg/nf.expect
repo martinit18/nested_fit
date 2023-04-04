@@ -5,8 +5,8 @@ from nf_output_res.dat expect
     # Split on spaces
     set split ' '
 
-    # File outputs 1 trial
-    line 2  split[1] as int match 1
+    # File outputs 2 trials
+    line 2  split[1] as int match 2
 
     # Check bg value
     line 11 split[1] as float match range(0.10, 0.12)
