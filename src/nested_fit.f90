@@ -145,21 +145,7 @@ PROGRAM NESTED_FIT
   ! Function definitions
   EXTERNAL :: NESTED_SAMPLING, SORTN, MEANVAR
 
-  ! Other variants
-  !CALL RANDOM_SEED()
-  !CALL INIT_RANDOM_SEED()
-
-  ! Other tries
-  !CALL RANDOM_NUMBER(rng)
-  !DO itry=1,ntry
-  !   CALL RNG_SEED(rng(itry), 932117 + 10*itry)
-  !   write(*,*) rng(1:5,itry)
-  !END DO
-
-#ifdef TEST_VAR
-  error
-#endif
-   ! Read input arguments (CLI)
+  ! Read input arguments (CLI)
   TYPE(option_s) :: opts(3)
   opts(1) = option_s("compact-output", .false., "c")
   opts(3) = option_s("help",  .false., "h")
@@ -829,7 +815,12 @@ PROGRAM NESTED_FIT
    CALL MPI_FINALIZE(mpi_ierror)
 #endif
 
-
+  IF(static_seed.AND.mpi_rank.EQ.0) THEN
+     WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+     WRITE(*,*) '       ATTENTION:           This nested_fit output was ran with a set seed! This is intended for testing only!'
+     WRITE(*,*) '       ATTENTION:           If you are using this as a production setting change the cmake NORNG option to OFF.'
+     WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+  ENDIF
   !IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
   !   DEALLOCATE(x,nc,enc)
   !ELSE

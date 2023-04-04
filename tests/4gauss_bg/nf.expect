@@ -1,0 +1,41 @@
+# Testing for 4 gaussian bg
+
+from nf_output_res.dat expect
+{
+    set split ' '
+
+    line 2  split[1] as int match 2
+
+    line 5  split[1] as float match range(-327.0, -326.8)
+
+    line 11 split[1] as float match range(0.08, 0.10)
+
+    line 12 split[1] as float match range(455, 475)
+    line 13 split[1] as float match range(380, 400)
+    line 14 split[1] as float match range(415, 435)
+    line 15 split[1] as float match range(470, 490)
+
+    line 16 split[1] as float match range(159, 161)
+    line 17 split[1] as float match range(16, 19)
+    line 18 split[1] as float match range(64, 66)
+    line 18 split[1] as float match range(60, 62)
+
+    line 20 split[1] as float match range(15, 17)
+}
+
+from nf_output_points.paramnames expect
+{
+    line 1 match "bg"
+
+    line 2 match "x1"
+    line 3 match "x2"
+    line 4 match "x3"
+    line 5 match "x4"
+
+    line 6 match "amp1"
+    line 7 match "amp2"
+    line 8 match "amp3"
+    line 9 match "amp4"
+
+    line 10 match "sigma"
+}

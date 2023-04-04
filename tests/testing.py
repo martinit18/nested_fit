@@ -241,13 +241,20 @@ def evaluate_test() -> Tuple[bool, int, int]:
         expected_file_lines = f.readlines()
         
         # Parse the file and get all the test results
-        parse_result = parse_expect_exec('nf.expect', expected_file_lines)
-        return all(parse_result), sum(parse_result), len(parse_result)
+        try:
+            parse_result = parse_expect_exec('nf.expect', expected_file_lines)
+            return all(parse_result), sum(parse_result), len(parse_result)
+        except RuntimeError as re:
+            print(re)
+            exit(-1)
     
     
 def run_test_folder(folder: str, nf_exec: str):
     # Run default nested fit on the cwd
-    os.system(f'../../bin/{nf_exec} >/dev/null 2>&1')
+    if os.name == 'nt':
+        os.system(f'../../bin/{nf_exec}.exe > NUL')
+    else:
+        os.system(f'../../bin/{nf_exec} > /dev/null 2>&1')
     
     passed, num_passed, num_test = evaluate_test()
     
