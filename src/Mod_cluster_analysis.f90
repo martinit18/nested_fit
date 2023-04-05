@@ -480,14 +480,15 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
 
     !$OMP PARALLEL DO PRIVATE(j)
     DO i=1,ndim
-      val_max = maxval(p(:,i))
-      val_min = minval(p(:,i))
+      val_max = maxval(p_in(:,i))
+      val_min = minval(p_in(:,i))
       IF (val_max.NE.val_min) THEN
-        p(:,i) = (p(:,i)-val_min)/(val_max-val_min)
+        p(:,i) = (p_in(:,i)-val_min)/(val_max-val_min)
       ELSE !If it is a fixed parameter, just ignore it
         p(:,i) = 0.
       ENDIF
     END DO
+    !$OMP END PARALLEL DO
 
     !$OMP PARALLEL DO PRIVATE(j)
     DO i=1,np ! calculate the distance matrix
