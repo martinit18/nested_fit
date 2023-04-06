@@ -1,6 +1,6 @@
 SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,&
      live_final,live_like_max,live_max,mpi_rank,mpi_cluster_size)
-  ! Time-stamp: <Last changed by martino on Monday 03 May 2021 at CEST 11:56:05>
+  ! Time-stamp: <Last changed by martino on Thursday 06 April 2023 at CEST 15:41:56>
   ! For parallel tests only
   !SUBROUTINE NESTED_SAMPLING(irnmax,rng,itry,ndata,x,nc,funcname,&
   !   npar,par_fix,par_step,par_in,par_bnd1,par_bnd2,nlive,evaccuracy,sdfraction,&
@@ -314,10 +314,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
         
         ! If the parallely computed live point is not good anymore, skip it.
         ! Otherwise take it for loop calculation
-        IF ((it.GE.1).AND.(live_like_new(it).LE.min_live_like)) THEN !(it.GT.1)
+        IF ((it.GT.1).AND.(live_like_new(it).LT.min_live_like)) THEN
            CYCLE
         ELSE
-           n = n +1
+           n = n + 1
            n_call_cluster_it=0
         ENDIF
 
@@ -387,78 +387,80 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
            ! Call cluster module to recalculate the std of the considered cluster and the cluster of the discarted point
            CALL REMAKE_CLUSTER_STD(live,icluster(it),icluster_old)
         END IF
-     END DO
-
-
-     IF(conv_method .EQ. 'LIKE_ACC') THEN
-       ! Calculate the evidence for this step
-       evstep(n) = live_like_old(n) + tlnmass(n)
-
-       ! Sum the evidences
-       evsum = ADDLOG(evsum,evstep(n))
-
-       ! Check if the estimate accuracy is reached
-       evrestest = live_like(nlive) + tlnrest(n)
-       evtotest = ADDLOG(evsum,evrestest)
-     ELSE IF(conv_method .EQ. 'ENERGY_ACC') THEN
-       ! Calculate the contribution to the partition function at that temperature for this step
-       evstep(n) = 1./conv_par*live_like_old(n) + tlnmass(n)
-
-       ! Sum the contribution with the previous contributions
-       evsum = ADDLOG(evsum,evstep(n))
-
-       ! Check if the estimate accuracy is reached
-       evrestest = 1./conv_par*live_like(nlive) + tlnrest(n)
-       evtotest = ADDLOG(evsum,evrestest)
-     ELSE IF(conv_method .EQ. 'ENERGY_MAX') THEN
-       ! Calculate the contribution to the partition function at that temperature for this step
-       evstep(n) = 1./conv_par*live_like_old(n) + tlnmass(n)
-
-       ! Max between the present contribution and previous ones
-       evsum = MAX(evsum,evstep(n))
-
-       ! Check if the estimate accuracy is reached
-       evtotest = evstep(n)
-     ELSE
-       WRITE(*,*) 'Not a convergence method. Change the name'
-     END IF
-     
-     ! Check if the estimate accuracy is reached
-     IF (evtotest-evsum.LT.evaccuracy) GOTO 301
-     
-     moving_eff_avg = MOVING_AVG(search_par2/ntries)
-     IF (MOD(n,100).EQ.0) THEN
+        
+        IF(conv_method .EQ. 'LIKE_ACC') THEN
+           ! Calculate the evidence for this step
+           evstep(n) = live_like_old(n) + tlnmass(n)
+           
+           ! Sum the evidences
+           evsum = ADDLOG(evsum,evstep(n))
+           
+           ! Check if the estimate accuracy is reached
+           evrestest = live_like(nlive) + tlnrest(n)
+           evtotest = ADDLOG(evsum,evrestest)
+        ELSE IF(conv_method .EQ. 'ENERGY_ACC') THEN
+           ! Calculate the contribution to the partition function at that temperature for this step
+           evstep(n) = 1./conv_par*live_like_old(n) + tlnmass(n)
+           
+           ! Sum the contribution with the previous contributions
+           evsum = ADDLOG(evsum,evstep(n))
+           
+           ! Check if the estimate accuracy is reached
+           evrestest = 1./conv_par*live_like(nlive) + tlnrest(n)
+           evtotest = ADDLOG(evsum,evrestest)
+        ELSE IF(conv_method .EQ. 'ENERGY_MAX') THEN
+           ! Calculate the contribution to the partition function at that temperature for this step
+           evstep(n) = 1./conv_par*live_like_old(n) + tlnmass(n)
+           
+           ! Max between the present contribution and previous ones
+           evsum = MAX(evsum,evstep(n))
+           
+           ! Check if the estimate accuracy is reached
+           evtotest = evstep(n)
+        ELSE
+           WRITE(*,*) 'Not a convergence method. Change the name'
+        END IF
+        
+        ! Write status
+        !write(*,*) 'N step : ', n, 'Evidence at present : ', evsum ! ???? Debugging
+        
+        ! Check if the estimate accuracy is reached
+        IF (evtotest-evsum.LT.evaccuracy) GOTO 301
+        
+        moving_eff_avg = MOVING_AVG(search_par2/ntries)
+        IF (MOD(n,100).EQ.0) THEN
 #ifdef OPENMPI_ON
-         IF(opt_compact_output) THEN
-            WRITE(info_string,20) itry+1, n, min_live_like, evsum, evstep(n), evtotest-evsum, &
-                                 moving_eff_avg
-         ELSE
-            WRITE(info_string,21) processor_name, itry+1, n, min_live_like, evsum, evstep(n), evtotest-evsum, &
-                                 moving_eff_avg
-         ENDIF
-20       FORMAT('| N: ', I2, ' | S: ', I8, ' | MLL: ', F20.12, ' | E: ', F20.12, &
-               ' | Es: ', F20.12, ' | Ea: ', ES13.7, ' | Ae: ', F6.4, ' |')
-21       FORMAT('| Machine: ', A10, ' | N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
-               ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES13.7, ' | Avg eff.: ', F6.4, ' |')
-         CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_STATUS, mpi_child_writter_comm, mpi_ierror)
+           IF(opt_compact_output) THEN
+              WRITE(info_string,20) itry+1, n, min_live_like, evsum, evstep(n), evtotest-evsum, &
+                   moving_eff_avg
+           ELSE
+              WRITE(info_string,21) processor_name, itry+1, n, min_live_like, evsum, evstep(n), evtotest-evsum, &
+                   moving_eff_avg
+           ENDIF
+20         FORMAT('| N: ', I2, ' | S: ', I8, ' | MLL: ', F20.12, ' | E: ', F20.12, &
+                ' | Es: ', F20.12, ' | Ea: ', ES13.7, ' | Ae: ', F6.4, ' |')
+21         FORMAT('| Machine: ', A10, ' | N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
+                ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES13.7, ' | Avg eff.: ', F6.4, ' |')
+           CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_STATUS, mpi_child_writter_comm, mpi_ierror)
 #else
-         IF(opt_compact_output) THEN
-            WRITE(info_string,22) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
-22          FORMAT('| N: ', I2, ' | S: ', I8, ' | MLL: ', F20.12, ' | E: ', F20.12, &
-                  ' | Es: ', F20.12, ' | Ea: ', ES13.7, ' | Te: ', F6.4, ' |')
-            WRITE(*,24) info_string
-24          FORMAT(A150)
-         ELSE
-            WRITE(info_string,23) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
-23          FORMAT('| N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
-                  ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES13.7, ' | Typical eff.: ', F6.4, ' |')
-            WRITE(*,25) info_string
-25          FORMAT(A220)
-         ENDIF
+           IF(opt_compact_output) THEN
+              WRITE(info_string,22) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
+22            FORMAT('| N: ', I2, ' | S: ', I8, ' | MLL: ', F20.12, ' | E: ', F20.12, &
+                   ' | Es: ', F20.12, ' | Ea: ', ES13.7, ' | Te: ', F6.4, ' |')
+              WRITE(*,24) info_string
+24            FORMAT(A150)
+           ELSE
+              WRITE(info_string,23) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
+23            FORMAT('| N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
+                   ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES13.7, ' | Typical eff.: ', F6.4, ' |')
+              WRITE(*,25) info_string
+25            FORMAT(A220)
+           ENDIF
 #endif
-      ENDIF
+        ENDIF
+     END DO
   END DO
-
+  
   ! ---------------------------------------------------------------------------------------!
   !                                                                                        !
   !                                 STOP THE MAIN LOOP                                     !
@@ -486,9 +488,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   !   WRITE(11,*) j, tstep(j), tlnmass(j), tlnrest(j)
   !END DO
   !CLOSE(11)
-
-  ! Write status
-  !WRITE(*,*) 'N step : ', n, 'Evidence at present : ', evsum
 
   ! Store actual live points
   !WRITE(out_filename,1000) 'live_points_',itry,'.dat'
