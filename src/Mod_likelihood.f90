@@ -28,9 +28,6 @@ MODULE MOD_LIKELIHOOD
   ! Likelihood variables
   REAL(8) :: const_ll = 0.
 
-  ! MPI Variables
-  INTEGER(4) :: mpi_ierror
-
 CONTAINS
 
   SUBROUTINE INIT_LIKELIHOOD()
@@ -51,6 +48,10 @@ CONTAINS
   !#####################################################################################################################
 
   SUBROUTINE INIT_SEARCH_METHOD()
+#ifdef OPENMPI_ON
+      INTEGER(4) :: mpi_ierror
+#endif
+
       IF (search_method.eq.'RANDOM_WALK') THEN
             searchid = 0
       ELSE IF(search_method.EQ.'UNIFORM') THEN
@@ -530,6 +531,7 @@ CONTAINS
 
     IF (.NOT.BIT_CHECK_IF(DATA_IS_SET)) THEN
        ! No set --------------------------------------------------------------------------------------------------------
+       !TODO(César): This is unnecessary and somewhat verbose
        k=1
        IF (BIT_CHECK_IF(DATA_IS_C)) THEN
           !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)

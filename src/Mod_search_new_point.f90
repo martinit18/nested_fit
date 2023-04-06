@@ -3,7 +3,7 @@ MODULE MOD_SEARCH_NEW_POINT
   ! Module for search of new points
 
   ! Module for the input parameter definition
-  USE MOD_PARAMETERS, ONLY:  npar, par_step, par_bnd1, par_bnd2, par_fix
+  USE MOD_PARAMETERS, ONLY:  npar, par_step, par_bnd1, par_bnd2, par_fix, searchid
   ! Module for likelihood
   USE MOD_LIKELIHOOD
   ! Module for cluster analysis
