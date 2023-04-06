@@ -14,3 +14,6 @@ bin/
 # tests / manual run output files
 nf_output_*
 tests/*/nf_input.dat
+
+# Python cache files
+__pycache__/
