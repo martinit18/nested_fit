@@ -31,7 +31,8 @@ MODULE MOD_PARAMETERS
   ! Calculated variables
   INTEGER(4) :: funcid=0
   INTEGER(4) :: dataid=0
-
+  INTEGER(4) :: searchid=0
+  
 
   COMMON /func_exp/ lr
   COMMON /func_conv/ npoint, nwidth
