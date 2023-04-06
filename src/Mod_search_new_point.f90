@@ -3,7 +3,7 @@ MODULE MOD_SEARCH_NEW_POINT
   ! Module for search of new points
 
   ! Module for the input parameter definition
-  USE MOD_PARAMETERS, ONLY:  npar, par_step, par_bnd1, par_bnd2, par_fix
+  USE MOD_PARAMETERS, ONLY:  npar, par_step, par_bnd1, par_bnd2, par_fix, searchid
   ! Module for likelihood
   USE MOD_LIKELIHOOD
   ! Module for cluster analysis
@@ -31,24 +31,20 @@ CONTAINS
     INTEGER(4), INTENT(INOUT) :: n_call_cluster
 
     ! Select the search method
-    IF (search_method.eq.'RANDOM_WALK') THEN
-        CALL RANDOM_WALK(n,itry,min_live_like,live_like,live, &
+    SELECT CASE (searchid)
+      CASE (0)
+         CALL RANDOM_WALK(n,itry,min_live_like,live_like,live, &
           live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
-    ELSE IF(search_method .EQ. 'UNIFORM') THEN
-        CALL UNIFORM(n,itry,min_live_like,live_like,live, &
+      CASE (1)
+         CALL UNIFORM(n,itry,min_live_like,live_like,live, &
           live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
-    ELSE IF(search_method .EQ. 'SLICE_SAMPLING') THEN
-        CALL SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
+      CASE (2)
+         CALL SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
           live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
-    ELSE IF(search_method .EQ. 'SLICE_SAMPLING_ADAPT') THEN
-        CALL SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
+      CASE (3)
+         CALL SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
           live_like_new,live_new,icluster,ntries,too_many_tries,n_call_cluster)
-    ELSE
-        WRITE(*,*) 'Error of the search type name in Mod_search_new_point module'
-        WRITE(*,*) 'Check the manual and the input file'
-        STOP
-    END IF
-
+    END SELECT
 
   END SUBROUTINE SEARCH_NEW_POINT
 

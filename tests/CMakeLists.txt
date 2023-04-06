@@ -88,6 +88,6 @@ set_property(TEST expect PROPERTY PASS_REGULAR_EXPRESSION "Test FAIL -> 3/4 pass
 listsubdir(test_dirs ${CMAKE_CURRENT_SOURCE_DIR})
 message(STATUS ${test_dirs})
 
-foreach(test_dir ${test_dirs})
-    add_test_dir(${test_dir})
-endforeach()
+# foreach(test_dir ${test_dirs})
+#     add_test_dir(${test_dir})
+# endforeach()

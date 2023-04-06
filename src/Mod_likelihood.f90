@@ -32,7 +32,9 @@ CONTAINS
 
   SUBROUTINE INIT_LIKELIHOOD()
     ! Initialize the normal likelihood with data files and special function
-
+    
+    ! Initialize the search method params
+    CALL INIT_SEARCH_METHOD()
 
     ! Read data ------------------------------------------------------------------------------------------------------------------------
     CALL READ_DATA()
@@ -44,6 +46,29 @@ CONTAINS
 
 
   !#####################################################################################################################
+
+  SUBROUTINE INIT_SEARCH_METHOD()
+#ifdef OPENMPI_ON
+      INTEGER(4) :: mpi_ierror
+#endif
+
+      IF (search_method.eq.'RANDOM_WALK') THEN
+            searchid = 0
+      ELSE IF(search_method.EQ.'UNIFORM') THEN
+            searchid = 1
+      ELSE IF(search_method.EQ.'SLICE_SAMPLING') THEN
+            searchid = 2
+      ELSE IF(search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
+            searchid = 3
+      ELSE
+            WRITE(*,*) 'Error of the search type name in Mod_search_new_point module'
+            WRITE(*,*) 'Check the manual and the input file'
+#ifdef OPENMPI_ON
+            CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+#endif
+            STOP
+      END IF
+  END SUBROUTINE INIT_SEARCH_METHOD
 
   SUBROUTINE READ_DATA()
     ! Subroutine to read data files
@@ -506,6 +531,7 @@ CONTAINS
 
     IF (.NOT.BIT_CHECK_IF(DATA_IS_SET)) THEN
        ! No set --------------------------------------------------------------------------------------------------------
+       !TODO(César): This is unnecessary and somewhat verbose
        k=1
        IF (BIT_CHECK_IF(DATA_IS_C)) THEN
           !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
