@@ -48,6 +48,10 @@ mkdir build && cd build
 cmake ..
 make
 ```
+These command will build two different executables in the bin directory: 
+- `nested_fitXXX` for likelihood function maximisation for data analysis,
+- `nested_fit_funcXXX` for functions maximisation not using data. 
+
 > :warning: For Windows you can compile by replacing the second line of the above commands with `cmake -G"MinGW Makefiles" ..`, for simplicity.
 
 **CMake options**
@@ -163,9 +167,10 @@ Additional information can be found in the reference articles.
 
 ## Present version and history of the past versions
 
-The present version is 4.4.0
+The present version is 4.4.3
 New features:
 - OpenMPI support (only available for number of tries)
+- OpenMP parallelisation for independent live point search 
 - New user function calling method
 - Add Windows support
 - New build system generator (CMake)
