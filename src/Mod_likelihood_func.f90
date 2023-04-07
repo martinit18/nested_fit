@@ -12,7 +12,7 @@ MODULE MOD_LIKELIHOOD
 
 
   ! Module for the input parameter definition
-  USE MOD_PARAMETERS, ONLY: npar, funcname, funcid
+  USE MOD_PARAMETERS !, ONLY: npar, funcname, funcid, searchid
 
   IMPLICIT NONE
   INTEGER(8) :: ncall=0
@@ -24,7 +24,10 @@ CONTAINS
   SUBROUTINE INIT_LIKELIHOOD()
     ! Initialize the normal likelihood with data files and special function
 
-    WRITE(*,*) 'Initialization of test likelihood function'
+    ! Initialize the search method params
+    CALL INIT_SEARCH_METHOD()
+    
+    WRITE(*,*) 'Initialization of func likelihood'
 
     !IF (funcname.eq.'TEST_ROSENBROCK') THEN
     !   CALL INIT_ROSENBROCK()
@@ -33,6 +36,29 @@ CONTAINS
     funcid = SELECT_LIKELIHOODFCN(funcname)
 
   END SUBROUTINE INIT_LIKELIHOOD
+
+  SUBROUTINE INIT_SEARCH_METHOD()
+#ifdef OPENMPI_ON
+      INTEGER(4) :: mpi_ierror
+#endif
+
+      IF (search_method.eq.'RANDOM_WALK') THEN
+            searchid = 0
+      ELSE IF(search_method.EQ.'UNIFORM') THEN
+            searchid = 1
+      ELSE IF(search_method.EQ.'SLICE_SAMPLING') THEN
+            searchid = 2
+      ELSE IF(search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
+            searchid = 3
+      ELSE
+            WRITE(*,*) 'Error of the search type name in Mod_search_new_point module'
+            WRITE(*,*) 'Check the manual and the input file'
+#ifdef OPENMPI_ON
+            CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+#endif
+            STOP
+      END IF
+  END SUBROUTINE INIT_SEARCH_METHOD
 
   !#####################################################################################################################
 
