@@ -19,7 +19,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   ! Parameter module
   USE MOD_PARAMETERS, ONLY:  npar, nlive, conv_method, evaccuracy, conv_par, &
         search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, &
-        cluster_yn,search_method, ntry, nth, maxtries, maxntries
+        cluster_yn,search_method, ntry, nth, maxtries, maxntries, searchid
   ! Module for likelihood
   USE MOD_LIKELIHOOD
   ! Module for searching new live points
@@ -369,13 +369,15 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
         ! Present minimal value of the likelihood
         min_live_like = live_like(1)
 
-        IF(search_method.EQ.'SLICE_SAMPLING' .OR. search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
-           IF(cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
-              IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
-                 make_cluster=.true.
-              END IF
-          END IF
-        END IF
+
+        SELECT CASE (searchid)
+      	   CASE (2,3)
+               IF(cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+                 IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
+                    make_cluster=.true.
+                 END IF
+               END IF
+        END SELECT
 
         ! Assign to the new point, the same cluster number of the start point
         IF (cluster_on) THEN
