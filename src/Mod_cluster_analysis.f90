@@ -6,9 +6,10 @@ MODULE MOD_CLUSTER_ANALYSIS
 
 
   IMPLICIT NONE
-
+  
   LOGICAL :: cluster_on = .false.
   INTEGER(4) :: np=0, ndim=0, ncluster=0
+  INTEGER(4), PARAMETER :: ncluster_max=500
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: cluster_std, cluster_mean
   INTEGER(4), ALLOCATABLE, DIMENSION(:) :: p_cluster, cluster_np
 
@@ -66,7 +67,7 @@ CONTAINS
     REAL(8) :: dist, weight, val_max, val_min, actual_accuracy, max_accuracy=0.
     REAL(8) :: distance_limit=0., bandwidth=0.
     REAL(8), DIMENSION(ndim_in) :: num, dem
-    INTEGER(4), PARAMETER :: iter_max=30, ncluster_max=500
+    INTEGER(4), PARAMETER :: iter_max=30
     INTEGER(4) :: i, j, k, l, nn, min_nn
     REAL(8), DIMENSION(ncluster_max,ndim_in) :: mean_cluster
     LOGICAL :: accuracy_reached
@@ -85,7 +86,7 @@ CONTAINS
     p_fix = .FALSE.
 
     ! Allocate the variables if needed
-    IF(.NOT.cluster_on) ALLOCATE(p_cluster(np))
+    IF(.NOT.cluster_on .AND. .NOT. ALLOCATED(p_cluster)) ALLOCATE(p_cluster(np))
     p_cluster = 0
 
 
@@ -276,7 +277,6 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     INTEGER(4), INTENT(IN) :: np_in, ndim_in
     REAL(8), INTENT(IN), DIMENSION(np_in,ndim_in) :: p_in
     REAL(8) :: distance_limit=0.
-    INTEGER(4), PARAMETER :: ncluster_max=500
     INTEGER(4) :: i, j, k, nn, min_nn, min_neighb
     INTEGER(4), DIMENSION(np_in) :: neighb, selected, not_cluster
     REAL(8), DIMENSION(np_in,ndim_in) :: p
@@ -295,7 +295,7 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     not_cluster=1
     ncluster=0
     ! Allocate the variables if needed
-    IF(.NOT.cluster_on) ALLOCATE(p_cluster(np))
+    IF(.NOT.cluster_on .AND. .NOT. ALLOCATED(p_cluster)) ALLOCATE(p_cluster(np))
     p_cluster = 0
 
 
@@ -457,7 +457,6 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     INTEGER(4), INTENT(IN) :: np_in, ndim_in
     REAL(8), INTENT(IN), DIMENSION(np_in,ndim_in) :: p_in
     REAL(8) :: distance_limit=0.
-    INTEGER(4), PARAMETER :: ncluster_max=500
     INTEGER(4) :: i, j, k, l, clust_min, clust_max
     REAL(8), DIMENSION(np_in,ndim_in) :: p
     REAL(8) :: val_max, val_min, dist_min, dist, max_dist
@@ -471,14 +470,14 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     ncluster=np_in
 
     ! Allocate the variables if needed
-    IF(.NOT.cluster_on) ALLOCATE(p_cluster(np))
+    IF(.NOT.cluster_on .AND. .NOT. ALLOCATED(p_cluster)) ALLOCATE(p_cluster(np))
     DO i=1,np
       p_cluster(i)= i
     END DO
 
     WRITE(*,*) 'Starting agglomerative cluster analysis'
 
-    !$OMP PARALLEL DO PRIVATE(j)
+    !!$OMP PARALLEL DO PRIVATE(j)
     DO i=1,ndim
       val_max = maxval(p_in(:,i))
       val_min = minval(p_in(:,i))
@@ -488,7 +487,7 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
         p(:,i) = 0.
       ENDIF
     END DO
-    !$OMP END PARALLEL DO
+    !!$OMP END PARALLEL DO
 
     !$OMP PARALLEL DO PRIVATE(j)
     DO i=1,np ! calculate the distance matrix
@@ -508,7 +507,8 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
       clust_min=min(p_cluster(minval(clusters_to_concat)),p_cluster(maxval(clusters_to_concat)))
       clust_max=max(p_cluster(minval(clusters_to_concat)),p_cluster(maxval(clusters_to_concat))) !finding the two clusters that are the closest
       IF(dist_min>=max_dist .OR. ncluster==1) EXIT !checking if the maximum distance has been reached or if there is only one cluster
-      !$OMP PARALLEL DO PRIVATE(j)
+      !!$OMP PARALLEL
+      !!$OMP DO PRIVATE(j) SCHEDULE(STATIC)
       DO i=1,np
         DO j=1,np
           IF(p_cluster(i)==clust_min .AND. p_cluster(j)==clust_max) THEN !set the distance of two points in the same clusters at -1
@@ -517,23 +517,25 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
           END IF
         END DO
       END DO
-      !$OMP END PARALLEL DO
-      !$OMP PARALLEL DO
+      !!$OMP END DO
+      !!$OMP END PARALLEL
+      !!$OMP DO SCHEDULE(STATIC)
       DO i=1,np
         IF(p_cluster(i)==clust_max) THEN ! put the two clusters together
           p_cluster(i)=clust_min
         END IF
       END DO
-      !$OMP END PARALLEL DO
+      !!$OMP END DO
+      !!$OMP END PARALLEL
 
       DO i=clust_max+1,ncluster ! change the labels of the other clusters
-        !$OMP PARALLEL DO
+        !!$OMP PARALLEL DO
         DO j=1,np
           IF(p_cluster(j)==i) THEN
             p_cluster(j)=i-1
           END IF
         END DO
-        !$OMP END PARALLEL DO
+        !!$OMP END PARALLEL DO
       END DO
       ncluster=ncluster-1
     END DO
@@ -586,7 +588,6 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     USE MOD_TIMESTAMP, ONLY: timestamp
     INTEGER(4), INTENT(IN) :: np_in, ndim_in
     REAL(8), INTENT(IN), DIMENSION(np_in,ndim_in) :: p_in
-    INTEGER(4), PARAMETER :: ncluster_max=500
     INTEGER(4) :: i, j, k, l, clust_min, clust_max, icluster
     REAL(8), DIMENSION(np_in,ndim_in) :: p
     INTEGER(4), DIMENSION(np_in) :: p_cluster_new, p_cluster_old
@@ -605,14 +606,15 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
 
     WRITE(*,*) 'Starting KNN cluster analysis'
 
-    !$OMP PARALLEL DO
+    !!$OMP PARALLEL
+    !!$OMP DO
     DO i=1,np
       p_cluster_new(i) = i
       p_cluster_old(i) = i
     END DO
-    !$OMP END PARALLEL DO
+    !!$OMP END DO
 
-    !$OMP PARALLEL DO PRIVATE(j)
+    !!$OMP DO PRIVATE(j)
     DO i=1,np  ! distance matrix
     dist_pt(i,i)=0
       DO j=i+1,np
@@ -620,7 +622,8 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
         dist_pt(j,i)=dist_pt(i,j)
       END DO
     END DO
-    !$OMP END PARALLEL DO
+    !!$OMP END DO
+    !!$OMP END PARALLEL
 
 
     DO k=2,np
@@ -631,11 +634,13 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
             clust_min=min(p_cluster_new(i),p_cluster_new(j))
             clust_max=max(p_cluster_new(i),p_cluster_new(j))
             IF(clust_min/=clust_max) THEN
+              !!!!!$OMP PARALLEL WORKSHARE
               WHERE(p_cluster_new==clust_max)
                 p_cluster_new=clust_min
               ELSEWHERE(p_cluster_new>clust_max) !new label for the other clusters
                 p_cluster_new=p_cluster_new-1
               END WHERE
+              !!!!!$OMP END PARALLEL WORKSHARE
             END IF
           END IF
         END DO
@@ -658,11 +663,11 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
       icluster=1
       DO WHILE(icluster<=ncluster_new)
 400     CONTINUE
-        !$OMP PARALLEL DO REDUCTION(+:np_temp)
+        !!$OMP PARALLEL DO REDUCTION(+:np_temp)
         DO i=1,np
           IF(p_cluster_new(i)==icluster) np_temp=np_temp+1
         END DO
-        !$OMP END PARALLEL DO
+        !!$OMP END PARALLEL DO
         IF(np_temp>=3) THEN
           IF(ALLOCATED(dist_pt_temp)) DEALLOCATE(dist_pt_temp)
           IF(ALLOCATED(p_cluster_temp)) DEALLOCATE(p_cluster_temp)
@@ -679,15 +684,17 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
           END DO
           dist_pt_temp=dist_pt(in_cluster,in_cluster)
           CALL MAKE_SUB_CLUSTERS(dist_pt_temp,np_temp,ncluster_temp,p_cluster_temp)
-          IF(ncluster_temp==1) THEN
+          IF(ncluster_temp==1) THEN !if only one subcluster found
             icluster=icluster+1
             np_temp=0
           ELSE
-            DO j=1,np_temp
+            !!$OMP PARALLEL DO PRIVATE(l)     
+            DO j=1,np_temp    !update cluster id of elements in split cluster
               l=in_cluster(j)
               IF(p_cluster_temp(j)/=1) p_cluster_new(l)=ncluster_new+p_cluster_temp(j)-1
             END DO
-            ncluster_new=ncluster_new+ncluster_temp-1
+            !!$OMP END PARALLEL DO
+            ncluster_new=ncluster_new+ncluster_temp-1 !update number of cluster
             IF (ncluster_new .GT.ncluster_max) THEN
               WRITE(*,*) '  '
               WRITE(*,*) 'ERROR!!! Too many clusters'
@@ -714,7 +721,7 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     WRITE(*,*) 'Number of cluster found = ', ncluster
 
 
-    IF(.NOT.cluster_on) ALLOCATE(p_cluster(np))
+    IF(.NOT.cluster_on .AND. .NOT. ALLOCATED(p_cluster)) ALLOCATE(p_cluster(np))
     p_cluster=p_cluster_new
 
     OPEN (UNIT=10, FILE='nf_output_cluster_final_'//timestamp()//'.dat', STATUS='unknown')
@@ -756,7 +763,7 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
 
     knn(:,1)=MINLOC(dist, DIM=1)
     DO i=2,k
-      !$OMP PARALLEL DO
+      !$OMP PARALLEL DO SCHEDULE(STATIC)
       DO j=1,nb_pt
         knn(j,i)=MINLOC(dist(:,j), MASK=(dist(:,j)>dist(knn(j,i-1),j)),DIM=1)
       END DO
@@ -792,11 +799,13 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
             clust_min=min(p_cluster_new(i),p_cluster_new(j))
             clust_max=max(p_cluster_new(i),p_cluster_new(j))
             IF(clust_min/=clust_max) THEN
+              !!!!!$OMP PARALLEL WORKSHARE
               WHERE(p_cluster_new==clust_max)
                 p_cluster_new=clust_min
               ELSEWHERE(p_cluster_new>clust_max)
                 p_cluster_new=p_cluster_new-1
               END WHERE
+              !!!!!$OMP END PARALLEL WORKSHARE
             END IF
           END IF
         END DO

@@ -462,7 +462,7 @@ CONTAINS
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
     !
     REAL(8) :: enc
-    INTEGER(4) :: i, j, k=1
+    INTEGER(4) :: i, j, k
     REAL(8) :: USERFCN, USERFCN_SET, USERFCN_2D, xx, yy
 
     ncall=ncall+1
@@ -523,7 +523,7 @@ CONTAINS
     !
     REAL(8) :: USERFCN, USERFCN_SET
     REAL(8) :: ll_tmp, enc
-    INTEGER(4) :: i=0, k=0
+    INTEGER(4) :: i, k
 
 
     ! Calculate LIKELIHOOD
@@ -534,41 +534,41 @@ CONTAINS
        !TODO(César): This is unnecessary and somewhat verbose
        k=1
        IF (BIT_CHECK_IF(DATA_IS_C)) THEN
-          !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
+          !!$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
           DO i=1, ndata_set(k)
              ! Poisson distribution calculation --------------------------------------------------
              enc = USERFCN(x(i,k),npar,par,funcid)
              ll_tmp = ll_tmp + nc(i,k)*DLOG(enc) - enc
           END DO
-          !$OMP END PARALLEL DO
+          !!$OMP END PARALLEL DO
        ELSE !IF (BIT_CHECK_IF(DATA_IS_E)) THEN
-          !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
+          !!$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
           DO i=1, ndata_set(k)
              ! Normal (Gaussian) distribution calculation --------------------------------------
              enc = USERFCN(x(i,k),npar,par,funcid)
              ll_tmp = ll_tmp - (nc(i,k) - enc)**2/(2*nc_err(i,k)**2)
           ENDDO
-          !$OMP END PARALLEL DO
+          !!$OMP END PARALLEL DO
        END IF
     ELSE
        ! Set ----------------------------------------------------------------------------------------------------------
        DO k=1,nset
           IF (BIT_CHECK_IF(DATA_IS_C)) THEN
-             !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
+             !!$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
              DO i=1, ndata_set(k)
                 ! Poisson distribution calculation --------------------------------------------------
                 enc = USERFCN_SET(x(i,k),npar,par,funcid,k)
                 ll_tmp = ll_tmp + nc(i,k)*DLOG(enc) - enc
              END DO
-             !$OMP END PARALLEL DO
+             !!$OMP END PARALLEL DO
           ELSE
-             !$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
+             !!$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
              DO i=1, ndata_set(k)
                 ! Normal (Gaussian) distribution calculation --------------------------------------
                 enc = USERFCN_SET(x(i,k),npar,par,funcid,k)
                 ll_tmp = ll_tmp - (nc(i,k) - enc)**2/(2*nc_err(i,k)**2)
              ENDDO
-             !$OMP END PARALLEL DO
+             !!$OMP END PARALLEL DO
           END IF
        END DO
     END IF
@@ -590,13 +590,13 @@ CONTAINS
     !
     REAL(8) :: USERFCN_2D
     REAL(8) :: ll_tmp, enc, xx, yy
-    INTEGER(4) :: i=0, j=0, k=1
+    INTEGER(4) :: i, j, k
 
 
     ! Calculate LIKELIHOOD
     ll_tmp = 0.
 
-    !$OMP PARALLEL DO PRIVATE(i,j,xx,yy,enc) REDUCTION(+:ll_tmp)
+    !!$OMP PARALLEL DO PRIVATE(i,j,xx,yy,enc) REDUCTION(+:ll_tmp)
     DO j=1, ny ! inversion of i,j for increasing memory administration efficency (but not differences noticed for te moment)
        DO i=1, nx
           ! Poisson distribution calculation --------------------------------------------------
@@ -606,7 +606,7 @@ CONTAINS
           ll_tmp = ll_tmp + adata_mask(i,j)*(adata(i,j)*DLOG(enc) - enc)
        END DO
     END DO
-    !$OMP END PARALLEL DO
+    !!$OMP END PARALLEL DO
 
     ! Sum all together
     LOGLIKELIHOOD_2D = ll_tmp + const_ll

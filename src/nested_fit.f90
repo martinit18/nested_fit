@@ -120,7 +120,7 @@ PROGRAM NESTED_FIT
   INTEGER(8) :: nexp=0
 
   ! Parallelization variables for master mpi node
-  INTEGER(4) :: itry=1, nth=1
+  INTEGER(4) :: itry=1
   INTEGER(4), DIMENSION(1) :: itrymax
   INTEGER(4), ALLOCATABLE, DIMENSION(:) :: nall_try
   REAL(8), ALLOCATABLE, DIMENSION(:) :: evsum_final_try, live_like_max_try
@@ -137,7 +137,7 @@ PROGRAM NESTED_FIT
   INTEGER(4) :: mpi_rank, mpi_cluster_size, mpi_ierror
 
   ! Time measurement variables
-  REAL(8) :: seconds, seconds_omp, startt, stopt
+  REAL(8) :: seconds, seconds_omp, startt, stopt, startt_omp, stopt_omp
 
   ! Random number variables
   INTEGER(4) :: seed_array(33) = 1
@@ -197,13 +197,13 @@ PROGRAM NESTED_FIT
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ! Calculate time elapsed !!!!!!!!!!!!!!!!!!!!
-  ! Parallel real time (and number of threads)
-  IF (parallel_on) THEN
-    seconds = omp_get_wtime( )
-    nth = omp_get_max_threads()
-  END IF
+  ! Parallel real time (and number of threads)  
+  !$ seconds = omp_get_wtime( )
+  !$ nth = omp_get_max_threads()
+
   ! Absolute time
   CALL CPU_TIME(startt)
+  !$ startt_omp = omp_get_wtime( )
 
   ! Print program version
   IF(mpi_rank.EQ.0) THEN
@@ -716,11 +716,13 @@ PROGRAM NESTED_FIT
    ENDIF
 
    ! Calculate end time
-   ! Parallel time
-   IF (parallel_on) seconds_omp = omp_get_wtime( ) - seconds
    ! Normal time
    CALL CPU_TIME(stopt)
    seconds  = stopt - startt
+   ! Parallel time
+   seconds_omp = seconds
+   !$ stopt_omp = omp_get_wtime( )
+   !$ seconds_omp =  stopt_omp - startt_omp
    
    IF(mpi_rank.EQ.0) THEN
       !IF(arg.EQ. ' ') THEN
