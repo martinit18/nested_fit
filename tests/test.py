@@ -3,6 +3,11 @@ import os
 import subprocess
 import numpy as np
 
+"""
+This file contains the code that discovers and runs the directories with the tests
+containing the nested_fit inputs and then tests its files.
+"""
+
 def run_nf(folder: str, nf_exec: str, cmake_build_dir: str, cmake_source_dir: str, target_precision: float, total_tests: int, i: int):
     extension = '.exe' if os.name == 'nt' else ''
     executable = f'{cmake_source_dir}/bin/{nf_exec}' + extension

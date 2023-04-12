@@ -1,13 +1,7 @@
 # NOTE(César): Testing requires python, I could run it off C++ or even Fortran, but I don't see the need to do so.
 find_package(Python COMPONENTS Interpreter REQUIRED)
 
-message(STATUS "Tests are enabled.")
-
-# Read from the test script output and regex its value for "Test Passed" or something similar
-set(passRegex "Test OK")
-set(failRegex "Test FAIL")
-
-# TODO(Cesar): Remake the python testing script to allow for a more precise testing environment
+message(STATUS "Configuring tests directory.")
 
 set(nf_test_version_input ${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR})
 
@@ -22,17 +16,22 @@ macro(listsubdir result curdir)
     set(${result} ${dirlist})
 endmacro()
 
-function(add_test_dir tname)
-    # Is this a data or function run ?
-    file(GLOB ALL_FILES ${tname}/*)
-    list(LENGTH ALL_FILES FILECOUNT)
+macro(try_implement_json_field)
+    set(options "")
+    set(single_args JSON_DATA PARAMETER_OUT)
+    set(multi_args KEYS)
+    cmake_parse_arguments(ARGS "${options}" "${single_args}" "${multi_args}" ${ARGN})
 
-    if(FILECOUNT EQUAL 1)
-        set(nf_test_bin ${nested_fit_target_func})
-    else()
-        set(nf_test_bin ${nested_fit_target})
+    string(JSON var ERROR_VARIABLE var_found GET ${ARGS_JSON_DATA} ${ARGS_KEYS})
+    if(${var_found} MATCHES "NOTFOUND")
+        list(GET ARGS_KEYS -1 last_key)
+        message(STATUS "Using custom key [${last_key}=${var}]")
+        set(nf_test_filename_suffix ${nf_test_filename_suffix}_${var})
+        set(${ARGS_PARAMETER_OUT} ${var})
     endif()
+endmacro()
 
+macro(add_test_dir tname isdata)
     # Are we using openMPI to test ?
     if(OPENMPI)
         set(nf_test_mt_type "OpenMPI")
@@ -41,7 +40,7 @@ function(add_test_dir tname)
     else()
         set(nf_test_mt_type "Baseline")
         # Else just set the number of tries to the default
-        if(FILECOUNT EQUAL 1)
+        if(NOT ${isdata})
             set(NCORES 3) # 3 For functions
         else()
             set(NCORES 1) # 1 For data
@@ -50,44 +49,92 @@ function(add_test_dir tname)
     
     # How many tries should we use ?
     set(nf_test_current_ntries ${NCORES})
-    
-    message(STATUS "Configuring test -> ${tname} | ${nf_test_mt_type} | ${nf_test_bin} | ${NCORES} try/tries")
+    message(STATUS "Configuring test -> ${tname} | ${nf_test_mt_type} | ${NCORES} try/tries")
+endmacro()
 
-    add_test(
-        NAME ${tname}
-        COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/testing.py ${tname} ${nf_test_bin} 
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${tname}/
-    )
+macro(generate_test_subfolders ttype)
+    # This is a data test directory
+    listsubdir(data_test_dirs ${CMAKE_CURRENT_SOURCE_DIR}/${ttype}/)
 
-    set_property(TEST ${tname} PROPERTY PASS_REGULAR_EXPRESSION "${passRegex}")
-    set_property(TEST ${tname} PROPERTY FAIL_REGULAR_EXPRESSION "${failRegex}")
+    foreach(data_test ${data_test_dirs})
+        if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${ttype}/${data_test}/modes.json)
 
-    # Configure test files version input
-    configure_file(${tname}/nf_input.dat.in ${tname}/nf_input.dat @ONLY)
-    file(COPY ${tname}/ 
-         DESTINATION ${CMAKE_BINARY_DIR}/tests/${tname}/
-         PATTERN "*.in" EXCLUDE
-    )
+            # Tell cmake what are the keys in the json file to fetch for
+            execute_process(COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/configure_json.py ${CMAKE_CURRENT_BINARY_DIR} ${data_test} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${ttype}/${data_test})
+            include(${CMAKE_CURRENT_BINARY_DIR}/configure_json_keys_${data_test}.cmake)
+            
+            file(READ ${CMAKE_CURRENT_SOURCE_DIR}/${ttype}/${data_test}/modes.json json_data_str)
+            
+            # Set the variables for the input file config
+            string(JSON variants ERROR_VARIABLE var_found GET ${json_data_str} "variants" 0 "search_func")
+            if(DEFINED variants)
+                string(JSON variants_length LENGTH ${json_data_str} "variants")
+                MATH(EXPR variants_loop_idx "${variants_length}-1")
+                
+                foreach(i RANGE ${variants_loop_idx})
+                    load_json_variants(${json_data_str} ${i})
+                    message(STATUS "Generating folder: ${data_test}${nf_test_filename_suffix}")
 
-    if(AUTOTESTS)
-        add_custom_target(test_${tname} ALL
-            COMMAND ${CMAKE_CTEST_COMMAND} -C $<CONFIGURATION> -R "^${tname}$" --output-on-failures
-        )
-        add_dependencies(test_${tname} ${nested_fit_target} ${nested_fit_target_func})
-    endif()
-endfunction()
+                    file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tests/${data_test}${nf_test_filename_suffix}/)
+                    list(APPEND nf_test_folders ${data_test}${nf_test_filename_suffix})
 
-# Test the tesing suite itself
-add_test(NAME expect COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/testing.py expect ${nested_fit_target}
-         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/expect/
-)
-set_property(TEST expect PROPERTY PASS_REGULAR_EXPRESSION "Test FAIL -> 3/4 passed.")
+                    if(${ttype} STREQUAL "data")
+                        add_test_dir(${data_test} TRUE)
+                        list(APPEND nf_test_bin ${nested_fit_target})
+                    else()
+                        add_test_dir(${data_test} FALSE)
+                        list(APPEND nf_test_bin ${nested_fit_target_func})
+                    endif()
+
+                    configure_file(${ttype}/${data_test}/nf_input.dat.in ${data_test}${nf_test_filename_suffix}/nf_input.dat @ONLY)
+                    file(COPY ${ttype}/${data_test}/
+                        DESTINATION ${CMAKE_BINARY_DIR}/tests/${data_test}${nf_test_filename_suffix}/
+                        PATTERN "*.in"   EXCLUDE
+                        PATTERN "*.json" EXCLUDE
+                    )
+                    message(STATUS "")
+                    set(nf_test_filename_suffix "")
+                endforeach()
+            endif()
+        else()
+            message(STATUS "Generating folder: ${data_test}")
+
+            if(${ttype} STREQUAL "data")
+                add_test_dir(${data_test} TRUE)
+                list(APPEND nf_test_bin ${nested_fit_target})
+            else()
+                add_test_dir(${data_test} FALSE)
+                list(APPEND nf_test_bin ${nested_fit_target_func})
+            endif()
+
+            file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tests/${data_test}/)
+            list(APPEND nf_test_folders ${data_test})
 
 
-# Add test directories recursively
-listsubdir(test_dirs ${CMAKE_CURRENT_SOURCE_DIR})
-message(STATUS ${test_dirs})
+            configure_file(${ttype}/${data_test}/nf_input.dat.in ${data_test}${nf_test_filename_suffix}/nf_input.dat @ONLY)
+            file(COPY ${ttype}/${data_test}/
+                DESTINATION ${CMAKE_BINARY_DIR}/tests/${data_test}${nf_test_filename_suffix}/
+                PATTERN "*.in"   EXCLUDE
+                PATTERN "*.json" EXCLUDE
+            )
+            message(STATUS "")
+        endif()
+    endforeach()
+endmacro()
 
-# foreach(test_dir ${test_dirs})
-#     add_test_dir(${test_dir})
-# endforeach()
+set(nf_test_bin "")
+set(nf_test_folders "")
+
+# Make the json loading part of the code available to the cmake generated modules
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR}/tests/)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/TryJsonField.cmake DESTINATION ${CMAKE_BINARY_DIR}/tests/)
+
+# Finaly generate all of the test folders
+generate_test_subfolders("data")
+generate_test_subfolders("func")
+
+# Copy the test suite file
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/test_suite.py DESTINATION ${CMAKE_BINARY_DIR}/tests/)
+
+# Configure the python test file
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test.py ${CMAKE_BINARY_DIR}/test.py)

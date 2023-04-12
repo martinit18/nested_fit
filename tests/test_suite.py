@@ -2,6 +2,10 @@ from __future__ import annotations
 import sys
 import re
 
+"""
+This file contains the testing suit library to check files against some conditions.
+"""
+
 # https://svn.blender.org/svnroot/bf-blender/trunk/blender/build_files/scons/tools/bcolors.py
 class bcolors:
     HEADER = '\033[95m'

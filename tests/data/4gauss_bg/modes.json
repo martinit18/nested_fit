@@ -1,0 +1,24 @@
+{
+    "variants": [
+        {
+            "search_func": "RANDOM_WALK",
+            "search_method": "LIKE_ACC",
+            "clustering_func": "k"
+        },
+        {
+            "search_func": "RANDOM_WALK",
+            "search_method": "LIKE_ACC",
+            "clustering_func": "g"
+        },
+        {
+            "search_func": "SLICE_SAMPLING",
+            "search_method": "LIKE_ACC",
+            "clustering_func": "k"
+        },
+        {
+            "search_func": "SLICE_SAMPLING",
+            "search_method": "LIKE_ACC",
+            "clustering_func": "g"
+        }
+    ]
+}
