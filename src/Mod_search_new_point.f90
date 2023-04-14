@@ -227,6 +227,8 @@ CONTAINS
                 !END IF
                 too_many_tries=.true.
                 live_like_new=min_live_like
+                live_new = live(1,:)
+                GOTO 600
              END IF
              ! Some test for desesperate seeking (for presence of several maxima)
 
@@ -336,6 +338,8 @@ CONTAINS
     ! Take the last point after jumps as new livepoint
     live_new = new_jump
     live_like_new = loglike
+
+600 CONTINUE
 
     RETURN
     ! ------------------------------------------------------------------------------------
@@ -525,6 +529,8 @@ CONTAINS
                 !END IF
                 too_many_tries=.true.
                 live_like_new=min_live_like
+                live_new = live(1,:)
+                GOTO 400
              END IF
              ! Some test for desesperate seeking (for presence of several maxima)
 
@@ -620,6 +626,8 @@ CONTAINS
     ! Take the last point after jumps as new livepoint
     live_new = new_jump
     live_like_new = loglike
+
+400 CONTINUE
 
     RETURN
     ! ------------------------------------------------------------------------------------
@@ -856,6 +864,8 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
                !END IF
                too_many_tries=.true.
                live_like_new=min_live_like
+               live_new = live(1,:)
+               GOTO 400
              END IF
              GOTO 500
            END IF
@@ -911,7 +921,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     ! Take the last point after jumps as new livepoint
     live_new = new_jump_comp
     live_like_new = loglike
-    ntries=ntries/dim_eff
+400 ntries=ntries/dim_eff
 
 END SUBROUTINE SLICE_SAMPLING
 
@@ -1163,7 +1173,9 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
                !  RETURN
                !END IF
                too_many_tries=.true.
-                live_like_new=min_live_like
+               live_like_new=min_live_like
+               live_new = live(1,:)
+               GOTO 400
              END IF
              GOTO 500
            END IF
@@ -1218,7 +1230,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     ! Take the last point after jumps as new livepoint
     live_new = new_jump_comp
     live_like_new = loglike
-    ntries=ntries/dim_eff
+400 ntries=ntries/dim_eff
 
 END SUBROUTINE SLICE_SAMPLING_ADAPT
 
