@@ -442,21 +442,21 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
                    moving_eff_avg
            ENDIF
 20         FORMAT('| N: ', I2, ' | S: ', I8, ' | MLL: ', F20.12, ' | E: ', F20.12, &
-                ' | Es: ', F20.12, ' | Ea: ', ES13.7, ' | Ae: ', F6.4, ' |')
+                ' | Es: ', F20.12, ' | Ea: ', ES14.7, ' | Ae: ', F6.4, ' |')
 21         FORMAT('| Machine: ', A10, ' | N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
-                ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES13.7, ' | Avg eff.: ', F6.4, ' |')
+                ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES14.7, ' | Avg eff.: ', F6.4, ' |')
            CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_STATUS, mpi_child_writter_comm, mpi_ierror)
 #else
            IF(opt_compact_output) THEN
               WRITE(info_string,22) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
 22            FORMAT('| N: ', I2, ' | S: ', I8, ' | MLL: ', F20.12, ' | E: ', F20.12, &
-                   ' | Es: ', F20.12, ' | Ea: ', ES13.7, ' | Te: ', F6.4, ' |')
+                   ' | Es: ', F20.12, ' | Ea: ', ES14.7, ' | Te: ', F6.4, ' |')
               WRITE(*,24) info_string
 24            FORMAT(A150)
            ELSE
               WRITE(info_string,23) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
 23            FORMAT('| N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
-                   ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES13.7, ' | Typical eff.: ', F6.4, ' |')
+                   ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES14.7, ' | Typical eff.: ', F6.4, ' |')
               WRITE(*,25) info_string
 25            FORMAT(A220)
            ENDIF
