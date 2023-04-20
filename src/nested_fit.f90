@@ -227,12 +227,13 @@ PROGRAM NESTED_FIT
       READ(77,*) filename(1), string
       READ(77,*) set_yn, string
       READ(77,*) data_type, string
+      READ(77,*) likelihood_funcname, string
       READ(77,*) nlive, string
       READ(77,*) conv_method, string
       READ(77,*) evaccuracy, conv_par, string
       READ(77,*) search_method, string
       READ(77,*) search_par1, search_par2, maxtries, maxntries, string
-      READ(77,*) cluster_yn, cluster_method, cluster_par1, cluster_par2
+      READ(77,*) cluster_yn, cluster_method, cluster_par1, cluster_par2, string
       READ(77,*) ntry, maxstep_try, string
       READ(77,*) funcname, string
       READ(77,*) lr, string

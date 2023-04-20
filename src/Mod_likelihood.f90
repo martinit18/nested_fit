@@ -30,6 +30,13 @@ MODULE MOD_LIKELIHOOD
 
 CONTAINS
 
+#define DATA_IS_C   B'00000001'
+#define DATA_IS_E   B'00000010'
+#define DATA_IS_1D  B'00010000'
+#define DATA_IS_2D  B'00100000'
+#define DATA_IS_SET B'10000000'
+#define BIT_CHECK_IF(what) (IAND(dataid, what).GT.0)
+
   SUBROUTINE INIT_LIKELIHOOD()
     ! Initialize the normal likelihood with data files and special function
     
@@ -41,6 +48,9 @@ CONTAINS
 
     ! Initialize functions
     CALL INIT_FUNCTIONS()
+
+    ! Initialize likelihood function
+    CALL INIT_LIKELIHOOD_FUNC()
 
   END SUBROUTINE INIT_LIKELIHOOD
 
@@ -69,6 +79,36 @@ CONTAINS
             STOP
       END IF
   END SUBROUTINE INIT_SEARCH_METHOD
+
+  SUBROUTINE INIT_LIKELIHOOD_FUNC()
+#ifdef OPENMPI_ON   
+      INTEGER(4) :: mpi_error
+#endif
+
+      IF(likelihood_funcname.eq.'GAUSSIAN') THEN
+         loglikefuncid = 0
+      ELSE IF(likelihood_funcname.eq.'MOD_JEFFREYS') THEN
+         loglikefuncid = 1
+      ELSE
+         WRITE(*,*) 'Error of the likelihood functio type name in Mod_search_new_point module'
+         WRITE(*,*) 'Check the manual and the input file'
+#ifdef OPENMPI_ON
+         CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+#endif
+         STOP
+      END IF
+
+      ! Note(César): This only works because INIT_FUNCTIONS is called earlier
+      IF (BIT_CHECK_IF(DATA_IS_C).AND.loglikefuncid.GT.0) THEN
+         WRITE(*,*) 'Count based data does not support non Gaussian likelihood functions.'
+         WRITE(*,*) 'Check the manual and the input file'
+#ifdef OPENMPI_ON
+         CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+#endif
+         STOP
+      END IF
+
+  END SUBROUTINE INIT_LIKELIHOOD_FUNC
 
   SUBROUTINE READ_DATA()
     ! Subroutine to read data files
@@ -340,13 +380,6 @@ CONTAINS
   END SUBROUTINE READ_FILE_COUNTS_2D
 
   !#####################################################################################################################
-
-#define DATA_IS_C   B'00000001'
-#define DATA_IS_E   B'00000010'
-#define DATA_IS_1D  B'00010000'
-#define DATA_IS_2D  B'00100000'
-#define DATA_IS_SET B'10000000'
-#define BIT_CHECK_IF(what) (IAND(dataid, what).GT.0)
   
   SUBROUTINE INIT_FUNCTIONS()
     ! Subroutine to initialize the user functions, functions id and data ids
@@ -522,7 +555,7 @@ CONTAINS
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
     !
     REAL(8) :: USERFCN, USERFCN_SET
-    REAL(8) :: ll_tmp, enc
+    REAL(8) :: ll_tmp, enc, rk, rk2
     INTEGER(4) :: i, k
 
 
@@ -542,13 +575,26 @@ CONTAINS
           END DO
           !!$OMP END PARALLEL DO
        ELSE !IF (BIT_CHECK_IF(DATA_IS_E)) THEN
-          !!$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
-          DO i=1, ndata_set(k)
-             ! Normal (Gaussian) distribution calculation --------------------------------------
-             enc = USERFCN(x(i,k),npar,par,funcid)
-             ll_tmp = ll_tmp - (nc(i,k) - enc)**2/(2*nc_err(i,k)**2)
-          ENDDO
-          !!$OMP END PARALLEL DO
+          SELECT CASE (loglikefuncid)
+            CASE (0) !-- Gaussian likelihood
+               !!$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
+               DO i=1, ndata_set(k)
+                  ! Normal (Gaussian) distribution calculation --------------------------------------
+                  enc = USERFCN(x(i,k),npar,par,funcid)
+                  ll_tmp = ll_tmp - (nc(i,k) - enc)**2/(2*nc_err(i,k)**2)
+               ENDDO
+               !!$OMP END PARALLEL DO
+            CASE (1) !-- Modified Jeffreys likelihood
+               !!$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
+               DO i=1, ndata_set(k)
+                  ! Normal (Gaussian) distribution calculation --------------------------------------
+                  enc = USERFCN(x(i,k),npar,par,funcid)
+                  rk = (nc(i, k) - enc) / (nc_err(i,k)**2)
+                  rk2 = rk ** 2
+                  ll_tmp = ll_tmp + DLOG((1 - EXP(-rk2/2))/rk2)
+               ENDDO
+               !!$OMP END PARALLEL DO
+          END SELECT
        END IF
     ELSE
        ! Set ----------------------------------------------------------------------------------------------------------

@@ -9,6 +9,7 @@ MODULE MOD_PARAMETERS
   ! Input variables
   CHARACTER, DIMENSION(nsetmax) :: filename*64
   CHARACTER :: set_yn*1= 'n', data_type*3= '1c'
+  CHARACTER :: likelihood_funcname*64
   INTEGER(4) :: nset=1
   INTEGER(4) :: nlive=0
   REAL(8) :: evaccuracy=0., conv_par, search_par1=0., search_par2=0.
@@ -32,6 +33,7 @@ MODULE MOD_PARAMETERS
 
 
   ! Calculated variables
+  INTEGER(4) :: loglikefuncid=0
   INTEGER(4) :: funcid=0
   INTEGER(4) :: dataid=0
   INTEGER(4) :: searchid=0
