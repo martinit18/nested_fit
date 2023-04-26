@@ -101,7 +101,9 @@ Together with this file, also the files `nf_output_points.paramnames` and `nf_ou
 he-histo.dat        # Name of the (first) data file
 n                   # Set of files (y/n)
 1c                  # Type of data: error bars or not and dimensions (1c,1e,2c,2s,2e)
+GAUSSIAN            # The likelihood function
 ```
+Type of data:
 - `1c`: one dimensional spectrum with counts. \
 Input: (x, n. counts)
 - `1e`: one dimensional spectrum with error bars. \
@@ -112,6 +114,11 @@ Input: xy matrix with number of counts
 Input: (x, y, n. counts) TO BE IMPLEMENTED
 - `2e`: two dimensional spectrum with counts. \
 Input: (x, y, z, error z) TO BE IMPLEMENTED
+
+
+Likelihood functions available:
+- `GAUSSIAN`: Default normal distribution assuming data likelihood.
+- `MOD_JEFFREYS`: Robust likelihood that does not assume a majorated error distribution.
 
 ```
 200                 # Number of live points

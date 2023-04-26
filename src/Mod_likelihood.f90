@@ -15,6 +15,10 @@ MODULE MOD_LIKELIHOOD
   ! Module for the input parameter definition
   USE MOD_PARAMETERS
 
+#ifdef OPENMPI_ON
+   USE MPI
+#endif
+
   IMPLICIT NONE
 
   ! Data variables
@@ -82,7 +86,7 @@ CONTAINS
 
   SUBROUTINE INIT_LIKELIHOOD_FUNC()
 #ifdef OPENMPI_ON   
-      INTEGER(4) :: mpi_error
+      INTEGER(4) :: mpi_ierror
 #endif
 
       IF(likelihood_funcname.eq.'GAUSSIAN') THEN
