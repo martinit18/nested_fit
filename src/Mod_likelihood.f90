@@ -94,7 +94,8 @@ CONTAINS
       ELSE IF(likelihood_funcname.eq.'MOD_JEFFREYS') THEN
          loglikefuncid = 1
       ELSE
-         WRITE(*,*) 'Error of the likelihood functio type name in Mod_search_new_point module'
+         WRITE(*,*) 'Error of the likelihood function type name in Mod_search_new_point module'
+	 WRITE(*,*) likelihood_funcname
          WRITE(*,*) 'Check the manual and the input file'
 #ifdef OPENMPI_ON
          CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)

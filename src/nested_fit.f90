@@ -212,6 +212,7 @@ PROGRAM NESTED_FIT
       ! Initialize values --------------------------------------------------------------------------------------------------------------
       filename = ' '
       funcname = ' '
+      likelihood_funcname = ' '
 
       ! Read parameter file ------------------------------------------------------------------------------------------------------------
       OPEN (UNIT=77, FILE='nf_input.dat', STATUS='old')
@@ -303,6 +304,7 @@ PROGRAM NESTED_FIT
       CALL MPI_Bcast(filename(1), 64, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(set_yn, 1, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(data_type, 3, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(likelihood_funcname, 64, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(nlive, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(conv_method, 64, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(evaccuracy, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
