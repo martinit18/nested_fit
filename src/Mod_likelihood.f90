@@ -594,7 +594,7 @@ CONTAINS
                DO i=1, ndata_set(k)
                   ! Normal (Gaussian) distribution calculation --------------------------------------
                   enc = USERFCN(x(i,k),npar,par,funcid)
-                  rk = (nc(i, k) - enc) / (nc_err(i,k)**2)
+                  rk = (nc(i, k) - enc) / nc_err(i,k)
                   rk2 = rk ** 2
                   ll_tmp = ll_tmp + DLOG((1 - EXP(-rk2/2))/rk2)
                ENDDO
