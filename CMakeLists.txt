@@ -9,7 +9,7 @@ set(nested_res_name nested_res_V4p3.py)
 
 # The nested_fit version being built -> This gets copied everywhere inside the project code
 # For more info see the 'src/Mod_metadata.f90.in' file
-set(project_version 4.4.3)
+set(project_version 4.4.4)
 
 # Global options
 option(DEBUG "Enable debug mode." OFF)
@@ -118,7 +118,7 @@ if(DEBUG)
     set(SRC_FLAGS "-cpp -O0 -Wall -g -ffree-line-length-0")
 else()
     message(STATUS "Configuring for Release")
-    set(SRC_FLAGS "-cpp -O2 -static -ffree-line-length-0")
+    set(SRC_FLAGS "-cpp -O2  -static -ffree-line-length-0")
 endif()
 
 # NOTE(César): This is required to preprocessor the OpenMP comments

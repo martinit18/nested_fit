@@ -148,6 +148,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   END DO
 
   ! Calculate average and standard deviation of the parameters
+  CALL MAKE_LIVE_MEAN_SD(live)
 
   ! Order livepoints
   CALL SORTN(nlive,npar,live_like,live)
@@ -240,7 +241,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
       END IF
       
       it = 1
-      !!$OMP DO SCHEDULE(STATIC) LASTPRIVATE(ntries) 
       !$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) FIRSTPRIVATE(ntries) PRIVATE(p_cluster) &
         !$OMP SHARED(n,itry,min_live_like,live_like,live,nth,live_like_new,live_new,icluster,too_many_tries) LASTPRIVATE(ntries)  
       DO it=1,nth
@@ -250,7 +250,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
          !write(*,*) 'there', OMP_GET_THREAD_NUM(), it, min_live_like, live_like_new(it)
       END DO
       !$OMP END PARALLEL DO
-      !!$OMP END DO
       
       !IF(MOD(n,100)==0) WRITE(*,*) too_many_tries, ANY(too_many_tries)
 
@@ -334,13 +333,12 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
         IF (live_like_new(it).GT.live_like(nlive)) THEN
             jlim = nlive
         ELSE
-            !!$OMP PARALLEL DO
             DO j=1,nlive-1
               IF (live_like_new(it).GT.live_like(j).AND.live_like_new(it).LT.live_like(j+1)) THEN
                  jlim = j
-               END IF
+                 EXIT
+              END IF
             END DO
-            !!$OMP END PARALLEL DO
          END IF
          
         ! Store old values
@@ -463,6 +461,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 #endif
         ENDIF
      END DO
+     ! Remake calculation of mean and standard deviation live points
+     IF (.NOT.cluster_on) CALL REMAKE_LIVE_MEAN_SD(live) 
   END DO
   
   ! ---------------------------------------------------------------------------------------!
@@ -623,6 +623,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 
   ! Deallocate parallel stuff
   DEALLOCATE(live_like_new,live_new,too_many_tries,icluster)
+  ! Deallocate variables for search new live points
+  CALL DEALLOCATE_SEARCH_NEW_POINTS()
 
 
   !------------ Calculate weights and parameter best values and distributions ----------------
