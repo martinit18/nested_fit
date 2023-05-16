@@ -180,7 +180,7 @@ CONTAINS
        live_sd(:) = cluster_std(icluster,:)
        IF(cluster_std(icluster,1).EQ.0.) THEN
           ! If the cluster is formed only from one point, take the standard standard deviation
-          CALL MAKE_LIVE_MEAN_SD(live)
+          CALL REMAKE_LIVE_MEAN_SD(live)
        END IF
        ! and mean
        live_ave(:) = cluster_mean(icluster,:)
@@ -445,7 +445,7 @@ CONTAINS
        live_sd(:) = cluster_std(icluster,:)
        IF(cluster_std(icluster,1).EQ.0.) THEN
           ! If the cluster is formed only from one point, take the standard standard deviation
-          CALL MAKE_LIVE_MEAN_SD(live)
+          CALL REMAKE_LIVE_MEAN_SD(live)
        END IF
        ! and mean
        live_ave(:) = cluster_mean(icluster,:)
@@ -755,7 +755,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
        live_sd(:) = cluster_std(icluster,:)
        IF(cluster_std(icluster,1).EQ.0.) THEN
           ! If the cluster is formed only from one point, take the standard standard deviation
-          CALL MAKE_LIVE_MEAN_SD(live)
+          CALL REMAKE_LIVE_MEAN_SD(live)
        END IF
        ! and mean
        live_ave(:) = cluster_mean(icluster,:)
@@ -1020,7 +1020,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
        live_sd(:) = cluster_std(icluster,:)
        IF(cluster_std(icluster,1).EQ.0.) THEN
           ! If the cluster is formed only from one point, take the standard standard deviation
-          CALL MAKE_LIVE_MEAN_SD(live)
+          CALL REMAKE_LIVE_MEAN_SD(live)
        END IF
        ! and mean
        live_ave(:) = cluster_mean(icluster,:)
