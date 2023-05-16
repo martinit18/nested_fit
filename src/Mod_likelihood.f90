@@ -512,7 +512,6 @@ CONTAINS
 
     ! Calculate LIKELIHOOD
     ll_tmp = 0.
-    enc = 0.
 
     IF (.NOT.BIT_CHECK_IF(DATA_IS_SET)) THEN
        ! No set --------------------------------------------------------------------------------------------------------
@@ -595,7 +594,6 @@ CONTAINS
 
     ! Calculate LIKELIHOOD
     ll_tmp = 0.
-    enc = 0.
     k = 1
 
     DO j = 1, ny ! inversion of i,j for increasing memory administration efficency (but not differences noticed for te moment)
