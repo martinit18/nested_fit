@@ -87,7 +87,7 @@ CONTAINS
   SUBROUTINE SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
           live_like_new,live_new,icluster,ntries,too_many_tries)
     ! Main search function
-    USE MOD_PARAMETERS, ONLY: search_method, nlive
+    USE MOD_PARAMETERS, ONLY: nlive
 
 
     INTEGER(4), INTENT(IN) :: n, itry
@@ -125,8 +125,7 @@ CONTAINS
   ! SUBROUTINE LAWN_MOWER_ROBOT(min_ll,nlive,live_like,live,new_live_like,new_live)
 
 
-    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, &
-         cluster_yn, cluster_method, par_in
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in
 
     ! MCMC search function from Leo's ideas and mine
     INTEGER(4), INTENT(IN) :: n, itry
@@ -141,11 +140,10 @@ CONTAINS
     REAL(8) :: gval
     REAL(8), DIMENSION(npar) :: start_jump, new_jump
     INTEGER(4) :: istart, n_ntries
-    REAL(8), DIMENSION(nlive,npar) :: live_selected
     ! Other variables
     INTEGER(4) :: i, l, irn
     REAL(8) :: rn
-    INTEGER(4) :: n_call_cluster_itj, test
+    INTEGER(4) :: n_call_cluster_itj
     REAL(8) :: sdfraction
     INTEGER(4) :: njump
     REAL(8) :: loglike
@@ -391,8 +389,7 @@ CONTAINS
   SUBROUTINE UNIFORM(n,itry,min_live_like,live_like,live, &
        live_like_new,live_new,icluster,ntries,too_many_tries)
 
-    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, &
-         cluster_yn, cluster_method, par_in
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in
 
     ! uniform search function
     INTEGER(4), INTENT(IN) :: n, itry
@@ -407,11 +404,10 @@ CONTAINS
     REAL(8) :: gval
     REAL(8), DIMENSION(npar) :: start_jump, new_jump
     INTEGER(4) :: istart, n_ntries
-    REAL(8), DIMENSION(nlive,npar) :: live_selected
     ! Other variables
     INTEGER(4) :: i, l, irn, j
-    REAL(8) :: rn, sd_mean, frac
-    INTEGER(4) :: n_call_cluster_itj, test
+    REAL(8) :: rn, frac
+    INTEGER(4) :: n_call_cluster_itj
     INTEGER(4) :: nb_cube, njump
     REAL(8) :: loglike
     ! Find new live points
@@ -659,8 +655,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
 
     !inspired from polychord code
 
-    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, &
-         cluster_yn, cluster_method, par_in
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in
     INTEGER(4), INTENT(IN) :: n, itry
     REAL(8), INTENT(IN) :: min_live_like
     REAL(8), INTENT(IN), DIMENSION(nlive) :: live_like
@@ -673,11 +668,10 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     REAL(8) :: gval
     REAL(8), DIMENSION(npar) :: start_jump_comp, new_jump_comp
     INTEGER(4) :: istart, n_ntries
-    REAL(8), DIMENSION(nlive,npar) :: live_selected
     ! Other variables
-    INTEGER(4) :: i, l, irn, j, kr, kl
-    REAL(8) :: rn, sd_mean
-    INTEGER(4) :: n_call_cluster_itj, test
+    INTEGER(4) :: i, l, j, kr, kl
+    REAL(8) :: rn
+    INTEGER(4) :: n_call_cluster_itj
     INTEGER(4) :: dim_eff
     REAL(8), DIMENSION(:,:),ALLOCATABLE :: basis
     !REAL(8), DIMENSION(:,:), ALLOCATABLE :: basis
@@ -688,7 +682,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     INTEGER(4), DIMENSION(:), ALLOCATABLE :: par_var
     REAL(8) :: part_like, size_jump, size_jump_save, loglike
     LOGICAL :: test_bnd
-    INTEGER(4) :: init_fail, test2, njump
+    INTEGER(4) :: init_fail, njump
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
     live_new = 0.
@@ -747,7 +741,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     live_nf=live(:,par_var)
 
     ! Calculate momenta of the live points
-600 IF (cluster_on) THEN
+    IF (cluster_on) THEN
        ! Identify cluster appartenance
        icluster = p_cluster(istart)
        ! Get for the specific cluster if the cluster analysis is on
@@ -774,9 +768,9 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
        CALL BASE_O_N(dim_eff,basis)
        DO l=1,dim_eff
          size_jump=search_par1
-701      CONTINUE
+         CONTINUE
          !Place the first interval around the start_jump
-702      CALL RANDOM_NUMBER(rn)
+         CALL RANDOM_NUMBER(rn)
          left=start_jump_t-rn*basis(:,l)*size_jump
          right=left+basis(:,l)*size_jump
          CALL RANDOM_NUMBER(rn)
@@ -925,8 +919,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
 
     !inspired from polychord code
 
-    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, &
-         cluster_yn, cluster_method, par_in
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in
     INTEGER(4), INTENT(IN) :: n, itry
     REAL(8), INTENT(IN) :: min_live_like
     REAL(8), INTENT(IN), DIMENSION(nlive) :: live_like
@@ -939,11 +932,10 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     REAL(8) :: gval
     REAL(8), DIMENSION(npar) :: start_jump_comp, new_jump_comp
     INTEGER(4) :: istart, n_ntries
-    REAL(8), DIMENSION(nlive,npar) :: live_selected
     ! Other variables
-    INTEGER(4) :: i, l, irn,j, k
-    REAL(8) :: rn, sd_mean
-    INTEGER(4) :: n_call_cluster_itj, test
+    INTEGER(4) :: i, l, j, k
+    REAL(8) :: rn
+    INTEGER(4) :: n_call_cluster_itj
     INTEGER(4) :: dim_eff
     REAL(8), DIMENSION(:,:),ALLOCATABLE :: basis
     !REAL(8), DIMENSION(:,:), ALLOCATABLE :: basis
@@ -954,7 +946,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     INTEGER(4), DIMENSION(:), ALLOCATABLE :: par_var
     REAL(8) :: part_like, size_jump, size_jump_save, loglike
     LOGICAL :: test_bnd
-    INTEGER(4) :: init_fail, test2, njump
+    INTEGER(4) :: init_fail, njump
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
     live_new = 0.
@@ -1012,7 +1004,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     live_nf=live(:,par_var)
 
     ! Calculate momenta of the live points
-600 IF (cluster_on) THEN
+    IF (cluster_on) THEN
        ! Identify cluster appartenance
        icluster = p_cluster(istart)
        ! Get for the specific cluster if the cluster analysis is on
@@ -1039,7 +1031,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
        CALL BASE_O_N(dim_eff,basis)
        DO l=1,dim_eff
          size_jump=search_par1
-701      CONTINUE
+         CONTINUE
          !Place the first interval around the start_jump
 702      CALL RANDOM_NUMBER(rn)
          left=start_jump_t-rn*basis(:,l)*size_jump

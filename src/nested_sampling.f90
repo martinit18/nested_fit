@@ -1,6 +1,6 @@
 SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,&
      live_final,live_like_max,live_max,mpi_rank,mpi_cluster_size)
-  ! Time-stamp: <Last changed by martino on Thursday 06 April 2023 at CEST 15:41:56>
+  ! Time-stamp: <Last changed by martino on Tuesday 16 May 2023 at CEST 12:59:49>
   ! For parallel tests only
   !SUBROUTINE NESTED_SAMPLING(irnmax,rng,itry,ndata,x,nc,funcname,&
   !   npar,par_fix,par_step,par_in,par_bnd1,par_bnd2,nlive,evaccuracy,sdfraction,&
@@ -19,7 +19,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   ! Parameter module
   USE MOD_PARAMETERS, ONLY:  npar, nlive, conv_method, evaccuracy, conv_par, &
         search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, &
-        cluster_yn,search_method, ntry, nth, maxtries, maxntries, searchid
+        cluster_yn, nth, maxtries, maxntries, searchid
   ! Module for likelihood
   USE MOD_LIKELIHOOD
   ! Module for searching new live points
@@ -67,21 +67,19 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   INTEGER(4) :: nstep_final
   REAL(8) :: last_likes, live_like_last, evrest_last, evlast
   ! Rest
-  INTEGER(4) :: i,j, l, n, jlim, it
+  INTEGER(4) :: j, l, n, jlim, it
   REAL(8) :: ADDLOG, rn, gval
-  CHARACTER :: out_filename*64
   REAL(8) :: MOVING_AVG
   
   ! MPI Stuff
   REAL(8) :: moving_eff_avg = 0.
-  INTEGER(4) :: processor_name_size
-  INTEGER(4) :: mpi_ierror
-  INTEGER(4) :: mpi_child_spawn_error(1)
+  !INTEGER(4) :: processor_name_size
+  !INTEGER(4) :: mpi_ierror
+  !INTEGER(4) :: mpi_child_spawn_error(1)
 #ifdef OPENMPI_ON
   character(LEN=MPI_MAX_PROCESSOR_NAME) :: processor_name
 #endif
   CHARACTER :: info_string*256
-  CHARACTER :: lines*20
 
   LOGICAL :: make_cluster, need_cluster
   INTEGER(4) :: n_call_cluster, n_call_cluster_it
@@ -369,12 +367,12 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 
 
         SELECT CASE (searchid)
-      	   CASE (2,3)
-               IF(cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
-                 IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
-                    make_cluster=.true.
-                 END IF
-               END IF
+        CASE (2,3)
+           IF(cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+              IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
+                 make_cluster=.true.
+              END IF
+           END IF
         END SELECT
 
         ! Assign to the new point, the same cluster number of the start point

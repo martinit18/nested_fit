@@ -290,7 +290,6 @@ CONTAINS
 
     REAL(8), DIMENSION(:), INTENT(IN) :: par
     REAL(8), DIMENSION(SIZE(par)) :: x ! Variable to explore
-    INTEGER(4) :: i=0
 
     x = par
 
@@ -342,7 +341,7 @@ CONTAINS
     REAL(8), PARAMETER :: pi=3.141592653589793d0
     REAL(8), PARAMETER ::  eps=1.
     REAL(8), DIMENSION(SIZE(par)) :: x     
-    INTEGER(4) :: N, i, j
+    INTEGER(4) :: N, i
     REAL(8) :: rij, ener
 
     x = par
