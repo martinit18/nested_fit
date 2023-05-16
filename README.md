@@ -245,7 +245,7 @@ Previous versions are:
 
 ### Additional included sources
 
-In addition to the original files from the main author (M. Trassinelli), nesed_fit includes
+In addition to the original files from the main authors, nesed_fit includes
 - *FITPACK (DIERCKX)* package, to fit and interpolating data with splines (no license)
   - Ref: Paul Dierckx, Curve and Surface Fitting with Splines, Oxford University Press, 1993
  Developer,

@@ -62,7 +62,7 @@ CONTAINS
   SUBROUTINE READ_DATA()
     ! Subroutine to read data files
     INTEGER(4) :: k=0
-    REAL(8), DIMENSION(maxdata,nsetmax) :: x_tmp=0, y_tmp=0, nc_tmp=0, nc_err_tmp=0
+    REAL(8), DIMENSION(maxdata,nsetmax) :: x_tmp=0, nc_tmp=0, nc_err_tmp=0
 
     ! READ DATA, calculate the constants for the likelihood function
     ! Initialize
@@ -847,11 +847,10 @@ CONTAINS
     !
     INTEGER(8), PARAMETER :: maxfit = 10000
     REAL(8) :: USERFCN_2D
-    REAL(8) :: minx=0., maxx=0., enc = 0., dx, xfit, yfit
+    REAL(8) :: minx=0., maxx=0., dx, xfit, yfit
     INTEGER(4) :: i=0, j=0, k=0, ix=0
     ! Stuff to save separate components
     LOGICAL :: plot = .FALSE.
-    CHARACTER :: out_filename*64
     REAL(8), DIMENSION(nx,ny) :: aenc, ares
     REAL(8), DIMENSION(nx) :: hx, hnc, henc, hres
     REAL(8) :: xx, yy, nan, a, b, c, y0, Dy

@@ -474,11 +474,11 @@ CONTAINS
 
        ! Check if the new point is inside the parameter volume defined by the minimum likelihood of the live points
        IF (LOGLIKELIHOOD(new_jump).GT.min_live_like) THEN
-           !!$OMP PARALLEL DO REDUCTION(+:nb_cube)
+           !$OMP SIMD REDUCTION(+:nb_cube)
            DO j=1, nlive
               IF(ALL(ABS(new_jump-live(j,:)) .LT. frac*live_sd)) nb_cube=nb_cube+1
            END DO
-          !!$OMP END PARALLEL DO
+          !$OMP END SIMD
           CALL RANDOM_NUMBER(rn)
           IF(rn.GT.1./nb_cube) THEN
             nb_cube=0
@@ -1236,70 +1236,70 @@ SUBROUTINE MAT_COV(pts,np,D,istart,cov) !calculates the covariance matrix
     ! Standard deviation
     IF(cluster_np(icluster).LT.2*D) THEN
        mean=pts(istart,:)
-       !!$OMP PARALLEL DO
+       !$OMP SIMD
        DO i=1,D
          mean_prov(i)=SUM(pts(:,i))/np
        END DO
-       !!$OMP END PARALLEL DO
-       !!$OMP PARALLEL DO
-       DO i=1,D
-         !!$OMP PARALLEL DO
-         DO j=i,D
+       !$OMP END SIMD
+       !$OMP SIMD
+       DO j=1,D
+         !$OMP SIMD
+         DO i=j,D
            cov(i,j)=SUM((pts(:,i)-mean_prov(i))*(pts(:,j)-mean_prov(j)))/(np-1)
            cov(j,i)=cov(i,j)
          END DO
-         !!$OMP END PARALLEL DO
+         !$OMP END SIMD
        END DO
-       !!$OMP END PARALLEL DO
+       !$OMP END SIMD
     ELSE IF(icluster==0) THEN
-       !!$OMP PARALLEL DO
+       !$OMP SIMD
        DO i=1,D
          mean(i)=SUM(pts(:,i))/np
        END DO
-       !!$OMP END PARALLEL DO
-       !!$OMP PARALLEL DO
-       DO i=1,D
-         !!$OMP PARALLEL DO
-         DO j=i,D
+       !$OMP END SIMD
+       !$OMP SIMD
+       DO j=1,D
+         !$OMP SIMD
+         DO i=j,D
            cov(i,j)=SUM((pts(:,i)-mean(i))*(pts(:,j)-mean(j)))/(np-1)
            cov(j,i)=cov(i,j)
          END DO
-         !!$OMP END PARALLEL DO
+         !$OMP END SIMD
        END DO
-       !!$OMP END PARALLEL DO
+       !$OMP END SIMD
     ELSE
-       !!$OMP PARALLEL DO
+       !$OMP SIMD
        DO i=1,D
          mean(i)=SUM(pts(:,i),MASK=(p_cluster==icluster))/cluster_np(icluster)
        END DO
-       !!$OMP END PARALLEL DO
-       !!$OMP PARALLEL DO
-       DO i=1,D
-         !!$OMP PARALLEL DO
-         DO j=i,D
+       !$OMP END SIMD
+       !$OMP SIMD
+       DO j=1,D
+         !$OMP SIMD
+         DO i=j,D
            cov(i,j)=SUM((pts(:,i)-mean(i))*(pts(:,j)-mean(j)),MASK=(p_cluster==icluster))/(cluster_np(icluster)-1)
            cov(j,i)=cov(i,j)
          END DO
-         !!$OMP END PARALLEL DO
+         !$OMP END SIMD
        END DO
-       !!$OMP END PARALLEL DO
+       !$OMP END SIMD
     END IF
   ELSE
-    !!$OMP PARALLEL DO
+    !$OMP SIMD
     DO i=1,D
       mean(i)=SUM(pts(:,i))/np
     END DO
-    !!$OMP END PARALLEL DO
-    !!$OMP PARALLEL DO
-     DO i=1,D
-       !!$OMP PARALLEL DO
-      DO j=i,D
+    !$OMP END SIMD
+    !$OMP SIMD
+     DO j=1,D
+       !$OMP SIMD
+      DO i=j,D
         cov(i,j)=SUM((pts(:,i)-mean(i))*(pts(:,j)-mean(j)))/(np-1)
         cov(j,i)=cov(i,j)
       END DO
-      !!$OMP END PARALLEL DO
+      !$OMP END SIMD
     END DO
-    !!$OMP END PARALLEL DO
+    !$OMP END SIMD
   END IF
 END SUBROUTINE MAT_COV
 
@@ -1310,17 +1310,22 @@ SUBROUTINE CHOLESKY(D,cov,chol) !calculates the cholesky decomposition of the co
    INTEGER(4) :: i,j,k
    chol=0
    chol(1,1)=SQRT(cov(1,1))
+   !$OMP SIMD
    DO i=2,D
      chol(i,1)=cov(i,1)/chol(1,1)
    END DO
+   !$OMP SIMD
    DO i=2,D
      chol(i,i)=cov(i,i)
+     !$OMP SIMD
      DO k=1,i-1
        chol(i,i)=chol(i,i)-chol(i,k)**2
      END DO
      chol(i,i)=SQRT(chol(i,i))
+     !$OMP SIMD
      DO j=i+1,D
        chol(j,i)=cov(i,j)
+       !$OMP SIMD
        DO k=1,i-1
          chol(j,i)=chol(j,i)-chol(i,k)*chol(j,k)
        END DO
@@ -1335,12 +1340,16 @@ SUBROUTINE TRIANG_INV(D,mat,mat_inv) !calculates the inverse of the cholesky dec
    REAL(8), DIMENSION(D,D), INTENT(OUT) :: mat_inv
    INTEGER(4) :: i,j,k
    mat_inv=0
+   !$OMP SIMD
    DO i=1,D
      mat_inv(i,i)=1./mat(i,i)
    END DO
 
+   !$OMP SIMD
    DO j=1,D-1
+     !$OMP SIMD
      DO i=1,D-j
+       !$OMP SIMD
        DO k=1,j
           mat_inv(i+j,i)=mat_inv(i+j,i)-mat(i+k,i)*mat_inv(i+j,i+k)
        END DO
