@@ -17,11 +17,17 @@ option(NORNG "Uses the same set seed. Useful for testing." OFF)
 option(OPENMP "Enable/Disable OpenMP." OFF)
 option(OPENMPI "Enable/Disable OpenMPI." OFF)
 option(AUTOTESTS "Automatically run tests after compiling." OFF)
+option(LAPACK "Enable/Disable LAPACK." OFF)
 
 #####################################
 #####################################
 
 project(nested_fit VERSION ${project_version} LANGUAGES Fortran)
+
+#if(LAPACK)
+#    find_package(BLAS REQUIRED)
+#    find_package(LAPACK REQUIRED)
+#endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
@@ -34,32 +40,57 @@ string(LENGTH ${nested_fit_version_str} nested_fit_version_str_len)
 string(CONCAT nested_fit_mpi_child_comm_proc_name "nf_child_proc" ${nested_fit_version_full_str})
 string(LENGTH ${nested_fit_mpi_child_comm_proc_name} nested_fit_mpi_child_comm_proc_name_len)
 
+if(LAPACK)
+    set(SRC_FILES_COMM
+        src/Mod_cluster_analysis.f90
+        src/Mod_parameters.f90
+        src/Mod_search_new_point_lapack.f90    #
+        src/Mod_timestamp.f90
 
-set(SRC_FILES_COMM
-    src/Mod_cluster_analysis.f90
-    src/Mod_parameters.f90
-    src/Mod_search_new_point.f90
-    src/Mod_timestamp.f90
-    
-    src/dlog_fac.f90
-    src/meanvar.f90
-    src/init_interpolation.f
+        src/dlog_fac.f90
+        src/meanvar.f90
+        src/init_interpolation.f
 
-    src/nested_fit.f90
-    src/nested_sampling.f90
+        src/nested_fit.f90
+        src/nested_sampling.f90
 
-    src/randn.f90
-    src/rinteg.f
-    src/shirley_fitpack.f90
-    src/sortn_slatec.f90
+        src/randn.f90
+        src/rinteg.f
+        src/shirley_fitpack.f90
+        src/sortn_slatec.f90
 
-    src/Mod_mpi.f90
-    src/Mod_math.f90
+        src/Mod_mpi.f90
+        src/Mod_math.f90
 
-    src/cli/f90getopt.f90
-    src/Mod_options.f90
+        src/cli/f90getopt.f90
+        src/Mod_options.f90
 )
+else()
+    set(SRC_FILES_COMM
+        src/Mod_cluster_analysis.f90
+        src/Mod_parameters.f90
+        src/Mod_search_new_point.f90
+        src/Mod_timestamp.f90
+    
+        src/dlog_fac.f90
+        src/meanvar.f90
+        src/init_interpolation.f
 
+        src/nested_fit.f90
+        src/nested_sampling.f90
+
+        src/randn.f90
+        src/rinteg.f
+        src/shirley_fitpack.f90
+        src/sortn_slatec.f90
+
+        src/Mod_mpi.f90
+        src/Mod_math.f90
+
+        src/cli/f90getopt.f90
+        src/Mod_options.f90
+)
+endif()
 set(SRC_FILES_DATA
     src/Mod_likelihood.f90
 
@@ -80,6 +111,7 @@ set(CHILD_SRC_FILES
 file(GLOB SRC_CALGO   ${CMAKE_SOURCE_DIR}/src/CALGO.ACM/*.f)
 file(GLOB SRC_DIERCKX ${CMAKE_SOURCE_DIR}/src/DIERCKX/*.f)
 file(GLOB SRC_SLATEC  ${CMAKE_SOURCE_DIR}/src/SLATEC/*.f)
+#file(GLOB SRC_LAPACK  ${CMAKE_SOURCE_DIR}/src/LAPACK/*.f ${CMAKE_SOURCE_DIR}/src/LAPACK/*.F)
 
 if(OPENMP AND OPENMPI)
     message(ERROR "Compiling against OpenMP and OpenMPI at the same time is currently not supported.")
@@ -118,7 +150,7 @@ if(DEBUG)
     set(SRC_FLAGS "-cpp -O0 -Wall -g -ffree-line-length-0")
 else()
     message(STATUS "Configuring for Release")
-    set(SRC_FLAGS "-cpp -O2  -static -ffree-line-length-0")
+    set(SRC_FLAGS "-cpp -O2 -static -ffree-line-length-0")
 endif()
 
 # NOTE(César): This is required to preprocessor the OpenMP comments
@@ -129,6 +161,7 @@ endif()
 set_source_files_properties(${SRC_CALGO} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${SRC_DIERCKX} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${SRC_SLATEC} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
+#set_source_files_properties(${SRC_LAPACK} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${SRC_FILES_COMM} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${SRC_FILES_DATA} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${SRC_FILES_FUNC} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
@@ -143,6 +176,7 @@ add_executable(${nested_fit_target}
     ${SRC_CALGO}
     ${SRC_DIERCKX}
     ${SRC_SLATEC}
+#    ${SRC_LAPACK}
     ${SRC_FILES_COMM}
     ${SRC_FILES_DATA}
 )
@@ -152,9 +186,37 @@ add_executable(${nested_fit_target_func}
     ${SRC_CALGO}
     ${SRC_DIERCKX}
     ${SRC_SLATEC}
+#    ${SRC_LAPACK}
     ${SRC_FILES_COMM}
     ${SRC_FILES_FUNC}
 )
+
+if(LAPACK)
+    target_compile_definitions(${nested_fit_target}      PUBLIC -DLAPACK_ON)
+    target_compile_definitions(${nested_fit_target_func} PUBLIC -DLAPACK_ON)
+    if(UNIX)
+        # Find LAPACK and BLAS on Unix-like systems
+        # old try set(SRC_FLAGS "${SRC_FLAGS} -L/usr/lib/x86_64-linux-gnu/liblapack.so -llapack -L/usr/lib/x86_64-linux-gnu/libblas.so -lblas")
+        find_package(LAPACK REQUIRED)  
+        if(LAPACK_FOUND)
+            target_link_libraries(${nested_fit_target} PRIVATE ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
+            target_link_libraries(${nested_fit_target_func} PRIVATE ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
+        else()
+            message(FATAL_ERROR "LAPACK library not found. Please install LAPACK.")
+        endif()
+    elseif(APPLE)
+        find_library(ACCELERATE_FRAMEWORK Accelerate)
+        target_link_libraries(${nested_fit_target}      PRIVATE ${ACCELERATE_FRAMEWORK})
+        target_link_libraries(${nested_fit_target_func} PRIVATE ${ACCELERATE_FRAMEWORK})
+    elseif(WIN32)
+        # Specify LAPACK and BLAS paths and names on Windows
+        #set(LAPACK_LIBRARIES "path/to/lapack.lib")
+        #set(BLAS_LIBRARIES "path/to/blas.lib")
+        #target_link_libraries(${nested_fit_target} PRIVATE ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
+        #target_link_libraries(${nested_fit_target_func} PRIVATE ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
+        message(FATAL_ERROR "LAPACK library not found. Please install LAPACK.")
+    endif()
+endif()
 
 if(OPENMP)
     target_link_options(${nested_fit_target}      PRIVATE "-fopenmp")
@@ -214,6 +276,8 @@ else()
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${nested_fit_mpi_child_comm_proc_name}> $ENV{HOME}/bin)
     endif()
 endif()
+
+#message(STATUS "${SRC_FLAGS}")
 
 enable_testing()
 add_subdirectory(tests)
