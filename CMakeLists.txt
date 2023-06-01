@@ -40,57 +40,32 @@ string(LENGTH ${nested_fit_version_str} nested_fit_version_str_len)
 string(CONCAT nested_fit_mpi_child_comm_proc_name "nf_child_proc" ${nested_fit_version_full_str})
 string(LENGTH ${nested_fit_mpi_child_comm_proc_name} nested_fit_mpi_child_comm_proc_name_len)
 
-if(LAPACK)
-    set(SRC_FILES_COMM
-        src/Mod_cluster_analysis.f90
-        src/Mod_parameters.f90
-        src/Mod_search_new_point_lapack.f90    #
-        src/Mod_timestamp.f90
 
-        src/dlog_fac.f90
-        src/meanvar.f90
-        src/init_interpolation.f
+set(SRC_FILES_COMM
+    src/Mod_cluster_analysis.f90
+    src/Mod_parameters.f90
+    src/Mod_search_new_point.f90    #
+    src/Mod_timestamp.f90
 
-        src/nested_fit.f90
-        src/nested_sampling.f90
+    src/dlog_fac.f90
+    src/meanvar.f90
+    src/init_interpolation.f
 
-        src/randn.f90
-        src/rinteg.f
-        src/shirley_fitpack.f90
-        src/sortn_slatec.f90
+    src/nested_fit.f90
+    src/nested_sampling.f90
 
-        src/Mod_mpi.f90
-        src/Mod_math.f90
+    src/randn.f90
+    src/rinteg.f
+    src/shirley_fitpack.f90
+    src/sortn_slatec.f90
 
-        src/cli/f90getopt.f90
-        src/Mod_options.f90
+    src/Mod_mpi.f90
+    src/Mod_math.f90
+
+    src/cli/f90getopt.f90
+    src/Mod_options.f90
 )
-else()
-    set(SRC_FILES_COMM
-        src/Mod_cluster_analysis.f90
-        src/Mod_parameters.f90
-        src/Mod_search_new_point.f90
-        src/Mod_timestamp.f90
-    
-        src/dlog_fac.f90
-        src/meanvar.f90
-        src/init_interpolation.f
 
-        src/nested_fit.f90
-        src/nested_sampling.f90
-
-        src/randn.f90
-        src/rinteg.f
-        src/shirley_fitpack.f90
-        src/sortn_slatec.f90
-
-        src/Mod_mpi.f90
-        src/Mod_math.f90
-
-        src/cli/f90getopt.f90
-        src/Mod_options.f90
-)
-endif()
 set(SRC_FILES_DATA
     src/Mod_likelihood.f90
 

@@ -1,5 +1,5 @@
 MODULE MOD_SEARCH_NEW_POINT
-  ! Automatic Time-stamp: <Last changed by martino on Saturday 13 May 2023 at CEST 23:47:56>
+  ! Automatic Time-stamp: <Last changed by martino on Thursday 01 June 2023 at CEST 15:23:06>
   ! Module for search of new points
 
   ! Module for the input parameter definition
@@ -16,6 +16,9 @@ MODULE MOD_SEARCH_NEW_POINT
   REAL(8), DIMENSION(:), ALLOCATABLE :: live_ave, live_sd
   INTEGER(4) :: n_call_clusterj=0
   INTEGER(4), PARAMETER :: n_call_cluster_it_maxj=3, n_call_cluster_maxj=10
+#ifdef LAPACK_ON
+  EXTERNAL :: dpotrf, dtrtri, dtrmv
+#endif
 
 CONTAINS
 
@@ -722,7 +725,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     !END IF
     !!$OMP END SINGLE
 
-
+    ! Select only the variables that are not fixed
     j=1
     DO i=1,npar
       IF(par_fix(i).NE.1) THEN
@@ -756,9 +759,21 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     END IF
 
     CALL MAT_COV(live_nf,nlive,dim_eff,istart,live_cov)
+#ifdef LAPACK_ON
+    live_chol=live_cov
+    CALL dpotrf('L',dim_eff,live_chol,dim_eff,i)
+    DO j=1,dim_eff
+       live_chol(1:(j-1),j)=0
+    END DO
+    inv_chol=live_chol
+    CALL dtrtri('L','N',dim_eff,inv_chol,dim_eff,i)
+    start_jump_t=start_jump
+    CALL dtrmv('L','N','N',dim_eff,inv_chol,dim_eff,start_jump_t,1)
+#else
     CALL CHOLESKY(dim_eff,live_cov,live_chol)
     CALL TRIANG_INV(dim_eff,live_chol,inv_chol)
     start_jump_t=matmul(inv_chol,start_jump) !start jump in the new space
+#endif
 
     ! Make several consecutive casual jumps in the region with loglikelyhood > minlogll
 700 CONTINUE
@@ -870,9 +885,15 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
          start_jump_t=new_jump_t
        END DO
      END DO
-
+     
     !Find the new point in the original space
-    new_jump=matmul(live_chol,new_jump_t)
+#ifdef LAPACK_ON
+     new_jump=new_jump_t
+     CALL dtrmv('L','N','N',dim_eff,live_chol,dim_eff,new_jump,1)
+#else
+     new_jump=matmul(live_chol,new_jump_t)
+#endif
+     ! Complete the new point with the fixed variables that were previously discarded
     j=1
     DO l=1,npar
       IF(par_fix(l).NE.1) THEN
