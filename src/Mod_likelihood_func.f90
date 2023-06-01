@@ -13,7 +13,9 @@ MODULE MOD_LIKELIHOOD
 
   ! Module for the input parameter definition
   USE MOD_PARAMETERS !, ONLY: npar, funcname, funcid, searchid
-
+#ifdef OPENMPI_ON
+  USE MPI
+#endif
   IMPLICIT NONE
   INTEGER(8) :: ncall=0
   REAL(8) :: a_norm=0.
