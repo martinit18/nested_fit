@@ -1254,7 +1254,7 @@ SUBROUTINE MAT_COV(pts,np,D,istart,cov) !calculates the covariance matrix
          mean_prov(i)=SUM(pts(:,i))/np
        END DO
        !$OMP END SIMD
-       !$OMP SIMD
+       !!$OMP SIMD
        DO j=1,D
          !$OMP SIMD
          DO i=j,D
@@ -1263,14 +1263,14 @@ SUBROUTINE MAT_COV(pts,np,D,istart,cov) !calculates the covariance matrix
          END DO
          !$OMP END SIMD
        END DO
-       !$OMP END SIMD
+       !!$OMP END SIMD
     ELSE IF(icluster==0) THEN
        !$OMP SIMD
        DO i=1,D
          mean(i)=SUM(pts(:,i))/np
        END DO
        !$OMP END SIMD
-       !$OMP SIMD
+       !!$OMP SIMD
        DO j=1,D
          !$OMP SIMD
          DO i=j,D
@@ -1279,14 +1279,14 @@ SUBROUTINE MAT_COV(pts,np,D,istart,cov) !calculates the covariance matrix
          END DO
          !$OMP END SIMD
        END DO
-       !$OMP END SIMD
+       !!$OMP END SIMD
     ELSE
        !$OMP SIMD
        DO i=1,D
          mean(i)=SUM(pts(:,i),MASK=(p_cluster==icluster))/cluster_np(icluster)
        END DO
        !$OMP END SIMD
-       !$OMP SIMD
+       !!$OMP SIMD
        DO j=1,D
          !$OMP SIMD
          DO i=j,D
@@ -1295,7 +1295,7 @@ SUBROUTINE MAT_COV(pts,np,D,istart,cov) !calculates the covariance matrix
          END DO
          !$OMP END SIMD
        END DO
-       !$OMP END SIMD
+       !!$OMP END SIMD
     END IF
   ELSE
     !$OMP SIMD
@@ -1303,7 +1303,7 @@ SUBROUTINE MAT_COV(pts,np,D,istart,cov) !calculates the covariance matrix
       mean(i)=SUM(pts(:,i))/np
     END DO
     !$OMP END SIMD
-    !$OMP SIMD
+    !!$OMP SIMD
      DO j=1,D
        !$OMP SIMD
       DO i=j,D
@@ -1312,7 +1312,7 @@ SUBROUTINE MAT_COV(pts,np,D,istart,cov) !calculates the covariance matrix
       END DO
       !$OMP END SIMD
     END DO
-    !$OMP END SIMD
+    !!$OMP END SIMD
   END IF
 END SUBROUTINE MAT_COV
 
@@ -1327,7 +1327,7 @@ SUBROUTINE CHOLESKY(D,cov,chol) !calculates the cholesky decomposition of the co
    DO i=2,D
      chol(i,1)=cov(i,1)/chol(1,1)
    END DO
-   !$OMP SIMD
+   !!$OMP SIMD
    DO i=2,D
      chol(i,i)=cov(i,i)
      !$OMP SIMD
@@ -1335,7 +1335,7 @@ SUBROUTINE CHOLESKY(D,cov,chol) !calculates the cholesky decomposition of the co
        chol(i,i)=chol(i,i)-chol(i,k)**2
      END DO
      chol(i,i)=SQRT(chol(i,i))
-     !$OMP SIMD
+     !!$OMP SIMD
      DO j=i+1,D
        chol(j,i)=cov(i,j)
        !$OMP SIMD
@@ -1358,9 +1358,9 @@ SUBROUTINE TRIANG_INV(D,mat,mat_inv) !calculates the inverse of the cholesky dec
      mat_inv(i,i)=1./mat(i,i)
    END DO
 
-   !$OMP SIMD
+   !!$OMP SIMD
    DO j=1,D-1
-     !$OMP SIMD
+     !!$OMP SIMD
      DO i=1,D-j
        !$OMP SIMD
        DO k=1,j
