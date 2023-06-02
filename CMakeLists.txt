@@ -14,7 +14,7 @@ option(NORNG "Uses the same set seed. Useful for testing." OFF)
 option(OPENMP "Enable/Disable OpenMP." OFF)
 option(OPENMPI "Enable/Disable OpenMPI." OFF)
 option(AUTOTESTS "Automatically run tests after compiling." OFF)
-option(BUILD_NESTED_RES "Automatically build nested_res for PyPI." ON)
+option(BUILD_NESTED_PY "Automatically build nested_res for PyPI." ON)
 
 if(OPENMPI AND WIN32)
     message(FATAL_ERROR "Windows builds don't currently support OpenMPI.")
@@ -192,7 +192,7 @@ if(OPENMPI)
 endif()
 
 
-if(BUILD_NESTED_RES)
+if(BUILD_NESTED_PY)
     find_package(Python COMPONENTS Interpreter QUIET)
     set(nested_res_dist_dir ${CMAKE_BINARY_DIR}/nested_py)
     if(Python_FOUND)
