@@ -2,7 +2,9 @@ PROGRAM NESTED_FIT
   ! Time-stamp: <Last changed by martino on Monday 07 June 2021 at CEST 10:29:22>
   !
   ! Please read README and LICENSE files for more inforamtion
-  ! 4.4  OpenMPI support (only available for number of tries)
+  ! 4.4  External LAPACK library link option 
+  !      OpenMP for parallel search of new points
+  !      OpenMPI support (only available for number of tries)
   !      New user function calling method
   !      Add Windows support
   !      New build system generator (CMake)
