@@ -1,8 +1,13 @@
-cmake_minimum_required(VERSION 3.20)
+# Change to 3.20 if you want to use the tests
+cmake_minimum_required(VERSION 3.10)
 
 #####################################
 # Custom variables are here for now #
 #####################################
+
+# Tests 
+#enable_testing()
+#add_subdirectory(tests)
 
 # The latest nested_res -> This gets copied to the user bin/
 set(nested_res_name nested_res_V4p3.py)
@@ -254,5 +259,3 @@ endif()
 
 #message(STATUS "${SRC_FLAGS}")
 
-enable_testing()
-add_subdirectory(tests)

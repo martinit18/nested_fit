@@ -63,6 +63,8 @@ These command will build two different executables in the bin directory:
 |OPENMP    | Enable/Disable OpenMP support.                                  | OFF     |
 |OPENMPI   | Enable/Disable OpenMPI support.                                 | OFF     |
 |AUTOTESTS | Automatically run tests after compiling.                        | OFF     |
+|LAPACK    | Use LAPACK library functions instead of the internal ones       | OFF     |
+|:---------|:----------------------------------------------------------------|:-------:|
 
 
 
@@ -167,8 +169,10 @@ Additional information can be found in the reference articles.
 
 ## Present version and history of the past versions
 
-The present version is 4.4.3
+The present version is 4.4.4
 New features:
+- External LAPACK library link option 
+- OpenMP for parallel search of new points
 - OpenMPI support (only available for number of tries)
 - OpenMP parallelisation for independent live point search 
 - New user function calling method
