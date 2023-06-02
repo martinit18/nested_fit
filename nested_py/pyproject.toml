@@ -24,8 +24,12 @@ dependencies = [
     "numpy",
     "matplotlib",
     "scipy",
-    "getdist"
+    "getdist",
+    "tqdm"
 ]
+
+# [project.scripts]
+# install_script = "nested_py.install:start"
 
 [project.urls]
 "Homepage" = "https://github.com/martinit18/nested_fit"

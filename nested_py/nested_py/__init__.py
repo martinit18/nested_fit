@@ -1,7 +1,8 @@
 from .nested_res import *
+from .nested_run import *
 
 from importlib.metadata import version as imp_version
-__version__ = imp_version("nested_res")
+__version__ = imp_version("nested_py")
 
 sversion = f'# Current version: {__version__}'
 vstring = sversion + ' ' * (58 - len(sversion)) + '#'

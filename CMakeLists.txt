@@ -194,7 +194,7 @@ endif()
 
 if(BUILD_NESTED_RES)
     find_package(Python COMPONENTS Interpreter QUIET)
-    set(nested_res_dist_dir ${CMAKE_BINARY_DIR}/nested_res)
+    set(nested_res_dist_dir ${CMAKE_BINARY_DIR}/nested_py)
     if(Python_FOUND)
         # Upgrade the PyPA's build
         add_custom_command(TARGET ${nested_fit_target} POST_BUILD
@@ -202,11 +202,11 @@ if(BUILD_NESTED_RES)
         )
         # Just build the package
         add_custom_command(TARGET ${nested_fit_target} POST_BUILD
-            COMMAND ${Python_EXECUTABLE} -m build ${CMAKE_SOURCE_DIR}/nested_res/ --outdir ${nested_res_dist_dir}
+            COMMAND ${Python_EXECUTABLE} -m build ${CMAKE_SOURCE_DIR}/nested_py/ --outdir ${nested_res_dist_dir}
         )
 
         # No need to build from wheel (we got the source)
-        install(CODE "execute_process(COMMAND ${Python_EXECUTABLE} -m pip install ${CMAKE_SOURCE_DIR}/nested_res/)")
+        install(CODE "execute_process(COMMAND ${Python_EXECUTABLE} -m pip install ${CMAKE_SOURCE_DIR}/nested_py/)")
 
         # Add a custom target for publishing python to the online PyPI index
         # TODO
