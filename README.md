@@ -69,7 +69,7 @@ If Python is found an utility for running and analysing data using nested_fit is
 |OPENMP    | Enable/Disable OpenMP support.                                  | OFF     |
 |OPENMPI   | Enable/Disable OpenMPI support.                                 | OFF     |
 |AUTOTESTS | Automatically run tests after compiling.                        | OFF     |
-|BUILD_NESTED_RES | Automatically build nested_res for PyPI.                 | ON      |
+|BUILD_NESTED_PY | Automatically build nested_py for PyPI.                   | ON      |
 
 
 
