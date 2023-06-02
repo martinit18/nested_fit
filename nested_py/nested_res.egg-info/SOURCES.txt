@@ -1,8 +1,0 @@
-pyproject.toml
-nested_res/__init__.py
-nested_res/nested_res.py
-nested_res.egg-info/PKG-INFO
-nested_res.egg-info/SOURCES.txt
-nested_res.egg-info/dependency_links.txt
-nested_res.egg-info/requires.txt
-nested_res.egg-info/top_level.txt

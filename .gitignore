@@ -19,4 +19,4 @@ tests/*/nf_input.dat
 __pycache__/
 
 # Python build metadata
-nested_res/*.egg-info/
+nested_py/*.egg-info/
