@@ -1,7 +1,7 @@
 PROGRAM NESTED_FIT
   ! Time-stamp: <Last changed by martino on Monday 07 June 2021 at CEST 10:29:22>
   !
-  ! Please read README and LICENSE files for more inforamtion
+  ! Please read README and LICENSE files for more information
   ! 4.4  OpenMPI support (only available for number of tries)
   !      New user function calling method
   !      Add Windows support
