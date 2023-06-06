@@ -76,7 +76,7 @@ PROGRAM NESTED_FIT
 
 
    ! Module for CLI lib
-   USE f90getopt
+   USE argparse
    ! Module for optional variables
    USE MOD_OPTIONS
    ! Module for the input parameter definition
@@ -144,29 +144,41 @@ PROGRAM NESTED_FIT
 
   ! Function definitions
   EXTERNAL :: NESTED_SAMPLING, SORTN, MEANVAR
-
-  ! Read input arguments (CLI)
-  TYPE(option_s) :: opts(3)
-  opts(1) = option_s("compact-output", .false., "c")
-  opts(3) = option_s("help",  .false., "h")
-
-
-  ! START Processing options
+  
+  TYPE(argdef_t) :: argdefs(2)
+  TYPE(argval_t) :: argval
+  argdefs(1) = argdef_t("help", "h", .FALSE.)
+  argdefs(2) = argdef_t("compact-output", "c", .FALSE.)
+  
   DO
-      SELECT CASE(getopt("ch", opts))
-            CASE(CHAR(0)) ! When all options are processed
-               EXIT
+      argval = get_next_arg(argdefs)
+      IF(argval%valid) THEN
+         SELECT CASE (argval%arg%short_name)
             CASE("c")
                opt_compact_output = .TRUE.
-            !   trim(optarg)
             CASE("h")
                ! TODO(César): Print a help screen for optional arguments
                WRITE(*,*) '-----------------------------------------------------------------------'
-               WRITE(*,*) ''
+               WRITE(*,*) '                                                                       '
+               WRITE(*,*) '                                                                       '
+               WRITE(*,*) '                                                                       '
+               WRITE(*,*) '                                                                       '
+               WRITE(*,*) '                                                                       '
+               WRITE(*,*) '                                                                       '
                WRITE(*,*) '-----------------------------------------------------------------------'
                ! Note(Cesar): This is before initializing mpi (if we have it on) so we should be good
                STOP
-      END SELECT
+         END SELECT
+      ELSE
+         IF(argval%value.NE.CHAR(255)) THEN
+            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            WRITE(*,*) '       ERROR:           Nested_fit argument parsing failed!'
+            WRITE(*,*) '       ERROR:           Aborting execution.'
+            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            STOP ! Error parsing cli inputs
+         ENDIF
+         EXIT
+      ENDIF
   END DO
 
 #ifdef OPENMPI_ON

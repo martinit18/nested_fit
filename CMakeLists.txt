@@ -56,7 +56,7 @@ set(SRC_FILES_COMM
     src/Mod_mpi.f90
     src/Mod_math.f90
 
-    src/cli/f90getopt.f90
+    src/cli/argparse.f90
     src/Mod_options.f90
 )
 
