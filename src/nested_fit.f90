@@ -76,6 +76,8 @@ PROGRAM NESTED_FIT
 
 
    ! Module for CLI lib
+   ! NOTE(César): Maybe we should keep the same Mod_* naming convention ?
+   !              Even though this is not strictly a functionality of nf
    USE argparse
    ! Module for optional variables
    USE MOD_OPTIONS
@@ -144,42 +146,16 @@ PROGRAM NESTED_FIT
 
   ! Function definitions
   EXTERNAL :: NESTED_SAMPLING, SORTN, MEANVAR
+
+  ! Add arguments to the executable (possibly prefer adding the flags for them into mod options)
+  CALL ADD_ARGUMENT(argdef_t("compact-output", "c", .FALSE.,&
+    'Sets nested fit console output to be more compact. &
+     Ideal for systems with lower resolution or smaller dpi screens.',&
+     B_COMPACT&
+  ))
   
-  TYPE(argdef_t) :: argdefs(2)
-  TYPE(argval_t) :: argval
-  argdefs(1) = argdef_t("help", "h", .FALSE.)
-  argdefs(2) = argdef_t("compact-output", "c", .FALSE.)
-  
-  DO
-      argval = get_next_arg(argdefs)
-      IF(argval%valid) THEN
-         SELECT CASE (argval%arg%short_name)
-            CASE("c")
-               opt_compact_output = .TRUE.
-            CASE("h")
-               ! TODO(César): Print a help screen for optional arguments
-               WRITE(*,*) '-----------------------------------------------------------------------'
-               WRITE(*,*) '                                                                       '
-               WRITE(*,*) '                                                                       '
-               WRITE(*,*) '                                                                       '
-               WRITE(*,*) '                                                                       '
-               WRITE(*,*) '                                                                       '
-               WRITE(*,*) '                                                                       '
-               WRITE(*,*) '-----------------------------------------------------------------------'
-               ! Note(Cesar): This is before initializing mpi (if we have it on) so we should be good
-               STOP
-         END SELECT
-      ELSE
-         IF(argval%value.NE.CHAR(255)) THEN
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-            WRITE(*,*) '       ERROR:           Nested_fit argument parsing failed!'
-            WRITE(*,*) '       ERROR:           Aborting execution.'
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-            STOP ! Error parsing cli inputs
-         ENDIF
-         EXIT
-      ENDIF
-  END DO
+  ! Parse executable arguments (how will this work with MPI??) !!! THIS NEEDS TO COME BEFORE THE MPI_INIT() SUBROUTINE !!!
+  CALL PARSE_ARGUMENTS()
 
 #ifdef OPENMPI_ON
     CALL MPI_INIT(mpi_ierror)
@@ -846,6 +822,12 @@ PROGRAM NESTED_FIT
 
 
 !100 FORMAT (A,' ',E10.4e2,' ',E10.4e2,' ',E10.4e2,' ',E10.4e2)
+  CONTAINS
+
+  SUBROUTINE B_COMPACT(this)
+   CLASS(argdef_t), INTENT(IN) :: this
+   opt_compact_output = .TRUE.
+  END SUBROUTINE
 
 
 END PROGRAM NESTED_FIT

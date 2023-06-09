@@ -5,22 +5,34 @@
 module argparse
 
     IMPLICIT NONE
-    PUBLIC :: argdef_t, argval_t, get_next_arg
+    PUBLIC :: parse_arguments, add_argument, argdef_t
     PRIVATE
-
-    INTEGER :: nextargidx=1
-
+    
     TYPE argdef_t
-        CHARACTER(LEN=64) :: long_name
-        CHARACTER         :: short_name
-        LOGICAL           :: supports_attr
+        CHARACTER(LEN=64)        :: long_name
+        CHARACTER                :: short_name
+        LOGICAL                  :: supports_attr
+        CHARACTER(LEN=512)       :: description
+        PROCEDURE(func), POINTER :: exec => null()
     END TYPE argdef_t
+
+    ABSTRACT INTERFACE
+        SUBROUTINE func(self)
+            IMPORT :: argdef_t
+            CLASS(argdef_t), INTENT(IN) :: self
+        END SUBROUTINE
+    END INTERFACE
+
 
     TYPE argval_t
         TYPE(argdef_t) :: arg
         CHARACTER(LEN=128) :: value
         LOGICAL :: valid
     END TYPE argval_t
+
+    INTEGER                     :: nextargidx=1
+    TYPE(argdef_t), ALLOCATABLE :: arguments(:)
+    INTEGER                     :: nargs=0
 
     CONTAINS
 
@@ -112,5 +124,108 @@ module argparse
         try_peak_next = .TRUE.
 
     END FUNCTION try_peak_next
+
+    SUBROUTINE print_description(argdef, header_sz)
+        TYPE(argdef_t), INTENT(IN) :: argdef
+        INTEGER, INTENT(IN)        :: header_sz
+        CHARACTER(LEN=512)         :: write_tmp(2)
+        CHARACTER                  :: wspace(128) = ' ' ! FIXME(César): Fixed size whitespace array
+        INTEGER                    :: desc_blocks, dblock
+        
+        ! Write option naming
+        WRITE(write_tmp(1),*) '--', argdef%long_name
+        WRITE(write_tmp(2),*) '-', argdef%short_name
+        WRITE(*,*) '|', TRIM(write_tmp(1)), ', ', TRIM(write_tmp(2)), wspace(1:(header_sz - LEN_TRIM(write_tmp(1)) - LEN_TRIM(write_tmp(2)) - 2)), '|'
+
+        ! Write description
+        ! How many lines do we need ?
+        desc_blocks = LEN_TRIM(argdef%description) / (header_sz - 2)
+
+        IF(desc_blocks.LE.0) THEN
+            WRITE(write_tmp(1), *) TRIM(argdef%description)
+            WRITE(*,*) '|', TRIM(write_tmp(1)), wspace(1:(header_sz - LEN_TRIM(write_tmp(1)))), '|'
+        ELSE
+            DO dblock = 1, desc_blocks
+                WRITE(write_tmp(1), *) TRIM(argdef%description((1 + (dblock-1)*(header_sz - 2)):(dblock*(header_sz - 2))))
+                WRITE(*,*) '|', TRIM(write_tmp(1)), wspace(1:(header_sz - LEN_TRIM(write_tmp(1)))), '|'
+            END DO
+            ! Don't run over the last block
+            WRITE(write_tmp(1), *) TRIM(argdef%description(1 + desc_blocks*(header_sz - 2):))
+            WRITE(*,*) '|', TRIM(write_tmp(1)), wspace(1:(header_sz - LEN_TRIM(write_tmp(1)))), '|'
+        ENDIF
+    END SUBROUTINE
+
+    SUBROUTINE add_argument(arg)
+        TYPE(argdef_t), INTENT(IN) :: arg
+        TYPE(argdef_t), ALLOCATABLE :: tmp(:)        
+
+        IF(nargs.EQ.0) THEN
+            ALLOCATE(arguments(2))
+        ENDIF
+
+        IF(SIZE(arguments).EQ.nargs) THEN
+            CALL MOVE_ALLOC(arguments, tmp)
+            ALLOCATE(arguments(nargs*2))
+            arguments(1:nargs) = tmp
+        ENDIF
+
+        nargs = nargs + 1
+        arguments(nargs) = arg
+    END SUBROUTINE
+
+    SUBROUTINE parse_arguments()
+        USE MOD_OPTIONS
+        USE MOD_METADATA
+
+        IMPLICIT NONE
+        TYPE(argval_t)    :: argval
+        CHARACTER(LEN=64) :: nf_write_tmp
+        CHARACTER(LEN=64) :: nf_exec_name
+        CHARACTER         :: wspace(128) = ' ' ! FIXME(César): Fixed size whitespace array
+        INTEGER           :: nf_header_sz = LEN('|---------------------------------------------------------------------|') - 2
+        integer           :: i
+
+        ! The help command is always present
+        CALL ADD_ARGUMENT(argdef_t("help", "h", .FALSE.,&
+            'Prints this help screen.'&
+        ))
+        
+        DO
+            argval = get_next_arg(arguments)
+            IF(argval%valid) THEN
+                SELECT CASE (argval%arg%short_name)
+                    CASE("h")
+                        WRITE(*,*) '|---------------------------------------------------------------------|'
+                        WRITE(nf_write_tmp, *) 'Nested_fit (v', version_full,')'
+                        WRITE(*,*) '|', nf_write_tmp, wspace(1:(nf_header_sz - LEN(nf_write_tmp))), '|'
+                        WRITE(*,*) '|=====================================================================|'
+                        WRITE(nf_write_tmp, *) 'Usage: ', exec_target_name, ' [OPTION]...'
+                        WRITE(*,*) '|', nf_write_tmp, wspace(1:(nf_header_sz - LEN(nf_write_tmp))), '|'
+                        WRITE(*,*) '|                                                                     |'
+                        WRITE(nf_write_tmp, *) 'Options:'
+                        WRITE(*,*) '|', nf_write_tmp, wspace(1:(nf_header_sz - LEN(nf_write_tmp))), '|'
+                        WRITE(*,*) '|                                                                     |'
+                        DO i=1, nargs
+                            CALL PRINT_DESCRIPTION(arguments(i), nf_header_sz)
+                            WRITE(*,*) '|                                                                     |'
+                        END DO
+                        WRITE(*,*) '|---------------------------------------------------------------------|'
+                        STOP ! Note(César): This is before initializing mpi (if we have it on) so we should be good
+                    CASE DEFAULT
+                        CALL argval%arg%exec()
+                END SELECT
+            ELSE
+                IF(argval%value.NE.CHAR(255)) THEN
+                    WRITE(*,*) 'Use -h for help.'
+                    WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+                    WRITE(*,*) '       ERROR:           Nested_fit argument parsing failed!'
+                    WRITE(*,*) '       ERROR:           Aborting execution.'
+                    WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+                    STOP ! Error parsing cli inputs
+                ENDIF
+                EXIT
+            ENDIF
+        END DO
+    END SUBROUTINE
 
 end module argparse

@@ -34,6 +34,10 @@ string(LENGTH ${nested_fit_version_str} nested_fit_version_str_len)
 string(CONCAT nested_fit_mpi_child_comm_proc_name "nf_child_proc" ${nested_fit_version_full_str})
 string(LENGTH ${nested_fit_mpi_child_comm_proc_name} nested_fit_mpi_child_comm_proc_name_len)
 
+string(CONCAT nested_fit_target "nested_fit" ${nested_fit_version_full_str})
+string(CONCAT nested_fit_target_func "nested_fit_func" ${nested_fit_version_full_str})
+string(LENGTH ${nested_fit_target} nested_fit_target_len)
+string(LENGTH ${nested_fit_target_func} nested_fit_target_func_len)
 
 set(SRC_FILES_COMM
     src/Mod_cluster_analysis.f90
@@ -135,9 +139,6 @@ set_source_files_properties(${SRC_FILES_FUNC} PROPERTIES COMPILE_FLAGS ${SRC_FLA
 set_source_files_properties(${CFG_FILES} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${CHILD_SRC_FILES} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 
-string(CONCAT nested_fit_target "nested_fit" ${nested_fit_version_full_str})
-string(CONCAT nested_fit_target_func "nested_fit_func" ${nested_fit_version_full_str})
-
 add_executable(${nested_fit_target}
     ${CFG_FILES}
     ${SRC_CALGO}
@@ -155,6 +156,7 @@ add_executable(${nested_fit_target_func}
     ${SRC_FILES_COMM}
     ${SRC_FILES_FUNC}
 )
+target_compile_definitions(${nested_fit_target_func} PRIVATE -DFUNC_TARGET)
 
 if(OPENMP)
     target_link_options(${nested_fit_target}      PRIVATE "-fopenmp")
