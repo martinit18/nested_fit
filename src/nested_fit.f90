@@ -153,6 +153,11 @@ PROGRAM NESTED_FIT
      Ideal for systems with lower resolution or smaller dpi screens.',&
      B_COMPACT&
   ))
+
+  CALL ADD_ARGUMENT(argdef_t("input-file", "i", .TRUE.,&
+    "Overwrites the input filename. The input filename defaults to 'nf_input.dat'.",&
+     B_INPUTFILE&
+  ))
   
   ! Parse executable arguments (how will this work with MPI??) !!! THIS NEEDS TO COME BEFORE THE MPI_INIT() SUBROUTINE !!!
   CALL PARSE_ARGUMENTS()
@@ -203,11 +208,11 @@ PROGRAM NESTED_FIT
       likelihood_funcname = ' '
 
       ! Read parameter file ------------------------------------------------------------------------------------------------------------
-      OPEN (UNIT=77, FILE='nf_input.dat', STATUS='old')
+      OPEN (UNIT=77, FILE=TRIM(opt_input_file), STATUS='old')
       READ(77,*) version_file, string
       IF(version.NE.version_file) THEN
-         WRITE(*,*) 'Program version not corresponding to the input type'
-         WRITE(*,*) 'Please change your input.dat'
+         WRITE(*,*) 'Program version not corresponding to the input type.'
+         WRITE(*,*) 'Please change your ', TRIM(opt_input_file), ' file.'
 #ifdef OPENMPI_ON
          CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
 #endif
@@ -824,9 +829,16 @@ PROGRAM NESTED_FIT
 !100 FORMAT (A,' ',E10.4e2,' ',E10.4e2,' ',E10.4e2,' ',E10.4e2)
   CONTAINS
 
-  SUBROUTINE B_COMPACT(this)
+  SUBROUTINE B_COMPACT(this, value)
    CLASS(argdef_t), INTENT(IN) :: this
+   CHARACTER(LEN=128), INTENT(IN) :: value
    opt_compact_output = .TRUE.
+  END SUBROUTINE
+
+  SUBROUTINE B_INPUTFILE(this, value)
+   CLASS(argdef_t), INTENT(IN) :: this
+   CHARACTER(LEN=128), INTENT(IN) :: value
+   opt_input_file = TRIM(value)
   END SUBROUTINE
 
 

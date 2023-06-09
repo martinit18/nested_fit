@@ -16,19 +16,19 @@ module argparse
         PROCEDURE(func), POINTER :: exec => null()
     END TYPE argdef_t
 
-    ABSTRACT INTERFACE
-        SUBROUTINE func(self)
-            IMPORT :: argdef_t
-            CLASS(argdef_t), INTENT(IN) :: self
-        END SUBROUTINE
-    END INTERFACE
-
-
     TYPE argval_t
         TYPE(argdef_t) :: arg
         CHARACTER(LEN=128) :: value
         LOGICAL :: valid
     END TYPE argval_t
+
+    ABSTRACT INTERFACE
+        SUBROUTINE func(self, value)
+            IMPORT :: argdef_t, argval_t
+            CLASS(argdef_t), INTENT(IN) :: self
+            CHARACTER(LEN=128), INTENT(IN) :: value
+        END SUBROUTINE
+    END INTERFACE
 
     INTEGER                     :: nextargidx=1
     TYPE(argdef_t), ALLOCATABLE :: arguments(:)
@@ -62,6 +62,7 @@ module argparse
                         RETURN
                     ELSEIF(valid_value) THEN
                         get_next_arg = argval_t(argdefs(i), TRIM(raw_value), .TRUE.)
+                        nextargidx = nextargidx + 1
                         RETURN
                     ELSE
                         get_next_arg = argval_t(argdefs(i), CHAR(0), .TRUE.)
@@ -82,6 +83,7 @@ module argparse
                         RETURN
                     ELSEIF(valid_value) THEN
                         get_next_arg = argval_t(argdefs(i), TRIM(raw_value), .TRUE.)
+                        nextargidx = nextargidx + 1
                         RETURN
                     ELSE
                         get_next_arg = argval_t(argdefs(i), CHAR(0), .TRUE.)
@@ -212,7 +214,7 @@ module argparse
                         WRITE(*,*) '|---------------------------------------------------------------------|'
                         STOP ! Note(César): This is before initializing mpi (if we have it on) so we should be good
                     CASE DEFAULT
-                        CALL argval%arg%exec()
+                        CALL argval%arg%exec(argval%value)
                 END SELECT
             ELSE
                 IF(argval%value.NE.CHAR(255)) THEN
