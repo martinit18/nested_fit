@@ -76,7 +76,9 @@ PROGRAM NESTED_FIT
 
 
    ! Module for CLI lib
-   USE f90getopt
+   ! NOTE(César): Maybe we should keep the same Mod_* naming convention ?
+   !              Even though this is not strictly a functionality of nf
+   USE argparse
    ! Module for optional variables
    USE MOD_OPTIONS
    ! Module for the input parameter definition
@@ -101,6 +103,7 @@ PROGRAM NESTED_FIT
   ! Parameters values and co.
   CHARACTER :: string*128
   CHARACTER :: version_file*20
+  LOGICAL   :: file_exists
 
   ! Results from Nested sampling
   INTEGER(4) :: nall=0
@@ -145,29 +148,25 @@ PROGRAM NESTED_FIT
   ! Function definitions
   EXTERNAL :: NESTED_SAMPLING, SORTN, MEANVAR
 
-  ! Read input arguments (CLI)
-  TYPE(option_s) :: opts(3)
-  opts(1) = option_s("compact-output", .false., "c")
-  opts(3) = option_s("help",  .false., "h")
+  ! Add arguments to the executable (possibly prefer adding the flags for them into mod options)
+  CALL ADD_ARGUMENT(argdef_t("compact-output", "c", .FALSE.,&
+    'Sets nested fit console output to be more compact. &
+     Ideal for systems with lower resolution or smaller dpi screens.',&
+    B_COMPACT&
+  ))
 
+  CALL ADD_ARGUMENT(argdef_t("input-file", "i", .TRUE.,&
+    "Overwrites the input filename. The input filename defaults to 'nf_input.dat'.",&
+    B_INPUTFILE&
+  ))
 
-  ! START Processing options
-  DO
-      SELECT CASE(getopt("ch", opts))
-            CASE(CHAR(0)) ! When all options are processed
-               EXIT
-            CASE("c")
-               opt_compact_output = .TRUE.
-            !   trim(optarg)
-            CASE("h")
-               ! TODO(César): Print a help screen for optional arguments
-               WRITE(*,*) '-----------------------------------------------------------------------'
-               WRITE(*,*) ''
-               WRITE(*,*) '-----------------------------------------------------------------------'
-               ! Note(Cesar): This is before initializing mpi (if we have it on) so we should be good
-               STOP
-      END SELECT
-  END DO
+  CALL ADD_ARGUMENT(argdef_t("n-try", "n", .TRUE.,&
+    "Overwrites the number of tries present in the input file.",&
+    B_NTRY&
+  ))
+  
+  ! Parse executable arguments (how will this work with MPI??) !!! THIS NEEDS TO COME BEFORE THE MPI_INIT() SUBROUTINE !!!
+  CALL PARSE_ARGUMENTS()
 
 #ifdef OPENMPI_ON
     CALL MPI_INIT(mpi_ierror)
@@ -205,21 +204,32 @@ PROGRAM NESTED_FIT
   CALL CPU_TIME(startt)
   !$ startt_omp = omp_get_wtime( )
 
-  ! Print program version
   IF(mpi_rank.EQ.0) THEN
+      ! Print program version
       WRITE(*,*) 'Current program version = ', version
-
+      
       ! Initialize values --------------------------------------------------------------------------------------------------------------
       filename = ' '
       funcname = ' '
       likelihood_funcname = ' '
 
       ! Read parameter file ------------------------------------------------------------------------------------------------------------
-      OPEN (UNIT=77, FILE='nf_input.dat', STATUS='old')
+      INQUIRE(FILE=TRIM(opt_input_file), EXIST=file_exists)
+      IF(.NOT.file_exists) THEN
+         WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+         WRITE(*,*) '       ERROR:           Input file (', TRIM(opt_input_file), ') was not found.'
+         WRITE(*,*) '       ERROR:           Aborting Execution...'
+         WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+#ifdef OPENMPI_ON
+         CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+#endif
+         STOP
+      ENDIF
+      OPEN (UNIT=77, FILE=TRIM(opt_input_file), STATUS='old')
       READ(77,*) version_file, string
       IF(version.NE.version_file) THEN
-         WRITE(*,*) 'Program version not corresponding to the input type'
-         WRITE(*,*) 'Please change your input.dat'
+         WRITE(*,*) 'Program version not corresponding to the input type.'
+         WRITE(*,*) 'Please change your ', TRIM(opt_input_file), ' file.'
 #ifdef OPENMPI_ON
          CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
 #endif
@@ -242,6 +252,10 @@ PROGRAM NESTED_FIT
       READ(77,*) xmin(1), xmax(1), ymin(1), ymax(1), string
       READ(77,*) npar, string
       READ(77,*) string
+
+      IF(opt_ntry.NE.0) THEN
+         ntry = opt_ntry
+      ENDIF
 
       !
       ! Allocate space for parameters and initialize
@@ -834,6 +848,54 @@ PROGRAM NESTED_FIT
 
 
 !100 FORMAT (A,' ',E10.4e2,' ',E10.4e2,' ',E10.4e2,' ',E10.4e2)
+  CONTAINS
+
+  SUBROUTINE TRY_PARSE_INT(input_str, output, error)
+   IMPLICIT NONE
+   CHARACTER(LEN=*)               :: input_str
+   INTEGER, INTENT(OUT)           :: output
+   LOGICAL, INTENT(OUT)           :: error
+   INTEGER                        :: idx
+
+   error = .FALSE.
+   DO idx = 1, LEN_TRIM(input_str)
+      IF((input_str(idx:idx).LT.'0').OR.(input_str(idx:idx).GT.'9')) THEN
+         error = .TRUE.
+      ENDIF
+   END DO
+
+   IF(.NOT.error) THEN
+      READ(input_str,'(I10)') output
+   ENDIF
+  END SUBROUTINE
+
+  SUBROUTINE B_COMPACT(this, invalue)
+   CLASS(argdef_t), INTENT(IN) :: this
+   CHARACTER(LEN=128), INTENT(IN) :: invalue
+   opt_compact_output = .TRUE.
+  END SUBROUTINE
+
+  SUBROUTINE B_INPUTFILE(this, invalue)
+   CLASS(argdef_t), INTENT(IN) :: this
+   CHARACTER(LEN=128), INTENT(IN) :: invalue
+   opt_input_file = TRIM(invalue)
+  END SUBROUTINE
+
+  SUBROUTINE B_NTRY(this, invalue)
+   CLASS(argdef_t), INTENT(IN) :: this
+   CHARACTER(LEN=128), INTENT(IN) :: invalue
+   LOGICAL :: error
+
+   CALL TRY_PARSE_INT(TRIM(invalue), opt_ntry, error)
+
+   IF(error) THEN
+      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      WRITE(*,*) '       ATTENTION: Argument --', TRIM(this%long_name), ' specified but its argument was not an integer : ', TRIM(invalue)
+      WRITE(*,*) '       ATTENTION: Defaulting to the input file specified value.'
+      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+   ENDIF
+
+  END SUBROUTINE
 
 
 END PROGRAM NESTED_FIT
