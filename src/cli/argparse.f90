@@ -185,7 +185,7 @@ module argparse
         CHARACTER(LEN=64) :: nf_exec_name
         CHARACTER         :: wspace(128) = ' ' ! FIXME(César): Fixed size whitespace array
         INTEGER           :: nf_header_sz = LEN('|---------------------------------------------------------------------|') - 2
-        integer           :: i
+        INTEGER           :: i
 
         ! The help command is always present
         CALL ADD_ARGUMENT(argdef_t("help", "h", .FALSE.,&
