@@ -11,6 +11,9 @@ bin/
 # vscode settings
 .vscode/
 
+# vscode line counter
+.VSCodeCounter/
+
 # tests / manual run output files
 nf_output_*
 tests/*/nf_input.dat
