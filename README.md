@@ -63,6 +63,8 @@ These command will build two different executables in the bin directory:
 |OPENMP    | Enable/Disable OpenMP support.                                  | OFF     |
 |OPENMPI   | Enable/Disable OpenMPI support.                                 | OFF     |
 |AUTOTESTS | Automatically run tests after compiling.                        | OFF     |
+|LAPACK    | Use LAPACK library functions instead of the internal ones       | OFF     |
+|:---------|:----------------------------------------------------------------|:-------:|
 
 
 
@@ -167,8 +169,12 @@ Additional information can be found in the reference articles.
 
 ## Present version and history of the past versions
 
-The present version is 4.4.3
+The present version is 4.4.4
 New features:
+- New "write_input" function in python library
+- New fit functions
+- External LAPACK library link option 
+- OpenMP for parallel search of new points
 - OpenMPI support (only available for number of tries)
 - OpenMP parallelisation for independent live point search 
 - New user function calling method
@@ -245,7 +251,7 @@ Previous versions are:
 
 ### Additional included sources
 
-In addition to the original files from the main author (M. Trassinelli), nesed_fit includes
+In addition to the original files from the main authors, nesed_fit includes
 - *FITPACK (DIERCKX)* package, to fit and interpolating data with splines (no license)
   - Ref: Paul Dierckx, Curve and Surface Fitting with Splines, Oxford University Press, 1993
  Developer,

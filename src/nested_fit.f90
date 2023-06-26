@@ -2,7 +2,11 @@ PROGRAM NESTED_FIT
   ! Time-stamp: <Last changed by martino on Monday 07 June 2021 at CEST 10:29:22>
   !
   ! Please read README and LICENSE files for more inforamtion
-  ! 4.4  OpenMPI support (only available for number of tries)
+  ! 4.4  New "write_input" function in python library
+  !      New fit functions
+  !      External LAPACK library link option 
+  !      OpenMP for parallel search of new points
+  !      OpenMPI support (only available for number of tries)
   !      New user function calling method
   !      Add Windows support
   !      New build system generator (CMake)
@@ -128,13 +132,11 @@ PROGRAM NESTED_FIT
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_like_final_try, weight_try, live_max_try
 
   ! Parallelization variables for each mpi instance
-  INTEGER(4) :: nall_try_instance
-  REAL(8) :: evsum_final_try_instance, live_like_max_try_instance
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_final_try_instance
   REAL(8), ALLOCATABLE, DIMENSION(:) :: live_like_final_try_instance, weight_try_instance, live_max_try_instance
 
   ! OpenMPI stuff
-  INTEGER(4) :: mpi_rank, mpi_cluster_size, mpi_ierror
+  INTEGER(4) :: mpi_rank !, mpi_cluster_size, mpi_ierror
 
   ! Time measurement variables
   REAL(8) :: seconds, seconds_omp, startt, stopt, startt_omp, stopt_omp

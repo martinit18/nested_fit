@@ -1,16 +1,6 @@
 MODULE MOD_LIKELIHOOD
-  ! Automatic Time-stamp: <Last changed by martino on Thursday 11 August 2022 at CEST 12:36:09>
+  ! Automatic Time-stamp: <Last changed by martino on Monday 15 May 2023 at CEST 18:37:52>
   ! Module of the likelihood function for data analysis
-
-
-  !#####################################################################################################################
-
-  ! IMPORTANT: to switch between likelihood types for test and others,
-  ! change the name of the file to compile in the Makefile,
-  ! Mod_likeihood.f90 or Mod_likeihood_tests.f90
-
-  !#####################################################################################################################
-
 
   ! Module for the input parameter definition
   USE MOD_PARAMETERS
@@ -32,7 +22,7 @@ CONTAINS
 
   SUBROUTINE INIT_LIKELIHOOD()
     ! Initialize the normal likelihood with data files and special function
-    
+
     ! Initialize the search method params
     CALL INIT_SEARCH_METHOD()
 
@@ -44,36 +34,35 @@ CONTAINS
 
   END SUBROUTINE INIT_LIKELIHOOD
 
-
   !#####################################################################################################################
 
   SUBROUTINE INIT_SEARCH_METHOD()
 #ifdef OPENMPI_ON
-      INTEGER(4) :: mpi_ierror
+    INTEGER(4) :: mpi_ierror
 #endif
 
-      IF (search_method.eq.'RANDOM_WALK') THEN
-            searchid = 0
-      ELSE IF(search_method.EQ.'UNIFORM') THEN
-            searchid = 1
-      ELSE IF(search_method.EQ.'SLICE_SAMPLING') THEN
-            searchid = 2
-      ELSE IF(search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
-            searchid = 3
-      ELSE
-            WRITE(*,*) 'Error of the search type name in Mod_search_new_point module'
-            WRITE(*,*) 'Check the manual and the input file'
+    IF (search_method.eq.'RANDOM_WALK') THEN
+       searchid = 0
+    ELSE IF(search_method.EQ.'UNIFORM') THEN
+       searchid = 1
+    ELSE IF(search_method.EQ.'SLICE_SAMPLING') THEN
+       searchid = 2
+    ELSE IF(search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
+       searchid = 3
+    ELSE
+       WRITE(*,*) 'Error of the search type name in Mod_search_new_point module'
+       WRITE(*,*) 'Check the manual and the input file'
 #ifdef OPENMPI_ON
-            CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+       CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
 #endif
-            STOP
-      END IF
+       STOP
+    END IF
   END SUBROUTINE INIT_SEARCH_METHOD
 
   SUBROUTINE READ_DATA()
     ! Subroutine to read data files
     INTEGER(4) :: k=0
-    REAL(8), DIMENSION(maxdata,nsetmax) :: x_tmp=0, y_tmp=0, nc_tmp=0, nc_err_tmp=0
+    REAL(8), DIMENSION(maxdata,nsetmax) :: x_tmp=0, nc_tmp=0, nc_err_tmp=0
 
     ! READ DATA, calculate the constants for the likelihood function
     ! Initialize
@@ -137,9 +126,7 @@ CONTAINS
        STOP
     END IF
 
-
     WRITE(*,*) 'Final constant in evidence calc. = ', const_ll
-
 
   END SUBROUTINE READ_DATA
 
@@ -386,7 +373,6 @@ CONTAINS
        dataid = IOR(dataid, DATA_IS_SET)
     END IF
 
-
     ! Init the funcid for function names
     IF(.NOT.BIT_CHECK_IF(DATA_IS_SET)) THEN
        IF(BIT_CHECK_IF(DATA_IS_1D)) THEN
@@ -508,8 +494,6 @@ CONTAINS
 
     END IF
 
-
-
   END FUNCTION LOGLIKELIHOOD_WITH_TEST
 
   !#####################################################################################################################
@@ -522,9 +506,9 @@ CONTAINS
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
     !
     REAL(8) :: USERFCN, USERFCN_SET
-    REAL(8) :: ll_tmp, enc
+    REAL(8) :: ll_tmp
+    REAL(8), DIMENSION(ndata, nset) :: enc
     INTEGER(4) :: i, k
-
 
     ! Calculate LIKELIHOOD
     ll_tmp = 0.
@@ -534,48 +518,63 @@ CONTAINS
        !TODO(César): This is unnecessary and somewhat verbose
        k=1
        IF (BIT_CHECK_IF(DATA_IS_C)) THEN
-          !!$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
+          ! Poisson distribution calculation --------------------------------------------------
+          ! Calculate the function (not SIMD optimisable)
           DO i=1, ndata_set(k)
-             ! Poisson distribution calculation --------------------------------------------------
-             enc = USERFCN(x(i,k),npar,par,funcid)
-             ll_tmp = ll_tmp + nc(i,k)*DLOG(enc) - enc
+             enc(i, k) = USERFCN(x(i, k),npar,par,funcid)
           END DO
-          !!$OMP END PARALLEL DO
-       ELSE !IF (BIT_CHECK_IF(DATA_IS_E)) THEN
-          !!$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
+          ! Calculate the likelihood
+          !$OMP SIMD REDUCTION(+:ll_tmp)
           DO i=1, ndata_set(k)
-             ! Normal (Gaussian) distribution calculation --------------------------------------
-             enc = USERFCN(x(i,k),npar,par,funcid)
-             ll_tmp = ll_tmp - (nc(i,k) - enc)**2/(2*nc_err(i,k)**2)
-          ENDDO
-          !!$OMP END PARALLEL DO
+             ll_tmp = ll_tmp + nc(i, k)*DLOG(enc(i,k)) - enc(i,k)
+          END DO
+          !$OMP END SIMD
+       ELSE !IF (BIT_CHECK_IF(DATA_IS_E)) THEN
+          ! Normal (Gaussian) distribution calculation --------------------------------------
+          ! Calculate the function (not SIMD optimisable)
+          DO i=1, ndata_set(k)
+             enc(i,k) = USERFCN(x(i,k),npar,par,funcid)
+          END DO
+          ! Calculate the likelihood
+          !$OMP SIMD REDUCTION(+:ll_tmp)
+          DO i=1, ndata_set(k)
+             ll_tmp = ll_tmp - (nc(i,k) - enc(i,k))**2/(2*nc_err(i,k)**2)
+          END DO
+          !$OMP END SIMD
        END IF
     ELSE
        ! Set ----------------------------------------------------------------------------------------------------------
        DO k=1,nset
           IF (BIT_CHECK_IF(DATA_IS_C)) THEN
-             !!$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
+             ! Poisson distribution calculation --------------------------------------------------
+             ! Calculate the function (not SIMD optimisable)
              DO i=1, ndata_set(k)
-                ! Poisson distribution calculation --------------------------------------------------
-                enc = USERFCN_SET(x(i,k),npar,par,funcid,k)
-                ll_tmp = ll_tmp + nc(i,k)*DLOG(enc) - enc
+                enc(i,k) = USERFCN_SET(x(i,k),npar,par,funcid,k)
              END DO
-             !!$OMP END PARALLEL DO
-          ELSE
-             !!$OMP PARALLEL DO PRIVATE(i,enc) REDUCTION(+:ll_tmp)
+             ! Calculate the likelihood
+             !$OMP SIMD REDUCTION(+:ll_tmp)
              DO i=1, ndata_set(k)
-                ! Normal (Gaussian) distribution calculation --------------------------------------
-                enc = USERFCN_SET(x(i,k),npar,par,funcid,k)
-                ll_tmp = ll_tmp - (nc(i,k) - enc)**2/(2*nc_err(i,k)**2)
-             ENDDO
-             !!$OMP END PARALLEL DO
+                ll_tmp = ll_tmp + nc(i,k)*DLOG(enc(i,k)) - enc(i,k)
+             END DO
+             !$OMP END SIMD
+          ELSE
+             ! Normal (Gaussian) distribution calculation --------------------------------------
+             ! Calculate the function (not SIMD optimisable)
+             DO i=1, ndata_set(k)
+                enc(i,k) = USERFCN_SET(x(i,k),npar,par,funcid,k)
+             END DO
+             ! Calculate the likelihood
+             !$OMP SIMD REDUCTION(+:ll_tmp)
+             DO i = 1, ndata_set(k)
+                ll_tmp = ll_tmp - (nc(i, k) - enc(i, k))**2/(2*nc_err(i, k)**2)
+             END DO
+             !$OMP END SIMD
           END IF
        END DO
     END IF
     !
     ! Sum all together
     LOGLIKELIHOOD_1D = ll_tmp + const_ll
-
 
   END FUNCTION LOGLIKELIHOOD_1D
 
@@ -589,28 +588,32 @@ CONTAINS
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
     !
     REAL(8) :: USERFCN_2D
-    REAL(8) :: ll_tmp, enc, xx, yy
+    REAL(8) :: ll_tmp
+    REAL(8), DIMENSION(nx, ny) :: enc
     INTEGER(4) :: i, j, k
-
 
     ! Calculate LIKELIHOOD
     ll_tmp = 0.
+    k = 1
 
-    !!$OMP PARALLEL DO PRIVATE(i,j,xx,yy,enc) REDUCTION(+:ll_tmp)
-    DO j=1, ny ! inversion of i,j for increasing memory administration efficency (but not differences noticed for te moment)
-       DO i=1, nx
-          ! Poisson distribution calculation --------------------------------------------------
-          xx = i - 0.5 + xmin(k) ! Real coordinates are given by the bins, the center of the bin.
-          yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin
-          enc = USERFCN_2D(xx,yy,npar,par,funcid)
-          ll_tmp = ll_tmp + adata_mask(i,j)*(adata(i,j)*DLOG(enc) - enc)
+    DO j = 1, ny ! inversion of i,j for increasing memory administration efficency (but not differences noticed for te moment)
+       DO i = 1, nx
+          ! Calculation of the function values  --------------------------------------------------
+          !xx = i - 0.5 + xmin(k) ! Real coordinates are given by the bins, the center of the bin.
+          !yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin
+          enc(i, j) = USERFCN_2D(i - 0.5 + xmin(k), j - 0.5 + ymin(k),npar,par,funcid)
        END DO
     END DO
-    !!$OMP END PARALLEL DO
+    !$OMP SIMD COLLAPSE(2) REDUCTION(+:ll_tmp)
+    DO j = 1, ny ! inversion of i,j for increasing memory administration efficency (but not differences noticed for te moment)
+       DO i = 1, nx
+          ll_tmp = ll_tmp + adata_mask(i,j)*(adata(i,j)*DLOG(enc(i,j)) - enc(i,j))
+       END DO
+    END DO
+    !$OMP END SIMD
 
     ! Sum all together
     LOGLIKELIHOOD_2D = ll_tmp + const_ll
-
 
   END FUNCTION LOGLIKELIHOOD_2D
 
@@ -639,7 +642,6 @@ CONTAINS
     CALL DEALLOCATE_DATA()
 
   END SUBROUTINE FINAL_LIKELIHOOD
-
 
   !#####################################################################################################################
   SUBROUTINE WRITE_EXPECTED_VALUES(live_max,par_mean,par_median_w)
@@ -843,11 +845,10 @@ CONTAINS
     !
     INTEGER(8), PARAMETER :: maxfit = 10000
     REAL(8) :: USERFCN_2D
-    REAL(8) :: minx=0., maxx=0., enc = 0., dx, xfit, yfit
+    REAL(8) :: minx=0., maxx=0., dx, xfit, yfit
     INTEGER(4) :: i=0, j=0, k=0, ix=0
     ! Stuff to save separate components
     LOGICAL :: plot = .FALSE.
-    CHARACTER :: out_filename*64
     REAL(8), DIMENSION(nx,ny) :: aenc, ares
     REAL(8), DIMENSION(nx) :: hx, hnc, henc, hres
     REAL(8) :: xx, yy, nan, a, b, c, y0, Dy
@@ -949,7 +950,6 @@ CONTAINS
 
   END SUBROUTINE WRITE_EXPECTED_VALUES_2D
 
-
   !#####################################################################################################################
 
   SUBROUTINE DEALLOCATE_DATA()
@@ -965,7 +965,5 @@ CONTAINS
   END SUBROUTINE DEALLOCATE_DATA
 
   !#####################################################################################################################
-
-
 
 END MODULE MOD_LIKELIHOOD

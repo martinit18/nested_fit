@@ -11,7 +11,7 @@ c     Simulation variables
       REAL*8 x(interpmax), y(interpmax), w(interpmax)
       REAL*8 sum
 c     Interpolation subroutine variables
-      INTEGER*4 iopt, k, nest, nn, lwrk, ier, itmp
+      INTEGER*4 iopt, k, nest, nn, lwrk, ier
       REAL*8 fp, s
       PARAMETER (iopt=0,nest=1000,lwrk=20000)
 c     s_s=90,s_p=60
@@ -150,7 +150,7 @@ c     Simulation variables
       CHARACTER*64 fileinterpname_s_apar, fileinterpname_p_apar
       CHARACTER*64 interpolated_s_par, interpolated_p_par
       CHARACTER*64 interpolated_s_apar, interpolated_p_apar
-      INTEGER*4 i, interpmax, n_s_par, n_p_par, n_s_apar, n_p_apar
+      !INTEGER*4 i, interpmax, n_s_par, n_p_par, n_s_apar, n_p_apar
 c     Interpolation subroutine var
 c     Interpolation subroutine variables
       INTEGER*4 k, nest
