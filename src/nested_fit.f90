@@ -178,7 +178,8 @@ PROGRAM NESTED_FIT
 #endif
 
   !!!!!!!! Initiate random generator with the same seed each time !!!!!!!!!!!
-  IF(static_seed.AND.mpi_rank.EQ.0) THEN
+#ifdef NORNG_ON  
+  IF(mpi_rank.EQ.0) THEN
       WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
       WRITE(*,*) '       ATTENTION:           Nested_fit is running with a set seed! This is intended for testing only!'
       WRITE(*,*) '       ATTENTION:           If you are using this as a production setting change the cmake NORNG option to OFF.'
@@ -186,9 +187,10 @@ PROGRAM NESTED_FIT
       CALL sleep(1)
   ENDIF
 
-  IF(static_seed) THEN
-      CALL RANDOM_SEED(PUT=seed_array)
-  ENDIF
+  !IF(static_seed) THEN
+  CALL RANDOM_SEED(PUT=seed_array)
+  !ENDIF
+#endif
 
 #ifdef OPENMPI_ON
    CALL MPI_BARRIER(MPI_COMM_WORLD, mpi_ierror)
@@ -817,12 +819,14 @@ PROGRAM NESTED_FIT
    CALL MPI_FINALIZE(mpi_ierror)
 #endif
 
-  IF(static_seed.AND.mpi_rank.EQ.0) THEN
+#ifdef NORNG_ON
+  IF(mpi_rank.EQ.0) THEN
      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
      WRITE(*,*) '       ATTENTION:           This nested_fit output was ran with a set seed! This is intended for testing only!'
      WRITE(*,*) '       ATTENTION:           If you are using this as a production setting change the cmake NORNG option to OFF.'
      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
   ENDIF
+#endif
   !IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
   !   DEALLOCATE(x,nc,enc)
   !ELSE

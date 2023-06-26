@@ -34,6 +34,8 @@ LIBPhys / NOVA University of Lisbon\
 email: c.godinho AT campus.fct.unl.pt
 
 ## Installation instructions ##
+
+### With CMake
 **Prerequisite**:
 - CMake
 - Fortran compiler (gfortran by default)
@@ -74,6 +76,37 @@ These command will build two different executables in the bin directory:
 NOTE for getdist function in the python library:\
 To make it work, change the file  xxx/pythonxx/site-packages/getdist/plots.py
 `matplotlib.use('Agg')` to `matplotlib.use('TkAgg')`.
+
+
+### With Makefile
+**Prerequisite**:
+- GNU Make (for Mod_metadata.f90 to be updated, GNU Make 4.0 is the minimum version required)
+- Fortran compiler (gfortran by default)
+- Python 3 with numpy, scipy, matplotlib, pandas, getdist
+
+**Instruction**:
+1. Download the latest version or clone the repository
+2. Run the commands:
+```
+cd nested_fit
+cd src
+make
+```
+These command will build two different executables in the bin directory: 
+- `nested_fitXXX.exe` for likelihood function maximisation for data analysis,
+- `nested_fit_funcXXX.exe` for functions maximisation not using data. 
+
+Running `make like` will only build the first executable while running `make func` will only build the second executable.
+
+**Makefile options**
+
+The options for the Makefile are the same as the one for the CMake. For an option to be set to OFF, it needs to be commented in the Makefile.
+
+### General comments
+
+- For the moment, the options OPENMPI and OPENMP cannot be selected at the same time. If both are set to ON, OPENMP will be set to OFF.
+
+- The options NORNG and OPENMP cannot be selected at the same time. If both are set to ON, OPENMP will be set to OFF.
 
 ## File descriptions
 
