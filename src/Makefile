@@ -2,7 +2,7 @@
 # Copyright M. Trassinelli
 # Last modified: 2023/01/23 09:54:59
 
-VERSION_FULL = 4.4.4
+VERSION_FULL = 4.4.5
 VERSION = 4.4
 
 NAME    = nested_fit$(VERSION_FULL)
