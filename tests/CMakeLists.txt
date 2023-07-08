@@ -82,7 +82,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/test_suite.py DESTINATION ${CMAKE_BINARY_D
 # Configure the python test file
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test.py ${CMAKE_BINARY_DIR}/test.py)
 
-add_custom_target(test 
+add_custom_target(test-all
     COMMAND ${Python_EXECUTABLE} ${CMAKE_BINARY_DIR}/test.py
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
