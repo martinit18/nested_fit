@@ -119,10 +119,10 @@ set(CFG_FILES
 # TODO(César): This assumes we are using gfortran!
 if(DEBUG)
     message(STATUS "Configuring for Debug")
-    set(SRC_FLAGS "-cpp -O0 -Wall -g -ffree-line-length-0")
+    set(SRC_FLAGS "-cpp -O0 -Wall -g -pg -ffree-line-length-0")
 else()
     message(STATUS "Configuring for Release")
-    set(SRC_FLAGS "-cpp -O2 -static -ffree-line-length-0")
+    set(SRC_FLAGS "-cpp -O3 -static -ffree-line-length-0")
 endif()
 
 # NOTE(César): This is required to preprocessor the OpenMP comments
@@ -157,6 +157,11 @@ add_executable(${nested_fit_target_func}
     ${SRC_FILES_FUNC}
 )
 target_compile_definitions(${nested_fit_target_func} PRIVATE -DFUNC_TARGET)
+
+if(DEBUG)
+    target_link_options(${nested_fit_target}      PRIVATE "-pg")
+    target_link_options(${nested_fit_target_func} PRIVATE "-pg")
+endif()
 
 if(OPENMP)
     target_link_options(${nested_fit_target}      PRIVATE "-fopenmp")
