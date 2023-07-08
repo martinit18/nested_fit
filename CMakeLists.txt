@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.10)
 
 #####################################
 # Custom variables are here for now #
@@ -40,7 +40,7 @@ string(LENGTH ${nested_fit_target} nested_fit_target_len)
 string(LENGTH ${nested_fit_target_func} nested_fit_target_func_len)
 
 set(SRC_FILES_COMM
-    src/Mod_cluster_analysis.f90
+src/Mod_cluster_analysis.f90
     src/Mod_parameters.f90
     src/Mod_search_new_point.f90
     src/Mod_timestamp.f90
@@ -217,5 +217,5 @@ else()
     endif()
 endif()
 
-enable_testing()
+# enable_testing() Don't use CTest
 add_subdirectory(tests)
