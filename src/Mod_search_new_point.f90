@@ -1006,7 +1006,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     !   END IF
     !END IF
 
-
+    ! Select only the variables that are not fixed
     j=1
     DO i=1,npar
       IF(par_fix(i).NE.1) THEN
@@ -1177,6 +1177,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
 
     !Find the new point in the original space
     new_jump=matmul(live_chol,new_jump_t)
+    ! Complete the new point with the fixed variables that were previously discarded
     j=1
     DO l=1,npar
       IF(par_fix(l).NE.1) THEN

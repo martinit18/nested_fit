@@ -94,7 +94,14 @@ file(GLOB SRC_SLATEC  ${CMAKE_SOURCE_DIR}/src/SLATEC/*.f)
 #file(GLOB SRC_LAPACK  ${CMAKE_SOURCE_DIR}/src/LAPACK/*.f ${CMAKE_SOURCE_DIR}/src/LAPACK/*.F)
 
 if(OPENMP AND OPENMPI)
-    message(ERROR "Compiling against OpenMP and OpenMPI at the same time is currently not supported.")
+    message(ERROR " Compiling against OpenMP and OpenMPI at the same time is currently not supported.")
+    message(WARNING "Disabling OpenMP.")
+    message(STATUS "Please enable only one feature.")
+    set(OPENMP OFF CACHE BOOL "" FORCE)
+endif()
+
+if(OPENMP AND NORNG)
+    message(ERROR " Having a set seed while enabling OpenMP does not work.")
     message(WARNING "Disabling OpenMP.")
     message(STATUS "Please enable only one feature.")
     set(OPENMP OFF CACHE BOOL "" FORCE)
@@ -201,6 +208,12 @@ endif()
 if(OPENMP)
     target_link_options(${nested_fit_target}      PRIVATE "-fopenmp")
     target_link_options(${nested_fit_target_func} PRIVATE "-fopenmp")
+endif()
+
+if(NORNG)
+    # Set the NORNG_ON flag for the preprocessor
+    target_compile_definitions(${nested_fit_target}      PUBLIC -DNORNG_ON)
+    target_compile_definitions(${nested_fit_target_func} PUBLIC -DNORNG_ON)
 endif()
 
 # Find MPI
