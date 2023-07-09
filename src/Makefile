@@ -1,6 +1,6 @@
 #  Automatic Time-stamp: <Last changed by martino on Tuesday 08 June 2021 at CEST 15:08:06>
 # Copyright M. Trassinelli
-# Last modified: 2023/01/23 09:54:59
+# Last modified: 2023/07/09 08:56:10
 
 VERSION_FULL = 4.4.5
 VERSION = 4.4
@@ -15,7 +15,7 @@ NAME_FUNC    = nested_fit_func$(VERSION_FULL)
 OPENMP = ON #Enable/Disable OpenMP.
 #OPENMPI = ON #Enable/Disable OpenMPI.
 #AUTOTESTS = ON #Automatically run tests after compiling.
-LAPACK = ON #Enable/Disable LAPACK.
+#LAPACK = ON #Enable/Disable LAPACK.
 
 
 .SUFFIXES : .f90 .f .o .c .mod
@@ -153,6 +153,7 @@ $(NAME): $(OBJFILES) $(FFILES)   $(LIBG)
 	chmod u+x $@
 	rm -f $(HOME)/bin/$@
 	cp -p $@ $(HOME)/bin
+	mv $@ ../bin/.
 
 $(NAME_FUNC):  $(OBJFILES_FUNC) $(FFILES)   $(LIBG)
 	$(FC) -o $@  $(FFLAGS) $(OBJFILES_FUNC) $(LIBG) $(LDFLAGS)
@@ -161,6 +162,7 @@ $(NAME_FUNC):  $(OBJFILES_FUNC) $(FFILES)   $(LIBG)
 	chmod u+x $@
 	rm -f $(HOME)/bin/$@
 	cp -p $@ $(HOME)/bin
+	mv $@ ../bin/.
 
 
 %.o: $(dir $(FFILES))/%.f
