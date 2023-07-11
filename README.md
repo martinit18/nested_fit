@@ -93,8 +93,8 @@ cd src
 make
 ```
 These command will build two different executables in the bin directory: 
-- `nested_fitXXX.exe` for likelihood function maximisation for data analysis,
-- `nested_fit_funcXXX.exe` for functions maximisation not using data. 
+- `nested_fitXXX` for likelihood function maximisation for data analysis,
+- `nested_fit_funcXXX` for functions maximisation not using data. 
 
 Running `make like` will only build the first executable while running `make func` will only build the second executable.
 
@@ -131,6 +131,12 @@ For this purpose, the python function in `nested_res_ .py` can be used also for 
 Together with this file, also the files `nf_output_points.paramnames` and `nf_output_points.ranges` are created for the use of GetDist python library.
 
 **Details of the input file line by line**
+
+A complete selection of input files example is given in the folder `examples` where the implementation of the function of the python library are given.
+
+
+It follwos a complete description of `nf_input.dat` file.
+
 ```
 4.4                 # Program version
 he-histo.dat        # Name of the (first) data file
