@@ -10,5 +10,11 @@ MODULE MOD_METADATA
   LOGICAL, PARAMETER :: parallel_mpi_on = @nested_fit_parallel_mpi_on@
   LOGICAL, PARAMETER :: static_seed = @nested_fit_static_seed@
 
+#ifdef FUNC_TARGET
+  CHARACTER(LEN=@nested_fit_target_func_len@), PARAMETER :: exec_target_name = '@nested_fit_target_func@'
+#else
+  CHARACTER(LEN=@nested_fit_target_len@), PARAMETER :: exec_target_name = '@nested_fit_target@'
+#endif
+
 
 END MODULE MOD_METADATA

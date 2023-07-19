@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.10)
 
 #####################################
 # Custom variables are here for now #
@@ -36,9 +36,13 @@ string(LENGTH ${nested_fit_version_str} nested_fit_version_str_len)
 string(CONCAT nested_fit_mpi_child_comm_proc_name "nf_child_proc" ${nested_fit_version_full_str})
 string(LENGTH ${nested_fit_mpi_child_comm_proc_name} nested_fit_mpi_child_comm_proc_name_len)
 
+string(CONCAT nested_fit_target "nested_fit" ${nested_fit_version_full_str})
+string(CONCAT nested_fit_target_func "nested_fit_func" ${nested_fit_version_full_str})
+string(LENGTH ${nested_fit_target} nested_fit_target_len)
+string(LENGTH ${nested_fit_target_func} nested_fit_target_func_len)
 
 set(SRC_FILES_COMM
-    src/Mod_cluster_analysis.f90
+src/Mod_cluster_analysis.f90
     src/Mod_parameters.f90
     src/Mod_search_new_point.f90
     src/Mod_timestamp.f90
@@ -58,7 +62,7 @@ set(SRC_FILES_COMM
     src/Mod_mpi.f90
     src/Mod_math.f90
 
-    src/cli/f90getopt.f90
+    src/cli/argparse.f90
     src/Mod_options.f90
 )
 
@@ -118,7 +122,7 @@ set(CFG_FILES
 # TODO(César): Use generator expressions instead!
 if(DEBUG)
     message(STATUS "Configuring for Debug")
-    set(SRC_FLAGS "-cpp -O0 -Wall -g -ffree-line-length-0")
+    set(SRC_FLAGS "-cpp -O0 -Wall -g -pg -ffree-line-length-0")
 else()
     message(STATUS "Configuring for Release")
     set(SRC_FLAGS "-cpp -O2 -static -ffree-line-length-0")
@@ -138,9 +142,6 @@ set_source_files_properties(${SRC_FILES_FUNC} PROPERTIES COMPILE_FLAGS ${SRC_FLA
 set_source_files_properties(${CFG_FILES} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${CHILD_SRC_FILES} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 
-string(CONCAT nested_fit_target "nested_fit" ${nested_fit_version_full_str})
-string(CONCAT nested_fit_target_func "nested_fit_func" ${nested_fit_version_full_str})
-
 add_executable(${nested_fit_target}
     ${CFG_FILES}
     ${SRC_CALGO}
@@ -158,6 +159,12 @@ add_executable(${nested_fit_target_func}
     ${SRC_FILES_COMM}
     ${SRC_FILES_FUNC}
 )
+target_compile_definitions(${nested_fit_target_func} PRIVATE -DFUNC_TARGET)
+
+if(DEBUG)
+    target_link_options(${nested_fit_target}      PRIVATE "-pg")
+    target_link_options(${nested_fit_target_func} PRIVATE "-pg")
+endif()
 
 if(OPENMP)
     target_link_options(${nested_fit_target}      PRIVATE "-fopenmp")
@@ -224,5 +231,13 @@ if(OPENMPI)
     install(TARGETS ${nested_fit_mpi_child_comm_proc_name} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
 endif()
 
-enable_testing()
+install(TARGETS ${nested_fit_target}      DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
+install(TARGETS ${nested_fit_target_func} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
+
+if(OPENMPI)
+    # Do the same for the child process in case it was compiled
+    install(TARGETS ${nested_fit_mpi_child_comm_proc_name} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
+endif()
+
+# enable_testing() Don't use CTest
 add_subdirectory(tests)

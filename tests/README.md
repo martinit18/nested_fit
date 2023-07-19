@@ -124,4 +124,5 @@ This is where things get interesting. This file allows to declare your own varia
     > :warning: For now there is no default values so, if the `modes.json` does have a variant without values the `nf_input.dat` variable location will be empty.
 ### Running tests
 
-To run tests simply call `python3 test.py` on your cmake build directory.
+To run tests simply call `make test-all` on your cmake build directory.
+> :warning: Testing requires python3 (tested with python3.8).
