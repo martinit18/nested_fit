@@ -1,4 +1,4 @@
-c     Automatic Time-stamp: <Last changed by martino on Friday 18 November 2022 at CET 09:56:43>
+c     Automatic Time-stamp: <Last changed by martino on Friday 23 June 2023 at CEST 10:18:48>
 c################################### USERFCN DEFINITION #####################################
 
       FUNCTION SELECT_USERFCN(funcname)
@@ -180,6 +180,16 @@ c################################### USERFCN DEFINITION ########################
             SELECT_USERFCN = 85
       ELSE IF(funcname.EQ.'POWER_CONST') THEN
             SELECT_USERFCN = 86
+      ELSE IF(funcname.EQ.'ELEVEN_GAUSS_WF_REL_BG') THEN
+            SELECT_USERFCN = 87
+      ELSE IF(funcname.EQ.'DOUBLE_GAUSS_BG_Si') THEN
+            SELECT_USERFCN = 88
+      ELSE IF(funcname.EQ.'EIGHT_GAUSS_WF_REL_BG') THEN
+            SELECT_USERFCN = 89  
+      ELSE IF(funcname.EQ.'ELEVEN_GAUSS_WF_CORREL_BG') THEN
+            SELECT_USERFCN = 90      
+      ELSE IF(funcname.EQ.'ELEVEN_GAUSS_WF_CORREL_BG2') THEN
+            SELECT_USERFCN = 91      
       ELSE
             WRITE(*,*) 'Error in the function name def. in USERFCN'
             WRITE(*,*) 'Check in the manual and in the input.dat file'
@@ -234,6 +244,9 @@ c################################### USERFCN DEFINITION ########################
       REAL*8 TWO_INTERP_VOIGT_POLY_X0
       REAL*8 DECAY, DECAY_SIMP
       REAL*8 x
+      REAL*8 ELEVEN_GAUSS_WF_REL_BG, ELEVEN_GAUSS_WF_CORREL_BG
+      REAL*8 DOUBLE_GAUSS_BG_Si
+      REAL*8 EIGHT_GAUSS_WF_REL_BG, ELEVEN_GAUSS_WF_CORREL_BG2
       INTEGER*4 funcid
 
 
@@ -413,6 +426,16 @@ c     Choose your model (see below for definition)
             USERFCN = SIX_VOIGT_PARA_POLY_SIG_PLEIADES(x,npar,val)
       CASE (86)
             USERFCN = POWER_CONST(x, npar, val)
+      CASE (87)
+            USERFCN = ELEVEN_GAUSS_WF_REL_BG(x, npar, val)
+      CASE (88)
+            USERFCN = DOUBLE_GAUSS_BG_Si(x, npar, val)  
+      CASE (89)
+            USERFCN = EIGHT_GAUSS_WF_REL_BG(x, npar, val)  
+      CASE (90)
+            USERFCN = ELEVEN_GAUSS_WF_CORREL_BG(x, npar, val)   
+      CASE (91)
+            USERFCN = ELEVEN_GAUSS_WF_CORREL_BG2(x, npar, val)                    
       END SELECT
 
       RETURN
@@ -6081,4 +6104,537 @@ c     Decay function for lifetime experiments
       END
      
 
-c ##############################################################################################
+c
+c_______________________________________________________________________________________________
+      FUNCTION ELEVEN_GAUSS_WF_REL_BG(X,npar,val)
+c     2 Normalized Gaussian distribution plus background
+c     The value of 'amp' is the value of the surface below the curve
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar), vall1(3), vall2(3), vall3(3)
+      REAL*8 vall4(3), vall5(3), vall6(3), vall7(3), vall8(3)
+      REAL*8 vall9(3), vall10(3), vall11(3)
+      REAL*8 ELEVEN_GAUSS_WF_REL_BG, GAUSS, x
+      REAL*8 pi
+      PARAMETER(pi=3.141592653589793d0)
+      REAL*8 x01, amp1, sigma, bg
+      REAL*8 dx02, amp2
+      REAL*8 dx03, amp3
+      REAL*8 dx04, amp4
+      REAL*8 dx05, amp5
+      REAL*8 dx06, amp6
+      REAL*8 dx07, amp7
+      REAL*8 dx08, amp8
+      REAL*8 x09, amp9, dsigma
+      REAL*8 x10, amp10
+      REAL*8 x11, amp11
+      ! To plot the different components
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+      bg     = val(1)
+      x01    = val(2)
+      dx02    = val(3)
+      dx03    = val(4)
+      dx04    = val(5)
+      dx05    = val(6)
+      dx06    = val(7)
+      dx07    = val(8)
+      dx08    = val(9)
+      x09    = val(10)
+      x10    = val(11)
+      x11    = val(12)
+      amp1   = val(13)
+      amp2   = val(14)
+      amp3   = val(15)
+      amp4   = val(16)
+      amp5   = val(17)
+      amp6   = val(18)
+      amp7   = val(19)
+      amp8   = val(20)
+      amp9   = val(21)
+      amp10   = val(22)
+      amp11   = val(23)
+      sigma = val(24)
+      dsigma = val(25)
+
+c     first Gaussian peak
+      vall1(1) = x01
+      vall1(2) = amp1
+      vall1(3) = sigma
+
+c     second Gaussian peak
+      vall2(1) = x01 + dx02
+      vall2(2) = amp2
+      vall2(3) = sigma
+
+c     third Gaussian peak
+      vall3(1) = x01 + dx03
+      vall3(2) = amp3
+      vall3(3) = sigma
+
+c     fourth Gaussian peak
+      vall4(1) = x01 + dx04
+      vall4(2) = amp4
+      vall4(3) = sigma
+
+c     fifth Gaussian peak
+      vall5(1) = x01+dx05
+      vall5(2) = amp5
+      vall5(3) = sigma
+
+c     sixth Gaussian peak
+      vall6(1) = x01+dx06
+      vall6(2) = amp6
+      vall6(3) = sigma
+
+c     seventh Gaussian peak
+      vall7(1) = x01+dx07
+      vall7(2) = amp7
+      vall7(3) = sigma
+
+c     eighth Gaussian peak
+      vall8(1) = x01+dx08
+      vall8(2) = amp8
+      vall8(3) = sigma
+      
+c     ninth Gaussian peak
+      vall9(1) = x09
+      vall9(2) = amp9
+      vall9(3) = sigma*dsigma
+      
+c     tenth Gaussian peak
+      vall10(1) = x10
+      vall10(2) = amp10
+      vall10(3) = sigma*dsigma
+
+c     eleventh Gaussian peak
+      vall11(1) = x11
+      vall11(2) = amp11
+      vall11(3) = sigma*dsigma
+
+      ELEVEN_GAUSS_WF_REL_BG = GAUSS(x,3,vall1) + GAUSS(x,3,vall2)
+     +     + GAUSS(x,3,vall3) + GAUSS(x,3,vall4)  + GAUSS(x,3,vall5)
+     +     + GAUSS(x,3,vall6) + GAUSS(x,3,vall7) + GAUSS(x,3,vall8)
+     +     + GAUSS(x,3,vall9) + GAUSS(x,3,vall10) + GAUSS(x,3,vall11) 
+     +     + bg
+
+
+c     Save the different components
+      IF(plot) THEN
+         WRITE(40,*) x, ELEVEN_GAUSS_WF_REL_BG,
+     +        GAUSS(x,3,vall1), GAUSS(x,3,vall2), GAUSS(x,3,vall3),
+     +        GAUSS(x,3,vall4), GAUSS(x,3,vall5), GAUSS(x,3,vall6),
+     +        GAUSS(x,3,vall7), GAUSS(x,3,vall8), GAUSS(x,3,vall9),
+     +        GAUSS(x,3,vall10),GAUSS(x,3,vall11), bg
+      ENDIF
+
+      RETURN
+      END
+
+c ___________________________________________________________________________________
+      FUNCTION DOUBLE_GAUSS_BG_Si(X,npar,val)
+c     2 Normalized Gaussian distribution plus background
+c     The value of 'amp' is the value of the surface below the curve
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar), val1(3), val2(3)
+      REAL*8 DOUBLE_GAUSS_BG_Si, GAUSS, x
+      REAL*8 pi
+      PARAMETER(pi=3.141592653589793d0)
+      REAL*8 x01, x02, amp1, amp2, sigma1,sigma2, bg
+
+      bg    = val(1)
+      x01   = val(2)
+      x02   = val(3)
+      amp1  = val(4)
+      amp2  = val(5)
+      sigma1 = val(6)
+      sigma2 = val(7)
+      
+
+c     first gauss peak
+      val1(1) = x01
+      val1(2) = amp1
+      val1(3) = sigma1
+
+
+c     second gauss peak
+      val2(1) = x02
+      val2(2) = amp2
+      val2(3) = sigma2
+
+      DOUBLE_GAUSS_BG_Si = GAUSS(x,3,val1) + GAUSS(x,3,val2) + bg
+
+      RETURN
+      END
+
+c __________________________
+      FUNCTION EIGHT_GAUSS_WF_REL_BG(X,npar,val)
+c     2 Normalized Gaussian distribution plus background
+c     The value of 'amp' is the value of the surface below the curve
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar), vall1(3), vall2(3), vall3(3)
+      REAL*8 vall4(3), vall5(3), vall6(3), vall7(3), vall8(3)
+      REAL*8 vall9(3), vall10(3), vall11(3)
+      REAL*8 EIGHT_GAUSS_WF_REL_BG, GAUSS, x
+      REAL*8 pi
+      PARAMETER(pi=3.141592653589793d0)
+      REAL*8 x01, amp1, sigma, bg
+      REAL*8 dx02, amp2
+      REAL*8 dx03, amp3
+      REAL*8 dx04, amp4
+      REAL*8 dx05, amp5
+      REAL*8 dx06, amp6
+      REAL*8 dx07, amp7
+      REAL*8 dx08, amp8
+      ! To plot the different components
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+      bg     = val(1)
+      x01    = val(2)
+      dx02    = val(3)
+      dx03    = val(4)
+      dx04    = val(5)
+      dx05    = val(6)
+      dx06    = val(7)
+      dx07    = val(8)
+      dx08    = val(9)
+      amp1   = val(10)
+      amp2   = val(11)
+      amp3   = val(12)
+      amp4   = val(13)
+      amp5   = val(14)
+      amp6   = val(15)
+      amp7   = val(16)
+      amp8   = val(17)
+      sigma = val(18)
+
+c     first Gaussian peak
+      vall1(1) = x01
+      vall1(2) = amp1
+      vall1(3) = sigma
+
+c     second Gaussian peak
+      vall2(1) = x01 + dx02
+      vall2(2) = amp2
+      vall2(3) = sigma
+
+c     third Gaussian peak
+      vall3(1) = x01 + dx03
+      vall3(2) = amp3
+      vall3(3) = sigma
+
+c     fourth Gaussian peak
+      vall4(1) = x01 + dx04
+      vall4(2) = amp4
+      vall4(3) = sigma
+
+c     fifth Gaussian peak
+      vall5(1) = x01+dx05
+      vall5(2) = amp5
+      vall5(3) = sigma
+
+c     sixth Gaussian peak
+      vall6(1) = x01+dx06
+      vall6(2) = amp6
+      vall6(3) = sigma
+
+c     seventh Gaussian peak
+      vall7(1) = x01+dx07
+      vall7(2) = amp7
+      vall7(3) = sigma
+
+c     eighth Gaussian peak
+      vall8(1) = x01+dx08
+      vall8(2) = amp8
+      vall8(3) = sigma
+      
+
+      EIGHT_GAUSS_WF_REL_BG = GAUSS(x,3,vall1) + GAUSS(x,3,vall2)
+     +     + GAUSS(x,3,vall3) + GAUSS(x,3,vall4)  + GAUSS(x,3,vall5)
+     +     + GAUSS(x,3,vall6) + GAUSS(x,3,vall7) + GAUSS(x,3,vall8) + bg
+
+
+c     Save the different components
+      IF(plot) THEN
+         WRITE(40,*) x, EIGHT_GAUSS_WF_REL_BG,
+     +        GAUSS(x,3,vall1), GAUSS(x,3,vall2), GAUSS(x,3,vall3),
+     +        GAUSS(x,3,vall4), GAUSS(x,3,vall5), GAUSS(x,3,vall6),
+     +        GAUSS(x,3,vall7), GAUSS(x,3,vall8),bg
+      ENDIF
+
+      RETURN
+      END
+
+c_______________________________________________________________________________________________
+      FUNCTION ELEVEN_GAUSS_WF_CORREL_BG(X,npar,val)
+c     2 Normalized Gaussian distribution plus background
+c     The value of 'amp' is the value of the surface below the curve
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar), vall1(3), vall2(3), vall3(3)
+      REAL*8 vall4(3), vall5(3), vall6(3), vall7(3), vall8(3)
+      REAL*8 vall9(3), vall10(3), vall11(3)
+      REAL*8 ELEVEN_GAUSS_WF_CORREL_BG, GAUSS, x
+      REAL*8 pi
+      PARAMETER(pi=3.141592653589793d0)
+      REAL*8 x01, amp5, sigma, bg, da, db, dx
+      REAL*8 dx02
+      REAL*8 dx03
+      REAL*8 dx04
+      REAL*8 dx05
+      REAL*8 dx06
+      REAL*8 dx07
+      REAL*8 dx08
+      REAL*8 x09, amp9, dsigma
+      REAL*8 x10, amp10
+      REAL*8 x11, amp11
+      ! To plot the different components
+      LOGICAL plot
+      COMMON /func_plot/ plot
+
+      bg      = val(1)
+      x01     = val(2)
+      dx02    = val(3)
+      dx03    = val(4)
+      dx04    = val(5)
+      dx05    = val(6)
+      dx06    = val(7)
+      dx07    = val(8)
+      dx08    = val(9)
+      x09     = val(10)
+      x10     = val(11)
+      x11     = val(12)
+      amp5     = val(13)
+      da      = val(14)
+      db      = val(15)
+      amp9    = val(16)
+      amp10   = val(17)
+      amp11   = val(18)
+      sigma   = val(19)
+      dsigma  = val(20)
+
+c     All positions are considered with respect to the line 5
+
+c     first Gaussian peak
+      dx = -dx05
+      vall1(1) = x01
+      vall1(2) = amp5*EXP(1+ da*dx + db*dx**2)
+      vall1(3) = sigma
+
+c     second Gaussian peak
+      dx = dx02-dx05
+      vall2(1) = x01 + dx02 
+      vall2(2) = amp5*EXP(1+ da*dx + db*dx**2)
+      vall2(3) = sigma
+
+c     third Gaussian peak
+      dx = dx03-dx05
+      vall3(1) = x01 + dx03 
+      vall3(2) = amp5*EXP(1+ da*dx + db*dx**2)
+      vall3(3) = sigma
+
+c     fourth Gaussian peak
+      dx = dx04-dx05
+      vall4(1) = x01 + dx04 
+      vall4(2) =amp5*EXP(1+ da*dx + db*dx**2)
+      vall4(3) = sigma
+
+c     fifth Gaussian peak
+      vall5(1) = x01 + dx05
+      vall5(2) = amp5 
+      vall5(3) = sigma
+
+c     sixth Gaussian peak
+      dx = dx06-dx05
+      vall6(1) = x01 + dx06
+      vall6(2) = amp5*EXP(1+ da*dx + db*dx**2)
+      vall6(3) = sigma
+
+c     seventh Gaussian peak
+      dx = dx07-dx05
+      vall7(1) = x01 + dx07 
+      vall7(2) = amp5*EXP(1+ da*dx + db*dx**2)
+      vall7(3) = sigma
+
+c     eighth Gaussian peak
+      vall8(1) = x01 + dx08
+      vall8(2) = amp5*EXP(1+ da*dx + db*dx**2)
+      vall8(3) = sigma
+      
+c     ninth Gaussian peak
+      vall9(1) = x09
+      vall9(2) = amp9
+      vall9(3) = sigma*dsigma
+      
+c     tenth Gaussian peak
+      vall10(1) = x10
+      vall10(2) = amp10
+      vall10(3) = sigma*dsigma
+
+c     eleventh Gaussian peak
+      vall11(1) = x11
+      vall11(2) = amp11
+      vall11(3) = sigma*dsigma
+
+      ELEVEN_GAUSS_WF_CORREL_BG = GAUSS(x,3,vall1) + GAUSS(x,3,vall2)
+     +     + GAUSS(x,3,vall3) + GAUSS(x,3,vall4)  + GAUSS(x,3,vall5)
+     +     + GAUSS(x,3,vall6) + GAUSS(x,3,vall7) + GAUSS(x,3,vall8)
+     +     + GAUSS(x,3,vall9) + GAUSS(x,3,vall10) + GAUSS(x,3,vall11) 
+     +     + bg
+
+
+c     Save the different components
+      IF(plot) THEN
+         WRITE(40,*) x, ELEVEN_GAUSS_WF_CORREL_BG,
+     +        GAUSS(x,3,vall1), GAUSS(x,3,vall2), GAUSS(x,3,vall3),
+     +        GAUSS(x,3,vall4), GAUSS(x,3,vall5), GAUSS(x,3,vall6),
+     +        GAUSS(x,3,vall7), GAUSS(x,3,vall8), GAUSS(x,3,vall9),
+     +        GAUSS(x,3,vall10),GAUSS(x,3,vall11), bg
+      ENDIF
+
+      RETURN
+      END
+
+c     _______________________________________________________________________________________________
+      FUNCTION ELEVEN_GAUSS_WF_CORREL_BG2(X,npar,val)
+c     2 Normalized Gaussian distribution plus background
+c     The value of 'amp' is the value of the surface below the curve
+      IMPLICIT NONE
+      INTEGER*4 npar
+      REAL*8 val(npar), vall1(3), vall2(3), vall3(3)
+      REAL*8 vall4(3), vall5(3), vall6(3), vall7(3), vall8(3)
+      REAL*8 vall9(3), vall10(3), vall11(3)
+      REAL*8 ELEVEN_GAUSS_WF_CORREL_BG2, GAUSS, x
+      REAL*8 pi
+      PARAMETER(pi=3.141592653589793d0)
+      REAL*8 x01, amp5, sigma, bg, x0amp, sigamp, dx
+      REAL*8 dx02
+      REAL*8 dx03
+      REAL*8 dx04
+      REAL*8 dx05
+      REAL*8 dx06
+      REAL*8 dx07
+      REAL*8 dx08
+      REAL*8 x09, amp9, dsigma
+      REAL*8 x10, amp10
+      REAL*8 x11, amp11
+! To plot the different components
+      LOGICAL plot
+      COMMON /func_plot/ plot
+      
+      bg      = val(1)
+      x01     = val(2)
+      dx02    = val(3)
+      dx03    = val(4)
+      dx04    = val(5)
+      dx05    = val(6)
+      dx06    = val(7)
+      dx07    = val(8)
+      dx08    = val(9)
+      x09     = val(10)
+      x10     = val(11)
+      x11     = val(12)
+      amp5    = val(13)
+      x0amp   = val(14)
+      sigamp  = val(15)
+      amp9    = val(16)
+      amp10   = val(17)
+      amp11   = val(18)
+      sigma   = val(19)
+      dsigma  = val(20)
+      
+c     All positions are considered with respect to the line 5
+      
+c     first Gaussian peak
+      dx = -dx05
+      vall1(1) = x01
+      vall1(2) = amp5*EXP(-(dx-x0amp)**2/(2*sigamp**2
+     +     -(dx05-x0amp)**2/(2*sigamp**2) )) 
+      vall1(3) = sigma
+      
+c     second Gaussian peak
+      dx = dx02-dx05
+      vall2(1) = x01 + dx02 
+      vall2(2) = amp5*EXP(-(dx-x0amp)**2/(2*sigamp**2)
+     +     +(dx05-x0amp)**2/(2*sigamp**2))
+      vall2(3) = sigma
+      
+c     third Gaussian peak
+      dx = dx03-dx05
+      vall3(1) = x01 + dx03 
+      vall3(2) = amp5*EXP(-(dx-x0amp)**2/(2*sigamp**2)
+     +     +(dx05-x0amp)**2/(2*sigamp**2))
+      vall3(3) = sigma
+      
+c     fourth Gaussian peak
+      dx = dx04-dx05
+      vall4(1) = x01 + dx04 
+      vall4(2) =amp5*EXP(-(dx-x0amp)**2/(2*sigamp**2)
+     +     +(dx05-x0amp)**2/(2*sigamp**2))
+      vall4(3) = sigma
+      
+c     fifth Gaussian peak
+      vall5(1) = x01 + dx05
+      vall5(2) = amp5 
+      vall5(3) = sigma
+      
+c     sixth Gaussian peak
+      dx = dx06-dx05
+      vall6(1) = x01 + dx06
+      vall6(2) = amp5*EXP(-(dx-x0amp)**2/(2*sigamp**2)
+     +     +(dx05-x0amp)**2/(2*sigamp**2))
+      vall6(3) = sigma
+      
+c     seventh Gaussian peak
+      dx = dx07-dx05
+      vall7(1) = x01 + dx07 
+      vall7(2) = amp5*EXP(-(dx-x0amp)**2/(2*sigamp**2)
+     +     +(dx05-x0amp)**2/(2*sigamp**2))
+      vall7(3) = sigma
+      
+c     eighth Gaussian peak
+      vall8(1) = x01 + dx08
+      vall8(2) = amp5*EXP(-(dx-x0amp)**2/(2*sigamp**2)
+     +     +(dx05-x0amp)**2/(2*sigamp**2))
+      vall8(3) = sigma
+      
+c     ninth Gaussian peak
+      vall9(1) = x09
+      vall9(2) = amp9
+      vall9(3) = sigma*dsigma
+      
+c     tenth Gaussian peak
+      vall10(1) = x10
+      vall10(2) = amp10
+      vall10(3) = sigma*dsigma
+      
+c     eleventh Gaussian peak
+      vall11(1) = x11
+      vall11(2) = amp11
+      vall11(3) = sigma*dsigma
+      
+      ELEVEN_GAUSS_WF_CORREL_BG2 = GAUSS(x,3,vall1) + GAUSS(x,3,vall2)
+     +     + GAUSS(x,3,vall3) + GAUSS(x,3,vall4)  + GAUSS(x,3,vall5)
+     +     + GAUSS(x,3,vall6) + GAUSS(x,3,vall7) + GAUSS(x,3,vall8)
+     +     + GAUSS(x,3,vall9) + GAUSS(x,3,vall10) + GAUSS(x,3,vall11) 
+     +     + bg
+      
+      
+c     Save the different components
+      IF(plot) THEN
+         WRITE(40,*) x, ELEVEN_GAUSS_WF_CORREL_BG2,
+     +        GAUSS(x,3,vall1), GAUSS(x,3,vall2), GAUSS(x,3,vall3),
+     +        GAUSS(x,3,vall4), GAUSS(x,3,vall5), GAUSS(x,3,vall6),
+     +        GAUSS(x,3,vall7), GAUSS(x,3,vall8), GAUSS(x,3,vall9),
+     +        GAUSS(x,3,vall10),GAUSS(x,3,vall11), bg
+      ENDIF
+      
+      RETURN
+      END
+      
+c     ##############################################################################################
+      

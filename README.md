@@ -34,6 +34,8 @@ LIBPhys / NOVA University of Lisbon\
 email: c.godinho AT campus.fct.unl.pt
 
 ## Installation instructions ##
+
+### With CMake
 **Prerequisite**:
 - CMake
 - Fortran compiler (gfortran by default)
@@ -63,6 +65,8 @@ These command will build two different executables in the bin directory:
 |OPENMP    | Enable/Disable OpenMP support.                                  | OFF     |
 |OPENMPI   | Enable/Disable OpenMPI support.                                 | OFF     |
 |AUTOTESTS | Automatically run tests after compiling.                        | OFF     |
+|LAPACK    | Use LAPACK library functions instead of the internal ones       | OFF     |
+|:---------|:----------------------------------------------------------------|:-------:|
 
 
 
@@ -72,6 +76,37 @@ These command will build two different executables in the bin directory:
 NOTE for getdist function in the python library:\
 To make it work, change the file  xxx/pythonxx/site-packages/getdist/plots.py
 `matplotlib.use('Agg')` to `matplotlib.use('TkAgg')`.
+
+
+### With Makefile
+**Prerequisite**:
+- GNU Make (for Mod_metadata.f90 to be updated, GNU Make 4.0 is the minimum version required)
+- Fortran compiler (gfortran by default)
+- Python 3 with numpy, scipy, matplotlib, pandas, getdist
+
+**Instruction**:
+1. Download the latest version or clone the repository
+2. Run the commands:
+```
+cd nested_fit
+cd src
+make
+```
+These command will build two different executables in the bin directory: 
+- `nested_fitXXX` for likelihood function maximisation for data analysis,
+- `nested_fit_funcXXX` for functions maximisation not using data. 
+
+Running `make like` will only build the first executable while running `make func` will only build the second executable.
+
+**Makefile options**
+
+The options for the Makefile are the same as the one for the CMake. For an option to be set to OFF, it needs to be commented in the Makefile.
+
+### General comments
+
+- For the moment, the options OPENMPI and OPENMP cannot be selected at the same time. If both are set to ON, OPENMP will be set to OFF.
+
+- The options NORNG and OPENMP cannot be selected at the same time. If both are set to ON, OPENMP will be set to OFF.
 
 ## File descriptions
 
@@ -96,6 +131,12 @@ For this purpose, the python function in `nested_res_ .py` can be used also for 
 Together with this file, also the files `nf_output_points.paramnames` and `nf_output_points.ranges` are created for the use of GetDist python library.
 
 **Details of the input file line by line**
+
+A complete selection of input files example is given in the folder `examples` where the implementation of the function of the python library are given.
+
+
+It follwos a complete description of `nf_input.dat` file.
+
 ```
 4.4                 # Program version
 he-histo.dat        # Name of the (first) data file
@@ -174,8 +215,12 @@ Additional information can be found in the reference articles.
 
 ## Present version and history of the past versions
 
-The present version is 4.4.3
+The present version is 4.4.4
 New features:
+- New "write_input" function in python library
+- New fit functions
+- External LAPACK library link option 
+- OpenMP for parallel search of new points
 - OpenMPI support (only available for number of tries)
 - OpenMP parallelisation for independent live point search 
 - New user function calling method
@@ -252,7 +297,7 @@ Previous versions are:
 
 ### Additional included sources
 
-In addition to the original files from the main author (M. Trassinelli), nesed_fit includes
+In addition to the original files from the main authors, nesed_fit includes
 - *FITPACK (DIERCKX)* package, to fit and interpolating data with splines (no license)
   - Ref: Paul Dierckx, Curve and Surface Fitting with Splines, Oxford University Press, 1993
  Developer,

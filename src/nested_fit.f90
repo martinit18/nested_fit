@@ -2,7 +2,11 @@ PROGRAM NESTED_FIT
   ! Time-stamp: <Last changed by martino on Monday 07 June 2021 at CEST 10:29:22>
   !
   ! Please read README and LICENSE files for more inforamtion
-  ! 4.4  OpenMPI support (only available for number of tries)
+  ! 4.4  New "write_input" function in python library
+  !      New fit functions
+  !      External LAPACK library link option 
+  !      OpenMP for parallel search of new points
+  !      OpenMPI support (only available for number of tries)
   !      New user function calling method
   !      Add Windows support
   !      New build system generator (CMake)
@@ -131,13 +135,11 @@ PROGRAM NESTED_FIT
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_like_final_try, weight_try, live_max_try
 
   ! Parallelization variables for each mpi instance
-  INTEGER(4) :: nall_try_instance
-  REAL(8) :: evsum_final_try_instance, live_like_max_try_instance
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_final_try_instance
   REAL(8), ALLOCATABLE, DIMENSION(:) :: live_like_final_try_instance, weight_try_instance, live_max_try_instance
 
   ! OpenMPI stuff
-  INTEGER(4) :: mpi_rank, mpi_cluster_size, mpi_ierror
+  INTEGER(4) :: mpi_rank !, mpi_cluster_size, mpi_ierror
 
   ! Time measurement variables
   REAL(8) :: seconds, seconds_omp, startt, stopt, startt_omp, stopt_omp
@@ -177,7 +179,8 @@ PROGRAM NESTED_FIT
 #endif
 
   !!!!!!!! Initiate random generator with the same seed each time !!!!!!!!!!!
-  IF(static_seed.AND.mpi_rank.EQ.0) THEN
+#ifdef NORNG_ON  
+  IF(mpi_rank.EQ.0) THEN
       WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
       WRITE(*,*) '       ATTENTION:           Nested_fit is running with a set seed! This is intended for testing only!'
       WRITE(*,*) '       ATTENTION:           If you are using this as a production setting change the cmake NORNG option to OFF.'
@@ -185,9 +188,10 @@ PROGRAM NESTED_FIT
       CALL sleep(1)
   ENDIF
 
-  IF(static_seed) THEN
-      CALL RANDOM_SEED(PUT=seed_array)
-  ENDIF
+  !IF(static_seed) THEN
+  CALL RANDOM_SEED(PUT=seed_array)
+  !ENDIF
+#endif
 
 #ifdef OPENMPI_ON
    CALL MPI_BARRIER(MPI_COMM_WORLD, mpi_ierror)
@@ -834,12 +838,14 @@ PROGRAM NESTED_FIT
    CALL MPI_FINALIZE(mpi_ierror)
 #endif
 
-  IF(static_seed.AND.mpi_rank.EQ.0) THEN
+#ifdef NORNG_ON
+  IF(mpi_rank.EQ.0) THEN
      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
      WRITE(*,*) '       ATTENTION:           This nested_fit output was ran with a set seed! This is intended for testing only!'
      WRITE(*,*) '       ATTENTION:           If you are using this as a production setting change the cmake NORNG option to OFF.'
      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
   ENDIF
+#endif
   !IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
   !   DEALLOCATE(x,nc,enc)
   !ELSE

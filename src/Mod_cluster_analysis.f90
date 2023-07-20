@@ -452,14 +452,14 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     ! INPUTS
     USE MOD_TIMESTAMP, ONLY: timestamp
     ! Module for the input parameter definition
-    USE MOD_PARAMETERS, ONLY: cluster_method, cluster_par1
+    USE MOD_PARAMETERS, ONLY: cluster_par1
     ! distance_limit corresponds to maximum distance percentage
     INTEGER(4), INTENT(IN) :: np_in, ndim_in
     REAL(8), INTENT(IN), DIMENSION(np_in,ndim_in) :: p_in
     REAL(8) :: distance_limit=0.
-    INTEGER(4) :: i, j, k, l, clust_min, clust_max
+    INTEGER(4) :: i, j, k, clust_min, clust_max
     REAL(8), DIMENSION(np_in,ndim_in) :: p
-    REAL(8) :: val_max, val_min, dist_min, dist, max_dist
+    REAL(8) :: val_max, val_min, dist_min, max_dist
     REAL(8), DIMENSION(np_in,np_in) :: dist_pt
     INTEGER(4), DIMENSION(2) :: clusters_to_concat
 
