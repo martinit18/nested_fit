@@ -1,7 +1,9 @@
 # Small guide of the examples
 
  Examples of nested fit input files for data analysis are presented in the folder `data_analysis`. In particular
-- in `synthetic_gauss_bg_low-statistics` different **search methods** are presented, 
+- in `synthetic_gauss_bg_counts` different **search methods** are presented for counts data, 
+- in `synthetic_gauss_bg_errorbars` an example is given for data with error bars and assuming a Gaussian probability for them, 
+- in `synthetic_gauss_bg_errorbars_with_outlaiers` an example is given for data with error bars with outliers and assuming a Jeffreys probability for them, 
 - in ``synthetic_gauss_bg_set`` an example of **simultaneous analysis of set data files** is give.
 
 Examples of nested fit input files for function exploration are presented in the folder `function_exploration`. In particular

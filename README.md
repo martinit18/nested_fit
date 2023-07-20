@@ -157,9 +157,9 @@ Input: (x, y, n. counts) TO BE IMPLEMENTED
 Input: (x, y, z, error z) TO BE IMPLEMENTED
 
 
-Likelihood functions available:
+Likelihood functions available (for data with error bars, Poisson statistics is assumed for counts):
 - `GAUSSIAN`: Default normal distribution assuming data likelihood.
-- `MOD_JEFFREYS`: Robust likelihood that does not assume a majorated error distribution.
+- `MOD_JEFFREYS`: Robust likelihood that does not assume a majorated error distribution (see Ref. [2]).
 
 ```
 200                 # Number of live points
@@ -215,26 +215,27 @@ Additional information can be found in the reference articles.
 
 ## Present version and history of the past versions
 
-The present version is 4.4.4
+The present version is 4.5.2
 New features:
-- New "write_input" function in python library
-- New fit functions
-- External LAPACK library link option 
-- OpenMP for parallel search of new points
-- OpenMPI support (only available for number of tries)
-- OpenMP parallelisation for independent live point search 
-- New user function calling method
-- Add Windows support
-- New build system generator (CMake)
-- Improved performance
+- New modified Jeffreys likelihood for data
 
 
 Previous versions are:
+ - 4.4 New "write_input" function in python library \
+ New fit functions \
+ External LAPACK library link option \ 
+ OpenMP for parallel search of new points \
+ OpenMPI support (only available for number of tries) \
+ OpenMP parallelisation for independent live point search \ 
+ New user function calling method \
+ Add Windows support \
+ New build system generator (CMake) \
+ Improved performance
  - 4.3 New (test) function : harmonic potential in 3D and loggamma \
  Choice between different convergence methods : evidence or partition function  
  - 4.2 Additional search methods : Uniform search around each live point and Slice Sampling
- - 4.1.1 New cluster recognition methods added
- - 4.0.3 2D data analysis for count-type XY \
+ - 4.1 New cluster recognition methods added
+ - 4.0  2D data analysis for count-type XY \
  Computation acceleration for the 1D case introducing a mask instead of IF condition in the likelihood \
  New ERFPEAK function \
  New example files for python analysis with pandas
@@ -284,7 +285,7 @@ Previous versions are:
  - 0.5: Add of the pion mass function.
  - 0.4: Improved search algorithm for presence of local maxima
       Add of the information, minimum required iteration and complexity calculation
-      D.S. Sivia, "Data Analysis, a Bayesian tutorial" (2006),
+      D.S. Sivia, "Data Analysis, a Bayesian tutorial" (Ref. [2]),
       R. Trotta, Contemporary Physics 49, 71 (2008),
       J. Veitch and A. Vecchio, Phys. Rev. D 81, 062003 (2010).
  - 0.3: Optimization with memory allocation and more variables accessible from the input file.

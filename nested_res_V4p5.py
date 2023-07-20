@@ -8,8 +8,7 @@ import matplotlib
 # matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
-current_version=4.4 # and beyond
-
+current_version=4.5 # and beyond
 
 linestyle = {"markeredgewidth":2, "elinewidth":2, "capsize":4,"markersize":3}
 linestyle2 = {"markeredgewidth":0, "elinewidth":2, "capsize":0,"markersize":0}
@@ -22,11 +21,11 @@ a="""
 #                                                         #
 #                                                         #
 # Start with                                              #
-# 'an=nested_res_V4p3.Analysis()'                         #
+# 'an=nested_res_V4p5.Analysis()'                         #
 # By default the current path is considered.              #
 #                                                         #
 # If you want analyze another path:                       #
-# 'an=nested_res_V4p3.Analysis(path="path")'              #
+# 'an=nested_res_V4p5.Analysis(path="path")'              #
 #                                                         #
 # If you do not want to specify any path:                 #
 # 'an=nested_res.Analysis(path=None)'                     #
@@ -228,6 +227,75 @@ class Analysis(object):
 
 
         return input_data, input_comment
+    
+    ########################################################################################
+    def write_input(self,input_data,input_comment,path=currentpath):
+        '''
+        Write the input file input.dat to be used by minuit_fit.exe
+        '''# Adjust the path first
+        if path[-1]!='/' and path != None:  path = path+'/'
+        # Open the file
+        input_file = open(path+'nf_input.dat','w')
+        # Bug to fix
+        #input_comment['parameters'] ='# Par n. name value step min max flag\n'
+        
+        # Write the parameters
+        input_file.writelines([str(input_data['version']),
+                                   '\t', input_comment['version']])
+        input_file.writelines([input_data['filename'],
+                                   '\t', input_comment['filename']])
+        input_file.writelines([input_data['set_yn'],
+                                   '\t', input_comment['set_yn']])
+        input_file.writelines([input_data['data_type'],
+                                   '\t', input_comment['data_type']])
+        input_file.writelines([input_data['likelihood_func'],
+                                   '\t', input_comment['likelihood_func']])
+        input_file.writelines([str(input_data['nlive']),
+                                   '\t', input_comment['nlive']])
+        input_file.writelines([input_data['conv_method'],
+                                   '\t', input_comment['conv_method']])
+        input_file.writelines([str(input_data['evaccuracy']), 
+                                   '\t',str(input_data['conv_par']),
+                                   '\t', input_comment['convergence']])
+        input_file.writelines([input_data['search_method'],
+                                   '\t', input_comment['search_method']])
+        input_file.writelines([str(input_data['search_par1']), 
+                                   '\t',str(input_data['search_par2']),
+                                   '\t',str(input_data['maxtries']), 
+                                   '\t',str(input_data['maxntries']),
+                                   '\t', input_comment['search_algorithm']])
+        input_file.writelines([input_data['cluster_yn'], 
+                                   '\t',input_data['cluster_method'],
+                                   '\t',str(input_data['distance_limit']), 
+                                   '\t',str(input_data['bandwidth']),
+                                   '\t', input_comment['cluster_algorithm']])
+        input_file.writelines([str(input_data['ntry']), 
+                                   '\t',str(input_data['maxstep_try']),
+                                   '\t', input_comment['ntry_maxstep']])
+        input_file.writelines([input_data['function_name'],
+                                   '\t', input_comment['function_name']])
+        input_file.writelines([input_data['lr'],
+                                   '\t', input_comment['lr']])
+        input_file.writelines([str(input_data['npoint']),
+                                   '\t', str(input_data['nwidth']),
+                                   '\t', input_comment['additional data']])
+        input_file.writelines([str(input_data['xmin']), 
+                                   '\t',str(input_data['xmax']),
+                                   '\t',str(input_data['ymin']), 
+                                   '\t',str(input_data['ymax']),
+                                   '\t', input_comment['min_max']])
+        input_file.writelines([str(input_data['npar']),
+                                   '\t', input_comment['npar']])
+        input_file.writelines(input_comment['parameters'])
+        npar = input_data['npar']
+        for index in range(npar):
+            input_file.writelines([str(input_data['parameters'][index][0]),
+                                       '\t', input_data['parameters'][index][1],
+                                       '\t', str(input_data['parameters'][index][2]),
+                                       '\t', str(input_data['parameters'][index][3]),
+                                       '\t', str(input_data['parameters'][index][4]),
+                                       '\t', str(input_data['parameters'][index][5]),
+                                       '\t', str(input_data['parameters'][index][6]),'\n'])
 
 ########################################################################################
     def read_output(self,path=currentpath):

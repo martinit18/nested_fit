@@ -9,11 +9,11 @@ cmake_minimum_required(VERSION 3.10)
 #add_subdirectory(tests)
 
 # The latest nested_res -> This gets copied to the user bin/
-set(nested_res_name nested_res_V4p3.py)
+set(nested_res_name nested_res_V4p5.py)
 
 # The nested_fit version being built -> This gets copied everywhere inside the project code
 # For more info see the 'src/Mod_metadata.f90.in' file
-set(project_version 4.5.1)
+set(project_version 4.5.2)
 
 # Global options
 option(DEBUG "Enable debug mode." OFF)
@@ -151,7 +151,6 @@ endif()
 set_source_files_properties(${SRC_CALGO} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${SRC_DIERCKX} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${SRC_SLATEC} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
-#set_source_files_properties(${SRC_LAPACK} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${SRC_FILES_COMM} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${SRC_FILES_DATA} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${SRC_FILES_FUNC} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
@@ -163,7 +162,6 @@ add_executable(${nested_fit_target}
     ${SRC_CALGO}
     ${SRC_DIERCKX}
     ${SRC_SLATEC}
-#    ${SRC_LAPACK}
     ${SRC_FILES_COMM}
     ${SRC_FILES_DATA}
 )
@@ -173,16 +171,15 @@ add_executable(${nested_fit_target_func}
     ${SRC_CALGO}
     ${SRC_DIERCKX}
     ${SRC_SLATEC}
-#    ${SRC_LAPACK}
     ${SRC_FILES_COMM}
     ${SRC_FILES_FUNC}
 )
 #target_compile_definitions(${nested_fit_target_func} PRIVATE -DFUNC_TARGET) # to uncomment?
 
-if(DEBUG)
-    target_link_options(${nested_fit_target}      PRIVATE "-pg")
-    target_link_options(${nested_fit_target_func} PRIVATE "-pg")
-endif()
+# if(DEBUG) Activate this option for profiling
+#     target_link_options(${nested_fit_target}      PRIVATE "-pg")
+#     target_link_options(${nested_fit_target_func} PRIVATE "-pg")
+# endif()
 
 if(LAPACK)
     target_compile_definitions(${nested_fit_target}      PUBLIC -DLAPACK_ON)

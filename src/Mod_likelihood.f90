@@ -1,5 +1,5 @@
 MODULE MOD_LIKELIHOOD
-  ! Automatic Time-stamp: <Last changed by martino on Monday 15 May 2023 at CEST 18:37:52>
+  ! Automatic Time-stamp: <Last changed by martino on Thursday 20 July 2023 at CEST 12:34:25>
   ! Module of the likelihood function for data analysis
 
   ! Module for the input parameter definition
@@ -537,20 +537,20 @@ CONTAINS
   !#####################################################################################################################
 
   REAL(8) FUNCTION LOGLIKELIHOOD_1D(par)
-
+    
     ! Main likelihood function
     ! Type: Poisson , Gaussian , .... soon 2D I hope
-
+    
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
     !
     REAL(8) :: USERFCN, USERFCN_SET
     REAL(8) :: ll_tmp, rk, rk2
     REAL(8), DIMENSION(ndata, nset) :: enc
     INTEGER(4) :: i, k
-
+    
     ! Calculate LIKELIHOOD
     ll_tmp = 0.
-
+    
     IF (.NOT.BIT_CHECK_IF(DATA_IS_SET)) THEN
        ! No set --------------------------------------------------------------------------------------------------------
        !TODO(César): This is unnecessary and somewhat verbose
@@ -561,33 +561,37 @@ CONTAINS
           DO i=1, ndata_set(k)
              enc(i, k) = USERFCN(x(i, k),npar,par,funcid)
           END DO
-          !!$OMP END PARALLEL DO
+          ! Calculate the likelihood
+          !$OMP SIMD REDUCTION(+:ll_tmp)
+          DO i=1, ndata_set(k)
+             ll_tmp = ll_tmp + nc(i, k)*DLOG(enc(i,k)) - enc(i,k)
+          END DO
        ELSE !IF (BIT_CHECK_IF(DATA_IS_E)) THEN
           SELECT CASE (loglikefuncid)
-            CASE (0) !-- Gaussian likelihood
-               ! Normal (Gaussian) distribution calculation --------------------------------------
-               ! Calculate the function (not SIMD optimisable)
-               DO i=1, ndata_set(k)
-                  enc(i,k) = USERFCN(x(i,k),npar,par,funcid)
-               END DO
-               ! Calculate the likelihood
-               !$OMP SIMD REDUCTION(+:ll_tmp)
-               DO i=1, ndata_set(k)
-                  ll_tmp = ll_tmp - (nc(i,k) - enc(i,k))**2/(2*nc_err(i,k)**2)
-               END DO
-               !$OMP END SIMD
-            CASE (1) !-- Modified Jeffreys likelihood 
-               DO i=1, ndata_set(k)
-                  enc(i,k) = USERFCN(x(i,k),npar,par,funcid)
-               END DO
-               ! Calculate the likelihood
-               !$OMP SIMD REDUCTION(+:ll_tmp)
-               DO i=1, ndata_set(k)
-                  rk = (nc(i, k) - enc(i,k)) / nc_err(i,k)
-                  rk2 = rk ** 2
-                  ll_tmp = ll_tmp + DLOG((1 - EXP(-rk2/2))/rk2)
-               ENDDO
-               !$OMP END SIMD
+          CASE (0) !-- Gaussian likelihood
+             ! Normal (Gaussian) distribution calculation --------------------------------------
+             ! Calculate the function (not SIMD optimisable)
+             DO i=1, ndata_set(k)
+                enc(i,k) = USERFCN(x(i,k),npar,par,funcid)
+             END DO
+             ! Calculate the likelihood
+             !$OMP SIMD REDUCTION(+:ll_tmp)
+             DO i=1, ndata_set(k)
+                ll_tmp = ll_tmp - (nc(i,k) - enc(i,k))**2/(2*nc_err(i,k)**2)
+             END DO
+             !$OMP END SIMD
+          CASE (1) !-- Modified Jeffreys likelihood 
+             DO i=1, ndata_set(k)
+                enc(i,k) = USERFCN(x(i,k),npar,par,funcid)
+             END DO
+             ! Calculate the likelihood
+             !$OMP SIMD REDUCTION(+:ll_tmp)
+             DO i=1, ndata_set(k)
+                rk = (nc(i, k) - enc(i,k)) / nc_err(i,k)
+                rk2 = rk ** 2
+                ll_tmp = ll_tmp + DLOG((1 - EXP(-rk2/2))/rk2)
+             ENDDO
+             !$OMP END SIMD
           END SELECT
        END IF
     ELSE

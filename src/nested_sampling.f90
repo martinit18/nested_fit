@@ -242,10 +242,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
       !$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) FIRSTPRIVATE(ntries) PRIVATE(p_cluster) &
         !$OMP SHARED(n,itry,min_live_like,live_like,live,nth,live_like_new,live_new,icluster,too_many_tries) LASTPRIVATE(ntries)  
       DO it=1,nth
-         !write(*,*) 'here', OMP_GET_THREAD_NUM(), it, min_live_like,live_like(1),live(1,1)
+         !write(*,*) 'before', n, it,live_like_new(1), live_like(nlive) ! OMP_GET_THREAD_NUM(),  ???
          CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
            live_like_new(it),live_new(it,:),icluster(it),ntries,too_many_tries(it))
-         !write(*,*) 'there', OMP_GET_THREAD_NUM(), it, min_live_like, live_like_new(it)
+         !write(*,*) 'after',  n, it,live_like_new(1), live_like(nlive) ! OMP_GET_THREAD_NUM(),  ???
       END DO
       !$OMP END PARALLEL DO
       
@@ -332,7 +332,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
             jlim = nlive
         ELSE
             DO j=1,nlive-1
-              IF (live_like_new(it).GT.live_like(j).AND.live_like_new(it).LT.live_like(j+1)) THEN
+              IF (live_like_new(it).GT.live_like(j).AND.live_like_new(it).LE.live_like(j+1)) THEN
                  jlim = j
                  EXIT
               END IF
