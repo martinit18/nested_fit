@@ -335,6 +335,9 @@ class Analysis(object):
         # Number of iteration
         output_data['niter'] = int(lines[2].split()[1])
 
+        # Number of likelihood function calls
+        output_data['ncall'] = int(lines[2].split()[1])
+
         # Number of live points
         output_data['nlive_out'] = int(lines[3].split()[1])
         if input_data['nlive'] != output_data['nlive_out'] :

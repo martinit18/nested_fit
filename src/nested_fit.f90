@@ -752,6 +752,7 @@ PROGRAM NESTED_FIT
       WRITE(22,*) '#############_FINAL_RESULTS_#####################################################################################'
       WRITE(22,*) 'N._of_trials:                          ', ntry
       WRITE(22,*) 'N._of_total_iteration:                 ', nall
+      WRITE(22,*) 'N._of_likelihood_calls:                ', ncall
       WRITE(22,*) 'N._of_used_livepoints:                 ', nlive
       WRITE(22,*) 'Final_evidence_(log):                  ', evsum_final
       WRITE(22,*) 'Evidence_estimated_uncertainty_(log):  ', evsum_err_est
@@ -788,7 +789,8 @@ PROGRAM NESTED_FIT
       WRITE(*,*) '############## FINAL RESULTS #####################################################################################'
       WRITE(*,*) 'N. of trials:                         ', ntry
       WRITE(*,*) 'N. of total iteration:                ', nall
-      WRITE(*,*) 'N._of_used_livepoints:               ', nlive
+      WRITE(*,*) 'N. of likelihood calls:               ', ncall
+      WRITE(*,*) 'N. of used livepoints:                ', nlive
       WRITE(*,*) 'Final evidence (log):                 ', evsum_final
       WRITE(*,*) 'Evidence estimated uncertainty (log): ', evsum_err_est
       WRITE(*,*) 'Evidence standard deviation (log):    ', evsum_err

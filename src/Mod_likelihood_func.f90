@@ -146,13 +146,6 @@ CONTAINS
 
     REAL(8), DIMENSION(npar), INTENT(IN) :: live_max, par_mean, par_median_w
 
-    WRITE(*,*) ' '
-    WRITE(*,*) 'End of likelihood test'
-    WRITE(*,*) 'Number of calls : ', ncall
-    OPEN(11,FILE='nf_output_n_likelihood_calls.txt',STATUS= 'UNKNOWN')
-    WRITE(11,*) ncall
-    CLOSE(11)
-
   END SUBROUTINE FINAL_LIKELIHOOD
 
 

@@ -682,13 +682,6 @@ CONTAINS
     ELSE IF (data_type(1:1).EQ.'2') THEN
        CALL WRITE_EXPECTED_VALUES_2D(live_max,par_mean,par_median_w)
     END IF
-
-    WRITE(*,*) ' '
-    WRITE(*,*) 'End of likelihood test'
-    WRITE(*,*) 'Number of calls : ', ncall
-    OPEN(11,FILE='nf_output_n_likelihood_calls.txt',STATUS= 'UNKNOWN')
-    WRITE(11,*) ncall
-    CLOSE(11)
     
     ! Deallocate variables
     CALL DEALLOCATE_DATA()
