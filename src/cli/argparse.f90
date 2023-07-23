@@ -136,9 +136,14 @@ module argparse
         
         ! Write option naming
         WRITE(write_tmp(1),*) '--', argdef%long_name
-        WRITE(write_tmp(2),*) '-', argdef%short_name
-        WRITE(*,*) '|', TRIM(write_tmp(1)), ', ', TRIM(write_tmp(2)), wspace(1:(header_sz - LEN_TRIM(write_tmp(1)) - LEN_TRIM(write_tmp(2)) - 2)), '|'
 
+        IF(argdef%short_name == "") THEN
+            WRITE(*,*) '|', TRIM(write_tmp(1)), wspace(1:(header_sz - LEN_TRIM(write_tmp(1)))), '|'
+        ELSE
+            WRITE(write_tmp(2),*) '-', argdef%short_name
+            WRITE(*,*) '|', TRIM(write_tmp(1)), ', ', TRIM(write_tmp(2)), wspace(1:(header_sz - LEN_TRIM(write_tmp(1)) - LEN_TRIM(write_tmp(2)) - 2)), '|'
+        ENDIF
+        
         ! Write description
         ! How many lines do we need ?
         desc_blocks = LEN_TRIM(argdef%description) / (header_sz - 2)
