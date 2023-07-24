@@ -5,6 +5,7 @@ MODULE MOD_METADATA
   CHARACTER(LEN=@nested_fit_version_full_str_len@), PARAMETER :: version_full = '@nested_fit_version_full_str@'
   CHARACTER(LEN=@nested_fit_version_str_len@), PARAMETER :: version = '@nested_fit_version_str@'
   CHARACTER(LEN=@nested_fit_mpi_child_comm_proc_name_len@), PARAMETER :: nf_child_proc_name = '@nested_fit_mpi_child_comm_proc_name@'
+  CHARACTER(LEN=@nested_fit_cache_folder_len@), PARAMETER :: nf_cache_folder = '@nested_fit_cache_folder@'
 
   LOGICAL, PARAMETER :: parallel_on = @nested_fit_parallel_on@
   LOGICAL, PARAMETER :: parallel_mpi_on = @nested_fit_parallel_mpi_on@

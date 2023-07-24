@@ -2,6 +2,13 @@
 # Copyright M. Trassinelli
 # Last modified: 2023/07/20 13:23:13
 
+##########################################################
+##########################################################
+## This Makefile is present for compatibility only.     ##
+## Please prefer the usage of CMake for the generation. ##
+##########################################################
+##########################################################
+
 VERSION_FULL = 4.5.2
 VERSION = 4.5
 

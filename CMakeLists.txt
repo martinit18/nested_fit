@@ -72,6 +72,9 @@ src/Mod_cluster_analysis.f90
 
     src/cli/argparse.f90
     src/Mod_options.f90
+
+    src/helper/hash_table.f90
+    src/auto_func.f90
 )
 
 set(SRC_FILES_DATA
@@ -127,6 +130,15 @@ if(NORNG)
 else()
     set(nested_fit_static_seed ".FALSE.")
 endif()
+
+# Add the cache folder location (usually .nested_fit under $HOME Linux, and %appdata% for Windows)
+if(WIN32)
+    set(nested_fit_cache_folder $ENV{APPDATA}/.nested_fit/)
+else()
+    set(nested_fit_cache_folder $ENV{HOME}/.nested_fit/)
+endif()
+string(LENGTH ${nested_fit_cache_folder} nested_fit_cache_folder_len)
+message(STATUS "Setting cache folder location: ${nested_fit_cache_folder}")
 
 configure_file(src/Mod_metadata.f90.in Mod_metadata.f90)
 
@@ -208,6 +220,9 @@ if(LAPACK)
     endif()
 endif()
 
+target_link_libraries(${nested_fit_target}      PUBLIC dl)
+target_link_libraries(${nested_fit_target_func} PUBLIC dl)
+
 if(OPENMP)
     target_link_options(${nested_fit_target}      PRIVATE "-fopenmp")
     target_link_options(${nested_fit_target_func} PRIVATE "-fopenmp")
@@ -245,6 +260,12 @@ if(OPENMPI)
         message(FATAL_ERROR "OpenMPI option specified, but could not find the MPI package.")
     endif()
 endif()
+
+# Create the cache folder at build time
+add_custom_command(TARGET ${nested_fit_target}
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${nested_fit_cache_folder}
+)
 
 # NOTE(César): Don't run these commands for the Windows build.
 if(WIN32)

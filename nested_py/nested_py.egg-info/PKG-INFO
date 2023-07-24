@@ -1,0 +1,10 @@
+Metadata-Version: 2.1
+Name: nested-py
+Version: 4.5
+Summary: A python integration of the nested_fit package.
+Author: Martino Trassinelli, Lune Maillard, César Godinho
+Project-URL: Homepage, https://github.com/martinit18/nested_fit
+Project-URL: Bug Tracker, https://github.com/martinit18/nested_fit/issues
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent

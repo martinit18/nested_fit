@@ -80,6 +80,8 @@ PROGRAM NESTED_FIT
   ! 0.1: Program developed from D.S. Sivia, "Data Analysis, a Bayesian tutorial" (2006) and Leo's program
 
 
+   ! Module for automatic function parsing/compilation
+   USE autofunc
    ! Module for CLI lib
    ! NOTE(César): Maybe we should keep the same Mod_* naming convention ?
    !              Even though this is not strictly a functionality of nf
@@ -98,7 +100,7 @@ PROGRAM NESTED_FIT
 #ifdef OPENMPI_ON
    USE MPI
 #endif
-
+use, intrinsic :: iso_c_binding
   !USE RNG
   !
   IMPLICIT NONE
@@ -150,6 +152,35 @@ PROGRAM NESTED_FIT
 
   ! Function definitions
   EXTERNAL :: NESTED_SAMPLING, SORTN, MEANVAR
+  
+!   abstract interface
+!      function fp(x, npar, params)
+!         use, intrinsic :: iso_c_binding
+!         implicit none
+!         real(c_double), intent(in) :: x
+!         integer(c_int), intent(in) :: npar
+!         real(c_double), intent(in) :: params(npar)
+!         real(c_double) :: fp
+!      end function fp
+!   end interface
+!   TYPE(c_funptr) :: procaddr
+!   TYPE(c_ptr) :: fileaddr
+!   real(c_double) :: v(1)
+!   procedure(fp), pointer :: fproc
+!    !  CALL COMPILE_CACHE_FUNC('test_func', 'DLOG(x)')
+!     CALL COMPILE_CACHE_FUNC('test_func2', 'test_func(x, npar, params)')
+!   CALL LOAD_DLL_PROC('test_func2', procaddr, fileaddr)
+!   CALL c_f_procpointer(procaddr, fproc)
+!   DO i = 0, 100000000
+!    evsum_err = fproc(5.0d0 + i, 1, v)
+!    ! evsum_err = DLOG(5.0d0 + i)
+!    IF(MOD(i, 100).EQ.0) WRITE(*,*) i
+!   END DO
+!   CALL FREE_DLL(fileaddr)
+  
+!   STOP
+
+  CALL INIT_AUTOFUNC()
 
   ! Add arguments to the executable (possibly prefer adding the flags for them into mod options)
   CALL ADD_ARGUMENT(argdef_t("compact-output", "c", .FALSE.,&
@@ -167,6 +198,12 @@ PROGRAM NESTED_FIT
     "Overwrites the number of tries present in the input file.",&
     B_NTRY&
   ))
+
+  ! TODO(César)
+!   CALL ADD_ARGUMENT(argdef_t("delete-cache", "", .FALSE.,&
+!     "Deletes the user defined functions in the cache folder.",&
+!     B_DELCACHE&
+!   ))
   
   ! Parse executable arguments (how will this work with MPI??) !!! THIS NEEDS TO COME BEFORE THE MPI_INIT() SUBROUTINE !!!
   CALL PARSE_ARGUMENTS()
@@ -904,5 +941,29 @@ PROGRAM NESTED_FIT
 
   END SUBROUTINE
 
+  SUBROUTINE B_DELCACHE(this, invalue)
+   CLASS(argdef_t), INTENT(IN) :: this
+   CHARACTER(LEN=128), INTENT(IN) :: invalue
+   CHARACTER(LEN=6) :: delete_ok
+
+   WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+   WRITE(*,*) '       ATTENTION: This action is irreversible. All of the user functions will be lost.'
+   WRITE(*,*) '       ATTENTION: Type `Delete` to delete the cache?'
+   WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+   WRITE(*,*) '>'
+   READ(*, '(a6)') delete_ok
+
+   IF(delete_ok.EQ.'Delete') THEN
+      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      WRITE(*,*) '       ATTENTION: Cache deleted.'
+      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      ! TODO(César) : This is why fortran sucks...
+   ELSE
+      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      WRITE(*,*) '       ATTENTION: Operation aborted by the user.'
+      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+   ENDIF
+   STOP
+  END SUBROUTINE
 
 END PROGRAM NESTED_FIT
