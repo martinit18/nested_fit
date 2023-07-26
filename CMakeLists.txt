@@ -72,9 +72,9 @@ src/Mod_cluster_analysis.f90
 
     src/cli/argparse.f90
     src/Mod_options.f90
-
-    src/helper/hash_table.f90
-    src/auto_func.f90
+    
+    src/funceval/auto_func.f90
+    src/funceval/latex_parser.cpp
 )
 
 set(SRC_FILES_DATA

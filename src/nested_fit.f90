@@ -152,35 +152,36 @@ use, intrinsic :: iso_c_binding
 
   ! Function definitions
   EXTERNAL :: NESTED_SAMPLING, SORTN, MEANVAR
-  
-!   abstract interface
-!      function fp(x, npar, params)
-!         use, intrinsic :: iso_c_binding
-!         implicit none
-!         real(c_double), intent(in) :: x
-!         integer(c_int), intent(in) :: npar
-!         real(c_double), intent(in) :: params(npar)
-!         real(c_double) :: fp
-!      end function fp
-!   end interface
-!   TYPE(c_funptr) :: procaddr
-!   TYPE(c_ptr) :: fileaddr
-!   real(c_double) :: v(1)
-!   procedure(fp), pointer :: fproc
-!    !  CALL COMPILE_CACHE_FUNC('test_func', 'DLOG(x)')
-!     CALL COMPILE_CACHE_FUNC('test_func2', 'test_func(x, npar, params)')
-!   CALL LOAD_DLL_PROC('test_func2', procaddr, fileaddr)
-!   CALL c_f_procpointer(procaddr, fproc)
-!   DO i = 0, 100000000
-!    evsum_err = fproc(5.0d0 + i, 1, v)
-!    ! evsum_err = DLOG(5.0d0 + i)
-!    IF(MOD(i, 100).EQ.0) WRITE(*,*) i
-!   END DO
-!   CALL FREE_DLL(fileaddr)
-  
-!   STOP
+
+  abstract interface
+     function fp(x, npar, params)
+        use, intrinsic :: iso_c_binding
+        implicit none
+        real(c_double), intent(in) :: x
+        integer(c_int), intent(in) :: npar
+        real(c_double), intent(in) :: params(npar)
+        real(c_double) :: fp
+     end function fp
+  end interface
+  TYPE(c_funptr) :: procaddr
+  TYPE(c_ptr) :: fileaddr
+  real(c_double) :: v(1)
+  procedure(fp), pointer :: fproc
+
 
   CALL INIT_AUTOFUNC()
+  CALL COMPILE_CACHE_FUNC('test_func', 'DLOG(x)')
+   !  CALL COMPILE_CACHE_FUNC('test_func2', 'test_func(x, npar, params)')
+  CALL LOAD_DLL_PROC('test_func', procaddr, fileaddr)
+  CALL c_f_procpointer(procaddr, fproc)
+  DO i = 0, 100000000
+   evsum_err = fproc(5.0d0 + i, 1, v)
+   ! evsum_err = DLOG(5.0d0 + i)
+   ! IF(MOD(i, 1000).EQ.0) WRITE(*,*) i
+  END DO
+  CALL FREE_DLL(fileaddr)
+  
+  STOP
 
   ! Add arguments to the executable (possibly prefer adding the flags for them into mod options)
   CALL ADD_ARGUMENT(argdef_t("compact-output", "c", .FALSE.,&

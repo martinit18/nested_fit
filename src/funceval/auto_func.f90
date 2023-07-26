@@ -68,6 +68,7 @@ MODULE autofunc
     END SUBROUTINE
     
     SUBROUTINE READ_CACHE()
+        CHARACTER(LEN=512) :: line
         CHARACTER(LEN=64) :: date, fname
         LOGICAL :: exist
         INTEGER :: i
@@ -76,21 +77,26 @@ MODULE autofunc
         IF (exist) THEN
             OPEN(77, FILE=TRIM(fname_cache), STATUS='old', ACTION='read')
             DO
-                READ(77,*, END=10) fname, date
-                CALL ADD_ENTRY(cache_entry_t(date, fname))
+                READ(77,('(A)'), END=10) line
+
+                i = INDEX(line, '-')
+                fname = TRIM(line(1:i-1))
+                date  = TRIM(line(i+1:LEN_TRIM(line)))
+
+                CALL ADD_ENTRY(cache_entry_t(date, TRIM(fname)))
             END DO
 10          CLOSE(77)
         ENDIF
     END SUBROUTINE
 
     SUBROUTINE UPDATE_CACHE(fname)
-        CHARACTER(LEN=64), INTENT(IN) :: fname
-        CHARACTER(LEN=64)             :: date
-        INTEGER                       :: i
-        
+        CHARACTER(LEN=*), INTENT(IN) :: fname
+        CHARACTER(LEN=64)            :: date
+        INTEGER                      :: i
+
         CALL FDATE(date)
-        DO i = 0, nentries
-            IF(fname.EQ.entries(i)%name) THEN
+        DO i = 1, nentries
+            IF(fname.EQ.TRIM(entries(i)%name)) THEN
                 entries(i)%date_modified = date
                 RETURN
             ENDIF
@@ -103,8 +109,8 @@ MODULE autofunc
         INTEGER :: i
         
         OPEN(UNIT=77, FILE=TRIM(fname_cache), STATUS='UNKNOWN')
-            DO i = 0, nentries
-                WRITE(77,*) entries(i)%name, entries(i)%date_modified
+            DO i = 1, nentries
+                WRITE(77,'(a, a, a)') TRIM(entries(i)%name), ' - ', entries(i)%date_modified
             END DO
         CLOSE(77)
 
@@ -117,7 +123,7 @@ MODULE autofunc
         LOGICAL                       :: check_func_cache
         INTEGER                       :: i
 
-        DO i = 0, nentries
+        DO i = 1, nentries
             IF(fname.EQ.entries(i)%name) THEN
                 check_func_cache = .TRUE.
                 RETURN
@@ -144,7 +150,7 @@ MODULE autofunc
             WRITE(77,'(a)') char(9)//'real(c_double), intent(in) :: params(npar)'
             WRITE(77,'(a)') char(9)//'real(c_double)             :: '//TRIM(funcname)
             WRITE(77,'(a)') char(9)
-            WRITE(77,'(a)') char(9)//'real(c_double), external :: test_func'
+            ! WRITE(77,'(a)') char(9)//'real(c_double), external :: test_func'
             WRITE(77,'(a)') char(9)
             WRITE(77,'(a)') char(9)//TRIM(funcname)//' = '//expression
             WRITE(77,'(a)') 'end function '//TRIM(funcname)
@@ -166,7 +172,7 @@ MODULE autofunc
             WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
             STOP ! NOTE(César) : This works, before MPI init!!
         ENDIF
-        CALL UPDATE_CACHE(funcname)
+        CALL UPDATE_CACHE(TRIM(funcname))
     END SUBROUTINE
 
     SUBROUTINE INIT_AUTOFUNC()
