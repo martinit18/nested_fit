@@ -48,7 +48,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   REAL(8), DIMENSION(npar) :: par_prior
   ! Loop variables
   INTEGER(4) :: nstep = 2
-  REAL(8), DIMENSION(maxstep) :: tstep, tlnmass, tlnrest, evstep
+  REAL(8) :: lntstep=1., lntrest=0., lntmass =0., constm = 0., constp = 0.
+  REAL(8), DIMENSION(maxstep) :: evstep
   REAL(8), DIMENSION(maxstep) :: live_like_old
   REAL(8), DIMENSION(maxstep,npar) :: live_old
   REAL(8) :: evsum = 0., evrestest = 0., evtotest = 0.
@@ -96,9 +97,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   live_like_old = 0.
   live_final = 0.
   live_like_final = 0.
-  tstep = 0.
-  tlnmass = 0.
-  tlnrest = 0.
   evstep = 0.
   nstep = maxstep - nlive + 1
   n_call_cluster=0
@@ -162,37 +160,50 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   ! --------- Set-up stuff before main loop ------------------------------------------------
   ! Calculate the intervarls (logarithmic) for the integration
   ! This is equivalent to the "crude" approximation from Skilling
-  IF (maxstep/nlive.GT.700.AND.mpi_rank.EQ.0) THEN
-     WRITE(*,*) '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-     WRITE(*,*) '!!! Attention, too few nlive points for too many maxstep !!!'
-     WRITE(*,*) '!!! Step volumes cannot be calculated correctly          !!!'
-     WRITE(*,*) '!!! Change your input file                               !!!'
-     WRITE(*,*) '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-#ifdef OPENMPI_ON
-     CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-     STOP
-  END IF
-  DO l=1, maxstep
-     tstep(l) = DEXP(-DFLOAT(l)/DFLOAT(nlive))
-  ENDDO
+!   IF (maxstep/nlive.GT.700.AND.mpi_rank.EQ.0) THEN
+!      WRITE(*,*) '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+!      WRITE(*,*) '!!! Attention, too few nlive points for too many maxstep !!!'
+!      WRITE(*,*) '!!! Step volumes cannot be calculated correctly          !!!'
+!      WRITE(*,*) '!!! Change your input file                               !!!'
+!      WRITE(*,*) '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+! #ifdef OPENMPI_ON
+!      CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+! #endif
+!      STOP
+!   END IF
+!   DO l=1, maxstep
+!      tstep(l) = DEXP(-DFLOAT(l)/DFLOAT(nlive))
+!   ENDDO
 
   ! Calculate the first differential prior mass and the remaining prior mass
-  tlnmass(1) = DLOG(-(tstep(1)-1))
-  tlnrest(1) = DLOG(tstep(1))
+  !tlnmass(1) = DLOG(-(tstep(1)-1))
+  !tlnrest(1) = DLOG(tstep(1))
+
+  ! Alternative calculations
+  lntstep = -1.d0/nlive
+  lntrest = lntstep
+  lntmass = DLOG(1 - DEXP(lntstep))
+  ! Check
+  !write(*,*) dlog(tstep(1)), lntstep, dlog(tstep(1))-lntstep
+  !write(*,*) tlnrest(1), lntrest, tlnrest(1) - lntrest
+  !write(*,*) tlnmass(1), lntmass, tlnmass(1) - lntmass
+  ! Calculations of the constant to be used later
+  constm = DLOG(1 - DEXP(-2.d0/nlive)) - DLOG(2.d0)
+  constp = DLOG(1 + DEXP(-2.d0/nlive)) - DLOG(2.d0)
+  !write(*,*) constm, constp
 
   ! Actual minimum loglikelihood and correspondent live point
   live_like_old(1) = live_like(1)
   live_old(1,:) = live(1,:)
   ! First evidence (sum because we are working with logarithms)
   IF(conv_method .EQ. 'LIKE_ACC') THEN
-    evstep(1) = live_like_old(1) + tlnmass(1)
+    evstep(1) = live_like_old(1) + lntmass
     evsum = evstep(1)
   ELSE IF(conv_method .EQ. 'ENERGY_ACC') THEN
-    evstep(1) = 1./conv_par*live_like_old(1) + tlnmass(1)
+    evstep(1) = 1./conv_par*live_like_old(1) + lntmass
     evsum = evstep(1)
   ELSE IF(conv_method .EQ. 'ENERGY_MAX') THEN
-    evstep(1) = 1./conv_par*live_like_old(1) + tlnmass(1)
+    evstep(1) = 1./conv_par*live_like_old(1) + lntmass
     evsum = evstep(1)
   ELSE
     WRITE(*,*) 'Not a convergence method. Change the name'
@@ -322,8 +333,15 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 
         ! Calculate steps, mass and rest each time
         ! trapezoidal rule applied here (Skilling Entropy 2006)
-        tlnmass(n) = DLOG(-(tstep(n+1)-tstep(n-1))/2.d0)
-        tlnrest(n) = DLOG((tstep(n+1)+tstep(n-1))/2.d0)
+        !tlnmass(n) = DLOG(-(tstep(n+1)-tstep(n-1))/2.d0)
+        !tlnrest(n) = DLOG((tstep(n+1)+tstep(n-1))/2.d0)
+        ! Alternative calculation
+        lntmass = - (n-1.d0)/nlive + constm
+        lntrest = - (n-1.d0)/nlive + constp
+        ! Check
+        !write(*,*) n, tlnrest(n), lntrest, tlnrest(n) - lntrest
+        !write(*,*) n, tlnmass(n), lntmass, tlnmass(n) - lntmass
+        !pause
 
         ! Reorder found point (no parallel here) and make the required calculation for the evidence
         ! Reorder point
@@ -390,27 +408,27 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
         
         IF(conv_method .EQ. 'LIKE_ACC') THEN
            ! Calculate the evidence for this step
-           evstep(n) = live_like_old(n) + tlnmass(n)
+           evstep(n) = live_like_old(n) + lntmass
            
            ! Sum the evidences
            evsum = ADDLOG(evsum,evstep(n))
            
            ! Check if the estimate accuracy is reached
-           evrestest = live_like(nlive) + tlnrest(n)
+           evrestest = live_like(nlive) + lntrest
            evtotest = ADDLOG(evsum,evrestest)
         ELSE IF(conv_method .EQ. 'ENERGY_ACC') THEN
            ! Calculate the contribution to the partition function at that temperature for this step
-           evstep(n) = 1./conv_par*live_like_old(n) + tlnmass(n)
+           evstep(n) = 1./conv_par*live_like_old(n) + lntmass
            
            ! Sum the contribution with the previous contributions
            evsum = ADDLOG(evsum,evstep(n))
            
            ! Check if the estimate accuracy is reached
-           evrestest = 1./conv_par*live_like(nlive) + tlnrest(n)
+           evrestest = 1./conv_par*live_like(nlive) + lntrest
            evtotest = ADDLOG(evsum,evrestest)
         ELSE IF(conv_method .EQ. 'ENERGY_MAX') THEN
            ! Calculate the contribution to the partition function at that temperature for this step
-           evstep(n) = 1./conv_par*live_like_old(n) + tlnmass(n)
+           evstep(n) = 1./conv_par*live_like_old(n) + lntmass
            
            ! Max between the present contribution and previous ones
            evsum = MAX(evsum,evstep(n))
@@ -483,42 +501,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   ! Store the number of steps
   nstep_final = n
 
-  ! Store steps in a file
-  !OPEN(11,FILE='tsteps.dat',STATUS= 'UNKNOWN')
-  !WRITE(11,*) '# tstep  tlnmass    tlnrest'
-  !DO j=1, nstep_final
-  !   WRITE(11,*) j, tstep(j), tlnmass(j), tlnrest(j)
-  !END DO
-  !CLOSE(11)
-
-  ! Store actual live points
-  !WRITE(out_filename,1000) 'live_points_',itry,'.dat'
-  !OPEN(22,FILE=out_filename,STATUS= 'UNKNOWN')
-  !WRITE(22,*) '# n     lnlikelihood     parameters'
-  !DO l=1,nlive
-  !   WRITE(22,*) l, live_like(l), live(l,:)
-  !END DO
-  !CLOSE(22)
-  !
-  !   ! Write temporal results in a file
-  !WRITE(out_filename,2000) 'status_',itry,'.dat'
-  !OPEN(33,FILE=out_filename,STATUS= 'UNKNOWN')
-  !WRITE(33,*) 'New last live point : ', live_like(1), live(1,:)
-  !WRITE(33,*) 'New first live point : ', live_like(nlive), live(nlive,:)
-  !WRITE(33,*) 'N step : ', n, 'Evidence at present : ',evsum, &
-  !     'Ev. of the step : ', evstep(n), 'Diff. with the estimate total evidence : ', evtotest-evsum
-  !CLOSE(33)
-  !
-
-  ! Check the calculation of the evsteps
-  !WRITE(out_filename,3000) 'evsteps_',th_num,'.dat'
-  !OPEN(44,FILE=out_filename,STATUS= 'UNKNOWN')
-  !WRITE(44,*) '# n   lnlikelihood     parameters'
-  !DO l=1,nstep_final
-  !   WRITE(44,*) l, evstep(l)
-  !END DO
-  !CLOSE(44)
-
   !------------ Calculate the total evidence with the last live points ---------------------
 601 CONTINUE
 #ifdef OPENMPI_ON
@@ -537,11 +519,11 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   WRITE(99,*) '# n step =',  n-1
   WRITE(99,*) '# Evidence of the step =', evstep(n-1)
   IF(conv_method .EQ. 'LIKE_ACC') THEN
-    WRITE(99,*) '# Evidence accuracy =',  ADDLOG(evsum,live_like(nlive) + tlnrest(n-1)) - evsum
+    WRITE(99,*) '# Evidence accuracy =',  ADDLOG(evsum,live_like(nlive) + lntrest) - evsum
   ELSE IF(conv_method .EQ. 'ENERGY_ACC') THEN
-    WRITE(99,*) '# Evidence accuracy =',  ADDLOG(evsum,1./conv_par*live_like(nlive) + tlnrest(n-1)) - evsum
+    WRITE(99,*) '# Evidence accuracy =',  ADDLOG(evsum,1./conv_par*live_like(nlive) + lntrest) - evsum
   ELSE IF(conv_method .EQ. 'ENERGY_MAX') THEN
-    WRITE(99,*) '# Evidence accuracy =',  1./conv_par*live_like(nlive) + tlnmass(n-1) - evsum
+    WRITE(99,*) '# Evidence accuracy =',  1./conv_par*live_like(nlive) + lntmass - evsum
   ELSE
     WRITE(*,*) 'Not a convergence method. Change the name'
   END IF
@@ -562,10 +544,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
     live_like_last = last_likes - DLOG(DFLOAT(nlive))
 
     ! Evidence of each last points assuming equal volume spacing (EXP(tlnrest)/nlive)
-    evlast = live_like_last + tlnrest(nstep_final) - DLOG(DFLOAT(nlive))
+    evlast = live_like_last + lntrest - DLOG(DFLOAT(nlive))
 
     ! The final evidence !!!
-    evrest_last = live_like_last + tlnrest(nstep_final)
+    evrest_last = live_like_last + lntrest
     evsum_final = ADDLOG(evsum,evrest_last)
   ELSE IF(conv_method .EQ. 'ENERGY_ACC') THEN
     ! Sum the last energies  (considering that we are dealing with logs)
@@ -577,10 +559,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
     live_like_last = last_likes/DFLOAT(nlive)
 
     ! Contribution of each last points assuming equal volume spacing (EXP(tlnrest)/nlive)
-    evlast = 1./conv_par*live_like_last + tlnrest(nstep_final) - DLOG(DFLOAT(nlive))
+    evlast = 1./conv_par*live_like_last + lntrest - DLOG(DFLOAT(nlive))
 
     ! The final partion function !!!
-    evrest_last = 1./conv_par*live_like_last + tlnrest(nstep_final)
+    evrest_last = 1./conv_par*live_like_last + lntrest
     evsum_final = ADDLOG(evsum,evrest_last)
   ELSE IF(conv_method .EQ. 'ENERGY_MAX') THEN
     ! Sum the last energies  (considering that we are dealing with logs)
@@ -592,10 +574,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
     live_like_last = last_likes/DFLOAT(nlive)
 
     ! Contribution of each last points assuming equal volume spacing (EXP(tlnrest)/nlive)
-    evlast = 1./conv_par*live_like_last + tlnrest(nstep_final) - DLOG(DFLOAT(nlive))
+    evlast = 1./conv_par*live_like_last + lntrest - DLOG(DFLOAT(nlive))
 
     ! The maximal contribution !!!
-    evrest_last = 1./conv_par*live_like_last + tlnrest(nstep_final)
+    evrest_last = 1./conv_par*live_like_last + lntrest
     evsum_final = MAX(evsum,evrest_last)
   ELSE
     WRITE(*,*) 'Not a convergence method. Change the name'
