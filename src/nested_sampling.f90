@@ -1,12 +1,6 @@
-SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,&
-     live_final,live_like_max,live_max,mpi_rank,mpi_cluster_size)
+SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_birth_final,live_rank_final,&
+   weight,live_final,live_like_max,live_max,mpi_rank,mpi_cluster_size)
   ! Time-stamp: <Last changed by martino on Tuesday 16 May 2023 at CEST 12:59:49>
-  ! For parallel tests only
-  !SUBROUTINE NESTED_SAMPLING(irnmax,rng,itry,ndata,x,nc,funcname,&
-  !   npar,par_fix,par_step,par_in,par_bnd1,par_bnd2,nlive,evaccuracy,sdfraction,&
-  !   nall,evsum_final,live_like_final,weight,live_final,live_like_max,live_max)
-  !$ USE OMP_LIB
-  !USE RNG
 
 #ifdef OPENMPI_ON
   USE MPI
@@ -40,6 +34,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   REAL(8), INTENT(OUT), DIMENSION(maxstep) :: weight
   REAL(8), INTENT(OUT), DIMENSION(maxstep) :: live_like_final
   REAL(8), INTENT(OUT), DIMENSION(maxstep,npar) :: live_final
+  REAL(8), INTENT(OUT), DIMENSION(maxstep) :: live_birth_final
+  INTEGER(4), INTENT(OUT), DIMENSION(maxstep) :: live_rank_final
   INTEGER(4), INTENT(IN) :: mpi_rank, mpi_cluster_size
   ! Random number variables
   !INTEGER, INTENT(IN) :: irnmax
@@ -50,7 +46,9 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   INTEGER(4) :: nstep = 2
   REAL(8) :: lntstep=1., lntrest=0., lntmass =0., constm = 0., constp = 0.
   REAL(8), DIMENSION(maxstep) :: evstep
-  REAL(8), DIMENSION(maxstep) :: live_like_old
+  REAL(8), DIMENSION(maxstep) :: live_like_old        ! End values
+  REAL(8), DIMENSION(maxstep) :: live_birth_old       ! Birth values
+  INTEGER(4), DIMENSION(maxstep) :: live_rank_old     ! Likelihood sort rank at the birth
   REAL(8), DIMENSION(maxstep,npar) :: live_old
   REAL(8) :: evsum = 0., evrestest = 0., evtotest = 0.
   ! Search variable to monitor efficiency
@@ -60,13 +58,18 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_new
   LOGICAL, ALLOCATABLE, DIMENSION(:) :: too_many_tries
   INTEGER(4), ALLOCATABLE, DIMENSION(:) :: icluster
+  ! Live points variables
   REAL(8) :: min_live_like = 0.
-  REAL(8), DIMENSION(nlive) :: live_like
   REAL(8), DIMENSION(nlive,npar) :: live
+  REAL(8), DIMENSION(nlive) :: live_like              
+  REAL(8), DIMENSION(nlive) :: live_birth             ! Likelihood step value (birth value)
+  INTEGER(4), DIMENSION(nlive) :: live_rank           ! Likelihood sort rank
   INTEGER(4) :: icluster_old=0
   ! Final calculations
   INTEGER(4) :: nstep_final
-  REAL(8) :: last_likes, live_like_last, evrest_last, evlast
+  REAL(8) :: last_likes, live_like_last, evrest_last, evlast              
+  REAL(8), DIMENSION(nlive) :: live_birth_last               
+  INTEGER(4), DIMENSION(nlive) :: live_rank_last  
   ! Rest
   INTEGER(4) :: j, l, n, jlim, it
   REAL(8) :: ADDLOG, rn, gval
@@ -93,10 +96,16 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   par_prior = 0.
   live = 0.
   live_like = 0.
+  live_birth = 0.
+  live_rank = 0
   live_old = 0.
   live_like_old = 0.
+  live_birth_old = 0.
+  live_rank_old = 0
   live_final = 0.
   live_like_final = 0.
+  live_birth_final = 0.
+  live_rank_final = 0
   evstep = 0.
   nstep = maxstep - nlive + 1
   n_call_cluster=0
@@ -114,8 +123,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   ! ---------- Inintial live points sorting ------------------------------------------------
   WRITE(*,*) 'Sorting live points. N. of points = ', nlive
   DO j=1, nlive
-
-
      ! Sort point considering priors
      ! Generate random prior if not fixe
      DO l=1,npar
@@ -141,7 +148,9 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
      ! If it is good, take it
      live(j,:) = par_prior(:)
      live_like(j) = LOGLIKELIHOOD_WITH_TEST(par_prior)
+     live_rank(j) = j
   END DO
+  live_birth = MINVAL(live_like) - 10.d0
 
   ! Calculate average and standard deviation of the parameters
   CALL MAKE_LIVE_MEAN_SD(live)
@@ -150,9 +159,9 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   CALL SORTN(nlive,npar,live_like,live)
   ! Store in a file
   OPEN(11,FILE='nf_output_initial_live_points.dat',STATUS= 'UNKNOWN')
-  WRITE(11,*) '# n     lnlikelihood     parameters'
+  WRITE(11,*) '# n     lnlikelihood     parameters    birth_lnlike   rank'
   DO j=1,nlive
-     WRITE(11,*) j, live_like(j), live(j,:)
+     WRITE(11,*) j, live_like(j), live(j,:), live_birth(j), live_rank(j)
   END DO
   CLOSE(11)
 
@@ -253,10 +262,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
       !$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) FIRSTPRIVATE(ntries) PRIVATE(p_cluster) &
         !$OMP SHARED(n,itry,min_live_like,live_like,live,nth,live_like_new,live_new,icluster,too_many_tries) LASTPRIVATE(ntries)  
       DO it=1,nth
-         !write(*,*) 'before', n, it,live_like_new(1), live_like(nlive) ! OMP_GET_THREAD_NUM(),  ???
          CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
            live_like_new(it),live_new(it,:),icluster(it),ntries,too_many_tries(it))
-         !write(*,*) 'after',  n, it,live_like_new(1), live_like(nlive) ! OMP_GET_THREAD_NUM(),  ???
       END DO
       !$OMP END PARALLEL DO
       
@@ -318,7 +325,9 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
            GOTO 601
         END IF
      END IF
-     ! ##########################################################################
+     ! -------------------------------------!
+     !     Subloop for threads starts       !
+     ! -------------------------------------!      
 
      DO it = 1, nth
         
@@ -360,6 +369,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
         ! Store old values
         live_like_old(n) = live_like(1)
         live_old(n,:) = live(1,:)
+        live_birth_old(n) = live_birth(1)
+        live_rank_old(n) = live_rank(1)
 
         ! Insert the new one
         IF (jlim.LT.1.OR.jlim.GT.nlive) THEN
@@ -370,13 +381,19 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
         ELSE IF (jlim.EQ.1) THEN
            live_like(1) = live_like_new(it)
            live(1,:) = live_new(it,:)
+           live_birth(1) = live_like_old(n)
+           live_rank(1) = 1
         ELSE
            ! Shift values
            live_like(1:jlim-1) =  live_like(2:jlim)
            live(1:jlim-1,:) =  live(2:jlim,:)
+           live_birth(1:jlim-1) =  live_birth(2:jlim)
+           live_rank(1:jlim-1) =  live_rank(2:jlim)
            ! Insert new value
            live_like(jlim) =  live_like_new(it)
            live(jlim,:) =  live_new(it,:)
+           live_birth(jlim) = live_like_old(n)
+           live_rank(jlim) = jlim
            ! The rest stay as it is
         END IF
 
@@ -441,6 +458,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
         
         ! Write status
         !write(*,*) 'N step : ', n, 'Evidence at present : ', evsum ! ???? Debugging
+        !write(*,*) n, live_like_old(n), live_birth_old(n), live_rank_old(n) !????
         
         ! Check if the estimate accuracy is reached
         IF (evtotest-evsum.LT.evaccuracy) GOTO 301
@@ -527,9 +545,9 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   ELSE
     WRITE(*,*) 'Not a convergence method. Change the name'
   END IF
-  WRITE(99,*) '# n     lnlikelihood     parameters'
+  WRITE(99,*) '# n     lnlikelihood     parameters    birth_lnlike   rank'
   DO j=1,nlive
-     WRITE(99,*) j, live_like(j), live(j,:)
+     WRITE(99,*) j, live_like(j), live(j,:), live_birth(j), live_rank(j)
   END DO
   CLOSE(99)
 
@@ -540,7 +558,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
     DO j=2,nlive
        last_likes = ADDLOG(last_likes,live_like(j))
     END DO
-    ! Average value of the loglikelihood
+    ! Arithmetic average value of the loglikelihood
     live_like_last = last_likes - DLOG(DFLOAT(nlive))
 
     ! Evidence of each last points assuming equal volume spacing (EXP(tlnrest)/nlive)
@@ -586,11 +604,15 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   ! Insert the last live points in the ensemble
   live_old(nstep_final+1:nstep_final+nlive,:) = live(:,:)
   live_like_old(nstep_final+1:nstep_final+nlive) = live_like_last
+  live_birth_old(nstep_final+1:nstep_final+nlive) = live_birth(:)
+  live_rank_old(nstep_final+1:nstep_final+nlive) = live_rank(:)
   evstep(nstep_final+1:nstep_final+nlive) = evlast
 
   ! Total output of the routine (plis evsum_final)
   live_final = live_old
   live_like_final = live_like_old
+  live_birth_final = live_birth_old
+  live_rank_final = live_rank_old
 
   nall = nstep_final + nlive
 

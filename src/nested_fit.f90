@@ -115,6 +115,8 @@ PROGRAM NESTED_FIT
   REAL(8) :: evsum_final=0., live_like_max=0.
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_final
   REAL(8), ALLOCATABLE, DIMENSION(:) :: weight, live_like_final, live_max
+  REAL(8), ALLOCATABLE, DIMENSION(:) :: live_birth_final
+  INTEGER(4), ALLOCATABLE, DIMENSION(:) :: live_rank_final
 
   ! Final results
   REAL(8), ALLOCATABLE, DIMENSION(:) :: par_mean, par_sd
@@ -134,10 +136,14 @@ PROGRAM NESTED_FIT
   REAL(8), ALLOCATABLE, DIMENSION(:) :: evsum_final_try, live_like_max_try
   REAL(8), ALLOCATABLE, DIMENSION(:,:,:) :: live_final_try
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_like_final_try, weight_try, live_max_try
+  REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_birth_final_try
+  INTEGER(4), ALLOCATABLE, DIMENSION(:,:) :: live_rank_final_try
 
   ! Parallelization variables for each mpi instance
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_final_try_instance
   REAL(8), ALLOCATABLE, DIMENSION(:) :: live_like_final_try_instance, weight_try_instance, live_max_try_instance
+  REAL(8), ALLOCATABLE, DIMENSION(:) :: live_birth_final_try_instance
+  INTEGER(4), ALLOCATABLE, DIMENSION(:) :: live_rank_final_try_instance
 
   ! OpenMPI stuff
   INTEGER(4) :: mpi_rank !, mpi_cluster_size, mpi_ierror
@@ -419,8 +425,11 @@ PROGRAM NESTED_FIT
      ! Allocate parallel stuff ---------------------------------------------------------------------------------------------------------
      ALLOCATE(live_like_final_try(maxstep_try,ntry),weight_try(maxstep_try,ntry),&
           live_final_try(maxstep_try,npar,ntry),live_max_try(npar,ntry),&
-          nall_try(ntry),evsum_final_try(ntry),live_like_max_try(ntry))
+          nall_try(ntry),evsum_final_try(ntry),live_like_max_try(ntry),&
+          live_birth_final_try(maxstep_try,ntry),live_rank_final_try(maxstep_try,ntry))
      live_like_final_try = 0.
+     live_birth_final_try = 0.
+     live_rank_final_try = 0
      weight_try = 0.
      live_final_try = 0.
      live_max_try = 0.
@@ -430,11 +439,13 @@ PROGRAM NESTED_FIT
 #ifdef OPENMPI_ON
      ALLOCATE(live_final_try_instance(maxstep_try,npar))
      ALLOCATE(live_like_final_try_instance(maxstep_try), weight_try_instance(maxstep_try), live_max_try_instance(npar))
+     ALLOCATE(live_birth_final_try_instance(maxstep_try),live_rank_final_try_instance(maxstep_try))
 #endif
      !
   ELSE
      ALLOCATE(live_final_try_instance(maxstep_try,npar))
      ALLOCATE(live_like_final_try_instance(maxstep_try), weight_try_instance(maxstep_try), live_max_try_instance(npar))
+     ALLOCATE(live_birth_final_try_instance(maxstep_try),live_rank_final_try_instance(maxstep_try))
   ENDIF
 
 
@@ -471,13 +482,16 @@ PROGRAM NESTED_FIT
 #ifndef OPENMPI_ON
    DO itry=1,ntry
       CALL NESTED_SAMPLING(itry,maxstep_try,nall_try(itry),evsum_final_try(itry), &
-            live_like_final_try(:,itry),weight_try(:,itry),&
+            live_like_final_try(:,itry),live_birth_final_try(:,itry),live_rank_final_try(:,itry),weight_try(:,itry),&
             live_final_try(:,:,itry),live_like_max_try(itry),live_max_try(:,itry), 0, 0)
+            ! write(*,*) 'there', '     1', live_like_final_try(1,itry), live_birth_final_try(1,itry) 
+            ! write(*,*) 'there', nall_try(itry), live_like_final_try(nall_try(itry),itry), live_birth_final_try(nall_try(itry),itry)!????
+            ! pause
    END DO
 #else
    IF(mpi_rank.LT.ntry) THEN
       CALL NESTED_SAMPLING(mpi_rank,maxstep_try,nall_try_instance,evsum_final_try_instance, &
-         live_like_final_try_instance,weight_try_instance,&
+         live_like_final_try_instance,live_birth_final_try_instance,live_rank_final_try_instance,weight_try_instance,&
          live_final_try_instance,live_like_max_try_instance,live_max_try_instance, mpi_rank, mpi_cluster_size)
       
       ! Wait for all the calculations to finish
@@ -489,6 +503,8 @@ PROGRAM NESTED_FIT
          CALL MPI_SEND(nall_try_instance, 1, MPI_INT, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
          CALL MPI_SEND(evsum_final_try_instance, 1, MPI_DOUBLE, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
          CALL MPI_SEND(live_like_final_try_instance, maxstep_try, MPI_DOUBLE, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
+         CALL MPI_SEND(live_birth_final_try_instance, maxstep_try, MPI_DOUBLE, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
+         CALL MPI_SEND(live_rank_final_try_instance, maxstep_try, MPI_INT, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
          CALL MPI_SEND(weight_try_instance, maxstep_try, MPI_DOUBLE, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
          CALL MPI_SEND(live_final_try_instance, maxstep_try*npar, MPI_DOUBLE, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
          CALL MPI_SEND(live_like_max_try_instance, 1, MPI_DOUBLE, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
@@ -503,6 +519,8 @@ PROGRAM NESTED_FIT
          nall_try(1) = nall_try_instance
          evsum_final_try(1) = evsum_final_try_instance
          live_like_final_try(:,1) = live_like_final_try_instance
+         live_birth_final_try(:,1) = live_birth_final_try_instance
+         live_rank_final_try(:,1) = live_rank_final_try_instance
          weight_try(:,1) = weight_try_instance
          live_final_try(:,:,1) = live_final_try_instance
          live_like_max_try(1) = live_like_max_try_instance
@@ -511,6 +529,8 @@ PROGRAM NESTED_FIT
             CALL MPI_RECV(nall_try(itry+1), 1, MPI_INT, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
             CALL MPI_RECV(evsum_final_try(itry+1), 1, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
             CALL MPI_RECV(live_like_final_try(:,itry+1), maxstep_try, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
+            CALL MPI_RECV(live_birth_final_try(:,itry+1), maxstep_try, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
+            CALL MPI_RECV(live_rank_final_try(:,itry+1), maxstep_try, MPI_INT, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
             CALL MPI_RECV(weight_try(:,itry+1), maxstep_try, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
             CALL MPI_RECV(live_final_try(:,:,itry+1), maxstep_try*npar, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
             CALL MPI_RECV(live_like_max_try(itry+1), 1, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
@@ -523,11 +543,13 @@ PROGRAM NESTED_FIT
       ! Re-assemble the points ---------------------------------------------------------------
       ! Final number of points
       nall = SUM(nall_try)
-      ALLOCATE(weight(nall),live_like_final(nall),live_final(nall,npar),weight_par(nall,2))
+      ALLOCATE(weight(nall),live_like_final(nall),live_birth_final(nall),live_rank_final(nall),&
+      live_final(nall,npar),weight_par(nall,2))
       weight = 0.
       live_final = 0.
       live_like_final = 0.
-      live_final = 0.
+      live_birth_final = 0.
+      live_rank_final = 0
       weight_par = 0.
 
       ! Final evidence and dispersion
@@ -563,6 +585,8 @@ PROGRAM NESTED_FIT
          DO itry=1,ntry
             !WRITE(*,*) 'Sum from', SUM(nall_try(:itry-1))+1, 'to', SUM(nall_try(:itry))
             live_like_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = live_like_final_try(:nall_try(itry),itry)
+            live_birth_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = live_birth_final_try(:nall_try(itry),itry)
+            live_rank_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = live_rank_final_try(:nall_try(itry),itry)
             weight(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = weight_try(:nall_try(itry),itry)*nall_try(itry)/nall
             live_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry)),:) = live_final_try(:nall_try(itry),:,itry)
          END DO
@@ -581,6 +605,8 @@ PROGRAM NESTED_FIT
          evsum_err = 0.
 
          live_like_final = live_like_final_try(:nall,1)
+         live_birth_final = live_birth_final_try(:nall,1)
+         live_rank_final = live_rank_final_try(:nall,1)
          weight          = weight_try(:nall,1)
          live_final      = live_final_try(:nall,:,1)
          live_like_max   = live_like_max_try(1)
@@ -708,19 +734,20 @@ PROGRAM NESTED_FIT
       !pause
 
       ! ---------------- Write results on screen and files -------------------------------------
-      !OPEN(23,FILE='nf_output_points.dat',STATUS= 'UNKNOWN')
-      !WRITE(23,*) '# n     lnlikelihood     weight      parameters'
-      !DO j=1,nall
-      !   WRITE(23,*) j, live_like_final(j), weight(j), live_final(j,:)
-      !END DO
-      !CLOSE(23)
 
       ! Write files in the format for GetDist
       ! Data
       OPEN(23,FILE='nf_output_points.txt',STATUS= 'UNKNOWN')
-      !WRITE(23,*) '# weight   lnlikelihood      parameters'
+      WRITE(23,*) '# weight   lnlikelihood      parameters'
       DO j=1,nall
          WRITE(23,*) weight(j), live_like_final(j), live_final(j,:)
+      END DO
+      CLOSE(23)
+      ! Diagnostic additional stuff
+      OPEN(23,FILE='nf_output_diag.dat',STATUS= 'UNKNOWN')
+      WRITE(23,*) '# birth_lnlike   rank'
+      DO j=1,nall
+         WRITE(23,*) live_birth_final(j), live_rank_final(j)
       END DO
       CLOSE(23)
       ! Names of parameters
@@ -821,7 +848,7 @@ PROGRAM NESTED_FIT
       WRITE(*,*) 'Number of used cores:                       ', nth
       WRITE(*,*) 'Time elapsed (tot and real in s):           ', seconds, seconds_omp
   
-      DEALLOCATE(weight,live_like_final,live_final,weight_par)
+      DEALLOCATE(weight,live_like_final,live_final,live_birth_final,live_rank_final,weight_par)
    ENDIF
 
   ! Deallocate stuff
@@ -831,13 +858,14 @@ PROGRAM NESTED_FIT
        par_m68_w,par_p68_w,par_m95_w,par_p95_w,par_m99_w,par_p99_w)
   ! Dellocate parallel stuff
   IF(mpi_rank.EQ.0) THEN
-      DEALLOCATE(live_like_final_try,weight_try,live_final_try,live_max_try, &
+      DEALLOCATE(live_like_final_try,live_birth_final_try,live_rank_final_try,weight_try,live_final_try,live_max_try, &
             nall_try,evsum_final_try,live_like_max_try)
   ENDIF
 
 #ifdef OPENMPI_ON
    DEALLOCATE(live_final_try_instance)
-   DEALLOCATE(live_like_final_try_instance, weight_try_instance, live_max_try_instance)
+   DEALLOCATE(live_like_final_try_instance,live_birth_final_try_instance,live_rank_final_try_instance,&
+   weight_try_instance, live_max_try_instance)
    CALL MPI_FINALIZE(mpi_ierror)
 #endif
 
