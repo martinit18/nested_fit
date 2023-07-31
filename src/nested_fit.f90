@@ -200,6 +200,7 @@ use, intrinsic :: iso_c_binding
     B_NTRY&
   ))
 
+  ! TODO(César) : Write to cache cli, Python plot cache func
   ! TODO(César)
 !   CALL ADD_ARGUMENT(argdef_t("delete-cache", "", .FALSE.,&
 !     "Deletes the user defined functions in the cache folder.",&
