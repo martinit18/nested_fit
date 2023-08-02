@@ -26,7 +26,7 @@ option(LAPACK "Enable/Disable LAPACK." OFF)
 #####################################
 #####################################
 
-project(nested_fit VERSION ${project_version} LANGUAGES Fortran)
+project(nested_fit VERSION ${project_version} LANGUAGES Fortran CXX)
 
 #if(LAPACK)
 #    find_package(BLAS REQUIRED)
@@ -50,9 +50,9 @@ string(LENGTH ${nested_fit_target} nested_fit_target_len)
 string(LENGTH ${nested_fit_target_func} nested_fit_target_func_len)
 
 set(SRC_FILES_COMM
-src/Mod_cluster_analysis.f90
+    src/Mod_cluster_analysis.f90
     src/Mod_parameters.f90
-    src/Mod_search_new_point.f90    #
+    src/Mod_search_new_point.f90
     src/Mod_timestamp.f90
 
     src/dlog_fac.f90

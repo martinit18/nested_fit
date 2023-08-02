@@ -153,35 +153,34 @@ use, intrinsic :: iso_c_binding
   ! Function definitions
   EXTERNAL :: NESTED_SAMPLING, SORTN, MEANVAR
 
-  abstract interface
-     function fp(x, npar, params)
-        use, intrinsic :: iso_c_binding
-        implicit none
-        real(c_double), intent(in) :: x
-        integer(c_int), intent(in) :: npar
-        real(c_double), intent(in) :: params(npar)
-        real(c_double) :: fp
-     end function fp
-  end interface
-  TYPE(c_funptr) :: procaddr
-  TYPE(c_ptr) :: fileaddr
-  real(c_double) :: v(1)
-  procedure(fp), pointer :: fproc
-
+!   abstract interface
+!      function fp(x, npar, params)
+!         use, intrinsic :: iso_c_binding
+!         implicit none
+!         real(c_double), intent(in) :: x
+!         integer(c_int), intent(in) :: npar
+!         real(c_double), intent(in) :: params(npar)
+!         real(c_double) :: fp
+!      end function fp
+!   end interface
+!   TYPE(c_funptr) :: procaddr
+!   TYPE(c_ptr) :: fileaddr
+!   real(c_double) :: v(1)
+!   procedure(fp), pointer :: fproc
 
   CALL INIT_AUTOFUNC()
-  CALL COMPILE_CACHE_FUNC('test_func', 'DLOG(x)')
-   !  CALL COMPILE_CACHE_FUNC('test_func2', 'test_func(x, npar, params)')
-  CALL LOAD_DLL_PROC('test_func', procaddr, fileaddr)
-  CALL c_f_procpointer(procaddr, fproc)
-  DO i = 0, 100000000
-   evsum_err = fproc(5.0d0 + i, 1, v)
-   ! evsum_err = DLOG(5.0d0 + i)
-   ! IF(MOD(i, 1000).EQ.0) WRITE(*,*) i
-  END DO
-  CALL FREE_DLL(fileaddr)
+!   CALL COMPILE_CACHE_FUNC('test_func', 'DLOG(x)')
+!    !  CALL COMPILE_CACHE_FUNC('test_func2', 'test_func(x, npar, params)')
+!   CALL LOAD_DLL_PROC('test_func', procaddr, fileaddr)
+!   CALL c_f_procpointer(procaddr, fproc)
+!   DO i = 0, 100000000
+!    evsum_err = fproc(5.0d0 + i, 1, v)
+!    ! evsum_err = DLOG(5.0d0 + i)
+!    ! IF(MOD(i, 1000).EQ.0) WRITE(*,*) i
+!   END DO
+!   CALL FREE_DLL(fileaddr)
   
-  STOP
+!   STOP
 
   ! Add arguments to the executable (possibly prefer adding the flags for them into mod options)
   CALL ADD_ARGUMENT(argdef_t("compact-output", "c", .FALSE.,&
@@ -202,10 +201,17 @@ use, intrinsic :: iso_c_binding
 
   ! TODO(César) : Write to cache cli, Python plot cache func
   ! TODO(César)
-!   CALL ADD_ARGUMENT(argdef_t("delete-cache", "", .FALSE.,&
-!     "Deletes the user defined functions in the cache folder.",&
-!     B_DELCACHE&
-!   ))
+  CALL ADD_ARGUMENT(argdef_t("cache-delete", "cd", .FALSE.,&
+    "Deletes the user defined functions in the cache folder.",&
+    B_DELCACHE&
+  ))
+
+  CALL ADD_ARGUMENT(argdef_t("function-add", "fa", .TRUE.,&
+    "Adds a new function with name <name>(x, ...)=<expression> to the cache. &
+     For example: -fa 'gauss1D(x, u, s) = \frac{1}{s\sqrt{2\pi}}\exp(-\frac{(x-u)^2}{2s^2})'. &
+     If the function <name> already exists, an overwrite will take place.",&
+    B_ADDUSRFUNC&
+  ))
   
   ! Parse executable arguments (how will this work with MPI??) !!! THIS NEEDS TO COME BEFORE THE MPI_INIT() SUBROUTINE !!!
   CALL PARSE_ARGUMENTS()
@@ -952,7 +958,7 @@ use, intrinsic :: iso_c_binding
    WRITE(*,*) '       ATTENTION: This action is irreversible. All of the user functions will be lost.'
    WRITE(*,*) '       ATTENTION: Type `Delete` to delete the cache?'
    WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-   WRITE(*,*) '>'
+   WRITE(*, '(a2)', advance='no') '> '
    READ(*, '(a6)') delete_ok
 
    IF(delete_ok.EQ.'Delete') THEN
@@ -965,6 +971,28 @@ use, intrinsic :: iso_c_binding
       WRITE(*,*) '       ATTENTION: Operation aborted by the user.'
       WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
    ENDIF
+   STOP
+  END SUBROUTINE
+
+  
+  SUBROUTINE B_ADDUSRFUNC(this, invalue)
+   USE iso_c_binding
+   CLASS(argdef_t), INTENT(IN)              :: this
+   CHARACTER(LEN=128), INTENT(IN)           :: invalue
+   TYPE(ParseLatex_t)                       :: parse_result
+   CHARACTER(128)                           :: expression
+   CHARACTER(128)                           :: function_name
+
+   ! Find the function name
+   function_name = TRIM(ADJUSTL(invalue(1:INDEX(invalue, '(')-1)))
+
+   parse_result = PARSE_LATEX(TRIM(invalue))
+
+   IF(parse_result%error.EQ.0) THEN
+      CALL COMPILE_CACHE_FUNC(parse_result)
+   ENDIF
+
+   CALL PARSE_LATEX_DEALLOC(parse_result)
    STOP
   END SUBROUTINE
 

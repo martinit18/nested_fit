@@ -20,31 +20,24 @@
 #include <cassert>
 #include <fstream>
 
-typedef char ShortVarName[2];
-typedef char LongVarName[64];
-
-extern "C" struct Parameter
-{
-    LongVarName  name;       // The name (This really is only size 3 here)
-    ShortVarName identifier; // The identifier (not null terminated)
-};
-
 extern "C" struct ParseOutput
 {
-    // ShortVarName* constants;     // The detected constants in the expression (Automatically converted for now)
-    Parameter*    parameters;    // The detected parameters in the expression
-    int           num_params;    // The number of parameters
-    LongVarName*  functions;     // The detected function calls in the expression
-    int           num_funcs;     // The number of function calls
-    int*          func_argc;     // The detected number of parameters for each called user function in 'functions'
-    char*         infixcode_f90; // The latex code converted to f90 for compilation
-    int           error;         // The error code of the last error
+    // ShortVarName* constants;  // The detected constants in the expression (Automatically converted for now)
+    char* parameter_names;       // The detected parameter names in the expression
+    char* parameter_identifiers; // The detected parameter identifiers in the expression
+    int   num_params;            // The number of parameters
+    char* functions;             // The detected function calls in the expression
+    int   num_funcs;             // The number of function calls
+    int*  func_argc;             // The detected number of parameters for each called user function in 'functions'
+    char* infixcode_f90;         // The latex code converted to f90 for compilation
+    int   error;                 // The error code of the last error
 };
 
 #define LTXP_ERR_NOERR              0
 #define LTXP_ERR_UNKOWN_PARAM       1
 #define LTXP_ERR_INVALID_PARAMCOUNT 2
 #define LTXP_ERR_INVALID_FUNCTION   3
+#define LTXP_ERR_INVALID_PARAM_NAME 4
 
 #define ERR_MAP_ENTRY(x) {x, #x}
 static const std::map<int, std::string> error_map = {
@@ -338,6 +331,9 @@ static std::vector<std::string> ExtractParameters(const std::string& stripped_in
         searchStart = match.suffix().first;
     }
 
+    std::sort(parameters.begin(), parameters.end());
+    parameters.erase(std::unique(parameters.begin(), parameters.end()), parameters.end());
+
     return parameters;
 }
 
@@ -383,7 +379,7 @@ static int ArgumentCount(const std::string& input)
     return argc;
 }
 
-static std::tuple<std::string, std::vector<std::string>, std::vector<std::string>, std::vector<int>> SimplifyInput(const char* input_stream, bool* error)
+static std::tuple<std::string, std::vector<std::string>, std::vector<std::string>, std::vector<int>> SimplifyInput(const std::string& input_stream, bool* error)
 {
     if(error != nullptr) *error = false; 
     const std::string start_string(input_stream);
@@ -486,20 +482,75 @@ static std::tuple<std::string, std::vector<std::string>, std::vector<std::string
     return std::make_tuple(input, parameters, function_names, function_argcount);
 }
 
+static std::pair<std::string, std::string> SplitExpression(const std::string& input)
+{
+    auto loc = input.find('=');
+    if(loc != std::string::npos)
+    {
+        return std::make_pair(TrimLR(input.substr(0, loc-1)), TrimLR(input.substr(loc+1)));
+    }
+    else
+    {
+        std::cout << "Error on parsing: Function name not found." << std::endl;
+        std::cout << "Error on parsing: Please use the '<func_name>(x, p0, p1, ...)=<expression>' syntax." << std::endl;
+        return std::make_pair("", "");
+    }
+}
+
+static std::pair<std::string, std::vector<std::string>> HandleHeader(const std::string& input, int* error)
+{
+    std::pair<std::string, std::vector<std::string>> output;
+    if(error != nullptr) *error = LTXP_ERR_NOERR;
+
+    auto split_left  = StringSplit(input, '(');
+    std::string func_name = split_left[0];
+    std::string remainder = split_left[1];
+    output.first = func_name;
+
+    auto split_right = StringSplit(split_left[1], ')');
+    std::string parameters_string = split_right[0];
+    auto parameters  = StringSplit(parameters_string, ','); // Declared parameters
+
+    for(const auto& p : parameters)
+    {
+        const std::string tp = TrimLR(p);
+        if(tp.size() > 3)
+        {
+            std::cout << "Error on parsing: Declared parameter `" << p << "` exceeds maximum allowed size." << std::endl;
+            std::cout << "Error on parsing: Parameters must be no larger than 3 chars (and either of the form <char>_<char> or <char>)." << std::endl;
+            if(error != nullptr) *error = LTXP_ERR_INVALID_PARAM_NAME;
+            return std::make_pair("", std::vector<std::string>());
+        }
+        output.second.push_back(tp);
+    }
+
+    return output;
+}
+
 extern "C" ParseOutput ParseLatexToF90(const char* input_stream)
 {
     ParseOutput return_val;
     return_val.error = LTXP_ERR_NOERR;
     bool error;
 
-    auto output = SimplifyInput(input_stream, &error);
+    auto split = SplitExpression(input_stream);
+
+    // Handle the function name + parameters
+    auto header_out = HandleHeader(split.first, &return_val.error);
+    if(return_val.error != LTXP_ERR_NOERR)
+    {
+        return return_val;
+    }
+
+    // Handle the expression per se
+    auto output = SimplifyInput(split.second, &error);
     if(error)
     {
         return_val.error = LTXP_ERR_UNKOWN_PARAM;
     }
 
     const std::string infix_code              = std::get<0>(output);
-    const std::vector<std::string> parameters = std::get<1>(output); // Includes duplicates
+    const std::vector<std::string> parameters = std::get<1>(output);
     const std::vector<std::string> functions  = std::get<2>(output); // Includes duplicates
     const std::vector<int>         call_argc  = std::get<3>(output); // Includes duplicates
 
@@ -508,25 +559,27 @@ extern "C" ParseOutput ParseLatexToF90(const char* input_stream)
     return_val.infixcode_f90 = (char*)malloc(sizeof(char) * (infix_code.size() + 1));
     strcpy(return_val.infixcode_f90, infix_code.c_str());
 
-    return_val.functions   = (LongVarName*)malloc(sizeof(LongVarName) * functions.size());
-    return_val.num_funcs   = static_cast<int>(functions.size());
+    return_val.functions = (char*)malloc(sizeof(char) * 4096);
+    return_val.functions[0] = 0;
+    return_val.num_funcs = static_cast<int>(functions.size());
     return_val.func_argc = (int*)malloc(sizeof(int) * functions.size());
     for(size_t i = 0; i < functions.size(); i++)
     {
-        assert(functions[i].size() < 64);
-        strcpy(return_val.functions[i], functions[i].c_str());
+        strcat(return_val.functions, (functions[i] + " ").c_str());
         return_val.func_argc[i] = call_argc[i];
     }
 
-    return_val.parameters = (Parameter*)malloc(sizeof(Parameter) * parameters.size());
+    return_val.parameter_names       = (char*)malloc(sizeof(char) * 4096);
+    return_val.parameter_identifiers = (char*)malloc(sizeof(char) * 4096);
+    return_val.parameter_names[0] = 0;
+    return_val.parameter_identifiers[0] = 0;
     return_val.num_params = static_cast<int>(parameters.size());
     for(size_t i = 0; i < parameters.size(); i++)
     {
-        assert(parameters[i].size() <= 3);
-        strcpy(return_val.parameters[i].name, parameters[i].c_str());
+        strcat(return_val.parameter_names, (parameters[i] + " ").c_str());
+
         std::string p = RemoveAll(parameters[i], "_").c_str();
-        return_val.parameters[i].identifier[0] = p[0];
-        return_val.parameters[i].identifier[1] = p[1];
+        strcat(return_val.parameter_identifiers, (p + " ").c_str());
     }
 
     return return_val;
@@ -536,21 +589,13 @@ extern "C" void FreeParseOutput(ParseOutput* output)
 {
     if(output != nullptr)
     {
-        if(output->parameters)    free(output->parameters);
-        // if(output->constants)     free(output->constants);
-        if(output->functions)     free(output->functions);
-        if(output->func_argc)     free(output->func_argc);
-        if(output->infixcode_f90) free(output->infixcode_f90);
+        if(output->parameter_names)       free(output->parameter_names);
+        if(output->parameter_identifiers) free(output->parameter_identifiers);
+        if(output->functions)             free(output->functions);
+        // if(output->constants)          free(output->constants);
+        if(output->func_argc)             free(output->func_argc);
+        if(output->infixcode_f90)         free(output->infixcode_f90);
     }
-}
-
-extern "C" int CheckError(ParseOutput* output)
-{
-    if(output->error != LTXP_ERR_NOERR)
-    {
-        return 1;
-    }
-    return 0;
 }
 
 extern "C" void GetErrorMsg(ParseOutput* output, char* buffer)
@@ -585,17 +630,18 @@ extern "C" void CheckParseValidity(ParseOutput* output, const char* function_cac
         varcount.push_back(num_vars);
     }
 
+    auto functions = StringSplit(output->functions, ' ');
     for(int i = 0; i < output->num_funcs; i++)
     {
         bool func_in_cache = false;
         for(int j = 0; j < static_cast<int>(names.size()); j++)
         {
-            if(strcmp(output->functions[i], names[j].c_str()) == 0)
+            if(functions[i] == names[j])
             {
                 func_in_cache = true;
                 if(output->func_argc[i] != varcount[j])
                 {
-                    std::cout << "Error on function call `" << output->functions[i] <<  "`: Function takes " << varcount[j] << " parameters, but " << output->func_argc[i] << " were specified." << std::endl;
+                    std::cout << "Error on function call `" << functions[i] <<  "`: Function takes " << varcount[j] << " parameters, but " << output->func_argc[i] << " were specified." << std::endl;
                     output->error = LTXP_ERR_INVALID_PARAMCOUNT;
                 }
             }
@@ -603,32 +649,8 @@ extern "C" void CheckParseValidity(ParseOutput* output, const char* function_cac
 
         if(!func_in_cache)
         {
-            std::cout << "Error on function call `" << output->functions[i] <<  "`: Function is not declared in nested_fit cache." << std::endl;
+            std::cout << "Error on function call `" << functions[i] <<  "`: Function is not declared in nested_fit cache." << std::endl;
             output->error = LTXP_ERR_INVALID_FUNCTION;
         }
     }
-}
-
-int main()
-{
-    auto po1 = ParseLatexToF90("a_0x + \\frac{a_1a_2\\texttt{gauss_x}(-x^2)}{a_3} + 2^\\frac{b_0 - \\log(b_1x)}{2\\pi\\sqrt{c_0x}+c_1}");
-    auto po2 = ParseLatexToF90("\\frac{1}{a_0\\sqrt{2\\pi}}\\exp(-\\frac{1}{2}(\\frac{x-x_0}{s})^2)");
-    auto po3 = ParseLatexToF90("2.34^x_dx_1");
-    auto po4 = ParseLatexToF90("2\\texttt{test_func}(2.71, 1.61\\frac{\\sqrt{3.14\\texttt{test_func}(x - x_0, y))}}{\\exp(x+y)}");
-
-    CheckParseValidity(&po4, "/home/prime/.nested_fit/func_names.dat");
-    
-    if(CheckError(&po4))
-    {
-        char buffer[128];
-        GetErrorMsg(&po4, buffer);
-        std::cout << buffer << std::endl;
-    }
-    
-    FreeParseOutput(&po1);
-    FreeParseOutput(&po2);
-    FreeParseOutput(&po3);
-    FreeParseOutput(&po4);
-
-    return 0;
 }

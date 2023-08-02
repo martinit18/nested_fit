@@ -10,7 +10,7 @@ module argparse
     
     TYPE argdef_t
         CHARACTER(LEN=64)        :: long_name
-        CHARACTER                :: short_name
+        CHARACTER(LEN=2)         :: short_name
         LOGICAL                  :: supports_attr
         CHARACTER(LEN=512)       :: description
         PROCEDURE(func), POINTER :: exec => null()
@@ -70,10 +70,10 @@ module argparse
                     ENDIF
                 END IF
             ELSEIF(raw_arg(1:1) == '-') THEN ! Using short_name
-                IF(TRIM(raw_arg(2:2)) == argdefs(i)%short_name) THEN
-                    IF(LEN(TRIM(raw_arg(2:LEN_TRIM(raw_arg)))) > 1) THEN
+                IF(TRIM(raw_arg(2:LEN_TRIM(raw_arg))) == argdefs(i)%short_name) THEN
+                    IF(LEN(TRIM(raw_arg(2:LEN_TRIM(raw_arg)))) > 2) THEN
                         get_next_arg = argval_t(argdefs(i), CHAR(0), .FALSE.)
-                        WRITE(*, *) "Short argument notation '-", raw_arg(2:LEN_TRIM(raw_arg)),"' needs to have only one character."
+                        WRITE(*, *) "Short argument notation '-", raw_arg(2:LEN_TRIM(raw_arg)),"' needs to have only one or two character(s)."
                         RETURN
                     END IF
                     valid_value = TRY_PEAK_NEXT(nextargidx, raw_value)
