@@ -10,10 +10,11 @@ MODULE autofunc
     USE iso_c_binding
     IMPLICIT NONE
     
-    PUBLIC :: COMPILE_CACHE_FUNC, LOAD_DLL_PROC, FREE_DLL, INIT_AUTOFUNC, ParseLatex_t, PARSE_LATEX, PARSE_LATEX_DEALLOC
+    PUBLIC :: COMPILE_CACHE_FUNC, LOAD_DLL_PROC, FREE_DLL, INIT_AUTOFUNC, CLEAN_AUTOFUNC, ParseLatex_t, proc_ptr_t, PARSE_LATEX, PARSE_LATEX_DEALLOC, GET_USER_FUNC_PROCPTR
     PRIVATE
 
     TYPE, BIND(c) :: ParseOutput_t
+        TYPE(c_ptr)    :: function_name
         TYPE(c_ptr)    :: parameter_names
         TYPE(c_ptr)    :: parameter_identifiers
         INTEGER(c_int) :: num_params
@@ -27,6 +28,7 @@ MODULE autofunc
     END TYPE ParseOutput_t
 
     TYPE :: ParseLatex_t
+        CHARACTER(128)                           :: function_name
         CHARACTER(64), DIMENSION(:), ALLOCATABLE :: parameter_names
         CHARACTER(64), DIMENSION(:), ALLOCATABLE :: parameter_identifiers
         INTEGER                                  :: num_params
@@ -84,6 +86,8 @@ MODULE autofunc
     CHARACTER(LEN=*), PARAMETER      :: fname_cache = TRIM(nf_cache_folder)//'func_names.dat'
     TYPE(cache_entry_t), ALLOCATABLE :: entries(:)
     INTEGER                          :: nentries=0
+    TYPE(c_ptr), ALLOCATABLE         :: loaded_addr(:)
+    INTEGER                          :: nloaded_addr=0
 
     INTERFACE
         FUNCTION dlopen(filename, mode) BIND(c, name='dlopen')
@@ -108,6 +112,17 @@ MODULE autofunc
             INTEGER(c_int) :: dlclose
             TYPE(c_ptr), VALUE :: handle
          END FUNCTION
+    END INTERFACE
+
+    ABSTRACT INTERFACE
+        FUNCTION proc_ptr_t(x, npar, params)
+            USE, INTRINSIC :: iso_c_binding
+            IMPLICIT NONE
+            REAL(8), INTENT(IN) :: x
+            INTEGER, INTENT(IN) :: npar
+            REAL(8), INTENT(IN) :: params(npar)
+            REAL(c_double)      :: proc_ptr_t
+        END FUNCTION proc_ptr_t
     END INTERFACE
 
     CONTAINS
@@ -173,6 +188,9 @@ MODULE autofunc
         f_type%num_funcs  = c_type%num_funcs
         f_type%error      = c_type%error
 
+        ! Function name
+        CALL C_F_STRING(c_type%function_name, f_type%function_name)
+
         ! Infix code string
         CALL C_F_STRING(c_type%infixcode_f90, f_type%infixcode_f90)
 
@@ -207,7 +225,9 @@ MODULE autofunc
         parsed_data = ParseLatexToF90(c_expression(1)) ! Do the heavy lifting
         CALL F_C_STRING_DEALLOC(c_expression)
 
-        CALL CheckParseValidity(parsed_data, TRIM(fname_cache))
+        IF(parsed_data%error.EQ.0) THEN
+            CALL CheckParseValidity(parsed_data, TRIM(fname_cache))
+        ENDIF
 
         IF(parsed_data%error.NE.0) THEN
             CALL GetErrorMsg(parsed_data, error_msg)
@@ -252,6 +272,44 @@ MODULE autofunc
         nentries = nentries + 1
         entries(nentries) = arg
     END SUBROUTINE
+
+    SUBROUTINE CLEAN_ENTRIES()
+        IMPLICIT NONE
+
+        IF(nentries.GT.0) THEN
+            DEALLOCATE(entries)
+        ENDIF
+    END SUBROUTINE
+
+    SUBROUTINE ADD_ADDR(arg)
+        TYPE(c_ptr), INTENT(IN) :: arg
+        TYPE(c_ptr), ALLOCATABLE :: tmp(:)        
+
+        IF(nloaded_addr.EQ.0) THEN
+            ALLOCATE(loaded_addr(2))
+        ENDIF
+
+        IF(SIZE(loaded_addr).EQ.nloaded_addr) THEN
+            CALL MOVE_ALLOC(loaded_addr, tmp)
+            ALLOCATE(loaded_addr(nloaded_addr*2))
+            loaded_addr(1:nloaded_addr) = tmp
+        ENDIF
+
+        nloaded_addr = nloaded_addr + 1
+        loaded_addr(nloaded_addr) = arg
+    END SUBROUTINE
+
+    SUBROUTINE CLEAN_ADDRS()
+        IMPLICIT NONE
+        INTEGER :: i
+
+        IF(nloaded_addr.GT.0) THEN
+            DO i = 1, nloaded_addr
+                CALL FREE_DLL(loaded_addr(i))
+            END DO
+            DEALLOCATE(loaded_addr)
+        ENDIF
+    END SUBROUTINE
     
     SUBROUTINE READ_CACHE()
         CHARACTER(LEN=512) :: line
@@ -267,7 +325,7 @@ MODULE autofunc
                 READ(77,('(A)'), END=10) line
 
                 i0 = INDEX(line, '-')
-                i1 = INDEX(line(i0+1:), '-')
+                i1 = INDEX(line(i0+1:), '-') + i0
                 fname = TRIM(line(1:i0-1))
                 argc  = TRIM(line(i0+1:i1-1))
                 date  = TRIM(line(i1+1:LEN_TRIM(line)))
@@ -330,21 +388,42 @@ MODULE autofunc
         TYPE(ParseLatex_t), INTENT(IN) :: parse_data
         CHARACTER(LEN=128)             :: filename
         INTEGER                        :: status
-        CHARACTER(128)                 :: funcname = 'TODO'
-        INTEGER                        :: argc = 2 ! TODO
-        CHARACTER(128)                 :: expression = 'x' ! TODO
+        CHARACTER(128)                 :: funcname
+        INTEGER                        :: argc
+        CHARACTER(128)                 :: expression
+        INTEGER                        :: i
+
+        funcname   = parse_data%function_name
+        argc       = parse_data%num_params + 1
+        expression = parse_data%infixcode_f90
         
         WRITE(filename, '(a,a)') TRIM(nf_cache_folder), 'last_compile.f90'
         OPEN(UNIT=77, FILE=TRIM(filename), STATUS='UNKNOWN')
             WRITE(77,'(a)') 'function '//TRIM(funcname)//"(x, npar, params) bind(c, name='"//TRIM(funcname)//"_')"
             WRITE(77,'(a)') char(9)//'use, intrinsic :: iso_c_binding'
             WRITE(77,'(a)') char(9)//'implicit none'
-            WRITE(77,'(a)') char(9)//'real(c_double), intent(in) :: x'
-            WRITE(77,'(a)') char(9)//'integer(c_int), intent(in) :: npar'
-            WRITE(77,'(a)') char(9)//'real(c_double), intent(in) :: params(npar)'
-            WRITE(77,'(a)') char(9)//'real(c_double)             :: '//TRIM(funcname)
+            WRITE(77,'(a)') char(9)//'real(8), intent(in) :: x'
+            WRITE(77,'(a)') char(9)//'integer, intent(in) :: npar'
+            WRITE(77,'(a)') char(9)//'real(8), intent(in) :: params(npar)'
+            WRITE(77,'(a)') char(9)//'real(c_double)      :: '//TRIM(funcname)
             WRITE(77,'(a)') char(9)
-            ! WRITE(77,'(a)') char(9)//'real(c_double), external :: test_func'
+            WRITE(77,'(a)') char(9)//'real(8), parameter  :: pi = 3.141592653589793d0'
+            WRITE(77,'(a)') char(9)
+            DO i = 1, parse_data%num_funcs
+                WRITE(77,'(a)') char(9)//'real(c_double), external :: '//TRIM(parse_data%functions(i))
+            END DO
+            WRITE(77,'(a)') char(9)
+            DO i = 1, parse_data%num_params
+                WRITE(77,'(a)') char(9)//'real(8) :: '//TRIM(parse_data%parameter_identifiers(i))
+            END DO
+            WRITE(77,'(a)') char(9)
+            DO i = 1, parse_data%num_params
+                IF(LEN_TRIM(parse_data%parameter_identifiers(i)).EQ.2) THEN
+                    WRITE(77,'(a, I0, a)') char(9)//TRIM(parse_data%parameter_identifiers(i))//' = params(',i,')'
+                ELSE
+                    WRITE(77,'(a, I0, a)') char(9)//TRIM(parse_data%parameter_identifiers(i))//'  = params(',i,')'
+                ENDIF
+            END DO
             WRITE(77,'(a)') char(9)
             WRITE(77,'(a)') char(9)//TRIM(funcname)//' = '//expression
             WRITE(77,'(a)') 'end function '//TRIM(funcname)
@@ -372,6 +451,12 @@ MODULE autofunc
 
     SUBROUTINE INIT_AUTOFUNC()
         CALL READ_CACHE()
+    END SUBROUTINE
+
+    SUBROUTINE CLEAN_AUTOFUNC()
+        CALL WRITE_CACHE()
+        CALL CLEAN_ADDRS()
+        CALL CLEAN_ENTRIES()
     END SUBROUTINE
 
     SUBROUTINE LOAD_DLL_PROC(procname, procaddr, fileaddr)
@@ -420,4 +505,25 @@ MODULE autofunc
 
         RETURN
     END SUBROUTINE
+
+    SUBROUTINE GET_USER_FUNC_PROCPTR(name, proc, loaded)
+        USE, INTRINSIC :: iso_c_binding
+        CHARACTER(128), INTENT(IN)                 :: name
+        PROCEDURE(proc_ptr_t), POINTER, INTENT(IN) :: proc
+        LOGICAL, INTENT(OUT)                       :: loaded
+
+        TYPE(c_funptr) :: procaddr
+        TYPE(c_ptr)    :: fileaddr
+
+        CALL LOAD_DLL_PROC(name, procaddr, fileaddr)
+        CALL C_F_PROCPOINTER(procaddr, proc)
+
+        IF(.NOT.associated(proc)) THEN
+            loaded = .FALSE.
+        ELSE
+            loaded = .TRUE.
+        ENDIF
+
+    END SUBROUTINE
+
 END MODULE autofunc

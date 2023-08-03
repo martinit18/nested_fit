@@ -23,6 +23,7 @@
 extern "C" struct ParseOutput
 {
     // ShortVarName* constants;  // The detected constants in the expression (Automatically converted for now)
+    char* function_name;         // The detected function name
     char* parameter_names;       // The detected parameter names in the expression
     char* parameter_identifiers; // The detected parameter identifiers in the expression
     int   num_params;            // The number of parameters
@@ -38,14 +39,20 @@ extern "C" struct ParseOutput
 #define LTXP_ERR_INVALID_PARAMCOUNT 2
 #define LTXP_ERR_INVALID_FUNCTION   3
 #define LTXP_ERR_INVALID_PARAM_NAME 4
+#define LTXP_ERR_NO_FUNCTION_NAME   5
+#define LTXP_ERR_NO_X_ARGUMENT      6
+#define LTXP_ERR_UNUSED_PARAMETER   7
 
 #define ERR_MAP_ENTRY(x) {x, #x}
 static const std::map<int, std::string> error_map = {
     ERR_MAP_ENTRY(LTXP_ERR_NOERR),
     ERR_MAP_ENTRY(LTXP_ERR_UNKOWN_PARAM),
     ERR_MAP_ENTRY(LTXP_ERR_INVALID_PARAMCOUNT),
-    ERR_MAP_ENTRY(LTXP_ERR_INVALID_FUNCTION)
-
+    ERR_MAP_ENTRY(LTXP_ERR_INVALID_FUNCTION),
+    ERR_MAP_ENTRY(LTXP_ERR_INVALID_PARAM_NAME),
+    ERR_MAP_ENTRY(LTXP_ERR_NO_FUNCTION_NAME),
+    ERR_MAP_ENTRY(LTXP_ERR_NO_X_ARGUMENT),
+    ERR_MAP_ENTRY(LTXP_ERR_UNUSED_PARAMETER)
 };
 
 static std::vector<std::pair<std::string, std::string>> FindArgs(
@@ -226,7 +233,7 @@ static std::string StripInput(const std::string& input, const std::vector<std::s
     return output;
 }
 
-static void AddMultiplicationSignsReduceVars(std::string& input, const std::vector<std::pair<std::string, std::string>>& user_funcs)
+static void AddMultiplicationSignsReduceVars(std::string& input, const std::vector<std::pair<std::string, std::string>>& user_funcs, const std::vector<std::string>& builtin_funcs)
 {
     if(user_funcs.size() > ('Z' - 'A' + 1))
     {
@@ -234,11 +241,19 @@ static void AddMultiplicationSignsReduceVars(std::string& input, const std::vect
     }
 
     // Replace user defined function names on this stage just to ignore the rules on them
-    std::string dummy_name("USERFCN");
+    const std::string dummy_name_U("USERFCN");
     char id = 'A';
     for(const auto& f : user_funcs)
     {
-        ReplaceToken(f.first, dummy_name + id++, input);
+        ReplaceToken(f.first, dummy_name_U + id++, input);
+    }
+
+    // Replace builtin function names on this stage just to ignore the rules on them
+    const std::string dummy_name_B("BUILTIN");
+    id = 'A';
+    for(const auto& f : builtin_funcs)
+    {
+        ReplaceToken(f, dummy_name_B + id++, input);
     }
 
     // Rule for closing braces
@@ -249,7 +264,7 @@ static void AddMultiplicationSignsReduceVars(std::string& input, const std::vect
                input[i] != '*' &&
                input[i] != '/' &&
                input[i] != ',' &&
-               i != input.length();
+               i != static_cast<std::ptrdiff_t>(input.length());
     });
 
     // Rule for digits/numbers
@@ -261,7 +276,7 @@ static void AddMultiplicationSignsReduceVars(std::string& input, const std::vect
                input[i] != '/' &&
                input[i] != ',' &&
                input[i] != '.' &&
-               (input[i]  < '0' || input[i]  > '9') && i != input.length();
+               (input[i]  < '0' || input[i]  > '9') && i != static_cast<std::ptrdiff_t>(input.length());
     });
 
     // Rule for variable x
@@ -273,11 +288,12 @@ static void AddMultiplicationSignsReduceVars(std::string& input, const std::vect
                input[i] != '/' &&
                input[i] != ',' &&
                input[i] != '_' &&
-               i != input.length();
+               i != static_cast<std::ptrdiff_t>(input.length());
     });
 
     // Rule for identifiers
-    InsertAfterToken("\\w_.", "*", input, [](const std::ptrdiff_t& i, const std::string& input) -> bool {
+    ReplaceToken("\\\\pi", "PI", input); // Just so we don't match \\\\pi with the [a-z] rule
+    InsertAfterToken("\\w_.|[a-z]", "*", input, [](const std::ptrdiff_t& i, const std::string& input) -> bool {
         return input[i] != ')' &&
                input[i] != '+' &&
                input[i] != '-' &&
@@ -285,8 +301,9 @@ static void AddMultiplicationSignsReduceVars(std::string& input, const std::vect
                input[i] != '/' &&
                input[i] != ',' &&
                input[i] != '_' &&
-               i != input.length();
+               i != static_cast<std::ptrdiff_t>(input.length());
     });
+    ReplaceToken("PI", "\\pi", input);
 
     // Rule for constants (\pi)
     InsertAfterToken("\\\\pi", "*", input, [](const std::ptrdiff_t& i, const std::string& input) -> bool {
@@ -296,17 +313,55 @@ static void AddMultiplicationSignsReduceVars(std::string& input, const std::vect
                input[i] != '*' &&
                input[i] != '/' &&
                input[i] != ',' &&
-               i != input.length();
+               i != static_cast<std::ptrdiff_t>(input.length());
+    });
+
+    // Find all capital 1 char tokens (for that -> Lowercase all of the userfcns and builtins placeholders previously set)
+    const std::string dummy_name_U_Lower("userfcn");
+    id = 'A';
+    for(const auto& f : user_funcs)
+    {
+        (void)f;
+        std::string by = dummy_name_U_Lower + (char)std::tolower(id);
+        ReplaceToken(dummy_name_U + id++, by, input);
+    }
+
+    const std::string dummy_name_B_Lower("builtin");
+    id = 'A';
+    for(const auto& f : builtin_funcs)
+    {
+        (void)f;
+        std::string by = dummy_name_B_Lower + (char)std::tolower(id);
+        ReplaceToken(dummy_name_B + id++, by, input);
+    }
+
+    // Rule for [A-Z] identifiers (these are tricky)
+    InsertAfterToken("[A-Z]", "*", input, [](const std::ptrdiff_t& i, const std::string& input) -> bool {
+        return input[i] != ')' &&
+               input[i] != '+' &&
+               input[i] != '-' &&
+               input[i] != '*' &&
+               input[i] != '/' &&
+               input[i] != ',' &&
+               input[i] != '_' &&
+               i != static_cast<std::ptrdiff_t>(input.length());
     });
 
     // Reduce identifier names before putting back function names to avoid collision
     input = RemoveAll(input, "_");
 
     // Put back the user defined functions with their names
-    id = 'A';
+    id = 'a';
     for(const auto& f : user_funcs)
     {
-        ReplaceToken(dummy_name + id++, f.first, input);
+        ReplaceToken(dummy_name_U_Lower + id++, f.first, input);
+    }
+
+    // Put back the builtin functions with their names
+    id = 'a';
+    for(const auto& f : builtin_funcs)
+    {
+        ReplaceToken(dummy_name_B_Lower + id++, f, input);
     }
 }
 
@@ -351,6 +406,19 @@ static std::vector<std::string> StringSplit(const std::string& input, const char
     return output;
 }
 
+static std::string ArrayifyFunctionCall(const std::string& argument_string)
+{
+    auto arguments = StringSplit(argument_string, ',');
+    std::string output = arguments[0] + "," + std::to_string(arguments.size() - 1) + ",[";
+
+    for(size_t i = 1; i < arguments.size() - 1; i++)
+    {
+        output += arguments[i] + ",";
+    }
+
+    return output + arguments.back() + "]";
+}
+
 static std::string TrimLR(const std::string& input)
 {
     std::string output(input);
@@ -379,9 +447,8 @@ static int ArgumentCount(const std::string& input)
     return argc;
 }
 
-static std::tuple<std::string, std::vector<std::string>, std::vector<std::string>, std::vector<int>> SimplifyInput(const std::string& input_stream, bool* error)
+static std::tuple<std::string, std::vector<std::string>, std::vector<std::string>, std::vector<int>> SimplifyInput(const std::string& input_stream, const std::vector<std::string>& declared_args, int* error)
 {
-    if(error != nullptr) *error = false; 
     const std::string start_string(input_stream);
     std::string input(input_stream);
     std::smatch match;
@@ -390,7 +457,9 @@ static std::tuple<std::string, std::vector<std::string>, std::vector<std::string
     (void)FindArgs("{}", "{}", "\\\\frac\\{", 6, input, [](const std::string& a1, const std::string& a2) { return "((" + a1 + ")/(" + a2 + "))"; });
 
     // User functions
-    auto functions = FindArgs("{}", "()", "\\\\texttt\\{|mathrm\\{", 8, input, [](const std::string& a1, const std::string& a2) { return a1 + "(" + a2 + ")"; });
+    auto functions = FindArgs("{}", "()", "\\\\texttt\\{|mathrm\\{", 8, input, [](const std::string& a1, const std::string& a2) {
+        return a1 + "(" + a2 + ")";
+    });
 
     // Built-ins
     const std::map<std::string, std::string> f90_builtins = {
@@ -407,11 +476,11 @@ static std::tuple<std::string, std::vector<std::string>, std::vector<std::string
     {
         // Match '(' start
         auto match0 = FindArg("()", "\\\\" + function.first + "\\(", function.first.length() + 2, input, [=](const std::string& a) { return function.second + "(" + a + ")"; });
-        if(match0.size() > 0 ) built_ins.insert(built_ins.end(), match0.begin(), match0.end());
+        if(match0.size() > 0 ) built_ins.insert(built_ins.end(), 1, function.second);
         
         // Match '{' start
         auto match1 = FindArg("{}", "\\\\" + function.first + "\\{", function.first.length() + 2, input, [=](const std::string& a) { return function.second + "(" + a + ")"; });
-        if(match1.size() > 0 ) built_ins.insert(built_ins.end(), match1.begin(), match1.end());
+        if(match1.size() > 0 ) built_ins.insert(built_ins.end(), 1, function.second);
     }
 
     // Replace ^ by **
@@ -440,18 +509,24 @@ static std::tuple<std::string, std::vector<std::string>, std::vector<std::string
     input = RemoveAll(input, " ");
 
     // Place multiplication signs (*) in the final string
-    AddMultiplicationSignsReduceVars(input, functions);
+    AddMultiplicationSignsReduceVars(input, functions, built_ins);
 
     // Replace \pi by pi
     ReplaceToken("\\\\pi", "pi", input);
 
+    // Make array like function calls for each user defined function
+    for(const auto& f : functions)
+    {
+        FindArg("()", f.first + "\\(", f.first.length() + 1, input, [=](const std::string& a) { return f.first + "(" + ArrayifyFunctionCall(a) + ")"; });
+    }
+
     if(auto idx = input.find("\\") != std::string::npos)
     {
         std::cout << "Error at: " << input.substr(idx+1, 2) <<  ". Unrecognized parameter." << std::endl;
-        if(error != nullptr) *error = true; 
+        if(error != nullptr) *error = LTXP_ERR_UNKOWN_PARAM;; 
     }
 
-    if((error != nullptr && !*error) || error == nullptr)
+    if((error != nullptr && *error == LTXP_ERR_NOERR) || error == nullptr)
     {
         std::cout << "========= Parsing result =========" << std::endl;
 
@@ -482,7 +557,7 @@ static std::tuple<std::string, std::vector<std::string>, std::vector<std::string
     return std::make_tuple(input, parameters, function_names, function_argcount);
 }
 
-static std::pair<std::string, std::string> SplitExpression(const std::string& input)
+static std::pair<std::string, std::string> SplitExpression(const std::string& input, int* error)
 {
     auto loc = input.find('=');
     if(loc != std::string::npos)
@@ -491,6 +566,7 @@ static std::pair<std::string, std::string> SplitExpression(const std::string& in
     }
     else
     {
+        if(error != nullptr) *error = LTXP_ERR_NO_FUNCTION_NAME;
         std::cout << "Error on parsing: Function name not found." << std::endl;
         std::cout << "Error on parsing: Please use the '<func_name>(x, p0, p1, ...)=<expression>' syntax." << std::endl;
         return std::make_pair("", "");
@@ -505,11 +581,22 @@ static std::pair<std::string, std::vector<std::string>> HandleHeader(const std::
     auto split_left  = StringSplit(input, '(');
     std::string func_name = split_left[0];
     std::string remainder = split_left[1];
-    output.first = func_name;
+    output.first = TrimLR(func_name);
 
+    // TODO(César) : Deduce 1D or 2D from parameter list
     auto split_right = StringSplit(split_left[1], ')');
     std::string parameters_string = split_right[0];
     auto parameters  = StringSplit(parameters_string, ','); // Declared parameters
+
+    auto x_present = std::find(parameters.begin(), parameters.end(), "x");
+    if(x_present == parameters.end())
+    {
+        if(error != nullptr) *error = LTXP_ERR_NO_X_ARGUMENT;
+        return std::make_pair("", std::vector<std::string>());
+    }
+
+    // x is not truly a parameter (just an argument)
+    parameters.erase(x_present);
 
     for(const auto& p : parameters)
     {
@@ -531,9 +618,12 @@ extern "C" ParseOutput ParseLatexToF90(const char* input_stream)
 {
     ParseOutput return_val;
     return_val.error = LTXP_ERR_NOERR;
-    bool error;
 
-    auto split = SplitExpression(input_stream);
+    auto split = SplitExpression(input_stream, &return_val.error);
+    if(return_val.error != LTXP_ERR_NOERR)
+    {
+        return return_val;
+    }
 
     // Handle the function name + parameters
     auto header_out = HandleHeader(split.first, &return_val.error);
@@ -542,17 +632,45 @@ extern "C" ParseOutput ParseLatexToF90(const char* input_stream)
         return return_val;
     }
 
+    return_val.function_name = (char*)malloc(sizeof(char) * 128);
+    return_val.function_name[0] = 0;
+    strcpy(return_val.function_name, header_out.first.c_str());
+
     // Handle the expression per se
-    auto output = SimplifyInput(split.second, &error);
-    if(error)
+    auto output = SimplifyInput(split.second, header_out.second, &return_val.error);
+    if(return_val.error != LTXP_ERR_NOERR)
     {
-        return_val.error = LTXP_ERR_UNKOWN_PARAM;
+        return return_val;
     }
 
     const std::string infix_code              = std::get<0>(output);
     const std::vector<std::string> parameters = std::get<1>(output);
     const std::vector<std::string> functions  = std::get<2>(output); // Includes duplicates
     const std::vector<int>         call_argc  = std::get<3>(output); // Includes duplicates
+
+    // Make sure there is no 'rogue' parameters
+    for(const auto& p : header_out.second)
+    {
+        if(std::find(parameters.begin(), parameters.end(), p) == parameters.end())
+        {
+            std::cout << "Error: Declared parameter `" << p << "` is not used." << std::endl;
+            return_val.error = LTXP_ERR_UNUSED_PARAMETER;
+        }
+    }
+
+    for(const auto& p : parameters)
+    {
+        if(std::find(header_out.second.begin(), header_out.second.end(), p) == header_out.second.end())
+        {
+            std::cout << "Error: Unkown parameter `" << p << "`." << std::endl;
+            return_val.error = LTXP_ERR_UNKOWN_PARAM;
+        }
+    }
+
+    if(return_val.error != LTXP_ERR_NOERR)
+    {
+        return return_val;
+    }
 
     assert(call_argc.size() == functions.size());
 
@@ -573,12 +691,12 @@ extern "C" ParseOutput ParseLatexToF90(const char* input_stream)
     return_val.parameter_identifiers = (char*)malloc(sizeof(char) * 4096);
     return_val.parameter_names[0] = 0;
     return_val.parameter_identifiers[0] = 0;
-    return_val.num_params = static_cast<int>(parameters.size());
-    for(size_t i = 0; i < parameters.size(); i++)
+    return_val.num_params = static_cast<int>(header_out.second.size());
+    for(size_t i = 0; i < header_out.second.size(); i++)
     {
-        strcat(return_val.parameter_names, (parameters[i] + " ").c_str());
+        strcat(return_val.parameter_names, (header_out.second[i] + " ").c_str());
 
-        std::string p = RemoveAll(parameters[i], "_").c_str();
+        std::string p = RemoveAll(header_out.second[i], "_").c_str();
         strcat(return_val.parameter_identifiers, (p + " ").c_str());
     }
 
@@ -589,6 +707,7 @@ extern "C" void FreeParseOutput(ParseOutput* output)
 {
     if(output != nullptr)
     {
+        if(output->function_name)         free(output->function_name);
         if(output->parameter_names)       free(output->parameter_names);
         if(output->parameter_identifiers) free(output->parameter_identifiers);
         if(output->functions)             free(output->functions);
@@ -618,7 +737,6 @@ extern "C" void CheckParseValidity(ParseOutput* output, const char* function_cac
     std::vector<std::string> names;
     std::vector<int> varcount;
 
-    int errorc = 0;
     while(std::getline(input, line))
     {
         auto        cache_line = StringSplit(line, '-');

@@ -74,8 +74,8 @@ set(SRC_FILES_COMM
     src/Mod_options.f90
     
     src/funceval/auto_func.f90
-    src/funceval/latex_parser.cpp
 )
+
 
 set(SRC_FILES_DATA
     src/Mod_likelihood.f90
@@ -92,6 +92,10 @@ set(SRC_FILES_FUNC
 set(CHILD_SRC_FILES
     src/helper/mpi_status_process.f90
     src/Mod_mpi.f90
+)
+
+set(SRC_FILES_CXX
+    src/funceval/latex_parser.cpp
 )
 
 file(GLOB SRC_CALGO   ${CMAKE_SOURCE_DIR}/src/CALGO.ACM/*.f)
@@ -150,9 +154,11 @@ set(CFG_FILES
 if(DEBUG)
     message(STATUS "Configuring for Debug")
     set(SRC_FLAGS "-cpp -O0 -Wall -g -pg -ffree-line-length-0")
+    set(SRC_FLAGS_CXX "-O0 -Wall -pedantic -g -pg") # Be pedantic
 else()
     message(STATUS "Configuring for Release")
     set(SRC_FLAGS "-cpp -O2 -static -ffree-line-length-0")
+    set(SRC_FLAGS_CXX "-O2 -Wall -pedantic -static") # Be pedantic on release too
 endif()
 
 # NOTE(César): This is required to preprocessor the OpenMP comments
@@ -168,6 +174,7 @@ set_source_files_properties(${SRC_FILES_DATA} PROPERTIES COMPILE_FLAGS ${SRC_FLA
 set_source_files_properties(${SRC_FILES_FUNC} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${CFG_FILES} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${CHILD_SRC_FILES} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
+set_source_files_properties(${SRC_FILES_CXX} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS_CXX})
 
 add_executable(${nested_fit_target}
     ${CFG_FILES}
@@ -176,6 +183,7 @@ add_executable(${nested_fit_target}
     ${SRC_SLATEC}
     ${SRC_FILES_COMM}
     ${SRC_FILES_DATA}
+    ${SRC_FILES_CXX}
 )
 
 add_executable(${nested_fit_target_func}
@@ -185,6 +193,7 @@ add_executable(${nested_fit_target_func}
     ${SRC_SLATEC}
     ${SRC_FILES_COMM}
     ${SRC_FILES_FUNC}
+    ${SRC_FILES_CXX}
 )
 #target_compile_definitions(${nested_fit_target_func} PRIVATE -DFUNC_TARGET) # to uncomment?
 

@@ -100,7 +100,6 @@ PROGRAM NESTED_FIT
 #ifdef OPENMPI_ON
    USE MPI
 #endif
-use, intrinsic :: iso_c_binding
   !USE RNG
   !
   IMPLICIT NONE
@@ -153,34 +152,8 @@ use, intrinsic :: iso_c_binding
   ! Function definitions
   EXTERNAL :: NESTED_SAMPLING, SORTN, MEANVAR
 
-!   abstract interface
-!      function fp(x, npar, params)
-!         use, intrinsic :: iso_c_binding
-!         implicit none
-!         real(c_double), intent(in) :: x
-!         integer(c_int), intent(in) :: npar
-!         real(c_double), intent(in) :: params(npar)
-!         real(c_double) :: fp
-!      end function fp
-!   end interface
-!   TYPE(c_funptr) :: procaddr
-!   TYPE(c_ptr) :: fileaddr
-!   real(c_double) :: v(1)
-!   procedure(fp), pointer :: fproc
-
+  ! Init the autofunc module
   CALL INIT_AUTOFUNC()
-!   CALL COMPILE_CACHE_FUNC('test_func', 'DLOG(x)')
-!    !  CALL COMPILE_CACHE_FUNC('test_func2', 'test_func(x, npar, params)')
-!   CALL LOAD_DLL_PROC('test_func', procaddr, fileaddr)
-!   CALL c_f_procpointer(procaddr, fproc)
-!   DO i = 0, 100000000
-!    evsum_err = fproc(5.0d0 + i, 1, v)
-!    ! evsum_err = DLOG(5.0d0 + i)
-!    ! IF(MOD(i, 1000).EQ.0) WRITE(*,*) i
-!   END DO
-!   CALL FREE_DLL(fileaddr)
-  
-!   STOP
 
   ! Add arguments to the executable (possibly prefer adding the flags for them into mod options)
   CALL ADD_ARGUMENT(argdef_t("compact-output", "c", .FALSE.,&
@@ -211,6 +184,13 @@ use, intrinsic :: iso_c_binding
      For example: -fa 'gauss1D(x, u, s) = \frac{1}{s\sqrt{2\pi}}\exp(-\frac{(x-u)^2}{2s^2})'. &
      If the function <name> already exists, an overwrite will take place.",&
     B_ADDUSRFUNC&
+  ))
+
+  CALL ADD_ARGUMENT(argdef_t("function-run", "fr", .TRUE.,&
+    "Runs function with name <name>(x, ...) from the cache. &
+     For example: -fr 'gauss1D(2, 2, [2, 4])' would output the gaussian function value at 2 with u=2 and sigma=4. &
+     If the function <name> does not exist, nothing happens.",&
+    B_RUNUSRFUNC&
   ))
   
   ! Parse executable arguments (how will this work with MPI??) !!! THIS NEEDS TO COME BEFORE THE MPI_INIT() SUBROUTINE !!!
@@ -892,6 +872,9 @@ use, intrinsic :: iso_c_binding
      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
   ENDIF
 #endif
+
+  CALL CLEAN_AUTOFUNC()
+
   !IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
   !   DEALLOCATE(x,nc,enc)
   !ELSE
@@ -976,15 +959,9 @@ use, intrinsic :: iso_c_binding
 
   
   SUBROUTINE B_ADDUSRFUNC(this, invalue)
-   USE iso_c_binding
-   CLASS(argdef_t), INTENT(IN)              :: this
-   CHARACTER(LEN=128), INTENT(IN)           :: invalue
-   TYPE(ParseLatex_t)                       :: parse_result
-   CHARACTER(128)                           :: expression
-   CHARACTER(128)                           :: function_name
-
-   ! Find the function name
-   function_name = TRIM(ADJUSTL(invalue(1:INDEX(invalue, '(')-1)))
+   CLASS(argdef_t), INTENT(IN)    :: this
+   CHARACTER(LEN=128), INTENT(IN) :: invalue
+   TYPE(ParseLatex_t)             :: parse_result
 
    parse_result = PARSE_LATEX(TRIM(invalue))
 
@@ -993,6 +970,62 @@ use, intrinsic :: iso_c_binding
    ENDIF
 
    CALL PARSE_LATEX_DEALLOC(parse_result)
+   STOP
+  END SUBROUTINE
+
+  SUBROUTINE B_RUNUSRFUNC(this, invalue)
+   CLASS(argdef_t), INTENT(IN)    :: this
+   CHARACTER(LEN=128), INTENT(IN) :: invalue
+   CHARACTER(128)                 :: function_name
+   CHARACTER(128)                 :: parameters
+   CHARACTER(128)                 :: tmp, tmp2
+   PROCEDURE(proc_ptr_t), POINTER :: fptr
+   LOGICAL                        :: loaded_ok
+
+
+   REAL(8)              :: x
+   INTEGER              :: nargs
+   REAL(8), ALLOCATABLE :: args(:)
+   INTEGER              :: i, i0, i1
+
+   ! Find the function name
+   function_name = TRIM(ADJUSTL(invalue(1:INDEX(invalue, '(')-1)))
+   
+   ! Find the function parameters
+   parameters    = TRIM(ADJUSTL(invalue(INDEX(invalue, '(')+1:LEN_TRIM(invalue)-1)))
+
+   i0 = INDEX(parameters, ',')
+   tmp           = TRIM(ADJUSTL(parameters(1:i0)))
+   READ(tmp, *) x
+
+   i1 = INDEX(parameters(i0+1:LEN_TRIM(parameters)), ',') + i0
+   tmp           = TRIM(ADJUSTL(parameters(i0+1:i1-1)))
+   READ(tmp, *) nargs
+   ALLOCATE(args(nargs))
+
+   tmp = parameters(INDEX(parameters, '[')+1:LEN_TRIM(parameters)-1)
+   DO i = 1, nargs-1
+      tmp2 = tmp(1:INDEX(tmp, ',')-1)
+      READ(tmp2, *) args(i)
+      tmp = tmp(INDEX(tmp, ',')+1:LEN_TRIM(tmp))
+   END DO
+
+   READ(tmp, *) args(nargs)
+
+   CALL GET_USER_FUNC_PROCPTR(function_name, fptr, loaded_ok)
+
+   IF(.NOT.loaded_ok) THEN
+      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      WRITE(*,*) '       ERROR:           Failed to load proc address.'
+      WRITE(*,*) '       ERROR:           Maybe the specified function name is incorrect/not in the cache.'
+      WRITE(*,*) '       ERROR:           Aborting Execution...'
+      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      STOP
+   ENDIF
+
+   WRITE(*,*) TRIM(ADJUSTL(function_name)), '(', TRIM(parameters), ') =', fptr(x, nargs, args)
+
+   DEALLOCATE(args)
    STOP
   END SUBROUTINE
 
