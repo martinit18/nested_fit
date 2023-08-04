@@ -201,9 +201,13 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   constp = DLOG(1 + DEXP(-2.d0/nlive)) - DLOG(2.d0)
   !write(*,*) constm, constp
 
-  ! Actual minimum loglikelihood and correspondent live point
+  ! Actual minimum loglikelihood, fictif birth likelihood, 
+  ! rank and correspondent live point
   live_like_old(1) = live_like(1)
   live_old(1,:) = live(1,:)
+  live_birth_old(1) = live_birth(1)
+  live_rank_old(1) = live_rank(1)
+
   ! First evidence (sum because we are working with logarithms)
   IF(conv_method .EQ. 'LIKE_ACC') THEN
     evstep(1) = live_like_old(1) + lntmass
