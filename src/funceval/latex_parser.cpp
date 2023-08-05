@@ -523,7 +523,7 @@ static std::tuple<std::string, std::vector<std::string>, std::vector<std::string
     if(auto idx = input.find("\\") != std::string::npos)
     {
         std::cout << "Error at: " << input.substr(idx+1, 2) <<  ". Unrecognized parameter." << std::endl;
-        if(error != nullptr) *error = LTXP_ERR_UNKOWN_PARAM;; 
+        if(error != nullptr) *error = LTXP_ERR_UNKOWN_PARAM;
     }
 
     if((error != nullptr && *error == LTXP_ERR_NOERR) || error == nullptr)
