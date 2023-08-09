@@ -2,7 +2,7 @@
 ! Author : César Godinho
 ! Date   : 06/06/2023
 
-module argparse
+module MOD_ARGPARSE
 
     IMPLICIT NONE
     PUBLIC :: parse_arguments, add_argument, argdef_t
@@ -18,7 +18,7 @@ module argparse
 
     TYPE argval_t
         TYPE(argdef_t) :: arg
-        CHARACTER(LEN=128) :: value
+        CHARACTER(LEN=512) :: value
         LOGICAL :: valid
     END TYPE argval_t
 
@@ -26,7 +26,7 @@ module argparse
         SUBROUTINE func(self, value)
             IMPORT :: argdef_t, argval_t
             CLASS(argdef_t), INTENT(IN) :: self
-            CHARACTER(LEN=128), INTENT(IN) :: value
+            CHARACTER(LEN=512), INTENT(IN) :: value
         END SUBROUTINE
     END INTERFACE
 
@@ -38,8 +38,8 @@ module argparse
 
     TYPE(argval_t) FUNCTION get_next_arg(argdefs)
         TYPE(argdef_t), INTENT(IN) :: argdefs(:)
-        CHARACTER(LEN=256) :: raw_arg
-        CHARACTER(LEN=128) :: raw_value
+        CHARACTER(LEN=512) :: raw_arg
+        CHARACTER(LEN=512) :: raw_value
 
         INTEGER :: i
         LOGICAL :: valid_value
@@ -105,7 +105,7 @@ module argparse
 
     LOGICAL FUNCTION try_peak_next(idx, val)
         INTEGER, INTENT(IN) :: idx
-        CHARACTER(LEN=128), INTENT(OUT) :: val
+        CHARACTER(LEN=512), INTENT(OUT) :: val
 
         IF(idx > COMMAND_ARGUMENT_COUNT()) THEN
             try_peak_next = .FALSE.
@@ -235,4 +235,4 @@ module argparse
         END DO
     END SUBROUTINE
 
-end module argparse
+end module MOD_ARGPARSE

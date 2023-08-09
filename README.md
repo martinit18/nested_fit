@@ -135,7 +135,7 @@ Together with this file, also the files `nf_output_points.paramnames` and `nf_ou
 A complete selection of input files example is given in the folder `examples` where the implementation of the function of the python library are given.
 
 
-It follwos a complete description of `nf_input.dat` file.
+It follows a complete description of `nf_input.dat` file.
 
 ```
 4.4                 # Program version
@@ -200,6 +200,11 @@ For the second option:
 ```
 1    100000         # Number of runs and maximum of steps
 GAUSS_BG            # Name of the function
+```
+
+
+
+```
 L                   # Additional data: left/right (l/r)
 500     20          # Additional data:  npoint, nwidth for convolution
 1   1024  1 1024    # xmin, xmax, ymin, ymax

@@ -61,14 +61,14 @@ static std::vector<std::pair<std::string, std::string>> FindArgs(
     const std::string& expression,
     const std::ptrdiff_t offset_start,
     std::string& input,
-    std::function<std::string(const std::string&, const std::string&)> replace_template
+    std::function<std::string(const std::string&, const std::string&)> replace_template,
+    std::function<bool(const std::string&, const std::string&)> replace_check = std::function<bool(const std::string&, const std::string&)>([](const std::string&, const std::string&) -> bool { return true; })
 )
 {
     std::vector<std::pair<std::string, std::string>> args;
     std::smatch match;
     std::string::const_iterator searchStart(input.cbegin());
     std::vector<std::pair<std::ptrdiff_t, std::size_t>> replace;
-    std::vector<std::string> replace_what;
     while(std::regex_search(searchStart, input.cend(), match, std::regex(expression)))
     {
         int ref_count = 1;
@@ -94,16 +94,17 @@ static std::vector<std::pair<std::string, std::string>> FindArgs(
         // std::cout << arg2 << std::endl;
         args.push_back(std::make_pair(arg1, arg2));
 
-        replace.push_back(std::make_pair(match.position(0) + (searchStart - input.cbegin()), it - (searchStart + match.position(0))));
-        replace_what.push_back(replace_template(arg1, arg2));
-        searchStart = match.suffix().first;
-    }
+        auto replace_p = std::make_pair(match.position(0) + (searchStart - input.cbegin()), it - (searchStart + match.position(0)));
 
-    std::ptrdiff_t offset = 0;
-    for(size_t i = 0; i < replace.size(); i++)
-    {
-        input.replace(replace[i].first + offset, replace[i].second, replace_what[i]);
-        offset += (replace_what[i].size() - replace[i].second);
+        if(replace_check(arg1, arg2))
+        {
+            input.replace(replace_p.first, replace_p.second, replace_template(arg1, arg2));
+            searchStart = input.cbegin();
+        }
+        else
+        {
+            searchStart = match.suffix().first;
+        }
     }
 
     return args;
@@ -456,19 +457,22 @@ static std::tuple<std::string, std::vector<std::string>, std::vector<std::string
     // Fractions
     (void)FindArgs("{}", "{}", "\\\\frac\\{", 6, input, [](const std::string& a1, const std::string& a2) { return "((" + a1 + ")/(" + a2 + "))"; });
 
-    // User functions
-    auto functions = FindArgs("{}", "()", "\\\\texttt\\{|mathrm\\{", 8, input, [](const std::string& a1, const std::string& a2) {
-        return a1 + "(" + a2 + ")";
-    });
-
     // Built-ins
     const std::map<std::string, std::string> f90_builtins = {
-        { "sqrt", "DSQRT" },
-        { "exp",   "DEXP" },
-        { "log",   "DLOG" },
-        { "sin",   "DSIN" },
-        { "cos",   "DCOS" },
-        { "tan",   "DTAN" }
+        // Internal functions (fortran native generic ones)
+        { "sqrt",  "SQRT"  },
+        { "exp",   "EXP"   },
+        { "log",   "LOG"   },
+        { "sin",   "SIN"   },
+        { "cos",   "COS"   },
+        { "tan",   "TAN"   },
+        { "Gamma", "GAMMA" },
+        { "abs",   "ABS"   },
+        { "erf",   "ERF"   },
+        { "sign",  "SIGN"  }
+
+        // Internal functions (basically custom built-ins)
+        // { "WofzRe", "WofzRe" }
     };
 
     std::vector<std::string> built_ins;
@@ -476,12 +480,49 @@ static std::tuple<std::string, std::vector<std::string>, std::vector<std::string
     {
         // Match '(' start
         auto match0 = FindArg("()", "\\\\" + function.first + "\\(", function.first.length() + 2, input, [=](const std::string& a) { return function.second + "(" + a + ")"; });
-        if(match0.size() > 0 ) built_ins.insert(built_ins.end(), 1, function.second);
+        if(match0.size() > 0) built_ins.insert(built_ins.end(), 1, function.second);
         
         // Match '{' start
         auto match1 = FindArg("{}", "\\\\" + function.first + "\\{", function.first.length() + 2, input, [=](const std::string& a) { return function.second + "(" + a + ")"; });
-        if(match1.size() > 0 ) built_ins.insert(built_ins.end(), 1, function.second);
+        if(match1.size() > 0) built_ins.insert(built_ins.end(), 1, function.second);
     }
+
+    // Match '{}()' user function like built-in functions
+    (void)FindArgs("{}", "()", "\\\\texttt\\{|mathrm\\{", 8, input, [&](const std::string& a1, const std::string& a2) {
+        if(f90_builtins.find(a1) != f90_builtins.end())
+        {
+            const std::string builtin_name = f90_builtins.at(a1);
+            built_ins.insert(built_ins.end(), 1, builtin_name);
+
+            // TODO : Use our own sign function instead
+            if(builtin_name == "SIGN") // Special rule for the fortran "stupid" sign function
+            {
+                built_ins.insert(built_ins.end(), 1, "REAL"); // Small workaround
+                return "SIGN(REAL(1.0, 8)," + a2 + ")";
+            }
+
+            return builtin_name + "(" + a2 + ")";
+        }
+        else return a1 + "(" + a2 + ")";
+    },
+    [=](const std::string& a1, const std::string& a2) { // Skip if this is not a built-in
+        if(f90_builtins.find(a1) != f90_builtins.end())
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    });
+
+    std::sort(built_ins.begin(), built_ins.end());
+    built_ins.erase(std::unique(built_ins.begin(), built_ins.end()), built_ins.end());
+
+    // User functions
+    auto functions = FindArgs("{}", "()", "\\\\texttt\\{|mathrm\\{", 8, input, [](const std::string& a1, const std::string& a2) {
+        return a1 + "(" + a2 + ")";
+    });
 
     // Replace ^ by **
     ReplaceToken("\\^", "**", input);
@@ -502,6 +543,7 @@ static std::tuple<std::string, std::vector<std::string>, std::vector<std::string
     keywords.push_back("+");
     keywords.push_back("-");
     keywords.push_back("*");
+    keywords.push_back("REAL"); // Small workaround
 
     auto parameters = ExtractParameters(StripInput(input, keywords));
 
@@ -524,6 +566,7 @@ static std::tuple<std::string, std::vector<std::string>, std::vector<std::string
     {
         std::cout << "Error at: " << input.substr(idx+1, 2) <<  ". Unrecognized parameter." << std::endl;
         if(error != nullptr) *error = LTXP_ERR_UNKOWN_PARAM;
+        std::cout << input << std::endl;
     }
 
     if((error != nullptr && *error == LTXP_ERR_NOERR) || error == nullptr)
@@ -536,11 +579,18 @@ static std::tuple<std::string, std::vector<std::string>, std::vector<std::string
         std::cout << "Infix expression: ";
         std::cout << input << std::endl;
         std::cout << "      Parameters: ";
-        for(size_t i = 0; i < parameters.size() - 1; i++)
+        if(parameters.size() > 0)
         {
-            std::cout << parameters[i] << ", ";
+            for(size_t i = 0; i < parameters.size() - 1; i++)
+            {
+                std::cout << parameters[i] << ", ";
+            }
+            std::cout << parameters[parameters.size() - 1] << std::endl;
         }
-        std::cout << parameters[parameters.size() - 1] << std::endl;
+        else
+        {
+            std::cout << "None" << std::endl;
+        }
         std::cout << "==================================" << std::endl;
     }
 

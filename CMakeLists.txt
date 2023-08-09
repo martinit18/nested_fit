@@ -74,8 +74,13 @@ set(SRC_FILES_COMM
     src/Mod_options.f90
     
     src/funceval/auto_func.f90
+    src/functions/WOFZ.f
 )
 
+set(SRC_EXTERNAL_FUNCS
+    src/functions/internal_funcs.f90
+    src/functions/WOFZ.f
+)
 
 set(SRC_FILES_DATA
     src/Mod_likelihood.f90
@@ -98,7 +103,7 @@ set(SRC_FILES_CXX
     src/funceval/latex_parser.cpp
 )
 
-file(GLOB SRC_CALGO   ${CMAKE_SOURCE_DIR}/src/CALGO.ACM/*.f)
+
 file(GLOB SRC_DIERCKX ${CMAKE_SOURCE_DIR}/src/DIERCKX/*.f)
 file(GLOB SRC_SLATEC  ${CMAKE_SOURCE_DIR}/src/SLATEC/*.f)
 #file(GLOB SRC_LAPACK  ${CMAKE_SOURCE_DIR}/src/LAPACK/*.f ${CMAKE_SOURCE_DIR}/src/LAPACK/*.F)
@@ -166,7 +171,6 @@ if(OPENMP)
     set(SRC_FLAGS "${SRC_FLAGS} -fopenmp")
 endif()
 
-set_source_files_properties(${SRC_CALGO} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${SRC_DIERCKX} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${SRC_SLATEC} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
 set_source_files_properties(${SRC_FILES_COMM} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
@@ -178,7 +182,6 @@ set_source_files_properties(${SRC_FILES_CXX} PROPERTIES COMPILE_FLAGS ${SRC_FLAG
 
 add_executable(${nested_fit_target}
     ${CFG_FILES}
-    ${SRC_CALGO}
     ${SRC_DIERCKX}
     ${SRC_SLATEC}
     ${SRC_FILES_COMM}
@@ -188,7 +191,6 @@ add_executable(${nested_fit_target}
 
 add_executable(${nested_fit_target_func}
     ${CFG_FILES}
-    ${SRC_CALGO}
     ${SRC_DIERCKX}
     ${SRC_SLATEC}
     ${SRC_FILES_COMM}
@@ -274,6 +276,17 @@ endif()
 add_custom_command(TARGET ${nested_fit_target}
     POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory ${nested_fit_cache_folder}
+)
+
+# Create the internal functions imutable cache config
+# TODO
+
+# Compile the object files of the internal functions the user will be able to natively use in their expressions
+add_library(internal_functions OBJECT ${SRC_EXTERNAL_FUNCS})
+add_custom_target(copy_internal_functions ALL
+    DEPENDS internal_functions
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_OBJECTS:internal_functions> ${nested_fit_cache_folder}
+    COMMAND_EXPAND_LISTS
 )
 
 # NOTE(César): Don't run these commands for the Windows build.

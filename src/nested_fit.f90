@@ -81,11 +81,9 @@ PROGRAM NESTED_FIT
 
 
    ! Module for automatic function parsing/compilation
-   USE autofunc
+   USE MOD_AUTOFUNC
    ! Module for CLI lib
-   ! NOTE(César): Maybe we should keep the same Mod_* naming convention ?
-   !              Even though this is not strictly a functionality of nf
-   USE argparse
+   USE MOD_ARGPARSE
    ! Module for optional variables
    USE MOD_OPTIONS
    ! Module for the input parameter definition
@@ -191,6 +189,11 @@ PROGRAM NESTED_FIT
      For example: -fr 'gauss1D(2, 2, [2, 4])' would output the gaussian function value at 2 with u=2 and sigma=4. &
      If the function <name> does not exist, nothing happens.",&
     B_RUNUSRFUNC&
+  ))
+
+  CALL ADD_ARGUMENT(argdef_t("function-list", "fl", .FALSE.,&
+    "Lists all of the functions available in the cache.",&
+    B_LSTUSRFUNC&
   ))
   
   ! Parse executable arguments (how will this work with MPI??) !!! THIS NEEDS TO COME BEFORE THE MPI_INIT() SUBROUTINE !!!
@@ -906,19 +909,19 @@ PROGRAM NESTED_FIT
 
   SUBROUTINE B_COMPACT(this, invalue)
    CLASS(argdef_t), INTENT(IN) :: this
-   CHARACTER(LEN=128), INTENT(IN) :: invalue
+   CHARACTER(LEN=512), INTENT(IN) :: invalue
    opt_compact_output = .TRUE.
   END SUBROUTINE
 
   SUBROUTINE B_INPUTFILE(this, invalue)
    CLASS(argdef_t), INTENT(IN) :: this
-   CHARACTER(LEN=128), INTENT(IN) :: invalue
+   CHARACTER(LEN=512), INTENT(IN) :: invalue
    opt_input_file = TRIM(invalue)
   END SUBROUTINE
 
   SUBROUTINE B_NTRY(this, invalue)
    CLASS(argdef_t), INTENT(IN) :: this
-   CHARACTER(LEN=128), INTENT(IN) :: invalue
+   CHARACTER(LEN=512), INTENT(IN) :: invalue
    LOGICAL :: error
 
    CALL TRY_PARSE_INT(TRIM(invalue), opt_ntry, error)
@@ -932,9 +935,19 @@ PROGRAM NESTED_FIT
 
   END SUBROUTINE
 
+  SUBROUTINE DEL_FOLDER_RECURSIVE(where)
+   CHARACTER(LEN=*), INTENT(IN) :: where
+
+#ifdef _WIN32
+   CALL EXECUTE_COMMAND_LINE('del /s /q '//TRIM(where)//'*') ! TODO(César): Check for potential errors, and test it on windows
+#else
+   CALL EXECUTE_COMMAND_LINE('rm -rf '//TRIM(where)//'*')    ! TODO(César): Check for potential errors
+#endif
+  END SUBROUTINE
+
   SUBROUTINE B_DELCACHE(this, invalue)
    CLASS(argdef_t), INTENT(IN) :: this
-   CHARACTER(LEN=128), INTENT(IN) :: invalue
+   CHARACTER(LEN=512), INTENT(IN) :: invalue
    CHARACTER(LEN=6) :: delete_ok
 
    WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
@@ -948,7 +961,7 @@ PROGRAM NESTED_FIT
       WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
       WRITE(*,*) '       ATTENTION: Cache deleted.'
       WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-      ! TODO(César) : This is why fortran sucks...
+      CALL DEL_FOLDER_RECURSIVE(nf_cache_folder)
    ELSE
       WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
       WRITE(*,*) '       ATTENTION: Operation aborted by the user.'
@@ -960,13 +973,15 @@ PROGRAM NESTED_FIT
   
   SUBROUTINE B_ADDUSRFUNC(this, invalue)
    CLASS(argdef_t), INTENT(IN)    :: this
-   CHARACTER(LEN=128), INTENT(IN) :: invalue
+   CHARACTER(LEN=512), INTENT(IN) :: invalue
+   CHARACTER(LEN=512)             :: definition
    TYPE(ParseLatex_t)             :: parse_result
 
    parse_result = PARSE_LATEX(TRIM(invalue))
 
    IF(parse_result%error.EQ.0) THEN
-      CALL COMPILE_CACHE_FUNC(parse_result)
+      definition = TRIM(invalue(INDEX(invalue, '=')+1:LEN_TRIM(invalue)))
+      CALL COMPILE_CACHE_FUNC(parse_result, definition)
    ENDIF
 
    CALL PARSE_LATEX_DEALLOC(parse_result)
@@ -975,7 +990,7 @@ PROGRAM NESTED_FIT
 
   SUBROUTINE B_RUNUSRFUNC(this, invalue)
    CLASS(argdef_t), INTENT(IN)    :: this
-   CHARACTER(LEN=128), INTENT(IN) :: invalue
+   CHARACTER(LEN=512), INTENT(IN) :: invalue
    CHARACTER(128)                 :: function_name
    CHARACTER(128)                 :: parameters
    CHARACTER(128)                 :: tmp, tmp2
@@ -994,23 +1009,29 @@ PROGRAM NESTED_FIT
    ! Find the function parameters
    parameters    = TRIM(ADJUSTL(invalue(INDEX(invalue, '(')+1:LEN_TRIM(invalue)-1)))
 
+   ! Find x
    i0 = INDEX(parameters, ',')
    tmp           = TRIM(ADJUSTL(parameters(1:i0)))
    READ(tmp, *) x
 
+   ! Find nargs
    i1 = INDEX(parameters(i0+1:LEN_TRIM(parameters)), ',') + i0
    tmp           = TRIM(ADJUSTL(parameters(i0+1:i1-1)))
    READ(tmp, *) nargs
-   ALLOCATE(args(nargs))
 
-   tmp = parameters(INDEX(parameters, '[')+1:LEN_TRIM(parameters)-1)
-   DO i = 1, nargs-1
-      tmp2 = tmp(1:INDEX(tmp, ',')-1)
-      READ(tmp2, *) args(i)
-      tmp = tmp(INDEX(tmp, ',')+1:LEN_TRIM(tmp))
-   END DO
+   IF(nargs.GT.0) THEN
+      ALLOCATE(args(nargs))
+      ! Find the remaining arguments
+      tmp = parameters(INDEX(parameters, '[')+1:LEN_TRIM(parameters)-1)
+      DO i = 1, nargs-1
+         tmp2 = tmp(1:INDEX(tmp, ',')-1)
+         READ(tmp2, *) args(i)
+         tmp = tmp(INDEX(tmp, ',')+1:LEN_TRIM(tmp))
+      END DO
+   
+      READ(tmp, *) args(nargs)
+   ENDIF
 
-   READ(tmp, *) args(nargs)
 
    CALL GET_USER_FUNC_PROCPTR(function_name, fptr, loaded_ok)
 
@@ -1025,7 +1046,72 @@ PROGRAM NESTED_FIT
 
    WRITE(*,*) TRIM(ADJUSTL(function_name)), '(', TRIM(parameters), ') =', fptr(x, nargs, args)
 
-   DEALLOCATE(args)
+   IF(nargs.GT.0) THEN
+      DEALLOCATE(args)
+   ENDIF
+   STOP
+  END SUBROUTINE
+
+  SUBROUTINE WRITE_REPEAT_CHAR(val, n)
+   CHARACTER(LEN=1), INTENT(IN) :: val
+   INTEGER, INTENT(IN)          :: n
+   INTEGER                      :: i
+
+   DO i = 1, n
+      WRITE(*, '(a)', advance='no') val
+   END DO
+  END SUBROUTINE
+
+  SUBROUTINE B_LSTUSRFUNC(this, invalue)
+   CLASS(argdef_t), INTENT(IN)    :: this
+   CHARACTER(LEN=512), INTENT(IN) :: invalue
+   INTEGER                        :: i, n, max_dec_s, s
+   TYPE(cache_entry_t)            :: cache_entry
+   CHARACTER(LEN=16)              :: tmp
+
+   CALL GET_CACHE_SIZE(n)
+
+   IF(n.EQ.0) THEN
+      WRITE(*,'(a)') 'No cache functions found.'
+      WRITE(*,'(a)') 'Use the `-fa` option to add a function to the cache.'
+      STOP
+   ENDIF
+
+   ! Find out what is the largest declaration so we adjust the table accordingly
+   ! TODO(César) : Linebreak in case of huge declarations
+   max_dec_s = 21 ! This is the size of `Function Declaration` header
+   DO i = 1, n
+      cache_entry = GET_CACHE(i)
+      max_dec_s   = MAX(LEN_TRIM(cache_entry%dec), max_dec_s)
+   END DO
+   WRITE(tmp,'(I0)') max_dec_s
+
+   ! How many more table steps do we need
+   s = MAX(max_dec_s - 21, 0)
+
+   ! Basically, just display the cache now
+   WRITE(*,'(a)', advance='no')      ' --------------------------------------------------------------------'
+   CALL WRITE_REPEAT_CHAR('-', s)
+   WRITE(*, '(a)', advance='no') NEW_LINE('A')
+   WRITE(*,'(a)', advance='no')     '| Name           | Argc | Last Modified       | Function Declaration '
+   CALL WRITE_REPEAT_CHAR(' ', s)
+   WRITE(*, '(a)') '|'
+   WRITE(*,'(a)', advance='no')      ' ---------------- ------ --------------------- ----------------------'
+   CALL WRITE_REPEAT_CHAR('-', s)
+   WRITE(*, '(a)', advance='no') NEW_LINE('A')
+   DO i = 1, n
+      cache_entry = GET_CACHE(i)
+      WRITE(*,'(a2, a15, a1, I2, a6, a20, a2, a'//TRIM(tmp)//', a1)') '| ', &
+      cache_entry%name, '|', &
+      cache_entry%argc, '    | ', &
+      ADJUSTL(cache_entry%date_modified), '| ', &
+      ADJUSTL(cache_entry%dec), '|'
+   END DO
+   WRITE(*,'(a)', advance='no')      ' --------------------------------------------------------------------'
+   CALL WRITE_REPEAT_CHAR('-', s)
+   WRITE(*, '(a)', advance='no') NEW_LINE('A')
+
+
    STOP
   END SUBROUTINE
 

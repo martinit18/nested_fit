@@ -1,16 +1,33 @@
 ! Brief  : Module for automatically managing/loading RT compiled user functions.
+!          Basically we accept multiple input types now:
+!              - Old style (aka. functions inside the USERFCN*.f files, this should be deprecated)
+!              - New style with LaTeX directly inside the function line in the <input>.dat file
+!              - New style with f90 files with with a correct signature function inside the function line in the <input>.dat file
+!
 ! Author : César Godinho
 ! Date   : 23/07/2023
 
 ! Linearly sorting the cache in this file should be ok since we are
 ! using a relatively low ammount of comparisons at the start to check
 ! for the call of user functions.
-MODULE autofunc
+MODULE MOD_AUTOFUNC
     USE MOD_METADATA
     USE iso_c_binding
     IMPLICIT NONE
     
-    PUBLIC :: COMPILE_CACHE_FUNC, LOAD_DLL_PROC, FREE_DLL, INIT_AUTOFUNC, CLEAN_AUTOFUNC, ParseLatex_t, proc_ptr_t, PARSE_LATEX, PARSE_LATEX_DEALLOC, GET_USER_FUNC_PROCPTR
+    PUBLIC :: COMPILE_CACHE_FUNC, &
+        LOAD_DLL_PROC, &
+        FREE_DLL, &
+        INIT_AUTOFUNC, &
+        CLEAN_AUTOFUNC, &
+        ParseLatex_t, &
+        proc_ptr_t, &
+        PARSE_LATEX, &
+        PARSE_LATEX_DEALLOC, &
+        GET_USER_FUNC_PROCPTR, &
+        GET_CACHE_SIZE, &
+        GET_CACHE, &
+        cache_entry_t
     PRIVATE
 
     TYPE, BIND(c) :: ParseOutput_t
@@ -32,12 +49,12 @@ MODULE autofunc
         CHARACTER(64), DIMENSION(:), ALLOCATABLE :: parameter_names
         CHARACTER(64), DIMENSION(:), ALLOCATABLE :: parameter_identifiers
         INTEGER                                  :: num_params
-
+        
         CHARACTER(64), DIMENSION(:), ALLOCATABLE :: functions
         INTEGER                                  :: num_funcs
         INTEGER, POINTER, DIMENSION(:)           :: func_argc
 
-        CHARACTER(128)                           :: infixcode_f90
+        CHARACTER(512)                           :: infixcode_f90
         INTEGER                                  :: error
     END TYPE ParseLatex_t
 
@@ -77,9 +94,10 @@ MODULE autofunc
 
     ! Cache stuff
     TYPE cache_entry_t
-        CHARACTER(LEN=64) :: date_modified
-        CHARACTER(LEN=64) :: name
-        INTEGER           :: argc
+        CHARACTER(LEN=64)  :: date_modified
+        CHARACTER(LEN=64)  :: name
+        CHARACTER(LEN=512) :: dec
+        INTEGER            :: argc
     END TYPE cache_entry_t
 
     CHARACTER(LEN=*), PARAMETER      :: dll_name    = TRIM(nf_cache_folder)//'dynamic_calls.so'
@@ -314,9 +332,10 @@ MODULE autofunc
     SUBROUTINE READ_CACHE()
         CHARACTER(LEN=512) :: line
         CHARACTER(LEN=64)  :: date, argc, fname
+        CHARACTER(LEN=512) :: fdec
         INTEGER            :: argc_i
         LOGICAL            :: exist
-        INTEGER            :: i0, i1
+        INTEGER            :: i0, i1, i2
         
         INQUIRE(FILE=TRIM(fname_cache), EXIST=exist)
         IF (exist) THEN
@@ -326,41 +345,68 @@ MODULE autofunc
 
                 i0 = INDEX(line, '-')
                 i1 = INDEX(line(i0+1:), '-') + i0
+                i2 = INDEX(line(i1+1:), '-') + i1
                 fname = TRIM(line(1:i0-1))
                 argc  = TRIM(line(i0+1:i1-1))
-                date  = TRIM(line(i1+1:LEN_TRIM(line)))
+                date  = TRIM(line(i1+1:i2-1))
+                fdec  = TRIM(line(i2+1:LEN_TRIM(line)))
                 
                 READ(argc,*) argc_i
-                CALL ADD_ENTRY(cache_entry_t(date, TRIM(fname), argc_i))
+                CALL ADD_ENTRY(cache_entry_t(date, TRIM(fname), TRIM(fdec), argc_i))
             END DO
 10          CLOSE(77)
         ENDIF
     END SUBROUTINE
 
-    SUBROUTINE UPDATE_CACHE(fname, argc)
-        CHARACTER(LEN=*), INTENT(IN) :: fname
-        INTEGER, INTENT(IN)          :: argc
-        CHARACTER(LEN=64)            :: date
-        INTEGER                      :: i
+    SUBROUTINE UPDATE_CACHE(fname, argc, fdec)
+        CHARACTER(LEN=*), INTENT(IN)   :: fname
+        INTEGER, INTENT(IN)            :: argc
+        CHARACTER(LEN=512), INTENT(IN) :: fdec
+        CHARACTER(LEN=64)              :: date
+        INTEGER                        :: i
 
         CALL FDATE(date)
         DO i = 1, nentries
             IF(fname.EQ.TRIM(entries(i)%name)) THEN
                 entries(i)%date_modified = date
+                entries(i)%dec = TRIM(fdec)
                 entries(i)%argc = argc
                 RETURN
             ENDIF
         END DO
 
-        CALL ADD_ENTRY(cache_entry_t(date, fname, argc))
+        CALL ADD_ENTRY(cache_entry_t(date, fname, TRIM(fdec), argc))
     END SUBROUTINE
+
+    SUBROUTINE GET_CACHE_SIZE(n)
+        INTEGER, INTENT(OUT) :: n
+        n = nentries
+    END SUBROUTINE
+
+    FUNCTION GET_CACHE(i)
+        INTEGER, INTENT(IN) :: i
+        TYPE(cache_entry_t) :: GET_CACHE
+
+        IF(i.GT.nentries) THEN
+            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            WRITE(*,*) '       ERROR:           Trying to get cache with invalid index.'
+            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            RETURN
+        ENDIF
+
+        GET_CACHE = entries(i)
+    END FUNCTION
 
     SUBROUTINE WRITE_CACHE()
         INTEGER :: i
         
         OPEN(UNIT=77, FILE=TRIM(fname_cache), STATUS='UNKNOWN')
             DO i = 1, nentries
-                WRITE(77,'(a, a, I2, a, a)') TRIM(entries(i)%name), ' - ', entries(i)%argc, ' - ', entries(i)%date_modified
+                WRITE(77,'(a, a, I2, a, a, a, a)')         &
+                    TRIM(entries(i)%name), ' - ',          &
+                    entries(i)%argc, ' - ',                &
+                    TRIM(entries(i)%date_modified), ' - ', &
+                    TRIM(entries(i)%dec)
             END DO
         CLOSE(77)
 
@@ -384,13 +430,14 @@ MODULE autofunc
         RETURN
     END FUNCTION
 
-    SUBROUTINE COMPILE_CACHE_FUNC(parse_data)
+    SUBROUTINE COMPILE_CACHE_FUNC(parse_data, original_data)
         TYPE(ParseLatex_t), INTENT(IN) :: parse_data
+        CHARACTER(LEN=512), INTENT(IN) :: original_data
         CHARACTER(LEN=128)             :: filename
         INTEGER                        :: status
         CHARACTER(128)                 :: funcname
         INTEGER                        :: argc
-        CHARACTER(128)                 :: expression
+        CHARACTER(512)                 :: expression
         INTEGER                        :: i
 
         funcname   = parse_data%function_name
@@ -425,7 +472,7 @@ MODULE autofunc
                 ENDIF
             END DO
             WRITE(77,'(a)') char(9)
-            WRITE(77,'(a)') char(9)//TRIM(funcname)//' = '//expression
+            WRITE(77,'(a)') char(9)//TRIM(funcname)//' = '//TRIM(expression)
             WRITE(77,'(a)') 'end function '//TRIM(funcname)
         CLOSE(77)
 
@@ -445,7 +492,7 @@ MODULE autofunc
             WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
             STOP ! NOTE(César) : This works, before MPI init!!
         ENDIF
-        CALL UPDATE_CACHE(TRIM(funcname), argc)
+        CALL UPDATE_CACHE(TRIM(funcname), argc, original_data)
         CALL WRITE_CACHE()
     END SUBROUTINE
 
@@ -526,4 +573,4 @@ MODULE autofunc
 
     END SUBROUTINE
 
-END MODULE autofunc
+END MODULE MOD_AUTOFUNC
