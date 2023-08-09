@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nested_py"
+version = "4.5"
+description = "A python integration of the nested_fit package."
+
+authors = [
+    {name = "Martino Trassinelli"},
+    {name = "Lune Maillard"},
+    {name = "César Godinho"}
+]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent"
+]
+
+dependencies = [
+    "pandas",
+    "numpy",
+    "matplotlib",
+    "scipy",
+    "getdist",
+    "tqdm"
+]
+
+# [project.scripts]
+# install_script = "nested_py.install:start"
+
+[project.urls]
+"Homepage" = "https://github.com/martinit18/nested_fit"
+"Bug Tracker" = "https://github.com/martinit18/nested_fit/issues"

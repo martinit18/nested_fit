@@ -42,19 +42,25 @@ email: c.godinho AT campus.fct.unl.pt
 - Python 3 with numpy, scipy, matplotlib, pandas, getdist
 
 **Instruction**:
-1. Download the latest version or clone the repository
-2. Run the commands:
-```
+1. To install the latest stable version:
+```sh
+git clone git@github.com:martinit18/nested_fit.git
 cd nested_fit
 mkdir build && cd build
 cmake ..
-make
+sudo make install # Or set an installation directory which does not require sudo with (e.g.) -DCMAKE_INSTALL_PREFIX=/opt/nested_fit
 ```
+
+> :warning: On Windows (if using MSVC) replace the last command:
+```cmd
+cmake --build . --config Release --target install
+```
+
 These command will build two different executables in the bin directory: 
 - `nested_fitXXX` for likelihood function maximisation for data analysis,
-- `nested_fit_funcXXX` for functions maximisation not using data. 
+- `nested_fit_funcXXX` for functions maximisation not using data.
 
-> :warning: For Windows you can compile by replacing the second line of the above commands with `cmake -G"MinGW Makefiles" ..`, for simplicity.
+If Python is found an utility for running and analysing data using nested_fit is also installed -> the nested_py package.
 
 **CMake options**
 
@@ -66,12 +72,12 @@ These command will build two different executables in the bin directory:
 |OPENMPI   | Enable/Disable OpenMPI support.                                 | OFF     |
 |AUTOTESTS | Automatically run tests after compiling.                        | OFF     |
 |LAPACK    | Use LAPACK library functions instead of the internal ones       | OFF     |
-|:---------|:----------------------------------------------------------------|:-------:|
+|BUILD_NESTED_PY | Automatically build nested_py for PyPI.                   | ON      |
 
 
 
 > You can pass in options on the cmake step via: `cmake -D<option_name>=<ON/OFF> ..`\
-> These will prevail any time you run the `make` command.
+> These will prevail any time you run the `make` or `cmake --build .` commands.
 
 NOTE for getdist function in the python library:\
 To make it work, change the file  xxx/pythonxx/site-packages/getdist/plots.py

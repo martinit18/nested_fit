@@ -20,3 +20,6 @@ tests/*/nf_input.dat
 
 # Python cache files
 __pycache__/
+
+# Python build metadata
+nested_py/*.egg-info/

@@ -22,6 +22,11 @@ option(OPENMP "Enable/Disable OpenMP." OFF)
 option(OPENMPI "Enable/Disable OpenMPI." OFF)
 option(AUTOTESTS "Automatically run tests after compiling." OFF)
 option(LAPACK "Enable/Disable LAPACK." OFF)
+option(BUILD_NESTED_PY "Automatically build nested_res for PyPI." ON)
+
+if(OPENMPI AND WIN32)
+    message(FATAL_ERROR "Windows builds don't currently support OpenMPI.")
+endif()
 
 #####################################
 #####################################
@@ -156,6 +161,7 @@ set(CFG_FILES
 )
 
 # TODO(César): This assumes we are using gfortran!
+# TODO(César): Use generator expressions instead!
 if(DEBUG)
     message(STATUS "Configuring for Debug")
     set(SRC_FLAGS "-cpp -O0 -Wall -g -pg -ffree-line-length-0")
@@ -289,31 +295,37 @@ add_custom_target(copy_internal_functions ALL
     COMMAND_EXPAND_LISTS
 )
 
-# NOTE(César): Don't run these commands for the Windows build.
-if(WIN32)
-    # TODO(César): Create a automatic configuration for Windows as well
-    message(WARNING "Configuring for Windows. The executable and python library must be manually copied somewhere and added to the PATH.")
-    message(WARNING "--- Future fix ---")
-    message(WARNING "Windows builds do not support MPI.")
-else()
-    # Install would work well here but lets keep the same copy-after-build scheme of the original makefile
-    # TODO(César): Maybe use install later on
-    add_custom_command(TARGET ${nested_fit_target} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${nested_fit_target}> $ENV{HOME}/bin)
 
-    add_custom_command(TARGET ${nested_fit_target_func} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${nested_fit_target_func}> $ENV{HOME}/bin)
+if(BUILD_NESTED_PY)
+    find_package(Python COMPONENTS Interpreter QUIET)
+    set(nested_res_dist_dir ${CMAKE_BINARY_DIR}/nested_py)
+    if(Python_FOUND)
+        # Upgrade the PyPA's build
+        add_custom_command(TARGET ${nested_fit_target} POST_BUILD
+            COMMAND ${Python_EXECUTABLE} -m pip install --upgrade build
+        )
+        # Just build the package
+        add_custom_command(TARGET ${nested_fit_target} POST_BUILD
+            COMMAND ${Python_EXECUTABLE} -m build ${CMAKE_SOURCE_DIR}/nested_py/ --outdir ${nested_res_dist_dir}
+        )
 
-    # Since we do this for the nested fit executable, why not put the latest nested_res_* file in the bin
-    # At least while we don't have a custom python caller script
-    add_custom_command(TARGET ${nested_fit_target} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/${nested_res_name} $ENV{HOME}/bin)
+        # No need to build from wheel (we got the source)
+        install(CODE "execute_process(COMMAND ${Python_EXECUTABLE} -m pip install ${CMAKE_SOURCE_DIR}/nested_py/)")
 
-    if(OPENMPI)
-        # Do the same for the child process in case it was compiled
-        add_custom_command(TARGET ${nested_fit_mpi_child_comm_proc_name} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${nested_fit_mpi_child_comm_proc_name}> $ENV{HOME}/bin)
+        # Add a custom target for publishing python to the online PyPI index
+        # TODO
+    else()
+        message(WARNING "Python not found. nested_res will not be built/installed on the system.")
+        message(WARNING "If you wish to build, install python3 and re-run this command.")
     endif()
+endif()
+
+install(TARGETS ${nested_fit_target}      DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
+install(TARGETS ${nested_fit_target_func} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
+
+if(OPENMPI)
+    # Do the same for the child process in case it was compiled
+    install(TARGETS ${nested_fit_mpi_child_comm_proc_name} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
 endif()
 
 # enable_testing() Don't use CTest
