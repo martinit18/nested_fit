@@ -8,3 +8,4 @@ erfpeak(x, x_0, A_0, s, w)      = \frac{A_0}{4w}(\texttt{erf}(\frac{w + x - x_0}
 lorentzian(x, x_0, A_0, g)      = \frac{A_0 g}{\pi((x-x_0)^2+g^2)}
 lorentziannrm(x, x_0, A_0, g)   = \frac{A_0 g}{2\pi}\frac{1}{(x-x_0)^2 + g^2/4}
 voigt(x, x_0, A_0, s, g)        = \frac{A_0 \texttt{WofzRe}(\frac{x-x_0}{s\sqrt{2.0}}, \frac{g}{s\sqrt{2.0}})}{s\sqrt{2.0\pi}}
+laser(x, I_0, A_0, b)           = (A_0\frac{4}{3}\sqrt{x/I_0 - 1} - A_0\frac{4}{3}\arctan{\sqrt{x/I_0 - 1}} + A_0\frac{2}{9}\sqrt{x/I_0 - 1}^3)\texttt{heaviside}(x - I_0)
