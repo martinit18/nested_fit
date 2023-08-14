@@ -40,6 +40,9 @@ MODULE MOD_AUTOFUNC
         INTEGER(c_int) :: num_funcs
         TYPE(c_ptr)    :: func_argc
 
+        TYPE(c_ptr)    :: builtin_custom
+        INTEGER(c_int) :: num_builtin
+
         TYPE(c_ptr)    :: infixcode_f90
         INTEGER(c_int) :: error
     END TYPE ParseOutput_t
@@ -53,6 +56,9 @@ MODULE MOD_AUTOFUNC
         CHARACTER(64), DIMENSION(:), ALLOCATABLE :: functions
         INTEGER                                  :: num_funcs
         INTEGER, POINTER, DIMENSION(:)           :: func_argc
+
+        CHARACTER(64), DIMENSION(:), ALLOCATABLE :: builtin_custom
+        INTEGER                                  :: num_builtin
 
         CHARACTER(512)                           :: infixcode_f90
         INTEGER                                  :: error
@@ -202,9 +208,10 @@ MODULE MOD_AUTOFUNC
         INTEGER                         :: error
 
         ! Easy copying the 'simpler' datatypes
-        f_type%num_params = c_type%num_params
-        f_type%num_funcs  = c_type%num_funcs
-        f_type%error      = c_type%error
+        f_type%num_params  = c_type%num_params
+        f_type%num_funcs   = c_type%num_funcs
+        f_type%num_builtin = c_type%num_builtin
+        f_type%error       = c_type%error
 
         ! Function name
         CALL C_F_STRING(c_type%function_name, f_type%function_name)
@@ -229,6 +236,11 @@ MODULE MOD_AUTOFUNC
         CALL C_F_STRING(c_type%functions, tmp_string)
         ALLOCATE(f_type%functions(f_type%num_funcs))
         CALL STRING_SPLIT(tmp_string, f_type%functions, f_type%num_funcs)
+
+        ! Builtin names
+        CALL C_F_STRING(c_type%builtin_custom, tmp_string)
+        ALLOCATE(f_type%builtin_custom(f_type%num_builtin))
+        CALL STRING_SPLIT(tmp_string, f_type%builtin_custom, f_type%num_builtin)
     END SUBROUTINE
 
     FUNCTION PARSE_LATEX(expression) RESULT(parsed_data_f)
@@ -271,6 +283,7 @@ MODULE MOD_AUTOFUNC
         DEALLOCATE(parsed_data%parameter_names)
         DEALLOCATE(parsed_data%parameter_identifiers)
         DEALLOCATE(parsed_data%functions)
+        DEALLOCATE(parsed_data%builtin_custom)
     END SUBROUTINE
 
     SUBROUTINE ADD_ENTRY(arg)
@@ -455,6 +468,10 @@ MODULE MOD_AUTOFUNC
             WRITE(77,'(a)') char(9)//'real(c_double)      :: '//TRIM(funcname)
             WRITE(77,'(a)') char(9)
             WRITE(77,'(a)') char(9)//'real(8), parameter  :: pi = 3.141592653589793d0'
+            WRITE(77,'(a)') char(9)
+            DO i = 1, parse_data%num_builtin
+                WRITE(77,'(a)') char(9)//'real(c_double), external :: '//TRIM(parse_data%builtin_custom(i))
+            END DO
             WRITE(77,'(a)') char(9)
             DO i = 1, parse_data%num_funcs
                 WRITE(77,'(a)') char(9)//'real(c_double), external :: '//TRIM(parse_data%functions(i))
