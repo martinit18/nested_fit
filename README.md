@@ -127,8 +127,9 @@ The corresponding information gain and the Bayesian complexity are also provided
 - `nf_output_fit_ .dat`: Model function values with higher density sampling that the data (for plot purpose). In addition, different components of the model are given
 - `nf_output_tries.dat`: For each live points trial, it contains the final evidence, the number of iterations and the maximum value of the likelihood function.
 - `nf_output_points.txt`: contains all discarded and final live points values, their associated likelihood values and posterior probabilities. From them, the different parameter probability distributions can be built.
+- `nf_output_diag.dat`: contains likelihood values corresponding to the birth of the discarded and final live points, and the rank of the new live point once inserted in the enemble. These values are used for statistics of the evidence (with the help of Anesthetic library) and for diagnostics.
 For this purpose, the python function in `nested_res_ .py` can be used also for compressed `nf_output_points.txt` files (using gzip with the name `nf_output_points.txt.gz`).
-Together with this file, also the files `nf_output_points.paramnames` and `nf_output_points.ranges` are created for the use of GetDist python library.
+Together with this file, also the files `nf_output_points.paramnames` and `nf_output_points.ranges` are created for the use of GetDist and Anesthetic python libraries.
 
 **Details of the input file line by line**
 
@@ -138,7 +139,7 @@ A complete selection of input files example is given in the folder `examples` wh
 It follwos a complete description of `nf_input.dat` file.
 
 ```
-4.4                 # Program version
+4.5                 # Program version
 he-histo.dat        # Name of the (first) data file
 n                   # Set of files (y/n)
 1c                  # Type of data: error bars or not and dimensions (1c,1e,2c,2s,2e)
@@ -218,6 +219,9 @@ Additional information can be found in the reference articles.
 The present version is 4.5.2
 New features:
 - New modified Jeffreys likelihood for data
+- No limitation in number of steps 
+- Record of birth likelihood values and rank for diagnostics in `nf_output_diag.dat` file
+- Implementation of Anesthetic package for evaluation of evidence uncertainty with one run in python library
 
 
 Previous versions are:
@@ -248,7 +252,7 @@ Previous versions are:
  - 3.4 Introduction of benchmark tests with synthetic likelihood function via the module Mod_likelihood_tests,f90 (instead of Mod_likelihood.f90).
  Available tests: TEST_GAUSS (multidimensional Gaussian), TEST_GAUSSIAN_SHELLS (multidimensional Gaussian shells, worse case with available search and clustering methods),
  TEST_EGGBOX (eggbox style profile to test clustering), TEST_ROSENBROCK (Rosenbock function test for 2-n dimension).\
- Change of the outputs: nf_output_points.dat -> nf_output_points.txt, plus files nf_output_points.paramnames,  and nf_output_points.ranges to be compatible with GetDist Python package. New 'triangle plot' available now.
+ Change of the outputs: `nf_output_points.dat` -> `nf_output_points.txt`, plus files `nf_output_points.paramnames`,  and `nf_output_points.ranges` to be compatible with GetDist Python package. New 'triangle plot' available now.
  - 3.3 Modular version of likelihood function in preparation for handling more complex data (2D data, ...).
  - 3.2  This is the first version with free sharing code only.
     Pion mass function and laser interpolation taken out to avoid Numerical Recipes.\

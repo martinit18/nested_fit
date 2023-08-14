@@ -3,6 +3,8 @@ PROGRAM NESTED_FIT
   !
   ! Please read README and LICENSE files for more inforamtion
   ! 4.5  New modified Jeffreys likelihood for data
+  !      No limitation in number of steps
+  !      Record of birth likelihood values and rank for diagnostics
   ! 4.4  New "write_input" function in python library
   !      New fit functions
   !      External LAPACK library link option 
