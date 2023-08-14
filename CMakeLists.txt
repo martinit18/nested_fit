@@ -22,7 +22,7 @@ option(OPENMP "Enable/Disable OpenMP." OFF)
 option(OPENMPI "Enable/Disable OpenMPI." OFF)
 option(AUTOTESTS "Automatically run tests after compiling." OFF)
 option(LAPACK "Enable/Disable LAPACK." OFF)
-option(BUILD_NESTED_PY "Automatically build nested_res for PyPI." ON)
+option(BUILD_NESTED_PY "Automatically build nested_res for PyPI." OFF)
 
 if(OPENMPI AND WIN32)
     message(FATAL_ERROR "Windows builds don't currently support OpenMPI.")
@@ -83,6 +83,7 @@ set(SRC_FILES_COMM
 )
 
 set(SRC_EXTERNAL_FUNCS
+    src/Mod_interpolate.f90
     src/functions/internal_funcs.f90
     src/functions/WOFZ.f
 )
@@ -103,11 +104,6 @@ set(CHILD_SRC_FILES
     src/helper/mpi_status_process.f90
     src/Mod_mpi.f90
 )
-
-set(SRC_FILES_CXX
-    src/funceval/latex_parser.cpp
-)
-
 
 file(GLOB SRC_DIERCKX ${CMAKE_SOURCE_DIR}/src/DIERCKX/*.f)
 file(GLOB SRC_SLATEC  ${CMAKE_SOURCE_DIR}/src/SLATEC/*.f)
@@ -154,18 +150,32 @@ endif()
 string(LENGTH ${nested_fit_cache_folder} nested_fit_cache_folder_len)
 message(STATUS "Setting cache folder location: ${nested_fit_cache_folder}")
 
+# Create the internal functions imutable cache config
+set(Internal_CustomBuiltins "")
+file(READ src/functions/internal_funcs.f90 internal_funcs_data)
+string(REGEX MATCHALL "FUNCTION ([a-zA-Z0-9_]*)\\(" internal_funcs_declaration ${internal_funcs_data})
+foreach(i ${internal_funcs_declaration})
+    string(REGEX MATCH "FUNCTION ([a-zA-Z0-9_]*)\\(" dummy ${i})
+    list(APPEND Internal_CustomBuiltins ${CMAKE_MATCH_1})
+endforeach()
+configure_file(src/funceval/latex_parser.cpp latex_parser.cpp @ONLY)
+
 configure_file(src/Mod_metadata.f90.in Mod_metadata.f90)
 
 set(CFG_FILES
     ${CMAKE_CURRENT_BINARY_DIR}/Mod_metadata.f90
 )
 
+set(SRC_FILES_CXX
+    ${CMAKE_CURRENT_BINARY_DIR}/latex_parser.cpp
+)
+
 # TODO(César): This assumes we are using gfortran!
 # TODO(César): Use generator expressions instead!
 if(DEBUG)
     message(STATUS "Configuring for Debug")
-    set(SRC_FLAGS "-cpp -O0 -Wall -g -pg -ffree-line-length-0")
-    set(SRC_FLAGS_CXX "-O0 -Wall -pedantic -g -pg") # Be pedantic
+    set(SRC_FLAGS "-cpp -O0 -Wall -g -ffree-line-length-0")
+    set(SRC_FLAGS_CXX "-O0 -Wall -pedantic -g") # Be pedantic
 else()
     message(STATUS "Configuring for Release")
     set(SRC_FLAGS "-cpp -O2 -static -ffree-line-length-0")
@@ -284,17 +294,14 @@ add_custom_command(TARGET ${nested_fit_target}
     COMMAND ${CMAKE_COMMAND} -E make_directory ${nested_fit_cache_folder}
 )
 
-# Create the internal functions imutable cache config
-# TODO
-
 # Compile the object files of the internal functions the user will be able to natively use in their expressions
+set_source_files_properties(${SRC_EXTERNAL_FUNCS} PROPERTIES COMPILE_FLAGS "-fPIC")
 add_library(internal_functions OBJECT ${SRC_EXTERNAL_FUNCS})
 add_custom_target(copy_internal_functions ALL
     DEPENDS internal_functions
     COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_OBJECTS:internal_functions> ${nested_fit_cache_folder}
     COMMAND_EXPAND_LISTS
 )
-
 
 if(BUILD_NESTED_PY)
     find_package(Python COMPONENTS Interpreter QUIET)
