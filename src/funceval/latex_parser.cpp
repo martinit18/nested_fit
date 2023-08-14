@@ -30,6 +30,8 @@ extern "C" struct ParseOutput
     char* functions;             // The detected function calls in the expression
     int   num_funcs;             // The number of function calls
     int*  func_argc;             // The detected number of parameters for each called user function in 'functions'
+    char* builtin_custom;        // The detected custom built in functions (declared inside internal_funcs.f90)
+    int   num_builtin;           // The number of custom built in calls
     char* infixcode_f90;         // The latex code converted to f90 for compilation
     int   error;                 // The error code of the last error
 };
@@ -152,6 +154,20 @@ static std::vector<std::string> FindArg(
     return args;
 }
 
+static std::vector<std::string> FindStrings(const std::string& input)
+{
+    std::vector<std::string> strings;
+    std::smatch match;
+    std::string::const_iterator searchStart(input.cbegin());
+    while(std::regex_search(searchStart, input.cend(), match, std::regex("\".+?\"")))
+    {
+        strings.push_back(match[0]);
+        searchStart = match.suffix().first;
+    }
+
+    return strings;
+}
+
 static void ReplaceToken(const std::string& token, const std::string& replacement, std::string& input)
 {
     std::smatch match;
@@ -222,13 +238,19 @@ static std::string RemoveAll(const std::string& input, const std::string& kw)
     return output;
 }
 
-static std::string StripInput(const std::string& input, const std::vector<std::string>& keywords)
+static std::string StripInput(const std::string& input, const std::vector<std::string>& keywords, std::string extra_regex = std::string())
 {
     std::string output = input;
     
     for(const auto& kw : keywords)
     {
         output = RemoveAll(output, kw);
+    }
+
+    // Extra regex strip
+    if(!extra_regex.empty())
+    {
+        ReplaceToken(extra_regex, "", output);
     }
 
     return output;
@@ -255,6 +277,15 @@ static void AddMultiplicationSignsReduceVars(std::string& input, const std::vect
     for(const auto& f : builtin_funcs)
     {
         ReplaceToken(f, dummy_name_B + id++, input);
+    }
+
+    // Detect and replace strings before evaluating
+    std::vector<std::string> strings = FindStrings(input);
+    const std::string dummy_name_S("STRING");
+    id = 'A';
+    for(const auto& s : strings)
+    {
+        ReplaceToken(s, dummy_name_S + id++, input);
     }
 
     // Rule for closing braces
@@ -336,6 +367,15 @@ static void AddMultiplicationSignsReduceVars(std::string& input, const std::vect
         ReplaceToken(dummy_name_B + id++, by, input);
     }
 
+    const std::string dummy_name_S_Lower("string");
+    id = 'A';
+    for(const auto& s : strings)
+    {
+        (void)s;
+        std::string by = dummy_name_S_Lower + (char)std::tolower(id);
+        ReplaceToken(dummy_name_S + id++, by, input);
+    }
+
     // Rule for [A-Z] identifiers (these are tricky)
     InsertAfterToken("[A-Z]", "*", input, [](const std::ptrdiff_t& i, const std::string& input) -> bool {
         return input[i] != ')' &&
@@ -363,6 +403,13 @@ static void AddMultiplicationSignsReduceVars(std::string& input, const std::vect
     for(const auto& f : builtin_funcs)
     {
         ReplaceToken(dummy_name_B_Lower + id++, f, input);
+    }
+
+    // Put back the strings with their names
+    id = 'a';
+    for(const auto& s : strings)
+    {
+        ReplaceToken(dummy_name_S_Lower + id++, s, input);
     }
 }
 
@@ -448,7 +495,7 @@ static int ArgumentCount(const std::string& input)
     return argc;
 }
 
-static std::tuple<std::string, std::vector<std::string>, std::vector<std::string>, std::vector<int>> SimplifyInput(const std::string& input_stream, const std::vector<std::string>& declared_args, int* error)
+static std::tuple<std::string, std::vector<std::string>, std::vector<std::string>, std::vector<int>, std::vector<std::string>> SimplifyInput(const std::string& input_stream, const std::vector<std::string>& declared_args, int* error)
 {
     const std::string start_string(input_stream);
     std::string input(input_stream);
@@ -458,22 +505,28 @@ static std::tuple<std::string, std::vector<std::string>, std::vector<std::string
     (void)FindArgs("{}", "{}", "\\\\frac\\{", 6, input, [](const std::string& a1, const std::string& a2) { return "((" + a1 + ")/(" + a2 + "))"; });
 
     // Built-ins
+    // Internal functions (fortran native generic ones)
     const std::map<std::string, std::string> f90_builtins = {
-        // Internal functions (fortran native generic ones)
-        { "sqrt",  "SQRT"  },
-        { "exp",   "EXP"   },
-        { "log",   "LOG"   },
-        { "sin",   "SIN"   },
-        { "cos",   "COS"   },
-        { "tan",   "TAN"   },
-        { "Gamma", "GAMMA" },
-        { "abs",   "ABS"   },
-        { "erf",   "ERF"   },
-        { "sign",  "SIGN"  }
+        { "sqrt",   "SQRT"  },
 
-        // Internal functions (basically custom built-ins)
-        // { "WofzRe", "WofzRe" }
+        { "exp",    "EXP"   },
+        { "log",    "LOG"   },
+
+        { "sin",    "SIN"   },
+        { "cos",    "COS"   },
+        { "tan",    "TAN"   },
+        { "arcsin", "ASIN"  },
+        { "arccos", "ACOS"  },
+        { "arctan", "ATAN"  },
+        
+        { "Gamma",  "GAMMA" },
+        { "abs",    "ABS"   },
+        { "erf",    "ERF"   },
+        { "sign",   "SIGN"  }
     };
+
+    // Internal functions (basically custom built-ins) (values come from cmake)
+    const std::vector<std::string> custom_builtins = StringSplit("@Internal_CustomBuiltins@", ';');
 
     std::vector<std::string> built_ins;
     for(const auto& function : f90_builtins)
@@ -494,7 +547,7 @@ static std::tuple<std::string, std::vector<std::string>, std::vector<std::string
             const std::string builtin_name = f90_builtins.at(a1);
             built_ins.insert(built_ins.end(), 1, builtin_name);
 
-            // TODO : Use our own sign function instead
+            // TODO(César) : Use our own sign function instead
             if(builtin_name == "SIGN") // Special rule for the fortran "stupid" sign function
             {
                 built_ins.insert(built_ins.end(), 1, "REAL"); // Small workaround
@@ -503,10 +556,20 @@ static std::tuple<std::string, std::vector<std::string>, std::vector<std::string
 
             return builtin_name + "(" + a2 + ")";
         }
-        else return a1 + "(" + a2 + ")";
+
+        auto it = std::find(custom_builtins.begin(), custom_builtins.end(), a1);
+        if(it != custom_builtins.end())
+        {
+            const std::string builtin_name = *it;
+            built_ins.insert(built_ins.end(), 1, builtin_name);
+
+            return builtin_name + "(" + a2 + ")";
+        }
+        
+        return a1 + "(" + a2 + ")"; // NOTE(César) : This never runs
     },
     [=](const std::string& a1, const std::string& a2) { // Skip if this is not a built-in
-        if(f90_builtins.find(a1) != f90_builtins.end())
+        if(f90_builtins.find(a1) != f90_builtins.end() || std::find(custom_builtins.begin(), custom_builtins.end(), a1) != custom_builtins.end())
         {
             return true;
         }
@@ -528,9 +591,9 @@ static std::tuple<std::string, std::vector<std::string>, std::vector<std::string
     ReplaceToken("\\^", "**", input);
 
     std::vector<std::string> keywords;
-    for(const auto& b : f90_builtins)
+    for(const auto& b : built_ins)
     {
-        keywords.push_back(b.second);
+        keywords.push_back(b);
     }
     for(const auto& f : functions)
     {
@@ -545,7 +608,7 @@ static std::tuple<std::string, std::vector<std::string>, std::vector<std::string
     keywords.push_back("*");
     keywords.push_back("REAL"); // Small workaround
 
-    auto parameters = ExtractParameters(StripInput(input, keywords));
+    auto parameters = ExtractParameters(StripInput(input, keywords, "\".+?\""));
 
     // Remove spaces
     input = RemoveAll(input, " ");
@@ -604,7 +667,7 @@ static std::tuple<std::string, std::vector<std::string>, std::vector<std::string
         function_argcount.push_back(ArgumentCount(f.second));
     }
 
-    return std::make_tuple(input, parameters, function_names, function_argcount);
+    return std::make_tuple(input, parameters, function_names, function_argcount, custom_builtins);
 }
 
 static std::pair<std::string, std::string> SplitExpression(const std::string& input, int* error)
@@ -697,6 +760,7 @@ extern "C" ParseOutput ParseLatexToF90(const char* input_stream)
     const std::vector<std::string> parameters = std::get<1>(output);
     const std::vector<std::string> functions  = std::get<2>(output); // Includes duplicates
     const std::vector<int>         call_argc  = std::get<3>(output); // Includes duplicates
+    const std::vector<std::string> custom_bi  = std::get<4>(output);
 
     // Make sure there is no 'rogue' parameters
     for(const auto& p : header_out.second)
@@ -750,6 +814,13 @@ extern "C" ParseOutput ParseLatexToF90(const char* input_stream)
         strcat(return_val.parameter_identifiers, (p + " ").c_str());
     }
 
+    return_val.num_builtin = static_cast<int>(custom_bi.size());
+    return_val.builtin_custom = (char*)malloc(sizeof(char) * 4096);
+    for(size_t i = 0; i < custom_bi.size(); i++)
+    {
+        strcat(return_val.builtin_custom, (custom_bi[i] + " ").c_str());
+    }
+
     return return_val;
 }
 
@@ -761,8 +832,9 @@ extern "C" void FreeParseOutput(ParseOutput* output)
         if(output->parameter_names)       free(output->parameter_names);
         if(output->parameter_identifiers) free(output->parameter_identifiers);
         if(output->functions)             free(output->functions);
-        // if(output->constants)          free(output->constants);
         if(output->func_argc)             free(output->func_argc);
+        if(output->builtin_custom)        free(output->builtin_custom);
+        // if(output->constants)          free(output->constants);
         if(output->infixcode_f90)         free(output->infixcode_f90);
     }
 }
