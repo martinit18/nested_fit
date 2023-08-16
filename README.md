@@ -219,6 +219,7 @@ Additional information can be found in the reference articles.
 The present version is 4.5.2
 New features:
 - New modified Jeffreys likelihood for data
+- Number of calls recorded in the main output file
 - No limitation in number of steps 
 - Record of birth likelihood values and rank for diagnostics in `nf_output_diag.dat` file
 - Implementation of Anesthetic package for evaluation of evidence uncertainty with one run in python library

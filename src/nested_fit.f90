@@ -3,6 +3,7 @@ PROGRAM NESTED_FIT
   !
   ! Please read README and LICENSE files for more inforamtion
   ! 4.5  New modified Jeffreys likelihood for data
+  !      Number of calls recorded in the main output file
   !      No limitation in number of steps
   !      Record of birth likelihood values and rank for diagnostics
   ! 4.4  New "write_input" function in python library
