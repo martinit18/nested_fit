@@ -3,7 +3,6 @@ MODULE MOD_OPTIONS
   
     IMPLICIT NONE
     LOGICAL :: opt_compact_output = .FALSE.
-    CHARACTER(LEN=128) :: opt_input_file = 'nf_input.dat'
-    INTEGER :: opt_ntry = 0
+    CHARACTER(LEN=128) :: opt_input_file = 'nf_input.yaml'
     
 END MODULE MOD_OPTIONS
