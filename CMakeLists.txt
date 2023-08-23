@@ -79,6 +79,8 @@ set(SRC_FILES_COMM
 
     src/helper/hash.f90
     src/Mod_input_parse.f90
+
+    src/Mod_userfcn.f90
 )
 
 set(SRC_EXTERNAL_FUNCS
@@ -90,8 +92,6 @@ set(SRC_EXTERNAL_FUNCS
 
 set(SRC_FILES_DATA
     src/Mod_likelihood.f90
-
-    src/Mod_userfcn.f90
 
     src/USERFCN_2D.f90
     src/USERFCN_SET.f
@@ -307,16 +307,30 @@ if(BUILD_NESTED_PY)
     set(nested_res_dist_dir ${CMAKE_BINARY_DIR}/nested_py)
     if(Python_FOUND)
         # Upgrade the PyPA's build
-        add_custom_command(TARGET ${nested_fit_target} POST_BUILD
-            COMMAND ${Python_EXECUTABLE} -m pip install --upgrade build
+        install(CODE
+            "# add_custom_command(TARGET ${nested_fit_target} POST_BUILD
+            execute_process(
+                COMMAND ${Python_EXECUTABLE} -m pip install --upgrade build
+            )"
         )
+
         # Just build the package
-        add_custom_command(TARGET ${nested_fit_target} POST_BUILD
-            COMMAND ${Python_EXECUTABLE} -m build ${CMAKE_SOURCE_DIR}/nested_py/ --outdir ${nested_res_dist_dir}
+        install(CODE
+            "# add_custom_command(TARGET ${nested_fit_target} POST_BUILD
+            execute_process(
+                COMMAND ${Python_EXECUTABLE} -m build ${CMAKE_SOURCE_DIR}/nested_py/ --outdir ${nested_res_dist_dir}
+            )"
         )
 
         # No need to build from wheel (we got the source)
         install(CODE "execute_process(COMMAND ${Python_EXECUTABLE} -m pip install ${CMAKE_SOURCE_DIR}/nested_py/)")
+
+        # Make a custom target for python also, not requiring installation
+        add_custom_target(nested_py
+            ${Python_EXECUTABLE} -m pip install --upgrade build
+            COMMAND ${Python_EXECUTABLE} -m build ${CMAKE_SOURCE_DIR}/nested_py/ --outdir ${nested_res_dist_dir}
+            BYPRODUCTS *.whl
+        )
 
         # Add a custom target for publishing python to the online PyPI index
         # TODO(César)
