@@ -16,6 +16,7 @@ MODULE MOD_AUTOFUNC
     IMPLICIT NONE
     
     PUBLIC :: COMPILE_CACHE_FUNC, &
+        RECOMPILE_CACHE, &
         LOAD_DLL_PROC, &
         FREE_DLL, &
         INIT_AUTOFUNC, &
@@ -95,6 +96,15 @@ MODULE MOD_AUTOFUNC
             IMPLICIT NONE
             TYPE(ParseOutput_t), INTENT(INOUT)          :: parsedata
             CHARACTER(c_char), INTENT(IN), DIMENSION(*) :: cache_path
+        END SUBROUTINE
+
+        SUBROUTINE INIT_GLOBAL_SPLINE_MAP(capacity) BIND(c, name='INIT_GLOBAL_SPLINE_MAP')
+            IMPLICIT NONE
+            INTEGER, INTENT(IN) :: capacity
+        END SUBROUTINE
+    
+        SUBROUTINE FREE_GLOBAL_SPLINE_MAP() BIND(c, name='FREE_GLOBAL_SPLINE_MAP')
+            IMPLICIT NONE
         END SUBROUTINE
     END INTERFACE
 
@@ -493,7 +503,7 @@ MODULE MOD_AUTOFUNC
             WRITE(77,'(a)') 'end function '//TRIM(funcname)
         CLOSE(77)
 
-        CALL EXECUTE_COMMAND_LINE('gfortran -c -shared -fPIC '//TRIM(filename)//' -o '//TRIM(nf_cache_folder)//TRIM(funcname)//'.o', EXITSTAT=status)
+        CALL EXECUTE_COMMAND_LINE('gfortran -c -shared -O3 -w -fPIC '//TRIM(filename)//' -o '//TRIM(nf_cache_folder)//TRIM(funcname)//'.o', EXITSTAT=status)
         IF(status.NE.0) THEN
             WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
             WRITE(*,*) '       ERROR:           Failed to compile the function provided.'
@@ -501,6 +511,14 @@ MODULE MOD_AUTOFUNC
             WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
             STOP ! NOTE(César) : This works, before MPI init!!
         ENDIF
+        CALL RECOMPILE_CACHE()
+        CALL UPDATE_CACHE(TRIM(funcname), argc, original_data)
+        CALL WRITE_CACHE()
+    END SUBROUTINE
+
+    SUBROUTINE RECOMPILE_CACHE()
+        INTEGER :: status
+
         CALL EXECUTE_COMMAND_LINE('gcc -shared -fPIC '//TRIM(nf_cache_folder)//'*.o -o '//TRIM(dll_name), EXITSTAT=status)
         IF(status.NE.0) THEN
             WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
@@ -509,8 +527,6 @@ MODULE MOD_AUTOFUNC
             WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
             STOP ! NOTE(César) : This works, before MPI init!!
         ENDIF
-        CALL UPDATE_CACHE(TRIM(funcname), argc, original_data)
-        CALL WRITE_CACHE()
     END SUBROUTINE
 
     SUBROUTINE INIT_AUTOFUNC()
@@ -529,10 +545,23 @@ MODULE MOD_AUTOFUNC
         TYPE(c_funptr),   INTENT(OUT) :: procaddr
         TYPE(c_ptr),      INTENT(OUT) :: fileaddr
 
+        TYPE(c_funptr)                             :: init_gsm
+        PROCEDURE(INIT_GLOBAL_SPLINE_MAP), POINTER :: proc_init_gsm
+
         fileaddr = dlopen(TRIM(dll_name)//c_null_char, 1)
         IF(.NOT.c_associated(fileaddr)) THEN
             WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
             WRITE(*,*) '       ERROR:           Could not load dynamic function dll.'
+            WRITE(*,*) '       ERROR:           Aborting Execution...'
+            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            RETURN
+        ENDIF
+
+        init_gsm = dlsym(fileaddr, 'INIT_GLOBAL_SPLINE_MAP'//c_null_char)
+        IF(.NOT.c_associated(init_gsm)) THEN
+            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            WRITE(*,*) '       ERROR:           Could not load dynamic function (INIT_GLOBAL_SPLINE_MAP)'
+            WRITE(*,*) '       ERROR:           From dll ('//TRIM(dll_name)//').'
             WRITE(*,*) '       ERROR:           Aborting Execution...'
             WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
             RETURN
@@ -548,6 +577,10 @@ MODULE MOD_AUTOFUNC
             RETURN
         ENDIF
 
+        ! Initialize the SO global map with 32 buckets
+        CALL C_F_PROCPOINTER(init_gsm, proc_init_gsm)
+        CALL proc_init_gsm(32)
+
         RETURN
     END SUBROUTINE
 
@@ -556,7 +589,24 @@ MODULE MOD_AUTOFUNC
         TYPE(c_ptr), INTENT(IN) :: fileaddr
         INTEGER(c_int) :: status
 
+        TYPE(c_funptr)                             :: free_gsm
+        PROCEDURE(FREE_GLOBAL_SPLINE_MAP), POINTER :: proc_free_gsm
+
         CALL WRITE_CACHE()
+
+        free_gsm = dlsym(fileaddr, 'FREE_GLOBAL_SPLINE_MAP'//c_null_char)
+        IF(.NOT.c_associated(free_gsm)) THEN
+            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            WRITE(*,*) '       ERROR:           Could not load dynamic function (FREE_GLOBAL_SPLINE_MAP)'
+            WRITE(*,*) '       ERROR:           From dll ('//TRIM(dll_name)//').'
+            WRITE(*,*) '       ERROR:           Aborting Execution...'
+            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            RETURN
+        ENDIF
+
+        ! Free the SO global map
+        CALL C_F_PROCPOINTER(free_gsm, proc_free_gsm)
+        CALL proc_free_gsm()
         
         status = dlclose(fileaddr)
         IF(status.NE.0) THEN
