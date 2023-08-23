@@ -79,9 +79,14 @@ PROGRAM NESTED_FIT
   !      N. Chopin and C.P. Robert, Biometrika 97, 741-755 (2010)
   ! 0.1: Program developed from D.S. Sivia, "Data Analysis, a Bayesian tutorial" (2006) and Leo's program
 
-
+   ! Module with math parameter + some parsing stuff
+   USE MOD_MATH
    ! Module for automatic function parsing/compilation
    USE MOD_AUTOFUNC
+   ! Module with user functions routines and legacy calls
+   USE MOD_USERFCN
+   ! Module for input parsing (legacy and YAML)
+   USE MOD_INPUTPARSE
    ! Module for CLI lib
    USE MOD_ARGPARSE
    ! Module for optional variables
@@ -110,33 +115,33 @@ PROGRAM NESTED_FIT
   LOGICAL   :: file_exists
 
   ! Results from Nested sampling
-  INTEGER(4) :: nall=0
-  REAL(8) :: evsum_final=0., live_like_max=0.
+  INTEGER(4)                           :: nall=0
+  REAL(8)                              :: evsum_final=0., live_like_max=0.
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_final
-  REAL(8), ALLOCATABLE, DIMENSION(:) :: weight, live_like_final, live_max
+  REAL(8), ALLOCATABLE, DIMENSION(:)   :: weight, live_like_final, live_max
 
   ! Final results
-  REAL(8), ALLOCATABLE, DIMENSION(:) :: par_mean, par_sd
-  REAL(8), ALLOCATABLE, DIMENSION(:) :: par_median_w, par_m68_w, par_p68_w, par_m95_w
-  REAL(8), ALLOCATABLE, DIMENSION(:) :: par_p95_w, par_m99_w, par_p99_w
+  REAL(8), ALLOCATABLE, DIMENSION(:)   :: par_mean, par_sd
+  REAL(8), ALLOCATABLE, DIMENSION(:)   :: par_median_w, par_m68_w, par_p68_w, par_m95_w
+  REAL(8), ALLOCATABLE, DIMENSION(:)   :: par_p95_w, par_m99_w, par_p99_w
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: weight_par
-  REAL(8) :: mean_tmp=0., mean2_tmp=0., weight_tot=0., weight_int=0., weight_int_next=0.
-  REAL(8) :: evsum_err=0.
-  REAL(8) :: evsum_err_est=0.
-  REAL(8) :: live_like_mean=0., info=0., comp=0.
-  INTEGER(8) :: nexp=0
+  REAL(8)                              :: mean_tmp=0., mean2_tmp=0., weight_tot=0., weight_int=0., weight_int_next=0.
+  REAL(8)                              :: evsum_err=0.
+  REAL(8)                              :: evsum_err_est=0.
+  REAL(8)                              :: live_like_mean=0., info=0., comp=0.
+  INTEGER(8)                           :: nexp=0
 
   ! Parallelization variables for master mpi node
-  INTEGER(4) :: itry=1
-  INTEGER(4), DIMENSION(1) :: itrymax
-  INTEGER(4), ALLOCATABLE, DIMENSION(:) :: nall_try
-  REAL(8), ALLOCATABLE, DIMENSION(:) :: evsum_final_try, live_like_max_try
+  INTEGER(4)                             :: itry=1
+  INTEGER(4), DIMENSION(1)               :: itrymax
+  INTEGER(4), ALLOCATABLE, DIMENSION(:)  :: nall_try
+  REAL(8), ALLOCATABLE, DIMENSION(:)     :: evsum_final_try, live_like_max_try
   REAL(8), ALLOCATABLE, DIMENSION(:,:,:) :: live_final_try
-  REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_like_final_try, weight_try, live_max_try
+  REAL(8), ALLOCATABLE, DIMENSION(:,:)   :: live_like_final_try, weight_try, live_max_try
 
   ! Parallelization variables for each mpi instance
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_final_try_instance
-  REAL(8), ALLOCATABLE, DIMENSION(:) :: live_like_final_try_instance, weight_try_instance, live_max_try_instance
+  REAL(8), ALLOCATABLE, DIMENSION(:)   :: live_like_final_try_instance, weight_try_instance, live_max_try_instance
 
   ! OpenMPI stuff
   INTEGER(4) :: mpi_rank !, mpi_cluster_size, mpi_ierror
@@ -148,7 +153,18 @@ PROGRAM NESTED_FIT
   INTEGER(4) :: seed_array(33) = 1
 
   ! Function definitions
-  EXTERNAL :: NESTED_SAMPLING, SORTN, MEANVAR
+  EXTERNAL             :: NESTED_SAMPLING
+#ifndef FUNC_TARGET
+  INTEGER(4), EXTERNAL :: SELECT_USERFCN
+#endif
+  
+  ! Map for the config reading
+  TYPE(InputDataMap_t) :: input_config
+
+  ! Superfluous variables for backwards compatibility
+  ! TODO(César): Get rid of this
+  LOGICAL   :: input_error_bars=.FALSE.
+  CHARACTER :: input_dimensions='1'
 
   ! Init the autofunc module
   CALL INIT_AUTOFUNC()
@@ -164,17 +180,15 @@ PROGRAM NESTED_FIT
     "Overwrites the input filename. The input filename defaults to 'nf_input.dat'.",&
     B_INPUTFILE&
   ))
-
-  CALL ADD_ARGUMENT(argdef_t("n-try", "n", .TRUE.,&
-    "Overwrites the number of tries present in the input file.",&
-    B_NTRY&
-  ))
-
-  ! TODO(César) : Write to cache cli, Python plot cache func
-  ! TODO(César)
+   
   CALL ADD_ARGUMENT(argdef_t("cache-delete", "cd", .FALSE.,&
     "Deletes the user defined functions in the cache folder.",&
     B_DELCACHE&
+  ))
+
+  CALL ADD_ARGUMENT(argdef_t("cache-recompile", "cr", .FALSE.,&
+    "Recompiles all of the functions available in the cache.",&
+    B_RECUSRFUNC&
   ))
 
   CALL ADD_ARGUMENT(argdef_t("function-add", "fa", .TRUE.,&
@@ -238,9 +252,6 @@ PROGRAM NESTED_FIT
   !$ startt_omp = omp_get_wtime( )
 
   IF(mpi_rank.EQ.0) THEN
-      ! Print program version
-      WRITE(*,*) 'Current program version = ', version
-      
       ! Initialize values --------------------------------------------------------------------------------------------------------------
       filename = ' '
       funcname = ' '
@@ -258,79 +269,70 @@ PROGRAM NESTED_FIT
 #endif
          STOP
       ENDIF
-      OPEN (UNIT=77, FILE=TRIM(opt_input_file), STATUS='old')
-      READ(77,*) version_file, string
+
+      CALL PARSE_INPUT(TRIM(opt_input_file), input_config)
+
+      ! Check the version
+      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'version', version_file, MANDATORY=.TRUE.)
       IF(version.NE.version_file) THEN
-         WRITE(*,*) 'Program version not corresponding to the input type.'
-         WRITE(*,*) 'Please change your ', TRIM(opt_input_file), ' file.'
-#ifdef OPENMPI_ON
-         CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-         STOP
+         WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+         WRITE(*,*) '       ATTENTION:           Specified program version does not match the current one.'
+         WRITE(*,*) '       ATTENTION:           Specified = ', version_file
+         WRITE(*,*) '       ATTENTION:           Current   = ', version
+         WRITE(*,*) '       ATTENTION:           Some features could be deprecated, or not used.'
+         WRITE(*,*) '       ATTENTION:           Please upgrade the input file version.'
+         WRITE(*,*) '       ATTENTION:           Continuing with possible future errors...'
+         WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
       END IF
-      READ(77,*) filename(1), string
-      READ(77,*) set_yn, string
-      READ(77,*) data_type, string
-      READ(77,*) likelihood_funcname, string
-      READ(77,*) nlive, string
-      READ(77,*) conv_method, string
-      READ(77,*) evaccuracy, conv_par, string
-      READ(77,*) search_method, string
-      READ(77,*) search_par1, search_par2, maxtries, maxntries, string
-      READ(77,*) cluster_yn, cluster_method, cluster_par1, cluster_par2, string
-      READ(77,*) ntry, maxstep_try, string
-      READ(77,*) funcname, string
-      READ(77,*) lr, string
-      READ(77,*) npoint, nwidth, string
-      READ(77,*) xmin(1), xmax(1), ymin(1), ymax(1), string
-      READ(77,*) npar, string
-      READ(77,*) string
 
-      IF(opt_ntry.NE.0) THEN
-         ntry = opt_ntry
-      ENDIF
+      ! General configuration
+      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'datafile'  , filename(1)        , MANDATORY=.TRUE. )
+      CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'fileset'   , is_set             , MANDATORY=.FALSE.) !    False by default
+      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'dimensions', input_dimensions   , MANDATORY=.FALSE.) !        1 by default
+      CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'errorbars' , input_error_bars   , MANDATORY=.FALSE.) !    False by default
+      CALL POPULATE_DATATYPE         (input_dimensions, input_error_bars, data_type)                      ! TODO(César): Remove this
+      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'likelihood', likelihood_funcname, MANDATORY=.FALSE.) ! GAUSSIAN by default
 
-      !
-      ! Allocate space for parameters and initialize
-      ALLOCATE(live_max(npar),par_num(npar),par_name(npar),par_in(npar),par_step(npar), &
-         par_bnd1(npar),par_bnd2(npar),par_fix(npar), &
-         par_mean(npar),par_sd(npar), &
-         par_median_w(npar), &
-         par_m68_w(npar),par_p68_w(npar),par_m95_w(npar),par_p95_w(npar),par_m99_w(npar),par_p99_w(npar))
-      live_max = 0.
-      par_num = 0
-      par_name = ' '
-      par_in = 0.
-      par_step = 0.
-      par_bnd1 = 0.
-      par_bnd2 = 0.
-      par_fix = 0
-      par_mean = 0.
-      par_sd = 0.
-      par_median_w = 0.
-      par_m68_w = 0.
-      par_p68_w = 0.
-      par_m95_w = 0.
-      par_p95_w = 0.
-      par_m99_w = 0.
-      par_p99_w = 0.
+      ! Search configuration
+      CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.livepoints', nlive        , MANDATORY=.TRUE. )
+      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'search.method'    , search_method, MANDATORY=.TRUE. )
+      CALL FIELD_FROM_INPUT_REAL     (input_config, 'search.param1'    , search_par1  , MANDATORY=.TRUE. )
+      CALL FIELD_FROM_INPUT_REAL     (input_config, 'search.param2'    , search_par2  , MANDATORY=.TRUE. )
+      CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.max_tries' , maxtries     , MANDATORY=.TRUE. )
+      CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.tries_mult', maxntries    , MANDATORY=.TRUE. )
+      CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.num_tries' , ntry         , MANDATORY=.FALSE.) !      1 by default
+      CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.max_steps' , maxstep_try  , MANDATORY=.FALSE.) ! 100000 by default
 
-      DO i = 1, npar
-         READ(77,*,ERR=10,END=10) par_num(i),par_name(i),par_in(i),par_step(i),par_bnd1(i),par_bnd2(i),par_fix(i)
-         IF (par_bnd1(i).GE.par_bnd2(i)) THEN
-            WRITE(*,*) 'Bad limits in parameter n.', i, ' (low bound1 >= high bound!!!) Change it and restart'
-            WRITE(*,*) 'Low bound:',par_bnd1(i), 'High bound:', par_bnd2(i)
-#ifdef OPENMPI_ON
-            CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-            STOP
-         END IF
-      END DO
-      10 CONTINUE
-      CLOSE(77)
+      ! Convergence configuration
+      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'convergence.method'   , conv_method, MANDATORY=.TRUE.)
+      CALL FIELD_FROM_INPUT_REAL     (input_config, 'convergence.accuracy' , evaccuracy , MANDATORY=.TRUE.)
+      CALL FIELD_FROM_INPUT_REAL     (input_config, 'convergence.parameter', conv_par   , MANDATORY=.TRUE.)
+
+      ! Clustering configuration
+      CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'clustering.enabled'  , make_cluster  , MANDATORY=.FALSE.) ! False by default
+      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'clustering.method'   , cluster_method, MANDATORY=.FALSE.) !     f by default
+      CALL FIELD_FROM_INPUT_REAL     (input_config, 'clustering.distance' , cluster_par1  , MANDATORY=.FALSE.) !   0.4 by default
+      CALL FIELD_FROM_INPUT_REAL     (input_config, 'clustering.bandwidth', cluster_par2  , MANDATORY=.FALSE.) !   0.1 by default
+
+      ! Data configuration
+      ! TODO(César): Make this not mandatory and get bounds from data file
+      CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.xmin', xmin(1), MANDATORY=.TRUE. )
+      CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.xmax', xmax(1), MANDATORY=.TRUE. )
+      CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.ymin', ymin(1), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
+      CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.ymax', ymax(1), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
+
+      ! Legacy stuff required
+      ! TODO(César): Deprecate this
+      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'lr'    , lr    , MANDATORY=.FALSE.) ! r by default
+      CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'npoint', npoint, MANDATORY=.FALSE.) ! 0 by default
+      CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'nwidth', nwidth, MANDATORY=.FALSE.) ! 0 by default
+      
+      ! Function configuration
+      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'function.expression', funcname, MANDATORY=.TRUE.) ! LaTeX Expression or Legacy name
+      CALL CONFIGURE_USERFUNCTION()
 
       ! Read set of spectra file parameter
-      IF (set_yn.EQ.'y'.OR.set_yn.EQ.'Y') THEN
+      IF (is_set) THEN
          OPEN (UNIT=88, FILE='nf_input_set.dat', STATUS='old')
          READ(88,*,ERR=11,END=11) nset
          DO k = 2, nset
@@ -349,7 +351,7 @@ PROGRAM NESTED_FIT
   ! TODO(César): Refactor this to a function
 #ifdef OPENMPI_ON
       CALL MPI_Bcast(filename(1), 64, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(set_yn, 1, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(is_set, 1, MPI_LOGICAL, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(data_type, 3, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(likelihood_funcname, 64, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(nlive, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
@@ -361,7 +363,7 @@ PROGRAM NESTED_FIT
       CALL MPI_Bcast(search_par2, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(maxtries, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(maxntries, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(cluster_yn, 1, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(make_cluster, 1, MPI_LOGICAL, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(cluster_method, 1, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(cluster_par1, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(cluster_par2, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
@@ -409,12 +411,8 @@ PROGRAM NESTED_FIT
 
   ! Some tests and messages
   IF(mpi_rank.EQ.0) THEN
-      WRITE(*,*) 'Parameter file read'
-      WRITE(*,*) 'Filenames = ', filename(1:nset)
-      WRITE(*,*) 'Funcname = ', funcname
-
       ! Not implemented combination of inputs
-      IF (data_type(1:1).EQ.'2'.AND.set_yn.EQ.'y') THEN
+      IF (data_type(1:1).EQ.'2'.AND.is_set) THEN
          WRITE(*,*)
          WRITE(*,*) 'ERROR'
          WRITE(*,*) 'Set of 2D files not yet implemented. Change your input file.'
@@ -878,33 +876,188 @@ PROGRAM NESTED_FIT
 
   CALL CLEAN_AUTOFUNC()
 
-  !IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
-  !   DEALLOCATE(x,nc,enc)
-  !ELSE
-     !DEALLOCATE(x_set,nc_set)
-  !END IF
-
-
-!100 FORMAT (A,' ',E10.4e2,' ',E10.4e2,' ',E10.4e2,' ',E10.4e2)
   CONTAINS
 
-  SUBROUTINE TRY_PARSE_INT(input_str, output, error)
-   IMPLICIT NONE
-   CHARACTER(LEN=*)               :: input_str
-   INTEGER, INTENT(OUT)           :: output
-   LOGICAL, INTENT(OUT)           :: error
-   INTEGER                        :: idx
+  SUBROUTINE CONFIGURE_USERFUNCTION()
+   CHARACTER(512)                 :: definition, key
+   TYPE(ParseLatex_t)             :: parse_result
+   INTEGER                        :: i
+   LOGICAL                        :: fix_logical = .FALSE.
 
-   error = .FALSE.
-   DO idx = 1, LEN_TRIM(input_str)
-      IF((input_str(idx:idx).LT.'0').OR.(input_str(idx:idx).GT.'9')) THEN
-         error = .TRUE.
+   ! Check if the function is legacy or not
+   IF(.NOT.IS_LEGACY_USERFCN(TRIM(funcname))) THEN
+      ! Try to extract an expression
+      parse_result = PARSE_LATEX(TRIM(funcname))
+
+      IF(parse_result%error.EQ.0) THEN
+         definition = TRIM(funcname(INDEX(funcname, '=')+1:LEN_TRIM(funcname)))
+         CALL COMPILE_CACHE_FUNC(parse_result, definition)
+
+         npar = parse_result%num_params
+         
+         ! Allocate space for parameters and initialize
+         ALLOCATE(live_max(npar),par_num(npar),par_name(npar),par_in(npar),par_step(npar), &
+            par_bnd1(npar),par_bnd2(npar),par_fix(npar), &
+            par_mean(npar),par_sd(npar), &
+            par_median_w(npar), &
+            par_m68_w(npar),par_p68_w(npar),par_m95_w(npar),par_p95_w(npar),par_m99_w(npar),par_p99_w(npar))
+         live_max = 0.
+         par_num = 0
+         par_name = ' '
+         par_in = 0.
+         par_step = 0.
+         par_bnd1 = 0.
+         par_bnd2 = 0.
+         par_fix = 0
+         par_mean = 0.
+         par_sd = 0.
+         par_median_w = 0.
+         par_m68_w = 0.
+         par_p68_w = 0.
+         par_m95_w = 0.
+         par_p95_w = 0.
+         par_m99_w = 0.
+         par_p99_w = 0.
+
+         ! Handle the arguments from the input file
+         DO i=1, parse_result%num_params
+            key         = 'function.params.'//TRIM(parse_result%parameter_names(i))//'.'
+            par_num(i)  = i
+            par_name(i) = TRIM(parse_result%parameter_names(i))
+            CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'value', par_in(i)  , MANDATORY=.TRUE. )
+            CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'step' , par_step(i), MANDATORY=.FALSE.) !    -1 by default
+            CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'min'  , par_bnd1(i), MANDATORY=.TRUE. )
+            CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'max'  , par_bnd2(i), MANDATORY=.TRUE. )
+            CALL FIELD_FROM_INPUT_LOGICAL(input_config, TRIM(key)//'fixed', fix_logical, MANDATORY=.FALSE.) ! False by default
+            par_fix(i) = fix_logical ! Implicit conversion
+
+            IF (par_bnd1(i).GE.par_bnd2(i)) THEN
+               WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+               WRITE(*,*) '       ERROR:           Bad limits for parameter `', TRIM(parse_result%parameter_names(i)), '`.'
+               WRITE(*,*) '       ERROR:           min >= max.'
+               WRITE(*,*) '       ERROR:           Aborting Execution...'
+               WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+#ifdef OPENMPI_ON
+               CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+#endif
+               STOP
+            END IF
+         END DO
+
+      ELSE
+#ifdef OPENMPI_ON
+         CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+#endif
+         STOP
       ENDIF
-   END DO
-
-   IF(.NOT.error) THEN
-      READ(input_str,'(I10)') output
+      CALL PARSE_LATEX_DEALLOC(parse_result)
+   ELSE
+      ! Use the function as is (legacy mode)
+      ! Nothing to be done here (for now)
+      ! Continue as is
+      CONTINUE
    ENDIF
+  END SUBROUTINE
+
+  SUBROUTINE POPULATE_DATATYPE(dimensions, errorbars, output)
+   CHARACTER   , INTENT(IN)  :: dimensions
+   LOGICAL     , INTENT(IN)  :: errorbars
+   CHARACTER(3), INTENT(OUT) :: output
+
+   output(1:1) = dimensions
+   IF(errorbars) THEN
+      output(2:2) = 'e'
+   ELSE
+      output(2:2) = 'c'
+   ENDIF
+  END SUBROUTINE
+
+  SUBROUTINE FIELD_FROM_INPUT_REAL(config, field_name, field_value, mandatory)
+   TYPE(InputDataMap_t), INTENT(INOUT) :: config
+   CHARACTER(*)        , INTENT(IN)    :: field_name
+   REAL(8)             , INTENT(OUT)   :: field_value
+   LOGICAL             , INTENT(IN)    :: mandatory
+   
+   TYPE(InputDataGenericValue_t) :: generic_val
+   LOGICAL                       :: error
+
+   CALL config%find(field_name, generic_val, error)
+   IF(error.AND.mandatory) THEN
+      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      WRITE(*,*) '       ERROR:           Input config for parameter `', TRIM(field_name), '` was not found and is mandatory.'
+      WRITE(*,*) '       ERROR:           Aborting Execution...'
+      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      STOP
+   ELSEIF(error) THEN
+      RETURN ! Just ignore the value without warning or errors (for now)
+   ENDIF
+   field_value = generic_val%toReal()
+  END SUBROUTINE
+
+  SUBROUTINE FIELD_FROM_INPUT_INTEGER(config, field_name, field_value, mandatory)
+   TYPE(InputDataMap_t), INTENT(INOUT) :: config
+   CHARACTER(*)        , INTENT(IN)    :: field_name
+   INTEGER             , INTENT(OUT)   :: field_value
+   LOGICAL             , INTENT(IN)    :: mandatory
+   
+   TYPE(InputDataGenericValue_t) :: generic_val
+   LOGICAL                       :: error
+
+   CALL config%find(field_name, generic_val, error)
+   IF(error.AND.mandatory) THEN
+      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      WRITE(*,*) '       ERROR:           Input config for parameter `', TRIM(field_name), '` was not found and is mandatory.'
+      WRITE(*,*) '       ERROR:           Aborting Execution...'
+      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      STOP
+   ELSEIF(error) THEN
+      RETURN ! Just ignore the value without warning or errors (for now)
+   ENDIF
+   field_value = generic_val%toInteger()
+  END SUBROUTINE
+
+  SUBROUTINE FIELD_FROM_INPUT_CHARACTER(config, field_name, field_value, mandatory)
+   TYPE(InputDataMap_t), INTENT(INOUT) :: config
+   CHARACTER(*)        , INTENT(IN)    :: field_name
+   CHARACTER(*)        , INTENT(OUT)   :: field_value
+   LOGICAL             , INTENT(IN)    :: mandatory
+   
+   TYPE(InputDataGenericValue_t) :: generic_val
+   LOGICAL                       :: error
+
+   CALL config%find(field_name, generic_val, error)
+   IF(error.AND.mandatory) THEN
+      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      WRITE(*,*) '       ERROR:           Input config for parameter `', TRIM(field_name), '` was not found and is mandatory.'
+      WRITE(*,*) '       ERROR:           Aborting Execution...'
+      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      STOP
+   ELSEIF(error) THEN
+      RETURN ! Just ignore the value without warning or errors (for now)
+   ENDIF
+   field_value = generic_val%toCharacter()
+  END SUBROUTINE
+
+  SUBROUTINE FIELD_FROM_INPUT_LOGICAL(config, field_name, field_value, mandatory)
+   TYPE(InputDataMap_t), INTENT(INOUT) :: config
+   CHARACTER(*)        , INTENT(IN)    :: field_name
+   LOGICAL             , INTENT(OUT)   :: field_value
+   LOGICAL             , INTENT(IN)    :: mandatory
+   
+   TYPE(InputDataGenericValue_t) :: generic_val
+   LOGICAL                       :: error
+
+   CALL config%find(field_name, generic_val, error)
+   IF(error.AND.mandatory) THEN
+      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      WRITE(*,*) '       ERROR:           Input config for parameter `', TRIM(field_name), '` was not found and is mandatory.'
+      WRITE(*,*) '       ERROR:           Aborting Execution...'
+      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      STOP
+   ELSEIF(error) THEN
+      RETURN ! Just ignore the value without warning or errors (for now)
+   ENDIF
+   field_value = generic_val%toLogical()
   END SUBROUTINE
 
   SUBROUTINE B_COMPACT(this, invalue)
@@ -917,22 +1070,6 @@ PROGRAM NESTED_FIT
    CLASS(argdef_t), INTENT(IN) :: this
    CHARACTER(LEN=512), INTENT(IN) :: invalue
    opt_input_file = TRIM(invalue)
-  END SUBROUTINE
-
-  SUBROUTINE B_NTRY(this, invalue)
-   CLASS(argdef_t), INTENT(IN) :: this
-   CHARACTER(LEN=512), INTENT(IN) :: invalue
-   LOGICAL :: error
-
-   CALL TRY_PARSE_INT(TRIM(invalue), opt_ntry, error)
-
-   IF(error) THEN
-      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-      WRITE(*,*) '       ATTENTION: Argument --', TRIM(this%long_name), ' specified but its argument was not an integer : ', TRIM(invalue)
-      WRITE(*,*) '       ATTENTION: Defaulting to the input file specified value.'
-      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-   ENDIF
-
   END SUBROUTINE
 
   SUBROUTINE DEL_FOLDER_RECURSIVE(where)
@@ -998,7 +1135,7 @@ PROGRAM NESTED_FIT
    LOGICAL                        :: loaded_ok
 
 
-   REAL(8)              :: x
+   REAL(8)              :: x, y
    INTEGER              :: nargs
    REAL(8), ALLOCATABLE :: args(:)
    INTEGER              :: i, i0, i1
@@ -1044,7 +1181,9 @@ PROGRAM NESTED_FIT
       STOP
    ENDIF
 
-   WRITE(*,*) TRIM(ADJUSTL(function_name)), '(', TRIM(parameters), ') =', fptr(x, nargs, args)
+   y = fptr(x, nargs, args)
+
+   WRITE(*,*) TRIM(ADJUSTL(function_name)), '(', TRIM(parameters), ') =', y
 
    IF(nargs.GT.0) THEN
       DEALLOCATE(args)
@@ -1111,6 +1250,18 @@ PROGRAM NESTED_FIT
    CALL WRITE_REPEAT_CHAR('-', s)
    WRITE(*, '(a)', advance='no') NEW_LINE('A')
 
+
+   STOP
+  END SUBROUTINE
+
+  SUBROUTINE B_RECUSRFUNC(this, invalue)
+   CLASS(argdef_t), INTENT(IN)    :: this
+   CHARACTER(LEN=512), INTENT(IN) :: invalue
+
+   WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+   WRITE(*,*) '       ATTENTION: Recompiling cache...'
+   WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+   CALL RECOMPILE_CACHE()
 
    STOP
   END SUBROUTINE
