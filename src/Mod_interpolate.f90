@@ -18,14 +18,14 @@ MODULE MOD_INTERPOLATE
     END TYPE SplineData_t
 
     TYPE :: SplineMapPair_t
-        CHARACTER(128)                 :: key
+        CHARACTER(128)                 :: key   = ''
         TYPE(SplineData_t)             :: value
-        TYPE(SplineMapPair_t), POINTER :: next => null()
+        TYPE(SplineMapPair_t), POINTER :: next  => null()
         LOGICAL                        :: valid = .FALSE.
     END TYPE SplineMapPair_t
 
     TYPE :: SplineMap_t
-        PRIVATE
+        ! PRIVATE
         TYPE(SplineMapPair_t), ALLOCATABLE :: pairs(:)
         INTEGER                            :: capacity = 0
         INTEGER                            :: length   = 0
@@ -37,7 +37,7 @@ MODULE MOD_INTERPOLATE
         PROCEDURE, PUBLIC :: insert => SPLINE_MAP_INSERT
     END TYPE SplineMap_t
 
-    TYPE(SplineMap_t) :: GlobalSplineMap
+    TYPE(SplineMap_t), TARGET :: GlobalSplineMap
 
     CONTAINS
 
@@ -49,38 +49,45 @@ MODULE MOD_INTERPOLATE
 
         CALL SPLEV(spline_data%t, spline_data%n, spline_data%c, spline_data%k, x, y, 1, spline_data%e, ierr)
         IF(ierr.GT.0) THEN
-            ! TODO(César) : Error handling
+            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            WRITE(*,*) '       ERROR:           Spline evaluation failed this iteration.'
+            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
         ENDIF
     END SUBROUTINE
 
     SUBROUTINE INTERPOLATE_FROM_FILE(interpolator_file, output, s)
-        CHARACTER(128)    , INTENT(IN)  :: interpolator_file
+        CHARACTER(*)      , INTENT(IN)  :: interpolator_file
         TYPE(SplineData_t), INTENT(OUT) :: output
         REAL(8)           , INTENT(IN)  :: s
-
-        INTEGER, PARAMETER :: interpmax = 10000000 ! Absolute maximum number of points for interpolation
+        
         INTEGER, PARAMETER :: iopt      = 0        ! Using a smooth spline (automatically calculated)
-        INTEGER, PARAMETER :: lwrk      = 2000000  ! Size of the working space array
         INTEGER, PARAMETER :: k         = 3        ! B-spline type (cubic)
+
+        INTEGER            :: lwrk      = 0        ! Size of the working space array
         INTEGER            :: nest      = 0        ! Max storage for knots (theoretically should be much higher)
         REAL(8)            :: sum       = 0.       ! Total sum of the points (y-wise)
         LOGICAL            :: file_ok              ! Interpolator function file exists
 
         ! Input/Output variables
-        REAL(8)   , ALLOCATABLE         :: x(:), y(:), w(:)
-        REAL(8)   , ALLOCATABLE, TARGET :: t(:), c(:)
-        REAL(8)   , ALLOCATABLE         :: wrk(:)
-        INTEGER(4), ALLOCATABLE         :: iwrk(:)
-        INTEGER(4)                      :: m, i, n, r
-        INTEGER(4)                      :: ierr
-
-        WRITE(*,*) ' '
-        WRITE(*,*) '##### Initialization interpolation ######'
-        WRITE(*,*) TRIM(interpolator_file)
+        REAL(8), ALLOCATABLE         :: x(:), y(:), w(:)
+        REAL(8), ALLOCATABLE, TARGET :: t(:), c(:)
+        REAL(8), ALLOCATABLE         :: wrk(:)
+        INTEGER, ALLOCATABLE         :: iwrk(:)
+        INTEGER                      :: m, i, n
+        REAL(8)                      :: r
+        INTEGER                      :: ierr
         
         INQUIRE(FILE=TRIM(interpolator_file), EXIST=file_ok)
         IF(.NOT.file_ok) THEN
-            ! TODO(César) : Error handling
+            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            WRITE(*,*) '       ERROR:           The specified interpolation file (', TRIM(interpolator_file), ') was not found.'
+            WRITE(*,*) '       ERROR:           Aborting Execution...'
+            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            ! TODO(César) : How do we handle this if we are inside an OpenMPI context???
+! #ifdef OPENMPI_ON
+!             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+! #endif
+            STOP
         ENDIF
 
         ! Figure out the file size (i.e. the number of points)
@@ -93,14 +100,29 @@ MODULE MOD_INTERPOLATE
         END DO
         10 CLOSE(1)
 
-        IF(m.LT.3) THEN
-            ! TODO(César) : Error handling
+        IF(m.LE.k) THEN
+            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            WRITE(*,*) '       ERROR:           The specified interpolation file (', TRIM(interpolator_file), ') needs at least', k, 'points.'
+            WRITE(*,*) '       ERROR:           Aborting Execution...'
+            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            ! TODO(César) : How do we handle this if we are inside an OpenMPI context???
+! #ifdef OPENMPI_ON
+!             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+! #endif
+            STOP
         ENDIF
 
+        r    = 0
         nest = m+k+1
-        ALLOCATE(wrk((m*(k+1)+nest*(7+3*k))*2), iwrk(nest))
+        n = m - 1
+        lwrk = (m*(k+1)+nest*(7+3*k))*2
+        WRITE(*,*) nest, lwrk, n
+        ALLOCATE(wrk(lwrk), iwrk(nest))
         ALLOCATE(x(m), y(m), w(m))
         ALLOCATE(t(nest), c(nest))
+
+        t = 0.
+        c = 0.
 
         OPEN(1, file=TRIM(interpolator_file), status='old')
         DO i=1, m
@@ -112,17 +134,33 @@ MODULE MOD_INTERPOLATE
         ! Normalize function and calculate the weights
         DO i=1, m
             IF (y(i).GT.0) THEN
-                w(i) = 1/(DSQRT(y(i)))
+                w(i) = 1/(DSQRT(y(i))) ! NOTE(César) : This assumes the spline data are a countlike simulation/set
             ELSE
-                ! TODO(César) : Error handling
-                WRITE(*,*) 'Change your simulation file. All data must be positive.'
+                WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+                WRITE(*,*) '       ERROR:           The specified interpolation file (', TRIM(interpolator_file), ') requires positive y data.'
+                WRITE(*,*) '       ERROR:           Aborting Execution...'
+                WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+                ! TODO(César) : How do we handle this if we are inside an OpenMPI context???
+    ! #ifdef OPENMPI_ON
+    !             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+    ! #endif
+                STOP
             ENDIF
         ENDDO
         
         CALL CURFIT(iopt, m, x, y, w, x(1), x(m), k, s, nest, n, t, c, r, wrk, lwrk, iwrk, ierr)
 
         IF(ierr.GT.0) THEN
-            ! TODO(César) : Error handling
+            WRITE(*,*)           '------------------------------------------------------------------------------------------------------------------'
+            WRITE(*,*)           '       ERROR:           Failed to calculate b-spline coefficients and/or knots.'
+            WRITE(*,'(a,I2,a)') '        ERROR:           (ierr=', ierr, ')'
+            WRITE(*,*)           '       ERROR:           Aborting Execution...'
+            WRITE(*,*)           '------------------------------------------------------------------------------------------------------------------'
+            ! TODO(César) : How do we handle this if we are inside an OpenMPI context???
+! #ifdef OPENMPI_ON
+!             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+! #endif
+            STOP
         ENDIF
 
         output = SplineData_t(t, c, n, k, 1)
@@ -131,9 +169,22 @@ MODULE MOD_INTERPOLATE
         DEALLOCATE(x, y, w)
     END SUBROUTINE
 
+    SUBROUTINE INIT_GLOBAL_SPLINE_MAP(capacity) BIND(c, name='INIT_GLOBAL_SPLINE_MAP')
+        USE, INTRINSIC :: ISO_C_BINDING ! shut the compiler up -> We just need the name='...' here
+        INTEGER(c_int), INTENT(IN) :: capacity
+
+        CALL GlobalSplineMap%init(capacity)
+    END SUBROUTINE
+
+    SUBROUTINE FREE_GLOBAL_SPLINE_MAP() BIND(c, name='FREE_GLOBAL_SPLINE_MAP')
+        CALL GlobalSplineMap%free()
+    END SUBROUTINE
+
     SUBROUTINE SPLINE_MAP_INIT(map, cap)
         CLASS(SplineMap_t), INTENT(OUT) :: map
         INTEGER,            INTENT(IN)  :: cap
+
+        IF(map%capacity.NE.0) RETURN
 
         map%capacity = cap
         map%length = 0
@@ -165,83 +216,20 @@ MODULE MOD_INTERPOLATE
         ENDIF
     END SUBROUTINE
 
-    FUNCTION ASCII_SUM(input, len)
-        INTEGER  , INTENT(IN)  :: len
-        CHARACTER, INTENT(IN)  :: input(len)
-        INTEGER                :: ASCII_SUM, i
-
-        ASCII_SUM = 0
-        DO i = 1, len
-            ASCII_SUM = ASCII_SUM + ICHAR(input(i))
-        END DO
-
-        RETURN
-    END FUNCTION
-
-    SUBROUTINE MURMURHASH2_32(input, len, output)
-        INTEGER   , INTENT(IN)  :: len
-        CHARACTER , INTENT(IN)  :: input(len)
-        INTEGER(4), INTENT(OUT) :: output
-        
-        INTEGER(4), PARAMETER :: m = '5bd1e995'X
-        INTEGER(4), PARAMETER :: r = 24
-        INTEGER(4)            :: h, k, l, i
-
-
-        ! Use ascii char sum as a seed
-        h = XOR(ASCII_SUM(input, len), len)
-
-        l = len
-        i = 1
-        
-        DO WHILE(l.GE.4)
-            k = TRANSFER(input(i:i+3), i)
-
-            k = k * m
-            k = XOR(k, SHIFTR(k, r))
-            k = k * m
-
-            h = h * m
-            h = XOR(h, k)
-
-            i = i + 4
-            l = l - 4
-        END DO
-
-        ! Handle the rest
-        IF(l.EQ.3) THEN
-            h = XOR(h, SHIFTL(ICHAR(input(3)), 16))
-        ENDIF
-        
-        IF(l.GE.2) THEN
-            h = XOR(h, SHIFTL(ICHAR(input(2)), 8))
-        ENDIF
-        
-        IF(l.GE.1) THEN
-            h = XOR(h, ICHAR(input(1)))
-            h = h * m
-        ENDIF
-
-        h = XOR(h, SHIFTR(h, 13))
-        h = h * m
-        h = XOR(h, SHIFTR(h, 15))
-
-        output = h
-    END SUBROUTINE
-
     SUBROUTINE SPLINE_MAP_FIND(map, key, output, error)
-        CLASS(SplineMap_t), INTENT(IN)  :: map
-        CHARACTER(128),     INTENT(IN)  :: key
-        TYPE(SplineData_t), INTENT(OUT) :: output
-        LOGICAL, INTENT(OUT)            :: error
-        TYPE(SplineMapPair_t)           :: pair
-        INTEGER                         :: hash
-        INTEGER                         :: index
+        USE iso_fortran_env
+        CLASS(SplineMap_t), INTENT(IN), TARGET  :: map
+        CHARACTER(*)      , INTENT(IN)          :: key
+        TYPE(SplineData_t), INTENT(OUT)         :: output
+        LOGICAL, INTENT(OUT)                    :: error
+        TYPE(SplineMapPair_t), POINTER          :: pair
+        INTEGER                                 :: hash
+        INTEGER                                 :: index
 
         CALL MURMURHASH2_32(key, LEN_TRIM(key), hash)
 
         index = MODULO(hash, map%capacity)
-        pair  = map%pairs(index)
+        pair  => map%pairs(index)
 
         IF(.NOT.pair%valid) THEN
             error = .TRUE.
@@ -264,17 +252,17 @@ MODULE MOD_INTERPOLATE
     END SUBROUTINE
 
     SUBROUTINE SPLINE_MAP_INSERT(map, key, input)
-        CLASS(SplineMap_t), INTENT(INOUT) :: map
-        CHARACTER(128),     INTENT(IN)    :: key
-        TYPE(SplineData_t), INTENT(IN)    :: input
-        TYPE(SplineMapPair_t), POINTER    :: pair
-        INTEGER                           :: hash
-        INTEGER                           :: index
+        CLASS(SplineMap_t), INTENT(INOUT), TARGET :: map
+        CHARACTER(*)      , INTENT(IN)            :: key
+        TYPE(SplineData_t), INTENT(IN)            :: input
+        TYPE(SplineMapPair_t), POINTER            :: pair
+        INTEGER                                   :: hash
+        INTEGER                                   :: index
 
         CALL MURMURHASH2_32(key, LEN_TRIM(key), hash)
 
         index = MODULO(hash, map%capacity)
-        pair  = map%pairs(index)
+        pair  => map%pairs(index)
 
         ! Insert new (without collision)
         IF(.NOT.pair%valid) THEN
