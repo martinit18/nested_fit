@@ -5,6 +5,12 @@ MODULE MOD_LIKELIHOOD
   ! Module for the input parameter definition
   USE MOD_PARAMETERS
 
+  ! Module for the user functions
+  USE MOD_USERFCN
+
+  ! Math module
+  USE MOD_MATH
+
 #ifdef OPENMPI_ON
    USE MPI
 #endif
@@ -189,7 +195,6 @@ CONTAINS
     !
     INTEGER(4) :: i=0, nd=0
     REAL(8), DIMENSION(maxdata) :: x_raw=0, nc_raw=0
-    REAL(8) :: DLOG_FAC
 
     ! Initialize
     x_tmp = 0.
@@ -294,7 +299,6 @@ CONTAINS
     REAL(8), INTENT(IN) :: minx, maxx, miny, maxy
     INTEGER(4), INTENT(OUT) :: datan
     !
-    REAL(8) :: DLOG_FAC
     INTEGER(4) :: i, j, sx, sy, imin, imax, jmin, jmax
     REAL(8), ALLOCATABLE, DIMENSION(:,:) :: adata_tmp
     CHARACTER :: string*128
@@ -407,14 +411,14 @@ CONTAINS
     END IF
 
     ! Is this a set ?
-    IF(set_yn.EQ.'y'.OR.set_yn.EQ.'Y') THEN
+    IF(is_set) THEN
        dataid = IOR(dataid, DATA_IS_SET)
     END IF
 
     ! Init the funcid for function names
     IF(.NOT.BIT_CHECK_IF(DATA_IS_SET)) THEN
        IF(BIT_CHECK_IF(DATA_IS_1D)) THEN
-          funcid = SELECT_USERFCN(funcname)
+          CALL SET_USERFUNC_PROCPTR(funcname)
        ELSE
           funcid = SELECT_USERFCN_2D(funcname)
        END IF
@@ -487,7 +491,7 @@ CONTAINS
     !
     REAL(8) :: enc
     INTEGER(4) :: i, j, k
-    REAL(8) :: USERFCN, USERFCN_SET, USERFCN_2D, xx, yy
+    REAL(8) :: USERFCN_SET, USERFCN_2D, xx, yy
 
     ncall=ncall+1
     IF (BIT_CHECK_IF(DATA_IS_C).AND.BIT_CHECK_IF(DATA_IS_1D)) THEN
@@ -496,7 +500,7 @@ CONTAINS
           DO i=1, ndata_set(k)
              ! Poisson distribution calculation --------------------------------------------------
              IF (.NOT.BIT_CHECK_IF(DATA_IS_SET)) THEN
-                enc = USERFCN(x(i,k),npar,par,funcid)
+                enc = USERFCN(x(i,k),npar,par)
              ELSE
                 enc = USERFCN_SET(x(i,k),npar,par,funcid,k)
              END IF
@@ -543,7 +547,7 @@ CONTAINS
     
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
     !
-    REAL(8) :: USERFCN, USERFCN_SET
+    REAL(8) :: USERFCN_SET
     REAL(8) :: ll_tmp, rk, rk2
     REAL(8), DIMENSION(ndata, nset) :: enc
     INTEGER(4) :: i, k
@@ -559,7 +563,7 @@ CONTAINS
           ! Poisson distribution calculation --------------------------------------------------
           ! Calculate the function (not SIMD optimisable)
           DO i=1, ndata_set(k)
-             enc(i, k) = USERFCN(x(i, k),npar,par,funcid)
+             enc(i, k) = USERFCN(x(i, k),npar,par)
           END DO
           ! Calculate the likelihood
           !$OMP SIMD REDUCTION(+:ll_tmp)
@@ -572,7 +576,7 @@ CONTAINS
              ! Normal (Gaussian) distribution calculation --------------------------------------
              ! Calculate the function (not SIMD optimisable)
              DO i=1, ndata_set(k)
-                enc(i,k) = USERFCN(x(i,k),npar,par,funcid)
+                enc(i,k) = USERFCN(x(i,k),npar,par)
              END DO
              ! Calculate the likelihood
              !$OMP SIMD REDUCTION(+:ll_tmp)
@@ -582,7 +586,7 @@ CONTAINS
              !$OMP END SIMD
           CASE (1) !-- Modified Jeffreys likelihood 
              DO i=1, ndata_set(k)
-                enc(i,k) = USERFCN(x(i,k),npar,par,funcid)
+                enc(i,k) = USERFCN(x(i,k),npar,par)
              END DO
              ! Calculate the likelihood
              !$OMP SIMD REDUCTION(+:ll_tmp)
@@ -702,7 +706,7 @@ CONTAINS
     REAL(8), DIMENSION(npar), INTENT(IN) :: live_max, par_mean, par_median_w
     !
     INTEGER(8), PARAMETER :: maxfit = 10000
-    REAL(8) :: USERFCN, USERFCN_SET
+    REAL(8) :: USERFCN_SET
     REAL(8) :: minx=0., maxx=0., xfit=0., dx=0., enc = 0.
     INTEGER(4) :: i=0, k=0
     ! Stuff to save separate components
@@ -715,14 +719,14 @@ CONTAINS
     !-----------------------Calculate the expected function values -------------------------
 
     ! Calculate the expected function value and residual for max likelihood
-    IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
+    IF (.NOT.is_set) THEN
        k=1
        enc = 0.
        ! max likelihood values -------------------------------------------------------------
        OPEN (UNIT=20, FILE='nf_output_data_max.dat', STATUS='unknown')
        WRITE(20,*)'# x    y data    y theory      y diff    y err'
        DO i=1, ndata
-          enc = USERFCN(x(i,k),npar,live_max,funcid)
+          enc = USERFCN(x(i,k),npar,live_max)
           IF (data_type.EQ.'1e') THEN
              WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)
           ELSE IF (data_type.EQ.'1c') THEN
@@ -734,7 +738,7 @@ CONTAINS
        OPEN (UNIT=20, FILE='nf_output_data_mean.dat', STATUS='unknown')
        WRITE(20,*)'# x    y data    y theory      y diff    y err'
        DO i=1, ndata
-          enc = USERFCN(x(i,k),npar,par_mean,funcid)
+          enc = USERFCN(x(i,k),npar,par_mean)
           IF (data_type.EQ.'1e') THEN
              WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)
           ELSE IF (data_type.EQ.'1c') THEN
@@ -746,7 +750,7 @@ CONTAINS
        OPEN (UNIT=20, FILE='nf_output_data_median.dat', STATUS='unknown')
        WRITE(20,*)'# x    y data    y theory      y diff    y err'
        DO i=1, ndata
-          enc = USERFCN(x(i,k),npar,par_median_w,funcid)
+          enc = USERFCN(x(i,k),npar,par_median_w)
           IF (data_type.EQ.'1e') THEN
              WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)
           ELSE IF (data_type.EQ.'1c') THEN
@@ -803,7 +807,7 @@ CONTAINS
 
     ! Save in a file the different fit components !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! New from version 1.0: save three pairs of files with values from max likelihood, mean and median of the parameters
-    IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
+    IF (.NOT.is_set) THEN
        maxx = xmax(1)
        minx = xmin(1)
        plot = .TRUE.
@@ -815,7 +819,7 @@ CONTAINS
        WRITE(40,*)'# x    y fit'
        DO i=1, maxfit
           xfit = minx + (i-1)*dx
-          yfit = USERFCN(xfit,npar,live_max,funcid)
+          yfit = USERFCN(xfit,npar,live_max)
        ENDDO
        CLOSE(40)
 
@@ -824,7 +828,7 @@ CONTAINS
        WRITE(40,*)'# x    y fit'
        DO i=1, maxfit
           xfit = minx + (i-1)*dx
-          yfit = USERFCN(xfit,npar,par_mean,funcid)
+          yfit = USERFCN(xfit,npar,par_mean)
        ENDDO
        CLOSE(40)
 
@@ -833,7 +837,7 @@ CONTAINS
        WRITE(40,*)'# x    y fit'
        DO i=1, maxfit
           xfit = minx + (i-1)*dx
-          yfit = USERFCN(xfit,npar,par_median_w,funcid)
+          yfit = USERFCN(xfit,npar,par_median_w)
        ENDDO
        CLOSE(40)
     ELSE
@@ -924,7 +928,7 @@ CONTAINS
        Dy = live_max(5)
     END IF
 
-    IF (set_yn.EQ.'n'.OR.set_yn.EQ.'N') THEN
+    IF (.NOT.is_set) THEN
        k=1
        maxx = xmax(1)
        minx = xmin(1)

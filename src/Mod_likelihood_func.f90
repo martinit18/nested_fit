@@ -18,15 +18,17 @@ MODULE MOD_LIKELIHOOD
 #endif
 
   IMPLICIT NONE
+  PUBLIC :: SELECT_LIKELIHOODFCN
+
   INTEGER(8) :: ncall=0
-  REAL(8) :: a_norm=0.
+  REAL(8)    :: a_norm=0.
 
 CONTAINS
 
 
   SUBROUTINE INIT_LIKELIHOOD()
     ! Initialize the normal likelihood with data files and special function
-
+    
     ! Initialize the search method params
     CALL INIT_SEARCH_METHOD()
     
@@ -77,7 +79,7 @@ CONTAINS
   END FUNCTION LOGLIKELIHOOD_WITH_TEST
 
   !------------------------------------------------------------------------------------------------------------------------
-  ! TODO(Cesar): In reality this should be in another file, but I am following the previous "rules"...
+  ! TODO(César): In reality this should be in another file, but I am following the previous "rules"...
   FUNCTION SELECT_LIKELIHOODFCN(funcname)
     IMPLICIT NONE
     INTEGER*4 SELECT_LIKELIHOODFCN
@@ -100,9 +102,7 @@ CONTAINS
     ELSE IF(funcname.eq.'TEST_LOGGAMMA') THEN
       SELECT_LIKELIHOODFCN = 7
     ELSE
-       WRITE(*,*) 'Error of the function name in Mod_likelihood_test module'
-       WRITE(*,*) 'Check the manual and the input file'
-       STOP
+      SELECT_LIKELIHOODFCN = -1
     END IF
 
     RETURN
