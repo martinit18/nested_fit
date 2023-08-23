@@ -19,7 +19,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   ! Parameter module
   USE MOD_PARAMETERS, ONLY:  npar, nlive, conv_method, evaccuracy, conv_par, &
         search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, &
-        cluster_yn, nth, maxtries, maxntries, searchid
+        make_cluster, nth, maxtries, maxntries, searchid
   ! Module for likelihood
   USE MOD_LIKELIHOOD
   ! Module for searching new live points
@@ -81,11 +81,9 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 #endif
   CHARACTER :: info_string*256
 
-  LOGICAL :: make_cluster, need_cluster
+  LOGICAL :: make_cluster_internal, need_cluster
   INTEGER(4) :: n_call_cluster, n_call_cluster_it
   INTEGER(4), PARAMETER :: n_call_cluster_it_max=3, n_call_cluster_max=10
-  
-  EXTERNAL :: SORTN
 
   ! Initialize variables (with different seeds for different processors)
   gval = 0.
@@ -110,7 +108,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   live_like_new = 0.
   icluster = 0
   too_many_tries = .false.
-  make_cluster=.false.
+  make_cluster_internal=.false.
   need_cluster=.false.
 
   ! ---------- Inintial live points sorting ------------------------------------------------
@@ -225,11 +223,11 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
      ! ##########################################################################
      ! Find a new live point
       
-901   IF(make_cluster) THEN
+901   IF(make_cluster_internal) THEN
          WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
          CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
          cluster_on = .true.
-         make_cluster=.false.
+         make_cluster_internal=.false.
          IF(need_cluster) THEN
             n_call_cluster_it=n_call_cluster_it+1
             n_call_cluster=n_call_cluster+1
@@ -261,7 +259,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
       ! Signal final data MAXED_OUT
       CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_DONE_MANY_TRIES, mpi_child_writter_comm, mpi_ierror)
 #endif
-        IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+        IF (make_cluster) THEN
            IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
               WRITE(*,*) 'Too many cluster analysis for an iteration'
               WRITE(*,*) 'Change cluster recognition parameters'
@@ -272,7 +270,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
               WRITE(*,*) 'Change cluster recognition parameters'
               STOP
            END IF
-           make_cluster=.true.
+           make_cluster_internal=.true.
            need_cluster=.true.
         ELSE
            WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries*maxntries
@@ -286,7 +284,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
       ! Signal final data MAXED_OUT
       CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_DONE_MANY_TRIES, mpi_child_writter_comm, mpi_ierror)
 #endif
-        IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+        IF (make_cluster) THEN
            IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
               WRITE(*,*) 'Too many cluster analysis for an iteration'
               WRITE(*,*) 'Change cluster recognition parameters'
@@ -297,7 +295,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
               WRITE(*,*) 'Change cluster recognition parameters'
               STOP
            END IF
-           make_cluster=.true.
+           make_cluster_internal=.true.
            need_cluster=.true.
            GOTO 901
         ELSE
@@ -368,9 +366,9 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 
         SELECT CASE (searchid)
         CASE (2,3)
-           IF(cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+           IF(make_cluster) THEN
               IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
-                 make_cluster=.true.
+                 make_cluster_internal=.true.
               END IF
            END IF
         END SELECT
