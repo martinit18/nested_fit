@@ -155,8 +155,8 @@ class Analysis(object):
         input_data['filename'] = lines[1].split()[0]
         input_comment['filename'] = lines[1][lines[1].find('#'):]
         # Set of files or not
-        input_data['set_yn'] = lines[2].split()[0]
-        input_comment['set_yn'] = lines[2][lines[2].find('#'):]
+        input_data['is_set'] = lines[2].split()[0]
+        input_comment['is_set'] = lines[2][lines[2].find('#'):]
         # Errorbars present or not
         input_data['data_type'] = lines[3].split()[0]
         input_comment['data_type'] = lines[3][lines[3].find('#'):]
@@ -183,7 +183,7 @@ class Analysis(object):
         input_data['maxntries'] = int(lines[9].split()[3])
         input_comment['search_algorithm'] = lines[9][lines[9].find('#'):]
         # Cluster analysis: if it is active and its parameters
-        input_data['cluster_yn'] = lines[10].split()[0]
+        input_data['make_cluster'] = lines[10].split()[0]
         input_data['cluster_method'] = lines[10].split()[1]
         input_data['distance_limit'] = float(lines[10].split()[2])
         input_data['bandwidth'] = float(lines[10].split()[3])
@@ -244,8 +244,8 @@ class Analysis(object):
                                    '\t', input_comment['version']])
         input_file.writelines([input_data['filename'],
                                    '\t', input_comment['filename']])
-        input_file.writelines([input_data['set_yn'],
-                                   '\t', input_comment['set_yn']])
+        input_file.writelines([input_data['is_set'],
+                                   '\t', input_comment['is_set']])
         input_file.writelines([input_data['data_type'],
                                    '\t', input_comment['data_type']])
         input_file.writelines([input_data['likelihood_func'],
@@ -264,7 +264,7 @@ class Analysis(object):
                                    '\t',str(input_data['maxtries']), 
                                    '\t',str(input_data['maxntries']),
                                    '\t', input_comment['search_algorithm']])
-        input_file.writelines([input_data['cluster_yn'], 
+        input_file.writelines([input_data['make_cluster'], 
                                    '\t',input_data['cluster_method'],
                                    '\t',str(input_data['distance_limit']), 
                                    '\t',str(input_data['bandwidth']),
