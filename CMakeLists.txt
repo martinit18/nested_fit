@@ -60,29 +60,29 @@ set(SRC_FILES_COMM
     src/Mod_search_new_point.f90
     src/Mod_timestamp.f90
 
-    src/dlog_fac.f90
-    src/meanvar.f90
+    src/Mod_mpi.f90
+    src/Mod_math.f90
+
     src/init_interpolation.f
 
     src/nested_fit.f90
     src/nested_sampling.f90
 
-    src/randn.f90
     src/rinteg.f
     src/shirley_fitpack.f90
-    src/sortn_slatec.f90
-
-    src/Mod_mpi.f90
-    src/Mod_math.f90
 
     src/cli/argparse.f90
     src/Mod_options.f90
     
     src/funceval/auto_func.f90
     src/functions/WOFZ.f
+
+    src/helper/hash.f90
+    src/Mod_input_parse.f90
 )
 
 set(SRC_EXTERNAL_FUNCS
+    src/helper/hash.f90
     src/Mod_interpolate.f90
     src/functions/internal_funcs.f90
     src/functions/WOFZ.f
@@ -90,6 +90,8 @@ set(SRC_EXTERNAL_FUNCS
 
 set(SRC_FILES_DATA
     src/Mod_likelihood.f90
+
+    src/Mod_userfcn.f90
 
     src/USERFCN_2D.f90
     src/USERFCN_SET.f
@@ -170,38 +172,12 @@ set(SRC_FILES_CXX
     ${CMAKE_CURRENT_BINARY_DIR}/latex_parser.cpp
 )
 
-# TODO(César): This assumes we are using gfortran!
-# TODO(César): Use generator expressions instead!
-if(DEBUG)
-    message(STATUS "Configuring for Debug")
-    set(SRC_FLAGS "-cpp -O0 -Wall -g -ffree-line-length-0")
-    set(SRC_FLAGS_CXX "-O0 -Wall -pedantic -g") # Be pedantic
-else()
-    message(STATUS "Configuring for Release")
-    set(SRC_FLAGS "-cpp -O2 -static -ffree-line-length-0")
-    set(SRC_FLAGS_CXX "-O2 -Wall -pedantic -static") # Be pedantic on release too
-endif()
-
-# NOTE(César): This is required to preprocessor the OpenMP comments
-if(OPENMP)
-    set(SRC_FLAGS "${SRC_FLAGS} -fopenmp")
-endif()
-
-set_source_files_properties(${SRC_DIERCKX} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
-set_source_files_properties(${SRC_SLATEC} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
-set_source_files_properties(${SRC_FILES_COMM} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
-set_source_files_properties(${SRC_FILES_DATA} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
-set_source_files_properties(${SRC_FILES_FUNC} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
-set_source_files_properties(${CFG_FILES} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
-set_source_files_properties(${CHILD_SRC_FILES} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS})
-set_source_files_properties(${SRC_FILES_CXX} PROPERTIES COMPILE_FLAGS ${SRC_FLAGS_CXX})
-
 add_executable(${nested_fit_target}
     ${CFG_FILES}
     ${SRC_DIERCKX}
     ${SRC_SLATEC}
-    ${SRC_FILES_COMM}
     ${SRC_FILES_DATA}
+    ${SRC_FILES_COMM}
     ${SRC_FILES_CXX}
 )
 
@@ -209,16 +185,38 @@ add_executable(${nested_fit_target_func}
     ${CFG_FILES}
     ${SRC_DIERCKX}
     ${SRC_SLATEC}
-    ${SRC_FILES_COMM}
     ${SRC_FILES_FUNC}
+    ${SRC_FILES_COMM}
     ${SRC_FILES_CXX}
 )
-#target_compile_definitions(${nested_fit_target_func} PRIVATE -DFUNC_TARGET) # to uncomment?
 
-# if(DEBUG) Activate this option for profiling
-#     target_link_options(${nested_fit_target}      PRIVATE "-pg")
-#     target_link_options(${nested_fit_target_func} PRIVATE "-pg")
-# endif()
+# TODO(César): This assumes we are using gfortran!
+set(SRC_FLAGS_D     -cpp -O0 -Wall -g -ffree-line-length-0)
+set(SRC_FLAGS_R     -cpp -O2 -static -ffree-line-length-0)
+
+set(SRC_FLAGS_CXX_D -O0 -Wall -pedantic -g)      # Be pedantic
+set(SRC_FLAGS_CXX_R -O2 -Wall -pedantic -static) # Be pedantic on release too
+
+
+# NOTE(César): This is required to preprocessor the OpenMP comments
+set(SRC_FLAGS_OMP "")
+if(OPENMP)
+    set(SRC_FLAGS_OMP -fopenmp)
+endif()
+
+target_compile_options(${nested_fit_target} PUBLIC
+    $<$<COMPILE_LANGUAGE:Fortran>:$<IF:$<CONFIG:Debug>,${SRC_FLAGS_D},${SRC_FLAGS_R}>>
+    $<$<COMPILE_LANGUAGE:CXX>:$<IF:$<CONFIG:Debug>,${SRC_FLAGS_CXX_D},${SRC_FLAGS_CXX_R}>>
+    ${SRC_FLAGS_OMP}
+)
+
+target_compile_options(${nested_fit_target_func} PUBLIC 
+    $<$<COMPILE_LANGUAGE:Fortran>:$<IF:$<CONFIG:Debug>,${SRC_FLAGS_D},${SRC_FLAGS_R}>>
+    $<$<COMPILE_LANGUAGE:CXX>:$<IF:$<CONFIG:Debug>,${SRC_FLAGS_CXX_D},${SRC_FLAGS_CXX_R}>>
+    ${SRC_FLAGS_OMP}
+)
+
+target_compile_definitions(${nested_fit_target_func} PRIVATE -DFUNC_TARGET)
 
 if(LAPACK)
     target_compile_definitions(${nested_fit_target}      PUBLIC -DLAPACK_ON)
@@ -295,8 +293,9 @@ add_custom_command(TARGET ${nested_fit_target}
 )
 
 # Compile the object files of the internal functions the user will be able to natively use in their expressions
-set_source_files_properties(${SRC_EXTERNAL_FUNCS} PROPERTIES COMPILE_FLAGS "-fPIC")
-add_library(internal_functions OBJECT ${SRC_EXTERNAL_FUNCS})
+set_source_files_properties(${SRC_DIERCKX} PROPERTIES COMPILE_FLAGS "-fPIC -g -O0 -ffree-line-length-0")
+set_source_files_properties(${SRC_EXTERNAL_FUNCS} PROPERTIES COMPILE_FLAGS "-fPIC -g -O0 -Wall -ffree-line-length-0")
+add_library(internal_functions OBJECT ${SRC_EXTERNAL_FUNCS} ${SRC_DIERCKX})
 add_custom_target(copy_internal_functions ALL
     DEPENDS internal_functions
     COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_OBJECTS:internal_functions> ${nested_fit_cache_folder}
@@ -320,7 +319,7 @@ if(BUILD_NESTED_PY)
         install(CODE "execute_process(COMMAND ${Python_EXECUTABLE} -m pip install ${CMAKE_SOURCE_DIR}/nested_py/)")
 
         # Add a custom target for publishing python to the online PyPI index
-        # TODO
+        # TODO(César)
     else()
         message(WARNING "Python not found. nested_res will not be built/installed on the system.")
         message(WARNING "If you wish to build, install python3 and re-run this command.")
