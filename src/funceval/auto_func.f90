@@ -432,9 +432,6 @@ MODULE MOD_AUTOFUNC
                     TRIM(entries(i)%dec)
             END DO
         CLOSE(77)
-
-        DEALLOCATE(entries)
-
     END SUBROUTINE
 
     FUNCTION CHECK_FUNC_CACHE(fname)
