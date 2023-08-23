@@ -8,6 +8,8 @@ MODULE MOD_SEARCH_NEW_POINT
   USE MOD_LIKELIHOOD
   ! Module for cluster analysis
   USE MOD_CLUSTER_ANALYSIS
+  ! Module for math
+  USE MOD_MATH
   
   !$ USE OMP_LIB
 
@@ -231,7 +233,7 @@ CONTAINS
              IF (n_ntries.GE.maxntries) THEN
 
 
-                !IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+                !IF (make_cluster) THEN
 
                 !   IF(n_call_cluster_itj>=n_call_cluster_it_maxj) THEN
                 !     WRITE(*,*) 'Too many cluster analysis for an iteration'
@@ -507,7 +509,7 @@ CONTAINS
              IF (n_ntries.GE.maxntries) THEN
 
 
-                !IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+                !IF (make_cluster) THEN
 
                 !   IF(n_call_cluster_itj>=n_call_cluster_it_maxj) THEN
                 !     WRITE(*,*) 'Too many cluster analysis for an iteration'
@@ -715,7 +717,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     ntries = 0
 
     !!$OMP SINGLE
-    !IF(cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+    !IF(make_cluster) THEN
     !   IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
     !         WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
     !         CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
@@ -840,7 +842,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
              'n_ntries =',n_ntries,' over ', maxntries, 'n. step =', n
 
              IF(n_ntries .GE. maxntries) THEN
-               !IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+               !IF (make_cluster) THEN
                !  IF(n_call_cluster_itj>=n_call_cluster_it_maxj) THEN
                !    WRITE(*,*) 'Too many cluster analysis for an iteration'
                !    WRITE(*,*) 'Change cluster recognition parameters'
@@ -997,7 +999,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     ntries = 0
 
 
-    !IF(cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+    !IF(make_cluster) THEN
     !   IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
     !         WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
     !         CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
@@ -1130,7 +1132,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
              'n_ntries =',n_ntries,' over ', maxntries, 'n. step =', n
 
              IF(n_ntries .GE. maxntries) THEN
-               !IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+               !IF (make_cluster) THEN
                !  IF(n_call_cluster_itj>=n_call_cluster_it_maxj) THEN
                !    WRITE(*,*) 'Too many cluster analysis for an iteration'
                !    WRITE(*,*) 'Change cluster recognition parameters'
