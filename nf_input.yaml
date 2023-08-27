@@ -1,0 +1,61 @@
+version:    4.5           # Program version
+datafile:   quadratic.dat # Name of the (first) data file
+fileset:    false         # Set of files (true/false)
+errorbars:  false          # Data file has errorbars (true/false)
+dimensions: 1             # Number of dimensions on the data file (1 or 2)
+likelihood: GAUSSIAN      # The likelihood function
+
+function:
+  # expression: GAUSS_BG                               # Legacy mode
+  expression: f(x, A, u, d) = A\exp(-(x-u)^2/d)        # Interpret mode
+  params:
+    A:
+      # npar:  1             # Legacy mode only
+      value: 0
+      step: -1
+      min:   1
+      max:   100
+    u:
+      # npar:  2             # Legacy mode only
+      value: 0
+      step: -1
+      min:   0
+      max:   100
+    d:
+      # npar:  3             # Legacy mode only
+      value: 1
+      step: -1
+      min:   1
+      max:   100
+
+data:
+  xmin: 1
+  xmax: 99
+  ymin: 0
+  ymax: 0
+
+search:                      # Search settings
+  livepoints: 200
+  method:     SLICE_SAMPLING
+  param1:     0.5
+  param2:     3
+  max_tries:  100
+  tries_mult: 10
+  num_tries:  1
+  max_steps:  10000
+
+convergence:                 # Convergence
+  method:    LIKE_ACC
+  accuracy:  1.E-05
+  parameter: 0.01
+
+clustering:
+  enabled:   false
+  # method:    f
+  # distance:  0.5
+  # bandwidth: 0.2
+
+# Legacy stuff
+lr: L
+npoint: 500
+nwidth: 20
