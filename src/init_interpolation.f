@@ -3,6 +3,7 @@
 c     Subroutine for the preliminary interpolation of the simulated spectra.
 c     Because of the statistical noise, the spectra are fitted with as weight, the expected statistical fluctiation
 c     To note, the simulated spectra must have positive count number for all channels
+      USE MOD_LOGGER
       IMPLICIT NONE
 c     Simulation variables
       CHARACTER*64 fileinterp_name, interpolated_name

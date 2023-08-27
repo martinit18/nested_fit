@@ -3,6 +3,7 @@
 ! Date   : 22/08/2023
 
 MODULE MOD_USERFCN
+    USE MOD_LOGGER
     USE MOD_AUTOFUNC
     IMPLICIT NONE
 
@@ -218,11 +219,11 @@ MODULE MOD_USERFCN
             CALL GET_USER_FUNC_PROCPTR(func_header, USERFCN, loaded_ok)
 
             IF(.NOT.loaded_ok) THEN
-                WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-                WRITE(*,*) '       ERROR:           Failed to load proc address.'
-                WRITE(*,*) '       ERROR:           Maybe the specified function name is incorrect/not in the cache.'
-                WRITE(*,*) '       ERROR:           Aborting Execution...'
-                WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+                CALL LOG_HEADER()
+                CALL LOG_ERROR('Failed to load proc address.')
+                CALL LOG_ERROR('Maybe the specified function name is incorrect/not in the cache.')
+                CALL LOG_ERROR('Aborting Execution...')
+                CALL LOG_HEADER()
                 STOP
             ENDIF
         ELSE

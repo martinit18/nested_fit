@@ -1,5 +1,8 @@
 MODULE MOD_MATH
     ! Module for additional math functions
+
+    ! Module for logging
+    USE MOD_LOGGER
   
     IMPLICIT NONE
     INTEGER(4), PARAMETER :: moving_avg_window = 50 ! In samples
@@ -93,11 +96,11 @@ MODULE MOD_MATH
             ! Note(César): Thechnically I don't think this will ever print
             ! Since it is used for the constant part of the likelihood for poisson dist
             ! And the input file is already checked for negative values...
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-            WRITE(*,*) '       ERROR:           Error while calling DLOG_FAC with n = ', n, '.'
-            WRITE(*,*) '       ERROR:           DLOG_FAC domain is valid only for n >= 0.'
-            WRITE(*,*) '       ERROR:           Aborting Execution...'
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            CALL LOG_HEADER()
+            CALL LOG_ERROR('Error while calling DLOG_FAC with argument: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(n))))
+            CALL LOG_ERROR('DLOG_FAC domain is valid only for n >= 0.')
+            CALL LOG_ERROR('Aborting Execution...')
+            CALL LOG_HEADER()
 ! #ifdef OPENMPI_ON
 !             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
 ! #endif
@@ -127,11 +130,11 @@ MODULE MOD_MATH
 
         CALL DPSORT(asort,n,iwksp,1,ier)
         IF(ier.GT.0) THEN
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-            WRITE(*,*) '       ERROR:           In subroutine `SORTN`.'
-            WRITE(*,*) '       ERROR:           DPSORT returned the following error: ier = `', ier, '`.'
-            WRITE(*,*) '       ERROR:           Aborting Execution...'
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            CALL LOG_HEADER()
+            CALL LOG_ERROR('In subroutine `SORTN`.')
+            CALL LOG_ERROR('DPSORT returned the following error: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ier))))
+            CALL LOG_ERROR('Aborting Execution...')
+            CALL LOG_HEADER()
 ! #ifdef OPENMPI_ON
 !             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
 ! #endif
@@ -164,11 +167,11 @@ MODULE MOD_MATH
 
         CALL DPSORT(asort,n,iwksp,1,ier)
         IF(ier.GT.0) THEN
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-            WRITE(*,*) '       ERROR:           In subroutine `SORTN2`.'
-            WRITE(*,*) '       ERROR:           DPSORT returned the following error: ier = `', ier, '`.'
-            WRITE(*,*) '       ERROR:           Aborting Execution...'
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            CALL LOG_HEADER()
+            CALL LOG_ERROR('In subroutine `SORTN2`.')
+            CALL LOG_ERROR('DPSORT returned the following error: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ier))))
+            CALL LOG_ERROR('Aborting Execution...')
+            CALL LOG_HEADER()
 ! #ifdef OPENMPI_ON
 !             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
 ! #endif

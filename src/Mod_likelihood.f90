@@ -8,6 +8,9 @@ MODULE MOD_LIKELIHOOD
   ! Module for the user functions
   USE MOD_USERFCN
 
+  ! Module for logging
+  USE MOD_LOGGER
+
   ! Math module
   USE MOD_MATH
 
@@ -58,29 +61,32 @@ CONTAINS
 
   SUBROUTINE INIT_SEARCH_METHOD()
 #ifdef OPENMPI_ON
-    INTEGER(4) :: mpi_ierror
+   INTEGER(4) :: mpi_ierror
 #endif
 
     IF (search_method.eq.'RANDOM_WALK') THEN
-       searchid = 0
+      searchid = 0
     ELSE IF(search_method.EQ.'UNIFORM') THEN
-       searchid = 1
+      searchid = 1
     ELSE IF(search_method.EQ.'SLICE_SAMPLING') THEN
-       searchid = 2
+      searchid = 2
     ELSE IF(search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
-       searchid = 3
+      searchid = 3
     ELSE
-       WRITE(*,*) 'Error of the search type name in Mod_search_new_point module'
-       WRITE(*,*) 'Check the manual and the input file'
+      CALL LOG_HEADER()
+      CALL LOG_ERROR('Error of the search type name in Mod_search_new_point module.')
+      CALL LOG_ERROR('Check the manual and the input file.')
+      CALL LOG_MESSAGE('Available options: [RANDOM_WALK, UNIFORM, SLICE_SAMPLING, SLICE_SAMPLING_ADAPT]')
+      CALL LOG_HEADER()
 #ifdef OPENMPI_ON
-       CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+      CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
 #endif
-       STOP
+      STOP
     END IF
   END SUBROUTINE INIT_SEARCH_METHOD
 
   SUBROUTINE INIT_LIKELIHOOD_FUNC()
-#ifdef OPENMPI_ON   
+#ifdef OPENMPI_ON
       INTEGER(4) :: mpi_ierror
 #endif
 
@@ -89,9 +95,11 @@ CONTAINS
       ELSE IF(likelihood_funcname.eq.'MOD_JEFFREYS') THEN
          loglikefuncid = 1
       ELSE
-         WRITE(*,*) 'Error of the likelihood function type name in Mod_search_new_point module'
-	 WRITE(*,*) likelihood_funcname
-         WRITE(*,*) 'Check the manual and the input file'
+         CALL LOG_HEADER()
+         CALL LOG_ERROR('Error of the likelihood function type name in Mod_search_new_point module.')
+         CALL LOG_ERROR('Check the manual and the input file.')
+         CALL LOG_MESSAGE('Available options: [GAUSSIAN, MOD_JEFFREYS]')
+         CALL LOG_HEADER()
 #ifdef OPENMPI_ON
          CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
 #endif
@@ -100,8 +108,10 @@ CONTAINS
 
       ! Note(César): This only works because INIT_FUNCTIONS is called earlier
       IF (BIT_CHECK_IF(DATA_IS_C).AND.loglikefuncid.GT.0) THEN
-         WRITE(*,*) 'Count based data does not support non Gaussian likelihood functions.'
-         WRITE(*,*) 'Check the manual and the input file'
+         CALL LOG_HEADER()
+         CALL LOG_ERROR('Count based data does not support non Gaussian likelihood functions.')
+         CALL LOG_ERROR('Check the manual and the input file.')
+         CALL LOG_HEADER()
 #ifdef OPENMPI_ON
          CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
 #endif
@@ -126,10 +136,9 @@ CONTAINS
        DO k=1,nset
           CALL READ_FILE_COUNTS(filename(k),xmin(k),xmax(k),ndata_set(k), &
                x_tmp(:,k),nc_tmp(:,k))
-          WRITE(*,*) 'Number of file = ', k, ' of ', nset
-          WRITE(*,*) 'Read data file ', TRIM(filename(k))
-          WRITE(*,*) 'ndata = ', ndata_set(k)
-          WRITE(*,*) 'constant in evidence calc. = ', const_ll
+          CALL LOG_TRACE('File: '//TRIM(filename(k))//' ('//TRIM(ADJUSTL(INT_TO_STR_INLINE(k)))//'/'//TRIM(ADJUSTL(INT_TO_STR_INLINE(nset)))//')')
+          CALL LOG_TRACE('Data count: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ndata_set(k)))))
+          CALL LOG_TRACE('Constant evidence: '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(const_ll))))
        END DO
        ! Allocate set of data
        ndata = MAXVAL(ndata_set)
@@ -145,10 +154,9 @@ CONTAINS
        DO k=1,nset
           CALL READ_FILE_ERRORBARS(filename(k),xmin(k),xmax(k),ndata_set(k), &
                x_tmp(:,k),nc_tmp(:,k),nc_err_tmp(:,k))
-          WRITE(*,*) 'Number of file = ', k, ' of ', nset
-          WRITE(*,*) 'Data file ', filename(k), ' read'
-          WRITE(*,*) 'ndata = ', ndata
-          WRITE(*,*) 'constant in evidence calc. = ', const_ll
+          CALL LOG_TRACE('File: '//TRIM(filename(k))//' ('//TRIM(ADJUSTL(INT_TO_STR_INLINE(k)))//'/'//TRIM(ADJUSTL(INT_TO_STR_INLINE(nset)))//')')
+          CALL LOG_TRACE('Data count: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ndata_set(k)))))
+          CALL LOG_TRACE('Constant evidence: '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(const_ll))))
        END DO
        ! Allocate set of data
        ndata = MAXVAL(ndata_set)
@@ -165,20 +173,22 @@ CONTAINS
        ! Case 2D with counts in a matrix -------------------------------------------------------------------
        DO k=1,nset
           CALL READ_FILE_COUNTS_2D(filename(k),xmin(k),xmax(k),ymin(k),ymax(k),ndata_set(k))
-          WRITE(*,*) 'Number of file = ', k, ' of ', nset
-          WRITE(*,*) 'Read data file ', TRIM(filename(k))
-          WRITE(*,*) 'ndata = ', ndata_set(k)
-          WRITE(*,*) 'constant in evidence calc. = ', const_ll
+          CALL LOG_TRACE('File: '//TRIM(filename(k))//' ('//TRIM(ADJUSTL(INT_TO_STR_INLINE(k)))//'/'//TRIM(ADJUSTL(INT_TO_STR_INLINE(nset)))//')')
+          CALL LOG_TRACE('Data count: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ndata_set(k)))))
+          CALL LOG_TRACE('Constant evidence: '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(const_ll))))
 
-          IF(ndata.EQ.0) WRITE(*,*) 'ndata = 0, no data in the selected range. Please check your min max and data'
+          IF(ndata.EQ.0) THEN
+            CALL LOG_HEADER()
+            CALL LOG_ERROR('Data count: 0, no data in the selected range. Please check your min max and data.')
+            CALL LOG_HEADER()
+          ENDIF
        END DO
     ELSE
-       WRITE(*,*) 'Data type ', data_type, ' not available. Please change your input file'
+       CALL LOG_HEADER()
+       CALL LOG_ERROR('Invalid data type: '//data_type)
+       CALL LOG_HEADER()
        STOP
     END IF
-
-    WRITE(*,*) 'Final constant in evidence calc. = ', const_ll
-
   END SUBROUTINE READ_DATA
 
   !#####################################################################################################################
@@ -208,17 +218,33 @@ CONTAINS
        READ(10,*,END=20) x_raw(i), nc_raw(i)
        ! Make test for integer numbers, NaN and infinites
        IF (ABS(nc_raw(i)-INT(nc_raw(i))).GT.1E-5) THEN
-          WRITE(*,*) 'Attention, input numbers are not counts and you are using Poisson statistic (no error bar)'
-          WRITE(*,*) 'n. counts = ', nc_raw(i)
-          WRITE(*,*) 'Change something!'
+          CALL LOG_HEADER()
+          CALL LOG_ERROR('Input numbers are not counts and you are using Poisson statistic (no error bar).')
+          CALL LOG_ERROR('At value: '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(nc_raw(i)))))
+          CALL LOG_HEADER()
+#ifdef OPENMPI_ON
+          CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+#endif
           STOP
        ELSE IF (nc_raw(i).LT.0.AND.IEEE_IS_FINITE(nc_raw(i))) THEN
           ! Check if counts are negative
-          WRITE(*,*) 'Negative counts are not accepted. Change input file'
+          CALL LOG_HEADER()
+          CALL LOG_ERROR('Negative counts are not accepted.')
+          CALL LOG_ERROR('At value: '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(nc_raw(i)))))
+          CALL LOG_HEADER()
+#ifdef OPENMPI_ON
+          CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+#endif
           STOP
        ELSE IF (.NOT.IEEE_IS_FINITE(nc_raw(i)).OR.IEEE_IS_NAN(nc_raw(i))) THEN
           ! Check infinites and nan
-          WRITE(*,*) 'Infinite or "NaN" counts are not accepted. Change input file'
+          CALL LOG_HEADER()
+          CALL LOG_ERROR('Infinite or "NaN" counts are not accepted.')
+          CALL LOG_ERROR('At value: '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(nc_raw(i)))))
+          CALL LOG_HEADER()
+#ifdef OPENMPI_ON
+          CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+#endif
           STOP
        END IF
 
@@ -271,8 +297,13 @@ CONTAINS
           nc_tmp(nd) = nc_raw(i)
           nc_err_tmp(nd) = nc_err_raw(i)
           IF (nc_err_tmp(nd).LE.0.) THEN
-             WRITE(*,*) 'Errorbars with a value equal to 0 or negative'
-             WRITE(*,*) 'Check our data or do not use errorbars'
+             CALL LOG_HEADER()
+             CALL LOG_ERROR('Errorbar with a value equal to 0 or negative.')
+             CALL LOG_ERROR('At value: '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(nc_err_raw(i)))))
+             CALL LOG_HEADER()
+#ifdef OPENMPI_ON
+             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+#endif
              STOP
           END IF
           ! Calculation of the constant part of the likelihood with Gaussian distribution
@@ -316,7 +347,12 @@ CONTAINS
 
     ! Check if counts are negative
     IF (ANY(adata_tmp.LT.0.AND.IEEE_IS_FINITE(adata_tmp))) THEN
-       WRITE(*,*) 'Negative counts are not accepted. Change input file'
+       CALL LOG_HEADER()
+       CALL LOG_ERROR('Negative counts are not accepted.')
+       CALL LOG_HEADER()
+#ifdef OPENMPI_ON
+       CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+#endif
        STOP
     END IF
 
@@ -424,7 +460,12 @@ CONTAINS
        END IF
     ELSE
        IF(BIT_CHECK_IF(DATA_IS_2D)) THEN
-          WRITE(*,*) 'Sets for 2D functions are not yet implemented.'
+          CALL LOG_HEADER()
+          CALL LOG_ERROR('Sets for 2D functions are not yet implemented.')
+          CALL LOG_HEADER()
+#ifdef OPENMPI_ON
+          CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+#endif
           STOP
        END IF
        funcid = SELECT_USERFCN_SET(funcname)
@@ -505,9 +546,14 @@ CONTAINS
                 enc = USERFCN_SET(x(i,k),npar,par,funcid,k)
              END IF
              IF (enc.LE.0) THEN
-                WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
-                WRITE(*,*) 'number of counts different from 0, model prediction equal 0 or less'
-                WRITE(*,*) 'Function value = ', enc, ' n. counts = ', nc(i,k)
+                CALL LOG_HEADER()
+                CALL LOG_ERROR('LIKELIHOOD ERROR.')
+                CALL LOG_ERROR('The user function needs to be strictly positive for all the analysis domain.')
+                CALL LOG_ERROR('Function value = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(enc)))//' at x = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(x(i,k)))))
+                CALL LOG_HEADER()
+#ifdef OPENMPI_ON
+                CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+#endif
                 STOP ! TODO(Cesar): Handle all of these errors for the case of MPI
              END IF
           END DO
@@ -523,9 +569,14 @@ CONTAINS
              yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin
              enc = USERFCN_2D(xx,yy,npar,par,funcid)
              IF (enc.LE.0) THEN
-                WRITE(*,*) 'LIKELIHOOD ERROR: put a background in your function'
-                WRITE(*,*) 'number of counts different from 0, model prediction equal 0 or less'
-                WRITE(*,*) 'Function value = ', enc, ' n. counts = ', adata(i,j)
+                CALL LOG_HEADER()
+                CALL LOG_ERROR('LIKELIHOOD ERROR.')
+                CALL LOG_ERROR('The user function needs to be strictly positive for all the analysis domain.')
+                CALL LOG_ERROR('Function value = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(enc)))//' at x = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(adata(i,k)))))
+                CALL LOG_HEADER()
+#ifdef OPENMPI_ON
+                CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+#endif
                 STOP
              END IF
           END DO
@@ -687,9 +738,10 @@ CONTAINS
        CALL WRITE_EXPECTED_VALUES_2D(live_max,par_mean,par_median_w)
     END IF
 
-    WRITE(*,*) ' '
-    WRITE(*,*) 'End of likelihood test'
-    WRITE(*,*) 'Number of calls : ', ncall
+    CALL LOG_HEADER()
+    CALL LOG_MESSAGE('End of likelihood test.')
+    CALL LOG_MESSAGE('Number of calls : '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ncall))))
+    CALL LOG_HEADER()
     OPEN(11,FILE='nf_output_n_likelihood_calls.txt',STATUS= 'UNKNOWN')
     WRITE(11,*) ncall
     CLOSE(11)

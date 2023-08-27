@@ -4,6 +4,8 @@
 
 
 MODULE MOD_INTERPOLATE
+    ! Module for logging
+    USE MOD_LOGGER
     IMPLICIT NONE
 
     PUBLIC :: SplineData_t, GlobalSplineMap, INTERPOLATE_FROM_FILE, EVALUATE_SPLINE_DATA
@@ -49,9 +51,9 @@ MODULE MOD_INTERPOLATE
 
         CALL SPLEV(spline_data%t, spline_data%n, spline_data%c, spline_data%k, x, y, 1, spline_data%e, ierr)
         IF(ierr.GT.0) THEN
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-            WRITE(*,*) '       ERROR:           Spline evaluation failed this iteration.'
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            CALL LOG_HEADER()
+            CALL LOG_ERROR('Spline evaluation failed this iteration.')
+            CALL LOG_HEADER()
         ENDIF
     END SUBROUTINE
 
@@ -79,10 +81,10 @@ MODULE MOD_INTERPOLATE
         
         INQUIRE(FILE=TRIM(interpolator_file), EXIST=file_ok)
         IF(.NOT.file_ok) THEN
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-            WRITE(*,*) '       ERROR:           The specified interpolation file (', TRIM(interpolator_file), ') was not found.'
-            WRITE(*,*) '       ERROR:           Aborting Execution...'
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            CALL LOG_HEADER()
+            CALL LOG_ERROR('The specified interpolation file ('//TRIM(interpolator_file)//') was not found.')
+            CALL LOG_ERROR('Aborting Execution...')
+            CALL LOG_HEADER()
             ! TODO(César) : How do we handle this if we are inside an OpenMPI context???
 ! #ifdef OPENMPI_ON
 !             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
@@ -101,10 +103,10 @@ MODULE MOD_INTERPOLATE
         10 CLOSE(1)
 
         IF(m.LE.k) THEN
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-            WRITE(*,*) '       ERROR:           The specified interpolation file (', TRIM(interpolator_file), ') needs at least', k, 'points.'
-            WRITE(*,*) '       ERROR:           Aborting Execution...'
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            CALL LOG_HEADER()
+            CALL LOG_ERROR('The specified interpolation file ('//TRIM(interpolator_file)//') needs at least '//TRIM(ADJUSTL(INT_TO_STR_INLINE(k)))//' points.')
+            CALL LOG_ERROR('Aborting Execution...')
+            CALL LOG_HEADER()
             ! TODO(César) : How do we handle this if we are inside an OpenMPI context???
 ! #ifdef OPENMPI_ON
 !             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
@@ -116,7 +118,7 @@ MODULE MOD_INTERPOLATE
         nest = m+k+1
         n = m - 1
         lwrk = (m*(k+1)+nest*(7+3*k))*2
-        WRITE(*,*) nest, lwrk, n
+        CALL LOG_TRACE('Interpolator working sizes: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(nest)))//' '//TRIM(ADJUSTL(INT_TO_STR_INLINE(lwrk)))//' '//TRIM(ADJUSTL(INT_TO_STR_INLINE(n))))
         ALLOCATE(wrk(lwrk), iwrk(nest))
         ALLOCATE(x(m), y(m), w(m))
         ALLOCATE(t(nest), c(nest))
@@ -136,10 +138,10 @@ MODULE MOD_INTERPOLATE
             IF (y(i).GT.0) THEN
                 w(i) = 1/(DSQRT(y(i))) ! NOTE(César) : This assumes the spline data are a countlike simulation/set
             ELSE
-                WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-                WRITE(*,*) '       ERROR:           The specified interpolation file (', TRIM(interpolator_file), ') requires positive y data.'
-                WRITE(*,*) '       ERROR:           Aborting Execution...'
-                WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+                CALL LOG_HEADER()
+                CALL LOG_ERROR('The specified interpolation file ('//TRIM(interpolator_file)//') requires positive y data.')
+                CALL LOG_ERROR('Aborting Execution...')
+                CALL LOG_HEADER()
                 ! TODO(César) : How do we handle this if we are inside an OpenMPI context???
     ! #ifdef OPENMPI_ON
     !             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
@@ -151,11 +153,11 @@ MODULE MOD_INTERPOLATE
         CALL CURFIT(iopt, m, x, y, w, x(1), x(m), k, s, nest, n, t, c, r, wrk, lwrk, iwrk, ierr)
 
         IF(ierr.GT.0) THEN
-            WRITE(*,*)           '------------------------------------------------------------------------------------------------------------------'
-            WRITE(*,*)           '       ERROR:           Failed to calculate b-spline coefficients and/or knots.'
-            WRITE(*,'(a,I2,a)') '        ERROR:           (ierr=', ierr, ')'
-            WRITE(*,*)           '       ERROR:           Aborting Execution...'
-            WRITE(*,*)           '------------------------------------------------------------------------------------------------------------------'
+            CALL LOG_HEADER()
+            CALL LOG_ERROR('Failed to calculate b-spline coefficients and/or knots.')
+            CALL LOG_ERROR('ierr='//TRIM(ADJUSTL(INT_TO_STR_INLINE(ierr))))
+            CALL LOG_ERROR('Aborting Execution...')
+            CALL LOG_HEADER()
             ! TODO(César) : How do we handle this if we are inside an OpenMPI context???
 ! #ifdef OPENMPI_ON
 !             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)

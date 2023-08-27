@@ -1,6 +1,7 @@
 PROGRAM MPI_STATUS_PROCESS
     USE MPI
     USE MOD_MPI
+    USE MOD_LOGGER
     IMPLICIT NONE
 
     INTEGER(4) :: mpi_rank, mpi_cluster_size, mpi_ierror, mpi_istatus(MPI_STATUS_SIZE)
@@ -23,19 +24,19 @@ PROGRAM MPI_STATUS_PROCESS
     CALL MPI_Comm_get_parent(parent_comm, mpi_ierror)
 
     IF((mpi_cluster_size.NE.1).AND.(mpi_rank.EQ.0)) THEN
-        WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-        WRITE(*,*) '       ATTENTION:           MPI_STATUS_PROCESS spawned with size != 1.'
-        WRITE(*,*) '       ATTENTION:           If you are seeing this warning, there is a bug somewhere. Oops!'
-        WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+        CALL LOG_HEADER()
+        CALL LOG_WARNING('MPI_STATUS_PROCESS spawned with size != 1.')
+        CALL LOG_WARNING('If you are seeing this warning, there is a bug somewhere. Oops!')
+        CALL LOG_HEADER()
     ENDIF
 
     IF(parent_comm.EQ.MPI_COMM_NULL) THEN
         IF(mpi_rank.EQ.0) THEN
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-            WRITE(*,*) '       ATTENTION:           MPI_STATUS_PROCESS not spawned indirectly.'
-            WRITE(*,*) '       ATTENTION:           This process cannot be manually executed.'
-            WRITE(*,*) '       ATTENTION:           Aborting execution...'
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            CALL LOG_HEADER()
+            CALL LOG_WARNING('MPI_STATUS_PROCESS not spawned indirectly.')
+            CALL LOG_WARNING('This process cannot be manually executed.')
+            CALL LOG_WARNING('Aborting execution...')
+            CALL LOG_HEADER()
         ENDIF
         CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
         STOP
@@ -118,12 +119,11 @@ PROGRAM MPI_STATUS_PROCESS
 
     IF(.NOT.acc_reached) THEN
         WRITE(*, fmt="(a)", advance='no') ACHAR(27)//"[31m"
-        WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-        WRITE(*,*) '       ERROR:               ACCURACY NOT REACHED for tries presented in red.'
-        WRITE(*,*) '       ERROR:               Change your parameters (maxstep, nlive, accuracy,...)'
-        WRITE(*,*) ''
-        WRITE(*,*) '       ERROR:               ABORTING EXECUTION'
-        WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+        CALL LOG_HEADER()
+        CALL LOG_ERROR('ACCURACY NOT REACHED for tries presented in red.')
+        CALL LOG_ERROR('Change your parameters (max_step, livepoints, accuracy,...).')
+        CALL LOG_ERROR('Aborting execution...')
+        CALL LOG_HEADER()
     ENDIF
 
     CALL MPI_FINALIZE(mpi_ierror)

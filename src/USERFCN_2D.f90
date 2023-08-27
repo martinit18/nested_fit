@@ -1,6 +1,7 @@
 ! Time-stamp: <Last changed by martino on Monday 21 June 2021 at CEST 17:56:10>
 
 FUNCTION SELECT_USERFCN_2D(funcname)
+   USE MOD_LOGGER
    IMPLICIT NONE
    CHARACTER*64 funcname
    INTEGER*4 SELECT_USERFCN_2D
@@ -33,9 +34,11 @@ FUNCTION SELECT_USERFCN_2D(funcname)
    ELSE IF(funcname.EQ.'TWO_VOIGT_LINE_BG_2D') THEN
       SELECT_USERFCN_2D = 12
    ELSE
-      WRITE(*,*) 'Selected function:', funcname
-      WRITE(*,*) 'Error in the function name def. in SELECT_USERFCN_2D'
-      WRITE(*,*) 'Check in the manual and in the input.dat file'
+      CALL LOG_HEADER()
+      CALL LOG_ERROR('Legacy function `'//TRIM(funcname)//'` does not exist.')
+      CALL LOG_ERROR('Check in the manual for legacy function names.')
+      CALL LOG_ERROR('Aborting Execution...')
+      CALL LOG_HEADER()
       STOP
    END IF
    RETURN

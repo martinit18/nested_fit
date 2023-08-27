@@ -4,6 +4,10 @@
 SUBROUTINE INIT_SHIRLEY(ndata,x_data,nc_data)
   ! Initialization for Shirely bacground consisting in an integral of the data input spectrum to add to the peak functions
   ! Shirley function requires that the data are already ordered and equally spaced
+
+  ! Module for logging
+  USE MOD_LOGGER
+
   IMPLICIT NONE
   INTEGER(4), INTENT(IN) :: ndata
   REAL(8), INTENT(IN), DIMENSION(ndata) :: x_data, nc_data
@@ -64,9 +68,11 @@ SUBROUTINE INIT_SHIRLEY(ndata,x_data,nc_data)
        x_shirley(1),x_shirley(ninterp),k,s,nest,nn,t,c,fp,wrk,lwrk,iwrk,ier)
 
   IF(ier.GT.0) THEN
-     WRITE(*,*) 'Problem with CURVFIT. IER = ', ier
-     WRITE(*,*) 'iopt = ', iopt, 'k = ', k, 'ninterp = ', ninterp
-     WRITE(*,*) 'fp = ', fp, 'ndata = ', ndata, 'Max allowed is 1000'
+     CALL LOG_HEADER()
+     CALL LOG_ERROR('Problem with CURFIT. IER = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ier))))
+     CALL LOG_ERROR('iopt = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(iopt)))//' k = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(k)))//' ninterp = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ninterp))))
+     CALL LOG_ERROR('fp = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(fp)))//'ndata = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ndata)))//' Max allowed (legacy) is 1000.')
+     CALL LOG_HEADER()
      STOP
   END IF
 

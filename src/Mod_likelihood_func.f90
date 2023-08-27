@@ -17,6 +17,9 @@ MODULE MOD_LIKELIHOOD
   USE MPI
 #endif
 
+  ! Module for logging
+  USE MOD_LOGGER
+
   IMPLICIT NONE
   PUBLIC :: SELECT_LIKELIHOODFCN
 
@@ -32,7 +35,7 @@ CONTAINS
     ! Initialize the search method params
     CALL INIT_SEARCH_METHOD()
     
-    WRITE(*,*) 'Initialization of func likelihood'
+    CALL LOG_TRACE('Initialization of func likelihood.')
 
     !IF (funcname.eq.'TEST_ROSENBROCK') THEN
     !   CALL INIT_ROSENBROCK()
@@ -48,20 +51,22 @@ CONTAINS
 #endif
 
       IF (search_method.eq.'RANDOM_WALK') THEN
-            searchid = 0
+          searchid = 0
       ELSE IF(search_method.EQ.'UNIFORM') THEN
-            searchid = 1
+          searchid = 1
       ELSE IF(search_method.EQ.'SLICE_SAMPLING') THEN
-            searchid = 2
+          searchid = 2
       ELSE IF(search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
-            searchid = 3
+          searchid = 3
       ELSE
-            WRITE(*,*) 'Error of the search type name in Mod_search_new_point module'
-            WRITE(*,*) 'Check the manual and the input file'
+          CALL LOG_HEADER()
+          CALL LOG_ERROR('Error of the search type name in Mod_search_new_point module.')
+          CALL LOG_ERROR('Check the manual and the input file.')
+          CALL LOG_HEADER()
 #ifdef OPENMPI_ON
-            CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+          CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
 #endif
-            STOP
+          STOP
       END IF
   END SUBROUTINE INIT_SEARCH_METHOD
 
@@ -146,9 +151,10 @@ CONTAINS
 
     REAL(8), DIMENSION(npar), INTENT(IN) :: live_max, par_mean, par_median_w
 
-    WRITE(*,*) ' '
-    WRITE(*,*) 'End of likelihood test'
-    WRITE(*,*) 'Number of calls : ', ncall
+    CALL LOG_HEADER()
+    CALL LOG_MESSAGE('End of likelihood test.')
+    CALL LOG_MESSAGE('Number of calls : '//TRIM(ADJUSTL(INT8_TO_STR_INLINE(ncall))))
+    CALL LOG_HEADER()
     OPEN(11,FILE='nf_output_n_likelihood_calls.txt',STATUS= 'UNKNOWN')
     WRITE(11,*) ncall
     CLOSE(11)

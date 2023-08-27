@@ -5,6 +5,8 @@
 MODULE MOD_INPUTPARSE
     ! Math module
     USE MOD_MATH
+    ! Logging module
+    USE MOD_LOGGER
     IMPLICIT NONE
     PUBLIC :: InputDataMap_t, InputDataGenericValue_t, PARSE_INPUT
     PRIVATE
@@ -206,8 +208,8 @@ MODULE MOD_INPUTPARSE
             IF(lastidx.NE.i) THEN
                 ! Make the key based on current scope
                 CALL MAKE_SCOPE_STRING(scope, count, key)
-
-                WRITE(*,*) TRIM(key), ' = ', TRIM(ADJUSTL(line(i+1:lastidx)))
+                
+                CALL LOG_TRACE(TRIM(key)//' = '//TRIM(ADJUSTL(line(i+1:lastidx))))
 
                 ! There is content in the line => map it
                 CALL config%insert(key, InputDataGenericValue_t(TRIM(ADJUSTL(line(i+1:lastidx)))))
@@ -234,11 +236,11 @@ MODULE MOD_INPUTPARSE
         ) THEN
             INPUTDATA_CONVERT_VAL_LOGICAL = .FALSE.
         ELSE
-            WRITE(*,*)           '------------------------------------------------------------------------------------------------------------------'
-            WRITE(*,*)           '       ERROR:           Failed to convert value `', TRIM(this%data), '` to logical.'
-            WRITE(*,'(a,I2,a)') '        ERROR:           Expected `true/false` or `True/False` or `TRUE/FALSE`.'
-            WRITE(*,*)           '       ERROR:           Aborting Execution...'
-            WRITE(*,*)           '------------------------------------------------------------------------------------------------------------------'
+            CALL LOG_HEADER()
+            CALL LOG_ERROR('Failed to convert value `'//TRIM(this%data)//'` to logical.')
+            CALL LOG_ERROR('Expected `true/false` or `True/False` or `TRUE/FALSE`.')
+            CALL LOG_ERROR('Aborting Execution...')
+            CALL LOG_HEADER()
             STOP
             ! NOTE(César) : This works before OpenMPI init!
         ENDIF
@@ -262,10 +264,10 @@ MODULE MOD_INPUTPARSE
         CALL TRY_PARSE_INT(this%data, INPUTDATA_CONVERT_VAL_INTEGER, error)
 
         IF(error) THEN
-            WRITE(*,*)           '------------------------------------------------------------------------------------------------------------------'
-            WRITE(*,*)           '       ERROR:           Failed to convert value `', TRIM(this%data), '` to integer.'
-            WRITE(*,*)           '       ERROR:           Aborting Execution...'
-            WRITE(*,*)           '------------------------------------------------------------------------------------------------------------------'
+            CALL LOG_HEADER()
+            CALL LOG_ERROR('Failed to convert value `'//TRIM(this%data)//'` to integer.')
+            CALL LOG_ERROR('Aborting Execution...')
+            CALL LOG_HEADER()
             STOP
             ! NOTE(César) : This works before OpenMPI init!
         ENDIF
@@ -281,10 +283,10 @@ MODULE MOD_INPUTPARSE
         CALL TRY_PARSE_REAL(this%data, INPUTDATA_CONVERT_VAL_REAL, error)
 
         IF(error) THEN
-            WRITE(*,*)           '------------------------------------------------------------------------------------------------------------------'
-            WRITE(*,*)           '       ERROR:           Failed to convert value `', TRIM(this%data), '` to real.'
-            WRITE(*,*)           '       ERROR:           Aborting Execution...'
-            WRITE(*,*)           '------------------------------------------------------------------------------------------------------------------'
+            CALL LOG_HEADER()
+            CALL LOG_ERROR('Failed to convert value `'//TRIM(this%data)//'` to real.')
+            CALL LOG_ERROR('Aborting Execution...')
+            CALL LOG_HEADER()
             STOP
             ! NOTE(César) : This works before OpenMPI init!
         ENDIF

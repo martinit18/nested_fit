@@ -81,6 +81,8 @@ set(SRC_FILES_COMM
     src/Mod_input_parse.f90
 
     src/Mod_userfcn.f90
+
+    src/Mod_logger.f90
 )
 
 set(SRC_EXTERNAL_FUNCS
@@ -191,8 +193,8 @@ add_executable(${nested_fit_target_func}
 )
 
 # TODO(César): This assumes we are using gfortran!
-set(SRC_FLAGS_D     -cpp -O0 -Wall -g -ffree-line-length-0)
-set(SRC_FLAGS_R     -cpp -O2 -static -ffree-line-length-0)
+set(SRC_FLAGS_D     -cpp -O0 -Wall -g -ffree-line-length-0 -ffixed-line-length-0)
+set(SRC_FLAGS_R     -cpp -O2 -static -ffree-line-length-0 -ffixed-line-length-0)
 
 set(SRC_FLAGS_CXX_D -O0 -Wall -pedantic -g)      # Be pedantic
 set(SRC_FLAGS_CXX_R -O2 -Wall -pedantic -static) # Be pedantic on release too

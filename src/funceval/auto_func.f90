@@ -11,6 +11,7 @@
 ! using a relatively low ammount of comparisons at the start to check
 ! for the call of user functions.
 MODULE MOD_AUTOFUNC
+    USE MOD_LOGGER
     USE MOD_METADATA
     USE iso_c_binding
     IMPLICIT NONE
@@ -271,11 +272,11 @@ MODULE MOD_AUTOFUNC
 
         IF(parsed_data%error.NE.0) THEN
             CALL GetErrorMsg(parsed_data, error_msg)
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-            WRITE(*,*) '       ERROR:           Failed to parse the LaTeX code provided.'
-            WRITE(*,*) '       ERROR:           Error message = ', TRIM(error_msg), '.'
-            WRITE(*,*) '       ERROR:           Aborting Execution...'
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            CALL LOG_HEADER()
+            CALL LOG_ERROR('Failed to parse the LaTeX code provided.')
+            CALL LOG_ERROR('Error message = '//TRIM(error_msg)//'.')
+            CALL LOG_ERROR('Aborting Execution...')
+            CALL LOG_HEADER()
             CALL FreeParseOutput(parsed_data)
             STOP
         ENDIF
@@ -411,9 +412,9 @@ MODULE MOD_AUTOFUNC
         TYPE(cache_entry_t) :: GET_CACHE
 
         IF(i.GT.nentries) THEN
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-            WRITE(*,*) '       ERROR:           Trying to get cache with invalid index.'
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            CALL LOG_HEADER()
+            CALL LOG_ERROR('Trying to get cache with invalid index.')
+            CALL LOG_HEADER()
             RETURN
         ENDIF
 
@@ -502,10 +503,10 @@ MODULE MOD_AUTOFUNC
 
         CALL EXECUTE_COMMAND_LINE('gfortran -c -shared -O3 -w -fPIC '//TRIM(filename)//' -o '//TRIM(nf_cache_folder)//TRIM(funcname)//'.o', EXITSTAT=status)
         IF(status.NE.0) THEN
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-            WRITE(*,*) '       ERROR:           Failed to compile the function provided.'
-            WRITE(*,*) '       ERROR:           Aborting Execution...'
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            CALL LOG_HEADER()
+            CALL LOG_ERROR('Failed to compile the function provided.')
+            CALL LOG_ERROR('Aborting Execution...')
+            CALL LOG_HEADER()
             STOP ! NOTE(César) : This works, before MPI init!!
         ENDIF
         CALL RECOMPILE_CACHE()
@@ -518,10 +519,10 @@ MODULE MOD_AUTOFUNC
 
         CALL EXECUTE_COMMAND_LINE('gcc -shared -fPIC '//TRIM(nf_cache_folder)//'*.o -o '//TRIM(dll_name), EXITSTAT=status)
         IF(status.NE.0) THEN
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-            WRITE(*,*) '       ERROR:           Failed to link the function provided.'
-            WRITE(*,*) '       ERROR:           Aborting Execution...'
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            CALL LOG_HEADER()
+            CALL LOG_ERROR('Failed to link the function provided.')
+            CALL LOG_ERROR('Aborting Execution...')
+            CALL LOG_HEADER()
             STOP ! NOTE(César) : This works, before MPI init!!
         ENDIF
     END SUBROUTINE
@@ -547,30 +548,30 @@ MODULE MOD_AUTOFUNC
 
         fileaddr = dlopen(TRIM(dll_name)//c_null_char, 1)
         IF(.NOT.c_associated(fileaddr)) THEN
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-            WRITE(*,*) '       ERROR:           Could not load dynamic function dll.'
-            WRITE(*,*) '       ERROR:           Aborting Execution...'
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            CALL LOG_HEADER()
+            CALL LOG_ERROR('Could not load dynamic function dll.')
+            CALL LOG_ERROR('Aborting Execution...')
+            CALL LOG_HEADER()
             RETURN
         ENDIF
 
         init_gsm = dlsym(fileaddr, 'INIT_GLOBAL_SPLINE_MAP'//c_null_char)
         IF(.NOT.c_associated(init_gsm)) THEN
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-            WRITE(*,*) '       ERROR:           Could not load dynamic function (INIT_GLOBAL_SPLINE_MAP)'
-            WRITE(*,*) '       ERROR:           From dll ('//TRIM(dll_name)//').'
-            WRITE(*,*) '       ERROR:           Aborting Execution...'
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            CALL LOG_HEADER()
+            CALL LOG_ERROR('Could not load dynamic function (INIT_GLOBAL_SPLINE_MAP).')
+            CALL LOG_ERROR('From dll ('//TRIM(dll_name)//').')
+            CALL LOG_ERROR('Aborting Execution...')
+            CALL LOG_HEADER()
             RETURN
         ENDIF
 
         procaddr = dlsym(fileaddr, TRIM(procname)//'_'//c_null_char)
         IF(.NOT.c_associated(procaddr)) THEN
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-            WRITE(*,*) '       ERROR:           Could not load dynamic function ('//TRIM(procname)//')'
-            WRITE(*,*) '       ERROR:           From dll ('//TRIM(dll_name)//').'
-            WRITE(*,*) '       ERROR:           Aborting Execution...'
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            CALL LOG_HEADER()
+            CALL LOG_ERROR('Could not load dynamic function ('//TRIM(procname)//').')
+            CALL LOG_ERROR('From dll ('//TRIM(dll_name)//').')
+            CALL LOG_ERROR('Aborting Execution...')
+            CALL LOG_HEADER()
             RETURN
         ENDIF
 
@@ -593,11 +594,11 @@ MODULE MOD_AUTOFUNC
 
         free_gsm = dlsym(fileaddr, 'FREE_GLOBAL_SPLINE_MAP'//c_null_char)
         IF(.NOT.c_associated(free_gsm)) THEN
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-            WRITE(*,*) '       ERROR:           Could not load dynamic function (FREE_GLOBAL_SPLINE_MAP)'
-            WRITE(*,*) '       ERROR:           From dll ('//TRIM(dll_name)//').'
-            WRITE(*,*) '       ERROR:           Aborting Execution...'
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            CALL LOG_HEADER()
+            CALL LOG_ERROR('Could not load dynamic function (FREE_GLOBAL_SPLINE_MAP).')
+            CALL LOG_ERROR('From dll ('//TRIM(dll_name)//').')
+            CALL LOG_ERROR('Aborting Execution...')
+            CALL LOG_HEADER()
             RETURN
         ENDIF
 
@@ -607,10 +608,10 @@ MODULE MOD_AUTOFUNC
         
         status = dlclose(fileaddr)
         IF(status.NE.0) THEN
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-            WRITE(*,*) '       ERROR:           Could not free dll.'
-            WRITE(*,*) '       ERROR:           Aborting Execution...'
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            CALL LOG_HEADER()
+            CALL LOG_ERROR('Could not free dll.')
+            CALL LOG_ERROR('Aborting Execution...')
+            CALL LOG_HEADER()
             RETURN
         ENDIF
 

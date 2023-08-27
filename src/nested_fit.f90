@@ -97,6 +97,8 @@ PROGRAM NESTED_FIT
    USE MOD_LIKELIHOOD
    ! Module for metadata
    USE MOD_METADATA
+   ! Module for logging and displaying messages
+   USE MOD_LOGGER
    ! Parallelization library !!!CAREFULL to the table dimension in this case!!
    USE OMP_LIB
 
@@ -166,6 +168,9 @@ PROGRAM NESTED_FIT
   LOGICAL   :: input_error_bars=.FALSE.
   CHARACTER :: input_dimensions='1'
 
+  ! Init the logger file
+  CALL START_LOG()
+
   ! Init the autofunc module
   CALL INIT_AUTOFUNC()
 
@@ -224,10 +229,10 @@ PROGRAM NESTED_FIT
   !!!!!!!! Initiate random generator with the same seed each time !!!!!!!!!!!
 #ifdef NORNG_ON  
   IF(mpi_rank.EQ.0) THEN
-      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-      WRITE(*,*) '       ATTENTION:           Nested_fit is running with a set seed! This is intended for testing only!'
-      WRITE(*,*) '       ATTENTION:           If you are using this as a production setting change the cmake NORNG option to OFF.'
-      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      CALL LOG_HEADER()
+      CALL LOG_WARNING('Nested_fit is running with a set seed! This is intended for testing only!')
+      CALL LOG_WARNING('If you are using this as a production setting change the cmake NORNG option to OFF.')
+      CALL LOG_HEADER()
       CALL sleep(1)
   ENDIF
 
@@ -260,10 +265,10 @@ PROGRAM NESTED_FIT
       ! Read parameter file ------------------------------------------------------------------------------------------------------------
       INQUIRE(FILE=TRIM(opt_input_file), EXIST=file_exists)
       IF(.NOT.file_exists) THEN
-         WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-         WRITE(*,*) '       ERROR:           Input file (', TRIM(opt_input_file), ') was not found.'
-         WRITE(*,*) '       ERROR:           Aborting Execution...'
-         WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+         CALL LOG_HEADER()
+         CALL LOG_ERROR('Input file ('//TRIM(opt_input_file)//') was not found.')
+         CALL LOG_ERROR('Aborting Execution...')
+         CALL LOG_HEADER()
 #ifdef OPENMPI_ON
          CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
 #endif
@@ -275,14 +280,14 @@ PROGRAM NESTED_FIT
       ! Check the version
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'version', version_file, MANDATORY=.TRUE.)
       IF(version.NE.version_file) THEN
-         WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-         WRITE(*,*) '       ATTENTION:           Specified program version does not match the current one.'
-         WRITE(*,*) '       ATTENTION:           Specified = ', version_file
-         WRITE(*,*) '       ATTENTION:           Current   = ', version
-         WRITE(*,*) '       ATTENTION:           Some features could be deprecated, or not used.'
-         WRITE(*,*) '       ATTENTION:           Please upgrade the input file version.'
-         WRITE(*,*) '       ATTENTION:           Continuing with possible future errors...'
-         WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+         CALL LOG_HEADER()
+         CALL LOG_WARNING('Specified program version does not match the current one.')
+         CALL LOG_WARNING('Specified = '//TRIM(version_file))
+         CALL LOG_WARNING('Current   = '//TRIM(version))
+         CALL LOG_WARNING('Some features could be deprecated, or not used.')
+         CALL LOG_WARNING('Please upgrade the input file version.')
+         CALL LOG_WARNING('Continuing with possible future errors...')
+         CALL LOG_HEADER()
       END IF
 
       ! General configuration
@@ -413,9 +418,9 @@ PROGRAM NESTED_FIT
   IF(mpi_rank.EQ.0) THEN
       ! Not implemented combination of inputs
       IF (data_type(1:1).EQ.'2'.AND.is_set) THEN
-         WRITE(*,*)
-         WRITE(*,*) 'ERROR'
-         WRITE(*,*) 'Set of 2D files not yet implemented. Change your input file.'
+         CALL LOG_HEADER()
+         CALL LOG_ERROR('Set of 2D files not yet implemented. Change your input file.')
+         CALL LOG_HEADER()
 #ifdef OPENMPI_ON
          CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
 #endif
@@ -473,9 +478,9 @@ PROGRAM NESTED_FIT
      ! To check the likelihood function
      evsum_final = LOGLIKELIHOOD(par_in)
      IF(mpi_rank.EQ.0) THEN
-         WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-         WRITE(*,*) '       ATTENTION:           All parameters are fixed'
-         WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+         CALL LOG_HEADER()
+         CALL LOG_WARNING('All parameters are fixed.')
+         CALL LOG_HEADER()
      ENDIF
      GOTO 501
   END IF
@@ -483,11 +488,11 @@ PROGRAM NESTED_FIT
 #ifdef OPENMPI_ON
   IF(mpi_rank.EQ.0) THEN
       IF(mpi_cluster_size.GT.ntry) THEN
-         WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-         WRITE(*,*) '       ATTENTION:           Specified MPI cluster size is bigger than the number of tries in the input file'
-         WRITE(*,*) '       ATTENTION:           This feature is not supported at the moment'
-         WRITE(*,*) '       ATTENTION:           Idling the unused processes'
-         WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+         CALL LOG_HEADER()
+         CALL LOG_WARNING('Specified MPI cluster size is bigger than the number of tries in the input file.')
+         CALL LOG_WARNING('This feature is not supported at the moment.')
+         CALL LOG_WARNING('Idling the unused processes.')
+         CALL LOG_HEADER()
       ENDIF
   ENDIF
 #endif
@@ -867,14 +872,18 @@ PROGRAM NESTED_FIT
 
 #ifdef NORNG_ON
   IF(mpi_rank.EQ.0) THEN
-     WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-     WRITE(*,*) '       ATTENTION:           This nested_fit output was ran with a set seed! This is intended for testing only!'
-     WRITE(*,*) '       ATTENTION:           If you are using this as a production setting change the cmake NORNG option to OFF.'
-     WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+     CALL LOG_HEADER()
+     CALL LOG_WARNING('This nested_fit output was ran with a set seed! This is intended for testing only!')
+     CALL LOG_WARNING('If you are using this as a production setting change the cmake NORNG option to OFF.')
+     CALL LOG_HEADER()
   ENDIF
 #endif
 
+  ! Clean the autofunc module
   CALL CLEAN_AUTOFUNC()
+
+  ! Close the logger file
+  CALL CLOSE_LOG()
 
   CONTAINS
 
@@ -932,11 +941,11 @@ PROGRAM NESTED_FIT
             par_fix(i) = fix_logical ! Implicit conversion
 
             IF (par_bnd1(i).GE.par_bnd2(i)) THEN
-               WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-               WRITE(*,*) '       ERROR:           Bad limits for parameter `', TRIM(parse_result%parameter_names(i)), '`.'
-               WRITE(*,*) '       ERROR:           min >= max.'
-               WRITE(*,*) '       ERROR:           Aborting Execution...'
-               WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+               CALL LOG_HEADER()
+               CALL LOG_ERROR('Bad limits for parameter `'//TRIM(parse_result%parameter_names(i))//'`.')
+               CALL LOG_ERROR('min >= max.')
+               CALL LOG_ERROR('Aborting Execution...')
+               CALL LOG_HEADER()
 #ifdef OPENMPI_ON
                CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
 #endif
@@ -983,10 +992,10 @@ PROGRAM NESTED_FIT
 
    CALL config%find(field_name, generic_val, error)
    IF(error.AND.mandatory) THEN
-      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-      WRITE(*,*) '       ERROR:           Input config for parameter `', TRIM(field_name), '` was not found and is mandatory.'
-      WRITE(*,*) '       ERROR:           Aborting Execution...'
-      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      CALL LOG_HEADER()
+      CALL LOG_ERROR('Input config for parameter `'//TRIM(field_name)//'` was not found and is mandatory.')
+      CALL LOG_ERROR('Aborting Execution...')
+      CALL LOG_HEADER()
       STOP
    ELSEIF(error) THEN
       RETURN ! Just ignore the value without warning or errors (for now)
@@ -1005,10 +1014,10 @@ PROGRAM NESTED_FIT
 
    CALL config%find(field_name, generic_val, error)
    IF(error.AND.mandatory) THEN
-      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-      WRITE(*,*) '       ERROR:           Input config for parameter `', TRIM(field_name), '` was not found and is mandatory.'
-      WRITE(*,*) '       ERROR:           Aborting Execution...'
-      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      CALL LOG_HEADER()
+      CALL LOG_ERROR('Input config for parameter `'//TRIM(field_name)//'` was not found and is mandatory.')
+      CALL LOG_ERROR('Aborting Execution...')
+      CALL LOG_HEADER()
       STOP
    ELSEIF(error) THEN
       RETURN ! Just ignore the value without warning or errors (for now)
@@ -1027,10 +1036,10 @@ PROGRAM NESTED_FIT
 
    CALL config%find(field_name, generic_val, error)
    IF(error.AND.mandatory) THEN
-      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-      WRITE(*,*) '       ERROR:           Input config for parameter `', TRIM(field_name), '` was not found and is mandatory.'
-      WRITE(*,*) '       ERROR:           Aborting Execution...'
-      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      CALL LOG_HEADER()
+      CALL LOG_ERROR('Input config for parameter `'//TRIM(field_name)//'` was not found and is mandatory.')
+      CALL LOG_ERROR('Aborting Execution...')
+      CALL LOG_HEADER()
       STOP
    ELSEIF(error) THEN
       RETURN ! Just ignore the value without warning or errors (for now)
@@ -1049,10 +1058,10 @@ PROGRAM NESTED_FIT
 
    CALL config%find(field_name, generic_val, error)
    IF(error.AND.mandatory) THEN
-      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-      WRITE(*,*) '       ERROR:           Input config for parameter `', TRIM(field_name), '` was not found and is mandatory.'
-      WRITE(*,*) '       ERROR:           Aborting Execution...'
-      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      CALL LOG_HEADER()
+      CALL LOG_ERROR('Input config for parameter `'//TRIM(field_name)//'` was not found and is mandatory.')
+      CALL LOG_ERROR('Type `Delete` to delete the cache?')
+      CALL LOG_HEADER()
       STOP
    ELSEIF(error) THEN
       RETURN ! Just ignore the value without warning or errors (for now)
@@ -1087,22 +1096,22 @@ PROGRAM NESTED_FIT
    CHARACTER(LEN=512), INTENT(IN) :: invalue
    CHARACTER(LEN=6) :: delete_ok
 
-   WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-   WRITE(*,*) '       ATTENTION: This action is irreversible. All of the user functions will be lost.'
-   WRITE(*,*) '       ATTENTION: Type `Delete` to delete the cache?'
-   WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+   CALL LOG_HEADER()
+   CALL LOG_MESSAGE('This action is irreversible. All of the user functions will be lost.')
+   CALL LOG_MESSAGE('Type `Delete` to delete the cache?')
+   CALL LOG_HEADER()
    WRITE(*, '(a2)', advance='no') '> '
    READ(*, '(a6)') delete_ok
 
    IF(delete_ok.EQ.'Delete') THEN
-      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-      WRITE(*,*) '       ATTENTION: Cache deleted.'
-      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      CALL LOG_HEADER()
+      CALL LOG_MESSAGE('Cache deleted.')
+      CALL LOG_HEADER()
       CALL DEL_FOLDER_RECURSIVE(nf_cache_folder)
    ELSE
-      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-      WRITE(*,*) '       ATTENTION: Operation aborted by the user.'
-      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      CALL LOG_HEADER()
+      CALL LOG_MESSAGE('Operation aborted by the user.')
+      CALL LOG_HEADER()
    ENDIF
    STOP
   END SUBROUTINE
@@ -1173,11 +1182,11 @@ PROGRAM NESTED_FIT
    CALL GET_USER_FUNC_PROCPTR(function_name, fptr, loaded_ok)
 
    IF(.NOT.loaded_ok) THEN
-      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-      WRITE(*,*) '       ERROR:           Failed to load proc address.'
-      WRITE(*,*) '       ERROR:           Maybe the specified function name is incorrect/not in the cache.'
-      WRITE(*,*) '       ERROR:           Aborting Execution...'
-      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+      CALL LOG_HEADER()
+      CALL LOG_ERROR('Failed to load proc address.')
+      CALL LOG_ERROR('Maybe the specified function name is incorrect/not in the cache.')
+      CALL LOG_ERROR('Aborting Execution...')
+      CALL LOG_HEADER()
       STOP
    ENDIF
 
@@ -1211,8 +1220,10 @@ PROGRAM NESTED_FIT
    CALL GET_CACHE_SIZE(n)
 
    IF(n.EQ.0) THEN
-      WRITE(*,'(a)') 'No cache functions found.'
-      WRITE(*,'(a)') 'Use the `-fa` option to add a function to the cache.'
+      CALL LOG_HEADER()
+      CALL LOG_ERROR  ('No cache functions found.')
+      CALL LOG_MESSAGE('Use the `-fa` option to add a function to the cache.')
+      CALL LOG_HEADER()
       STOP
    ENDIF
 
@@ -1258,9 +1269,10 @@ PROGRAM NESTED_FIT
    CLASS(argdef_t), INTENT(IN)    :: this
    CHARACTER(LEN=512), INTENT(IN) :: invalue
 
-   WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-   WRITE(*,*) '       ATTENTION: Recompiling cache...'
-   WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+   CALL LOG_HEADER()
+   CALL LOG_MESSAGE('Recompiling cache...')
+   CALL LOG_HEADER()
+
    CALL RECOMPILE_CACHE()
 
    STOP
