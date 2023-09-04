@@ -178,7 +178,7 @@ CONTAINS
        END DO
        !$OMP END PARALLEL DO
 
-       CALL LOG_TRACE('n_iteration = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'present accuracy = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(max_accuracy))))
+       CALL LOG_TRACE('n_iteration = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//' present accuracy = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(max_accuracy))))
 
        OPEN (UNIT=10, FILE='nf_output_meanshift_check.dat', STATUS='unknown')
        DO l=1,np
