@@ -59,7 +59,7 @@ MODULE MOD_LOGGER
 #ifndef LTRACE
         RETURN ! NOTE(César): LOG_TRACE should be optimized out with just a return statement ??
 #endif
-        CALL LOG_GENERIC('<TRACE>', msg, '39')
+        CALL LOG_GENERIC('<TRACE>', msg, CHAR(27)//'[39m')
     END SUBROUTINE
 
     FUNCTION REAL_TO_STR_INLINE(val)
