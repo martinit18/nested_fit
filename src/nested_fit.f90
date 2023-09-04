@@ -931,6 +931,7 @@ PROGRAM NESTED_FIT
          ! Handle the arguments from the input file
          DO i=1, parse_result%num_params
             key         = 'function.params.'//TRIM(parse_result%parameter_names(i))//'.'
+            CALL LOG_TRACE('Reading key: '//key)
             par_num(i)  = i
             par_name(i) = TRIM(parse_result%parameter_names(i))
             CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'value', par_in(i)  , MANDATORY=.TRUE. )
