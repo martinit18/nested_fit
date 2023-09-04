@@ -175,13 +175,17 @@ MODULE MOD_INPUTPARSE
             ENDIF
 
             ! Ignore inline comments
+            ! NOTE(Cesar): FORTRAN does not have operator short-circuit (I think) so we need an else if here
+            !              https://fortranwiki.org/fortran/show/short-circuiting
             lastidx = INDEX(line, '#')
             IF(lastidx.EQ.0) THEN
+                lastidx = LEN_TRIM(line)
+            ELSE IF(line(lastidx-1:lastidx-1).NE.' ') THEN ! Inline YAML comments need a space before the `#` symbol
                 lastidx = LEN_TRIM(line)
             ELSE
                 lastidx = LEN_TRIM(line(1:(lastidx - 1)))
             ENDIF
-
+            
             ! Process line and get scope
             i = INDEX(line, ':')
 
