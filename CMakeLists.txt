@@ -23,9 +23,14 @@ option(OPENMPI "Enable/Disable OpenMPI." OFF)
 option(AUTOTESTS "Automatically run tests after compiling." OFF)
 option(LAPACK "Enable/Disable LAPACK." OFF)
 option(BUILD_NESTED_PY "Automatically build nested_res for PyPI." OFF)
+option(LTRACE "Enable trace logging." OFF)
 
 if(OPENMPI AND WIN32)
     message(FATAL_ERROR "Windows builds don't currently support OpenMPI.")
+endif()
+
+if(LTRACE)
+    add_definitions(-DLTRACE)
 endif()
 
 #####################################
