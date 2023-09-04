@@ -158,7 +158,8 @@ MODULE MOD_INPUTPARSE
         CHARACTER(128)                :: name
         TYPE(IntegerStack_t)          :: parent_stack
         CHARACTER(128), DIMENSION(32) :: scope = ''
-        LOGICAL                       :: empty_stack
+        LOGICAL                       :: empty_stack, find_error
+        TYPE(InputDataGenericValue_t) :: last_value
         
         CALL config%init(512) ! Make a big map
 
@@ -183,6 +184,14 @@ MODULE MOD_INPUTPARSE
 
             ! Process line and get scope
             i = INDEX(line, ':')
+
+            ! There is no new field (just cat to the last)
+            IF(i.EQ.0) THEN
+                ! `key` should have the last key here
+                CALL config%find(key, last_value, find_error) ! `find_error` should never be true here
+                CALL config%insert(key, InputDataGenericValue_t(TRIM(ADJUSTL(last_value%toCharacter()))//' '//TRIM(ADJUSTL(line(i+1:lastidx)))))
+                CYCLE
+            ENDIF
 
             name = TRIM(line(1:i-1))
 
