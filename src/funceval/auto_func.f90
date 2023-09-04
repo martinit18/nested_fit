@@ -267,7 +267,9 @@ MODULE MOD_AUTOFUNC
         CALL F_C_STRING_DEALLOC(c_expression)
 
         IF(parsed_data%error.EQ.0) THEN
-            CALL CheckParseValidity(parsed_data, TRIM(fname_cache))
+            CALL F_C_STRING_ALLOC(fname_cache, c_expression)
+            CALL CheckParseValidity(parsed_data, c_expression(1))
+            CALL F_C_STRING_DEALLOC(c_expression)
         ENDIF
 
         IF(parsed_data%error.NE.0) THEN

@@ -619,6 +619,14 @@ static std::tuple<std::string, std::vector<std::string>, std::vector<std::string
     // Replace \pi by pi
     ReplaceToken("\\\\pi", "pi", input);
 
+    // Make functions unique based on their name
+    std::sort(functions.begin(), functions.end(), [](auto& left, auto& right) {
+        return left.first < right.first; 
+    });
+    functions.erase(std::unique(functions.begin(), functions.end(), [](auto& left, auto& right) {
+        return left.first == right.first; 
+    }), functions.end());
+
     // Make array like function calls for each user defined function
     for(const auto& f : functions)
     {
@@ -660,6 +668,7 @@ static std::tuple<std::string, std::vector<std::string>, std::vector<std::string
     // Pass the function identifiers and arg count
     std::vector<std::string> function_names;
     std::vector<int> function_argcount;
+
     function_names.reserve(functions.size());
     for(const auto& f : functions)
     {
@@ -758,8 +767,8 @@ extern "C" ParseOutput ParseLatexToF90(const char* input_stream)
 
     const std::string infix_code              = std::get<0>(output);
     const std::vector<std::string> parameters = std::get<1>(output);
-    const std::vector<std::string> functions  = std::get<2>(output); // Includes duplicates
-    const std::vector<int>         call_argc  = std::get<3>(output); // Includes duplicates
+    const std::vector<std::string> functions  = std::get<2>(output);
+    const std::vector<int>         call_argc  = std::get<3>(output);
     const std::vector<std::string> custom_bi  = std::get<4>(output);
 
     // Make sure there is no 'rogue' parameters
@@ -865,7 +874,6 @@ extern "C" void CheckParseValidity(ParseOutput* output, const char* function_cac
         std::string name       = TrimLR(cache_line[0]);
         int         num_vars   = std::atoi(cache_line[1].c_str());
         std::string date_mod   = TrimLR(cache_line[2]);
-
         names.push_back(name);
         varcount.push_back(num_vars);
     }
