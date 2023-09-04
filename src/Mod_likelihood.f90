@@ -531,7 +531,7 @@ CONTAINS
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
     !
     REAL(8) :: enc
-    INTEGER(4) :: i, j, k
+    INTEGER(4) :: i, j, k, np
     REAL(8) :: USERFCN_SET, USERFCN_2D, xx, yy
 
     ncall=ncall+1
@@ -549,7 +549,11 @@ CONTAINS
                 CALL LOG_HEADER()
                 CALL LOG_ERROR('LIKELIHOOD ERROR.')
                 CALL LOG_ERROR('The user function needs to be strictly positive for all the analysis domain.')
-                CALL LOG_ERROR('Function value = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(enc)))//' at x = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(x(i,k)))))
+                CALL LOG_ERROR('Function value = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(enc)))//' at:')
+                CALL LOG_ERROR('x = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(x(i,k)))))
+                DO np=1, npar
+                  CALL LOG_ERROR(TRIM(par_name(np))//' = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(par(np)))))
+                END DO
                 CALL LOG_HEADER()
 #ifdef OPENMPI_ON
                 CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
@@ -572,7 +576,11 @@ CONTAINS
                 CALL LOG_HEADER()
                 CALL LOG_ERROR('LIKELIHOOD ERROR.')
                 CALL LOG_ERROR('The user function needs to be strictly positive for all the analysis domain.')
-                CALL LOG_ERROR('Function value = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(enc)))//' at x = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(adata(i,k)))))
+                CALL LOG_ERROR('Function value = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(enc)))//' at:')
+                CALL LOG_ERROR('x = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(adata(i,k)))))
+                DO np=1, npar
+                  CALL LOG_ERROR(TRIM(par_name(np))//' = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(par(np)))))
+                END DO
                 CALL LOG_HEADER()
 #ifdef OPENMPI_ON
                 CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
