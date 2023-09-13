@@ -209,11 +209,11 @@ CONTAINS
     ELSE IF(search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
       searchid = 3
     ELSE
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL LOG_ERROR('Error of the search type name in Mod_search_new_point module.')
       CALL LOG_ERROR('Check the manual and the input file.')
-      CALL LOG_MESSAGE('Available options: [RANDOM_WALK, UNIFORM, SLICE_SAMPLING, SLICE_SAMPLING_ADAPT]')
-      CALL LOG_HEADER()
+      CALL LOG_ERROR('Available options: [RANDOM_WALK, UNIFORM, SLICE_SAMPLING, SLICE_SAMPLING_ADAPT]')
+      CALL LOG_ERROR_HEADER()
       CALL HALT_EXECUTION()
     END IF
   END SUBROUTINE INIT_SEARCH_METHOD
@@ -228,20 +228,20 @@ CONTAINS
       ELSE IF(likelihood_funcname.eq.'MOD_JEFFREYS') THEN
          loglikefuncid = 1
       ELSE
-         CALL LOG_HEADER()
+         CALL LOG_ERROR_HEADER()
          CALL LOG_ERROR('Error of the likelihood function type name in Mod_search_new_point module.')
          CALL LOG_ERROR('Check the manual and the input file.')
-         CALL LOG_MESSAGE('Available options: [GAUSSIAN, MOD_JEFFREYS]')
-         CALL LOG_HEADER()
+         CALL LOG_ERROR('Available options: [GAUSSIAN, MOD_JEFFREYS]')
+         CALL LOG_ERROR_HEADER()
          CALL HALT_EXECUTION()
       END IF
 
       ! Note(César): This only works because INIT_FUNCTIONS is called earlier
       IF (BIT_CHECK_IF(DATA_IS_C).AND.loglikefuncid.GT.0) THEN
-         CALL LOG_HEADER()
+         CALL LOG_ERROR_HEADER()
          CALL LOG_ERROR('Count based data does not support non Gaussian likelihood functions.')
          CALL LOG_ERROR('Check the manual and the input file.')
-         CALL LOG_HEADER()
+         CALL LOG_ERROR_HEADER()
          CALL HALT_EXECUTION()
       END IF
 
@@ -327,21 +327,21 @@ CONTAINS
    LOGICAL             :: IS_POISSON_COUNT
 
    IF (ABS(val-INT(val)).GT.1E-5) THEN ! Make test for integer numbers, NaN and infinites
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL LOG_ERROR('Input number is not integer and you are using Poisson statistic (no error bar).')
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       IS_POISSON_COUNT = .FALSE.
       RETURN
    ELSE IF (val.LT.0.AND.IEEE_IS_FINITE(val)) THEN ! Check if counts are negative
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL LOG_ERROR('Input number is negative and you are using Poisson statistic (no error bar).')
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       IS_POISSON_COUNT = .FALSE.
       RETURN
    ELSE IF (.NOT.IEEE_IS_FINITE(val).OR.IEEE_IS_NAN(val)) THEN ! Check infinites and nan
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL LOG_ERROR('Infinite or "NaN" counts are not accepted.')
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       IS_POISSON_COUNT = .FALSE.
       RETURN
    END IF
@@ -395,9 +395,9 @@ CONTAINS
       CALL READ_FILE_COUNTS_2D(namefile, minx, maxx, miny, maxy, datan)
 
       IF(datan.EQ.0) THEN
-         CALL LOG_HEADER()
+         CALL LOG_ERROR_HEADER()
          CALL LOG_ERROR('Data count: 0, no data in the selected range. Please check your min max and data.')
-         CALL LOG_HEADER()
+         CALL LOG_ERROR_HEADER()
       ENDIF
       RETURN
    ENDIF
@@ -417,11 +417,11 @@ CONTAINS
 
       ! File does not contain the expected amount of columns
       IF(ncols.NE.expected_ncols) THEN
-         CALL LOG_HEADER()
+         CALL LOG_ERROR_HEADER()
          CALL LOG_ERROR('Input file does not have the layout specified in the `specstr`.')
          CALL LOG_ERROR('At line: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.')
          CALL LOG_ERROR('Aborting Execution...')
-         CALL LOG_HEADER()
+         CALL LOG_ERROR_HEADER()
          CALL HALT_EXECUTION()
       ENDIF
 
@@ -431,7 +431,7 @@ CONTAINS
       CALL TRY_GET_COLVAL_REAL('c_v'  , c_tmp(i) , cvars, c_present  ) ! Try for c
       CALL TRY_GET_COLVAL_REAL('ce_v' , ce_tmp(i), cvars, ce_present ) ! Try for ce
       CALL TRY_GET_COLVAL_CHAR('i_v'  , dummy    , cvars, i_present  ) ! Try for i
-      
+
       ! CALL TRY_GET_COLVAL_REAL('y_v'  , y_tmp(i) , cvars, y_present) ! Try for y ! TODO(César): Reserved for future use.
       ! CALL TRY_GET_COLVAL_REAL('t_v'  , t_tmp(i) , cvars, t_present) ! Try for t ! TODO(César): Reserved for future use.
 
@@ -457,10 +457,10 @@ CONTAINS
             c_tmp(nd) = c_tmp(i)
             ce_tmp(nd) = ce_tmp(i)
             IF (ce_tmp(nd).LE.0.) THEN
-               CALL LOG_HEADER()
+               CALL LOG_ERROR_HEADER()
                CALL LOG_ERROR('Errorbar with a value equal to 0 or negative.')
                CALL LOG_ERROR('At value: '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(ce_tmp(i)))))
-               CALL LOG_HEADER()
+               CALL LOG_ERROR_HEADER()
                CALL HALT_EXECUTION()
             END IF
             ! Calculation of the constant part of the likelihood with Gaussian distribution
@@ -504,9 +504,9 @@ CONTAINS
 
     ! Check if counts are negative
     IF (ANY(adata_tmp.LT.0.AND.IEEE_IS_FINITE(adata_tmp))) THEN
-       CALL LOG_HEADER()
+       CALL LOG_ERROR_HEADER()
        CALL LOG_ERROR('Negative counts are not accepted.')
-       CALL LOG_HEADER()
+       CALL LOG_ERROR_HEADER()
        CALL HALT_EXECUTION()
     END IF
 
@@ -614,9 +614,9 @@ CONTAINS
        END IF
     ELSE
        IF(BIT_CHECK_IF(DATA_IS_2D)) THEN
-          CALL LOG_HEADER()
+          CALL LOG_ERROR_HEADER()
           CALL LOG_ERROR('Sets for 2D functions are not yet implemented.')
-          CALL LOG_HEADER()
+          CALL LOG_ERROR_HEADER()
           CALL HALT_EXECUTION()
        END IF
        funcid = SELECT_USERFCN_SET(funcname)
@@ -697,7 +697,7 @@ CONTAINS
                 enc = USERFCN_SET(x(i,k),npar,par,funcid,k)
              END IF
              IF (enc.LE.0) THEN
-                CALL LOG_HEADER()
+                CALL LOG_ERROR_HEADER()
                 CALL LOG_ERROR('LIKELIHOOD ERROR.')
                 CALL LOG_ERROR('The user function needs to be strictly positive for all the analysis domain.')
                 CALL LOG_ERROR('Function value = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(enc)))//' at:')
@@ -705,7 +705,7 @@ CONTAINS
                 DO np=1, npar
                   CALL LOG_ERROR(TRIM(par_name(np))//' = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(par(np)))))
                 END DO
-                CALL LOG_HEADER()
+                CALL LOG_ERROR_HEADER()
                 CALL HALT_EXECUTION()
              END IF
           END DO
@@ -721,7 +721,7 @@ CONTAINS
              yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin
              enc = USERFCN_2D(xx,yy,npar,par,funcid)
              IF (enc.LE.0) THEN
-                CALL LOG_HEADER()
+                CALL LOG_ERROR_HEADER()
                 CALL LOG_ERROR('LIKELIHOOD ERROR.')
                 CALL LOG_ERROR('The user function needs to be strictly positive for all the analysis domain.')
                 CALL LOG_ERROR('Function value = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(enc)))//' at:')
@@ -729,7 +729,7 @@ CONTAINS
                 DO np=1, npar
                   CALL LOG_ERROR(TRIM(par_name(np))//' = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(par(np)))))
                 END DO
-                CALL LOG_HEADER()
+                CALL LOG_ERROR_HEADER()
                 CALL HALT_EXECUTION()
                 STOP
              END IF
@@ -896,10 +896,10 @@ CONTAINS
        CALL WRITE_EXPECTED_VALUES_2D(live_max,par_mean,par_median_w)
     END IF
 
-    CALL LOG_HEADER()
+    CALL LOG_MESSAGE_HEADER()
     CALL LOG_MESSAGE('End of likelihood test.')
     CALL LOG_MESSAGE('Number of calls : '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ncall))))
-    CALL LOG_HEADER()
+    CALL LOG_MESSAGE_HEADER()
     OPEN(11,FILE='nf_output_n_likelihood_calls.txt',STATUS= 'UNKNOWN')
     WRITE(11,*) ncall
     CLOSE(11)

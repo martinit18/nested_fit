@@ -227,10 +227,10 @@ module MOD_ARGPARSE
             ELSE
                 IF(argval%value.NE.CHAR(255)) THEN
                     WRITE(*,*) 'Use -h for help.'
-                    CALL LOG_HEADER()
+                    CALL LOG_ERROR_HEADER()
                     CALL LOG_ERROR('Nested_fit argument parsing failed!')
                     CALL LOG_ERROR('Aborting Execution...')
-                    CALL LOG_HEADER()
+                    CALL LOG_ERROR_HEADER()
                     STOP ! Error parsing cli inputs
                 ENDIF
                 EXIT

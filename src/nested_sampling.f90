@@ -163,10 +163,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   ! Calculate the intervarls (logarithmic) for the integration
   ! This is equivalent to the "crude" approximation from Skilling
   IF (maxstep/nlive.GT.700.AND.mpi_rank.EQ.0) THEN
-     CALL LOG_HEADER()
+     CALL LOG_ERROR_HEADER()
      CALL LOG_ERROR('Too few livepoints for too many max_steps.')
      CALL LOG_ERROR('Step volumes cannot be calculated correctly.')
-     CALL LOG_HEADER()
+     CALL LOG_ERROR_HEADER()
      CALL HALT_EXECUTION()
   END IF
   DO l=1, maxstep
@@ -191,10 +191,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
     evstep(1) = 1./conv_par*live_like_old(1) + tlnmass(1)
     evsum = evstep(1)
   ELSE
-    CALL LOG_HEADER()
+    CALL LOG_ERROR_HEADER()
     CALL LOG_ERROR('Invalid convergence method.')
     CALL LOG_ERROR('Available options: [LIKE_ACC, ENERGY_ACC, ENERGY_MAX].')
-    CALL LOG_HEADER()
+    CALL LOG_ERROR_HEADER()
   END IF
 
 
@@ -204,6 +204,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
    IF(mpi_rank.EQ.0) THEN
          CALL MPI_SEND(mpi_cluster_size, 1, MPI_INT, 0, 0, mpi_child_writter_comm, mpi_ierror)
          CALL MPI_SEND(opt_compact_output, 1, MPI_LOGICAL, 0, 0, mpi_child_writter_comm, mpi_ierror)
+         CALL MPI_SEND(opt_suppress_output, 1, MPI_LOGICAL, 0, 0, mpi_child_writter_comm, mpi_ierror)
    ENDIF
    CALL MPI_Get_processor_name(processor_name, processor_name_size, mpi_ierror)
    processor_name = TRIM(ADJUSTL(processor_name))
@@ -262,27 +263,27 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 #endif
         IF (make_cluster) THEN
            IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
-              CALL LOG_HEADER()
+              CALL LOG_ERROR_HEADER()
               CALL LOG_ERROR('Too many cluster analysis for an iteration.')
               CALL LOG_ERROR('Change cluster recognition parameters.')
-              CALL LOG_HEADER()
+              CALL LOG_ERROR_HEADER()
               CALL HALT_EXECUTION()
            END IF
            IF(n_call_cluster>=n_call_cluster_max) THEN
-              CALL LOG_HEADER()
+              CALL LOG_ERROR_HEADER()
               CALL LOG_ERROR('Too many cluster analysis.')
               CALL LOG_ERROR('Change cluster recognition parameters.')
-              CALL LOG_HEADER()
+              CALL LOG_ERROR_HEADER()
               CALL HALT_EXECUTION()
            END IF
            make_cluster_internal=.true.
            need_cluster=.true.
         ELSE
-           CALL LOG_HEADER()
+           CALL LOG_WARNING_HEADER()
            CALL LOG_WARNING('Too many tries to find new live points for try n.: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(itry))))
            CALL LOG_WARNING('More than '//TRIM(ADJUSTL(INT_TO_STR_INLINE(maxtries*maxntries))))
            CALL LOG_WARNING('We take the data as they are :-~')
-           CALL LOG_HEADER()
+           CALL LOG_WARNING_HEADER()
            nstep_final = n - 1
            GOTO 601
         END IF
@@ -294,28 +295,28 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 #endif
         IF (make_cluster) THEN
            IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
-              CALL LOG_HEADER()
+              CALL LOG_ERROR_HEADER()
               CALL LOG_ERROR('Too many cluster analysis for an iteration.')
               CALL LOG_ERROR('Change cluster recognition parameters.')
-              CALL LOG_HEADER()
+              CALL LOG_ERROR_HEADER()
               CALL HALT_EXECUTION()
            END IF
            IF(n_call_cluster>=n_call_cluster_max) THEN
-              CALL LOG_HEADER()
+              CALL LOG_ERROR_HEADER()
               CALL LOG_ERROR('Too many cluster analysis.')
               CALL LOG_ERROR('Change cluster recognition parameters.')
-              CALL LOG_HEADER()
+              CALL LOG_ERROR_HEADER()
               CALL HALT_EXECUTION()
            END IF
            make_cluster_internal=.true.
            need_cluster=.true.
            GOTO 901
         ELSE
-           CALL LOG_HEADER()
+           CALL LOG_WARNING_HEADER()
            CALL LOG_WARNING('Too many tries to find new live points for try n.: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(itry))))
            CALL LOG_WARNING('More than '//TRIM(ADJUSTL(INT_TO_STR_INLINE(maxtries))))
            CALL LOG_WARNING('We take the data as they are :-~')
-           CALL LOG_HEADER()
+           CALL LOG_WARNING_HEADER()
            nstep_final = n - 1
            GOTO 601
         END IF
@@ -358,11 +359,11 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 
         ! Insert the new one
         IF (jlim.LT.1.OR.jlim.GT.nlive) THEN
-           CALL LOG_HEADER()
+           CALL LOG_ERROR_HEADER()
            CALL LOG_ERROR('Problem in the search method, or in the calculations...')
            CALL LOG_ERROR('No improvement in the likelihood value after finding the new point...')
            CALL LOG_ERROR('j = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(jlim)))//'old min like = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(min_live_like)))//'new min like = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(live_like_new(it)))))
-           CALL LOG_HEADER()
+           CALL LOG_ERROR_HEADER()
            CALL HALT_EXECUTION()
         ELSE IF (jlim.EQ.1) THEN
            live_like(1) = live_like_new(it)
@@ -433,10 +434,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
            ! Check if the estimate accuracy is reached
            evtotest = evstep(n)
         ELSE
-           CALL LOG_HEADER()
+           CALL LOG_ERROR_HEADER()
            CALL LOG_ERROR('Invalid convergence method.')
            CALL LOG_ERROR('Available options: [LIKE_ACC, ENERGY_ACC, ENERGY_MAX].')
-           CALL LOG_HEADER()
+           CALL LOG_ERROR_HEADER()
         END IF
         
         ! Write status
@@ -461,6 +462,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
                 ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES14.7, ' | Avg eff.: ', F6.4, ' |')
            CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_STATUS, mpi_child_writter_comm, mpi_ierror)
 #else
+           IF(opt_suppress_output) CYCLE
            IF(opt_compact_output) THEN
               WRITE(info_string,22) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
 22            FORMAT('| N: ', I2, ' | S: ', I8, ' | MLL: ', F20.12, ' | E: ', F20.12, &
@@ -558,10 +560,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   ELSE IF(conv_method .EQ. 'ENERGY_MAX') THEN
     WRITE(99,*) '# Evidence accuracy =',  1./conv_par*live_like(nlive) + tlnmass(n-1) - evsum
   ELSE
-   CALL LOG_HEADER()
+   CALL LOG_ERROR_HEADER()
    CALL LOG_ERROR('Invalid convergence method.')
    CALL LOG_ERROR('Available options: [LIKE_ACC, ENERGY_ACC, ENERGY_MAX].')
-   CALL LOG_HEADER()
+   CALL LOG_ERROR_HEADER()
   END IF
   WRITE(99,*) '# n     lnlikelihood     parameters'
   DO j=1,nlive
@@ -616,10 +618,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
     evrest_last = 1./conv_par*live_like_last + tlnrest(nstep_final)
     evsum_final = MAX(evsum,evrest_last)
   ELSE
-   CALL LOG_HEADER()
+   CALL LOG_ERROR_HEADER()
    CALL LOG_ERROR('Invalid convergence method.')
    CALL LOG_ERROR('Available options: [LIKE_ACC, ENERGY_ACC, ENERGY_MAX].')
-   CALL LOG_HEADER()
+   CALL LOG_ERROR_HEADER()
   END IF
   
   ! Insert the last live points in the ensemble

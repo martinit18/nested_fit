@@ -59,10 +59,10 @@ CONTAINS
       ELSE IF(search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
           searchid = 3
       ELSE
-          CALL LOG_HEADER()
+          CALL LOG_ERROR_HEADER()
           CALL LOG_ERROR('Error of the search type name in Mod_search_new_point module.')
           CALL LOG_ERROR('Check the manual and the input file.')
-          CALL LOG_HEADER()
+          CALL LOG_ERROR_HEADER()
           CALL HALT_EXECUTION()
       END IF
   END SUBROUTINE INIT_SEARCH_METHOD
@@ -148,10 +148,10 @@ CONTAINS
 
     REAL(8), DIMENSION(npar), INTENT(IN) :: live_max, par_mean, par_median_w
 
-    CALL LOG_HEADER()
+    CALL LOG_MESSAGE_HEADER()
     CALL LOG_MESSAGE('End of likelihood test.')
     CALL LOG_MESSAGE('Number of calls : '//TRIM(ADJUSTL(INT8_TO_STR_INLINE(ncall))))
-    CALL LOG_HEADER()
+    CALL LOG_MESSAGE_HEADER()
     OPEN(11,FILE='nf_output_n_likelihood_calls.txt',STATUS= 'UNKNOWN')
     WRITE(11,*) ncall
     CLOSE(11)

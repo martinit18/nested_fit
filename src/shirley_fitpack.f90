@@ -68,11 +68,11 @@ SUBROUTINE INIT_SHIRLEY(ndata,x_data,nc_data)
        x_shirley(1),x_shirley(ninterp),k,s,nest,nn,t,c,fp,wrk,lwrk,iwrk,ier)
 
   IF(ier.GT.0) THEN
-     CALL LOG_HEADER()
+     CALL LOG_ERROR_HEADER()
      CALL LOG_ERROR('Problem with CURFIT. IER = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ier))))
      CALL LOG_ERROR('iopt = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(iopt)))//' k = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(k)))//' ninterp = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ninterp))))
      CALL LOG_ERROR('fp = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(fp)))//'ndata = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ndata)))//' Max allowed (legacy) is 1000.')
-     CALL LOG_HEADER()
+     CALL LOG_ERROR_HEADER()
      STOP
   END IF
 

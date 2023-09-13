@@ -46,12 +46,12 @@ FUNCTION Interpolate(interpolator_file, x, s)
         RETURN
     ELSE
         ! Fatal error
-        CALL LOG_HEADER()
+        CALL LOG_ERROR_HEADER()
         CALL LOG_ERROR('Failed to find the interpolation function in hashtable.')
         CALL LOG_ERROR('This is possibly a bug in the source code.')
         CALL LOG_ERROR('Please open an issue, reporting all your steps, so we are able to reproduce.')
         CALL LOG_ERROR('Aborting Execution...')
-        CALL LOG_HEADER()
+        CALL LOG_ERROR_HEADER()
 
         ! TODO(César) : How do we handle this if we are inside an OpenMPI context???
 ! #ifdef OPENMPI_ON

@@ -2,7 +2,8 @@ MODULE MOD_LOGGER
     USE MOD_TIMESTAMP
     IMPLICIT NONE
 
-    PUBLIC :: START_LOG, CLOSE_LOG, LOG_ERROR, LOG_WARNING, LOG_MESSAGE, LOG_TRACE, LOG_HEADER, LOG_VERBOSITY,&
+    PUBLIC :: START_LOG, CLOSE_LOG, LOG_ERROR, LOG_WARNING, LOG_MESSAGE, LOG_TRACE,&
+              LOG_ERROR_HEADER, LOG_WARNING_HEADER, LOG_MESSAGE_HEADER, LOG_VERBOSITY,&
               REAL_TO_STR_INLINE, INT_TO_STR_INLINE, INT8_TO_STR_INLINE
     PRIVATE
 
@@ -29,21 +30,36 @@ MODULE MOD_LOGGER
 
         DO i = 1, 5
             IF(TRIM(verbosity).EQ.verbosity_levels(i)) THEN
-                CALL LOG_TRACE('Chaning verbosity level to: '//TRIM(verbosity)//'.')
                 logger_verbosity = i - 1
+                CALL LOG_TRACE('Changing verbosity level to: '//TRIM(verbosity)//'.')
                 RETURN
             ENDIF
         END DO
         
-        CALL LOG_HEADER()
+        CALL LOG_ERROR_HEADER()
         CALL LOG_ERROR('Selected verbosity level ('//TRIM(verbosity)//') does not exist.')
         CALL LOG_ERROR('Available options = [''none'', ''error'', ''warning'', ''message'', ''trace'']') ! Hardcoded for simplicity
-        CALL LOG_HEADER()
+        CALL LOG_ERROR_HEADER()
     END SUBROUTINE
 
     ! NOTE(César): This is quite cumbersome
     SUBROUTINE LOG_HEADER()
         WRITE(*,*)     '------------------------------------------------------------------------------------------------------------------'
+    END SUBROUTINE
+
+    SUBROUTINE LOG_ERROR_HEADER()
+        IF(logger_verbosity.LT.1) RETURN
+        CALL LOG_HEADER()
+    END SUBROUTINE
+
+    SUBROUTINE LOG_WARNING_HEADER()
+        IF(logger_verbosity.LT.2) RETURN
+        CALL LOG_HEADER()
+    END SUBROUTINE
+
+    SUBROUTINE LOG_MESSAGE_HEADER()
+        IF(logger_verbosity.LT.3) RETURN
+        CALL LOG_HEADER()
     END SUBROUTINE
 
     SUBROUTINE LOG_GENERIC(level, msg, colorid)

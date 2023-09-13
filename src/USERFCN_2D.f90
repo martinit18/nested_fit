@@ -34,11 +34,11 @@ FUNCTION SELECT_USERFCN_2D(funcname)
    ELSE IF(funcname.EQ.'TWO_VOIGT_LINE_BG_2D') THEN
       SELECT_USERFCN_2D = 12
    ELSE
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL LOG_ERROR('Legacy function `'//TRIM(funcname)//'` does not exist.')
       CALL LOG_ERROR('Check in the manual for legacy function names.')
       CALL LOG_ERROR('Aborting Execution...')
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       STOP
    END IF
    RETURN

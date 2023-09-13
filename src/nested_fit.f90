@@ -242,10 +242,10 @@ PROGRAM NESTED_FIT
   !!!!!!!! Initiate random generator with the same seed each time !!!!!!!!!!!
 #ifdef NORNG_ON  
   IF(mpi_rank.EQ.0) THEN
-      CALL LOG_HEADER()
+      CALL LOG_WARNING_HEADER()
       CALL LOG_WARNING('Nested_fit is running with a set seed! This is intended for testing only!')
       CALL LOG_WARNING('If you are using this as a production setting change the cmake NORNG option to OFF.')
-      CALL LOG_HEADER()
+      CALL LOG_WARNING_HEADER()
       CALL sleep(1)
   ENDIF
 
@@ -255,8 +255,6 @@ PROGRAM NESTED_FIT
 #ifdef OPENMPI_ON
    CALL MPI_BARRIER(MPI_COMM_WORLD, mpi_ierror)
 #endif
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ! Calculate time elapsed !!!!!!!!!!!!!!!!!!!!
   ! Parallel real time (and number of threads)  
@@ -276,10 +274,10 @@ PROGRAM NESTED_FIT
       ! Read parameter file ------------------------------------------------------------------------------------------------------------
       INQUIRE(FILE=TRIM(opt_input_file), EXIST=file_exists)
       IF(.NOT.file_exists) THEN
-         CALL LOG_HEADER()
+         CALL LOG_ERROR_HEADER()
          CALL LOG_ERROR('Input file ('//TRIM(opt_input_file)//') was not found.')
          CALL LOG_ERROR('Aborting Execution...')
-         CALL LOG_HEADER()
+         CALL LOG_ERROR_HEADER()
          CALL HALT_EXECUTION()
       ENDIF
 
@@ -288,14 +286,14 @@ PROGRAM NESTED_FIT
       ! Check the version
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'version', version_file, MANDATORY=.TRUE.)
       IF(version.NE.version_file) THEN
-         CALL LOG_HEADER()
+         CALL LOG_WARNING_HEADER()
          CALL LOG_WARNING('Specified program version does not match the current one.')
          CALL LOG_WARNING('Specified = '//TRIM(version_file))
          CALL LOG_WARNING('Current   = '//TRIM(version))
          CALL LOG_WARNING('Some features could be deprecated, or not used.')
          CALL LOG_WARNING('Please upgrade the input file version.')
          CALL LOG_WARNING('Continuing with possible future errors...')
-         CALL LOG_HEADER()
+         CALL LOG_WARNING_HEADER()
       END IF
 
 #ifndef FUNC_TARGET
@@ -432,9 +430,9 @@ PROGRAM NESTED_FIT
   IF(mpi_rank.EQ.0) THEN
       ! Not implemented combination of inputs
       IF (data_type(1:1).EQ.'2'.AND.is_set) THEN
-         CALL LOG_HEADER()
+         CALL LOG_ERROR_HEADER()
          CALL LOG_ERROR('Set of 2D files not yet implemented. Change your input file.')
-         CALL LOG_HEADER()
+         CALL LOG_ERROR_HEADER()
          CALL HALT_EXECUTION()
       END IF
   END IF
@@ -489,9 +487,9 @@ PROGRAM NESTED_FIT
      ! To check the likelihood function
      evsum_final = LOGLIKELIHOOD(par_in)
      IF(mpi_rank.EQ.0) THEN
-         CALL LOG_HEADER()
+         CALL LOG_WARNING_HEADER()
          CALL LOG_WARNING('All parameters are fixed.')
-         CALL LOG_HEADER()
+         CALL LOG_WARNING_HEADER()
      ENDIF
      GOTO 501
   END IF
@@ -499,11 +497,11 @@ PROGRAM NESTED_FIT
 #ifdef OPENMPI_ON
   IF(mpi_rank.EQ.0) THEN
       IF(mpi_cluster_size.GT.ntry) THEN
-         CALL LOG_HEADER()
+         CALL LOG_WARNING_HEADER()
          CALL LOG_WARNING('Specified MPI cluster size is bigger than the number of tries in the input file.')
          CALL LOG_WARNING('This feature is not supported at the moment.')
          CALL LOG_WARNING('Idling the unused processes.')
-         CALL LOG_HEADER()
+         CALL LOG_WARNING_HEADER()
       ENDIF
   ENDIF
 #endif
@@ -789,78 +787,7 @@ PROGRAM NESTED_FIT
    !$ seconds_omp =  stopt_omp - startt_omp
    
    IF(mpi_rank.EQ.0) THEN
-      !IF(arg.EQ. ' ') THEN
-      OPEN(22,FILE='nf_output_res.dat',STATUS= 'UNKNOWN')
-      WRITE(22,*) '#############_FINAL_RESULTS_#####################################################################################'
-      WRITE(22,*) 'N._of_trials:                          ', ntry
-      WRITE(22,*) 'N._of_total_iteration:                 ', nall
-      WRITE(22,*) 'N._of_used_livepoints:                 ', nlive
-      WRITE(22,*) 'Final_evidence_(log):                  ', evsum_final
-      WRITE(22,*) 'Evidence_estimated_uncertainty_(log):  ', evsum_err_est
-      WRITE(22,*) 'Evidence_standard_deviation_(log):     ', evsum_err
-      WRITE(22,*) '------------------------------------------------------------------------------------------------------------------'
-      WRITE(22,*) 'Max_likelihood_(log):', live_like_max
-      WRITE(22,*) 'Max_parameter_set: '
-      DO i=1,npar
-         WRITE(22,*) par_name(i), live_max(i)
-      END DO
-      WRITE(22,*) '-------------------------------------------------------------------------------------------------------------------'
-      WRITE(22,*) 'Mean_value_and_standard_deviation_of_the_parameters'
-      DO i=1,npar
-         WRITE(22,*) par_name(i), par_mean(i), '+/-', par_sd(i)
-      END DO
-      WRITE(22,*) '-------------------------------------------------------------------------------------------------------------------'
-      WRITE(22,*) 'Median_and_confidence_levels: low_99%,     low_95%,     low_68%,     median,     high_68%,    high_95%,   high_99%'
-      DO i=1,npar
-         WRITE(22,*) par_name(i), par_m99_w(i),par_m95_w(i),par_m68_w(i),par_median_w(i),&
-               par_p68_w(i),par_p95_w(i),par_p99_w(i)
-      END DO
-      WRITE(22,*) '-------------------------------------------------------------------------------------------------------------------'
-      WRITE(22,*) 'Additional_information'
-      WRITE(22,*) 'Information:                                ', info
-      WRITE(22,*) 'Minimal_required_iteration_(ntry*exp[info]):', nexp
-      WRITE(22,*) 'Bayesian_complexity:                        ', comp
-      WRITE(22,*) '###################################################################################################################'
-      WRITE(22,*) 'Number_of_used_cores:                       ', nth
-      WRITE(22,*) 'Time_elapsed_(tot_and_real_in_s):           ', seconds, seconds_omp
-      CLOSE(22)
-
-      WRITE(*,*) ' '
-      WRITE(*,*) ' '
-      WRITE(*,*) '############## FINAL RESULTS #####################################################################################'
-      WRITE(*,*) 'N. of trials:                         ', ntry
-      WRITE(*,*) 'N. of total iteration:                ', nall
-      WRITE(*,*) 'N._of_used_livepoints:               ', nlive
-      WRITE(*,*) 'Final evidence (log):                 ', evsum_final
-      WRITE(*,*) 'Evidence estimated uncertainty (log): ', evsum_err_est
-      WRITE(*,*) 'Evidence standard deviation (log):    ', evsum_err
-
-      WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-      WRITE(*,*) 'Max likelihood (log):', live_like_max
-      WRITE(*,*) 'Max parameter set : '
-      DO i=1,npar
-         WRITE(*,*) par_name(i), ':', live_max(i)
-      END DO
-      WRITE(*,*) '-------------------------------------------------------------------------------------------------------------------'
-      WRITE(*,*) 'Mean value and standard deviation of the parameters'
-      DO i=1,npar
-         WRITE(*,*) par_name(i), ':', par_mean(i), '+/-', par_sd(i)
-      END DO
-      WRITE(*,*) '--------------------------------------------------------------------------------------------------------------------'
-      WRITE(*,*) 'Median and confidence levels: low 99%,     low 95%,     low68%,     median,     high 68%,     high 95%,     high 99%'
-      DO i=1,npar
-         WRITE(*,*) par_name(i), ':', par_m99_w(i),par_m95_w(i),par_m68_w(i),par_median_w(i),&
-               par_p68_w(i),par_p95_w(i),par_p99_w(i)
-      END DO
-      WRITE(*,*) '-------------------------------------------------------------------------------------------------------------------'
-      WRITE(*,*) 'Additional information'
-      WRITE(*,*) 'Information:                                ', info
-      WRITE(*,*) 'Minimal required iteration (ntry*exp[info]):', nexp
-      WRITE(*,*) 'Bayesian complexity:                        ', comp
-      WRITE(*,*) '####################################################################################################################'
-      WRITE(*,*) 'Number of used cores:                       ', nth
-      WRITE(*,*) 'Time elapsed (tot and real in s):           ', seconds, seconds_omp
-  
+      CALL PRINT_OUTPUT_RESULT()
       DEALLOCATE(weight,live_like_final,live_final,weight_par)
    ENDIF
 
@@ -883,10 +810,10 @@ PROGRAM NESTED_FIT
 
 #ifdef NORNG_ON
   IF(mpi_rank.EQ.0) THEN
-     CALL LOG_HEADER()
+     CALL LOG_WARNING_HEADER()
      CALL LOG_WARNING('This nested_fit output was ran with a set seed! This is intended for testing only!')
      CALL LOG_WARNING('If you are using this as a production setting change the cmake NORNG option to OFF.')
-     CALL LOG_HEADER()
+     CALL LOG_WARNING_HEADER()
   ENDIF
 #endif
 
@@ -897,6 +824,81 @@ PROGRAM NESTED_FIT
   CALL CLOSE_LOG()
 
   CONTAINS
+
+  SUBROUTINE PRINT_OUTPUT_RESULT()
+   OPEN(22,FILE='nf_output_res.dat',STATUS= 'UNKNOWN')
+   WRITE(22,*) '#############_FINAL_RESULTS_#####################################################################################'
+   WRITE(22,*) 'N._of_trials:                          ', ntry
+   WRITE(22,*) 'N._of_total_iteration:                 ', nall
+   WRITE(22,*) 'N._of_used_livepoints:                 ', nlive
+   WRITE(22,*) 'Final_evidence_(log):                  ', evsum_final
+   WRITE(22,*) 'Evidence_estimated_uncertainty_(log):  ', evsum_err_est
+   WRITE(22,*) 'Evidence_standard_deviation_(log):     ', evsum_err
+   WRITE(22,*) '------------------------------------------------------------------------------------------------------------------'
+   WRITE(22,*) 'Max_likelihood_(log):', live_like_max
+   WRITE(22,*) 'Max_parameter_set: '
+   DO i=1,npar
+      WRITE(22,*) par_name(i), live_max(i)
+   END DO
+   WRITE(22,*) '-------------------------------------------------------------------------------------------------------------------'
+   WRITE(22,*) 'Mean_value_and_standard_deviation_of_the_parameters'
+   DO i=1,npar
+      WRITE(22,*) par_name(i), par_mean(i), '+/-', par_sd(i)
+   END DO
+   WRITE(22,*) '-------------------------------------------------------------------------------------------------------------------'
+   WRITE(22,*) 'Median_and_confidence_levels: low_99%,     low_95%,     low_68%,     median,     high_68%,    high_95%,   high_99%'
+   DO i=1,npar
+      WRITE(22,*) par_name(i), par_m99_w(i),par_m95_w(i),par_m68_w(i),par_median_w(i),&
+            par_p68_w(i),par_p95_w(i),par_p99_w(i)
+   END DO
+   WRITE(22,*) '-------------------------------------------------------------------------------------------------------------------'
+   WRITE(22,*) 'Additional_information'
+   WRITE(22,*) 'Information:                                ', info
+   WRITE(22,*) 'Minimal_required_iteration_(ntry*exp[info]):', nexp
+   WRITE(22,*) 'Bayesian_complexity:                        ', comp
+   WRITE(22,*) '###################################################################################################################'
+   WRITE(22,*) 'Number_of_used_cores:                       ', nth
+   WRITE(22,*) 'Time_elapsed_(tot_and_real_in_s):           ', seconds, seconds_omp
+   CLOSE(22)
+
+   IF(opt_suppress_output) RETURN
+
+   WRITE(*,*) ' '
+   WRITE(*,*) ' '
+   WRITE(*,*) '############## FINAL RESULTS #####################################################################################'
+   WRITE(*,*) 'N. of trials:                         ', ntry
+   WRITE(*,*) 'N. of total iteration:                ', nall
+   WRITE(*,*) 'N._of_used_livepoints:               ', nlive
+   WRITE(*,*) 'Final evidence (log):                 ', evsum_final
+   WRITE(*,*) 'Evidence estimated uncertainty (log): ', evsum_err_est
+   WRITE(*,*) 'Evidence standard deviation (log):    ', evsum_err
+
+   WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+   WRITE(*,*) 'Max likelihood (log):', live_like_max
+   WRITE(*,*) 'Max parameter set : '
+   DO i=1,npar
+      WRITE(*,*) par_name(i), ':', live_max(i)
+   END DO
+   WRITE(*,*) '-------------------------------------------------------------------------------------------------------------------'
+   WRITE(*,*) 'Mean value and standard deviation of the parameters'
+   DO i=1,npar
+      WRITE(*,*) par_name(i), ':', par_mean(i), '+/-', par_sd(i)
+   END DO
+   WRITE(*,*) '--------------------------------------------------------------------------------------------------------------------'
+   WRITE(*,*) 'Median and confidence levels: low 99%,     low 95%,     low68%,     median,     high 68%,     high 95%,     high 99%'
+   DO i=1,npar
+      WRITE(*,*) par_name(i), ':', par_m99_w(i),par_m95_w(i),par_m68_w(i),par_median_w(i),&
+            par_p68_w(i),par_p95_w(i),par_p99_w(i)
+   END DO
+   WRITE(*,*) '-------------------------------------------------------------------------------------------------------------------'
+   WRITE(*,*) 'Additional information'
+   WRITE(*,*) 'Information:                                ', info
+   WRITE(*,*) 'Minimal required iteration (ntry*exp[info]):', nexp
+   WRITE(*,*) 'Bayesian complexity:                        ', comp
+   WRITE(*,*) '####################################################################################################################'
+   WRITE(*,*) 'Number of used cores:                       ', nth
+   WRITE(*,*) 'Time elapsed (tot and real in s):           ', seconds, seconds_omp
+  END SUBROUTINE
 
   SUBROUTINE CONFIGURE_USERFUNCTION()
    CHARACTER(512)                 :: definition, key
@@ -953,11 +955,11 @@ PROGRAM NESTED_FIT
             par_fix(i) = fix_logical ! Implicit conversion
 
             IF (par_bnd1(i).GE.par_bnd2(i)) THEN
-               CALL LOG_HEADER()
+               CALL LOG_ERROR_HEADER()
                CALL LOG_ERROR('Bad limits for parameter `'//TRIM(parse_result%parameter_names(i))//'`.')
                CALL LOG_ERROR('min >= max.')
                CALL LOG_ERROR('Aborting Execution...')
-               CALL LOG_HEADER()
+               CALL LOG_ERROR_HEADER()
                CALL HALT_EXECUTION()
             END IF
          END DO
@@ -980,10 +982,10 @@ PROGRAM NESTED_FIT
 
    CALL STR_TO_LOWER(format)
    IF((TRIM(format).NE.'.csv').AND.(TRIM(format).NE.'.tsv')) THEN
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL LOG_ERROR('Unrecognized filefmt: `'//TRIM(format)//'`.')
       CALL LOG_ERROR('Aborting Execution...')
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL HALT_EXECUTION()
    ENDIF
 
@@ -1035,10 +1037,10 @@ PROGRAM NESTED_FIT
    CALL SPLIT_INPUT_ON(',', specstr, specifiers, count, specstrmaxcol)
    
    IF(count.LT.1) THEN
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL LOG_ERROR('Specified `specstr` is not valid.')
       CALL LOG_ERROR('Aborting Execution...')
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL HALT_EXECUTION()
    ENDIF
 
@@ -1050,11 +1052,11 @@ PROGRAM NESTED_FIT
       output = '2c'
       RETURN
    ELSE IF(INDEX(spec_str, 'img').GT.0) THEN
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL LOG_ERROR('Specified `specstr` is not valid.')
       CALL LOG_ERROR('Spec name `img` is an exclusive spec. But other specs were found.')
       CALL LOG_ERROR('Aborting Execution...')
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL HALT_EXECUTION()
    ENDIF
    
@@ -1074,11 +1076,11 @@ PROGRAM NESTED_FIT
 
       919   CONTINUE
       IF(.NOT.found_spec) THEN
-         CALL LOG_HEADER()
+         CALL LOG_ERROR_HEADER()
          CALL LOG_ERROR('Specified `specstr` is not valid.')
          CALL LOG_ERROR('Spec name `'//TRIM(specifiers(i))//'` is not a valid name.')
          CALL LOG_ERROR('Aborting Execution...')
-         CALL LOG_HEADER()
+         CALL LOG_ERROR_HEADER()
          CALL HALT_EXECUTION()
       ENDIF
       found_spec = .FALSE.
@@ -1086,11 +1088,11 @@ PROGRAM NESTED_FIT
 
    CALL specstr_ordermap%find('x_v', order_int, spec_err)
    IF(spec_err) THEN
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL LOG_ERROR('Specified `specstr` is valid.')
       CALL LOG_ERROR('But spec `x` is required and was not found.')
       CALL LOG_ERROR('Aborting Execution...')
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL HALT_EXECUTION()
    ENDIF
    dimensions = '1'
@@ -1102,11 +1104,11 @@ PROGRAM NESTED_FIT
 
    CALL specstr_ordermap%find('c_v', order_int, spec_err)
    IF(spec_err) THEN
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL LOG_ERROR('Specified `specstr` is valid.')
       CALL LOG_ERROR('But spec `c` is required and was not found.')
       CALL LOG_ERROR('Aborting Execution...')
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL HALT_EXECUTION()
    ENDIF
 
@@ -1132,10 +1134,10 @@ PROGRAM NESTED_FIT
 
    CALL config%find(field_name, generic_val, error)
    IF(error.AND.mandatory) THEN
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL LOG_ERROR('Input config for parameter `'//TRIM(field_name)//'` was not found and is mandatory.')
       CALL LOG_ERROR('Aborting Execution...')
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       STOP
    ELSEIF(error) THEN
       RETURN ! Just ignore the value without warning or errors (for now)
@@ -1154,10 +1156,10 @@ PROGRAM NESTED_FIT
 
    CALL config%find(field_name, generic_val, error)
    IF(error.AND.mandatory) THEN
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL LOG_ERROR('Input config for parameter `'//TRIM(field_name)//'` was not found and is mandatory.')
       CALL LOG_ERROR('Aborting Execution...')
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       STOP
    ELSEIF(error) THEN
       RETURN ! Just ignore the value without warning or errors (for now)
@@ -1176,10 +1178,10 @@ PROGRAM NESTED_FIT
 
    CALL config%find(field_name, generic_val, error)
    IF(error.AND.mandatory) THEN
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL LOG_ERROR('Input config for parameter `'//TRIM(field_name)//'` was not found and is mandatory.')
       CALL LOG_ERROR('Aborting Execution...')
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       STOP
    ELSEIF(error) THEN
       RETURN ! Just ignore the value without warning or errors (for now)
@@ -1198,10 +1200,10 @@ PROGRAM NESTED_FIT
 
    CALL config%find(field_name, generic_val, error)
    IF(error.AND.mandatory) THEN
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL LOG_ERROR('Input config for parameter `'//TRIM(field_name)//'` was not found and is mandatory.')
       CALL LOG_ERROR('Type `Delete` to delete the cache?')
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       STOP
    ELSEIF(error) THEN
       RETURN ! Just ignore the value without warning or errors (for now)
@@ -1236,22 +1238,22 @@ PROGRAM NESTED_FIT
    CHARACTER(LEN=512), INTENT(IN) :: invalue
    CHARACTER(LEN=6) :: delete_ok
 
-   CALL LOG_HEADER()
+   CALL LOG_MESSAGE_HEADER()
    CALL LOG_MESSAGE('This action is irreversible. All of the user functions will be lost.')
    CALL LOG_MESSAGE('Type `Delete` to delete the cache?')
-   CALL LOG_HEADER()
+   CALL LOG_MESSAGE_HEADER()
    WRITE(*, '(a2)', advance='no') '> '
    READ(*, '(a6)') delete_ok
 
    IF(delete_ok.EQ.'Delete') THEN
-      CALL LOG_HEADER()
+      CALL LOG_MESSAGE_HEADER()
       CALL LOG_MESSAGE('Cache deleted.')
-      CALL LOG_HEADER()
+      CALL LOG_MESSAGE_HEADER()
       CALL DEL_FOLDER_RECURSIVE(nf_cache_folder)
    ELSE
-      CALL LOG_HEADER()
+      CALL LOG_MESSAGE_HEADER()
       CALL LOG_MESSAGE('Operation aborted by the user.')
-      CALL LOG_HEADER()
+      CALL LOG_MESSAGE_HEADER()
    ENDIF
    STOP
   END SUBROUTINE
@@ -1322,11 +1324,11 @@ PROGRAM NESTED_FIT
    CALL GET_USER_FUNC_PROCPTR(function_name, fptr, loaded_ok)
 
    IF(.NOT.loaded_ok) THEN
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL LOG_ERROR('Failed to load proc address.')
       CALL LOG_ERROR('Maybe the specified function name is incorrect/not in the cache.')
       CALL LOG_ERROR('Aborting Execution...')
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       STOP
    ENDIF
 
@@ -1360,10 +1362,10 @@ PROGRAM NESTED_FIT
    CALL GET_CACHE_SIZE(n)
 
    IF(n.EQ.0) THEN
-      CALL LOG_HEADER()
-      CALL LOG_ERROR  ('No cache functions found.')
-      CALL LOG_MESSAGE('Use the `-fa` option to add a function to the cache.')
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
+      CALL LOG_ERROR('No cache functions found.')
+      CALL LOG_ERROR('Use the `-fa` option to add a function to the cache.')
+      CALL LOG_ERROR_HEADER()
       STOP
    ENDIF
 
@@ -1409,9 +1411,9 @@ PROGRAM NESTED_FIT
    CLASS(argdef_t), INTENT(IN)    :: this
    CHARACTER(LEN=512), INTENT(IN) :: invalue
 
-   CALL LOG_HEADER()
+   CALL LOG_MESSAGE_HEADER()
    CALL LOG_MESSAGE('Recompiling cache...')
-   CALL LOG_HEADER()
+   CALL LOG_MESSAGE_HEADER()
 
    CALL RECOMPILE_CACHE()
 
@@ -1428,9 +1430,9 @@ PROGRAM NESTED_FIT
   SUBROUTINE B_SUPPRESSOUTPUT(this, invalue)
    CLASS(argdef_t), INTENT(IN)    :: this
    CHARACTER(LEN=512), INTENT(IN) :: invalue
-   
+
    CALL LOG_VERBOSITY('none')
-   ! TODO(César): Maybe somehow suppress stdout
+   opt_suppress_output = .TRUE.
   END SUBROUTINE
 
 END PROGRAM NESTED_FIT

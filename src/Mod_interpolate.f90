@@ -51,9 +51,9 @@ MODULE MOD_INTERPOLATE
 
         CALL SPLEV(spline_data%t, spline_data%n, spline_data%c, spline_data%k, x, y, 1, spline_data%e, ierr)
         IF(ierr.GT.0) THEN
-            CALL LOG_HEADER()
+            CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Spline evaluation failed this iteration.')
-            CALL LOG_HEADER()
+            CALL LOG_ERROR_HEADER()
         ENDIF
     END SUBROUTINE
 
@@ -81,10 +81,10 @@ MODULE MOD_INTERPOLATE
         
         INQUIRE(FILE=TRIM(interpolator_file), EXIST=file_ok)
         IF(.NOT.file_ok) THEN
-            CALL LOG_HEADER()
+            CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('The specified interpolation file ('//TRIM(interpolator_file)//') was not found.')
             CALL LOG_ERROR('Aborting Execution...')
-            CALL LOG_HEADER()
+            CALL LOG_ERROR_HEADER()
             ! TODO(César) : How do we handle this if we are inside an OpenMPI context???
 ! #ifdef OPENMPI_ON
 !             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
@@ -103,10 +103,10 @@ MODULE MOD_INTERPOLATE
         10 CLOSE(1)
 
         IF(m.LE.k) THEN
-            CALL LOG_HEADER()
+            CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('The specified interpolation file ('//TRIM(interpolator_file)//') needs at least '//TRIM(ADJUSTL(INT_TO_STR_INLINE(k)))//' points.')
             CALL LOG_ERROR('Aborting Execution...')
-            CALL LOG_HEADER()
+            CALL LOG_ERROR_HEADER()
             ! TODO(César) : How do we handle this if we are inside an OpenMPI context???
 ! #ifdef OPENMPI_ON
 !             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
@@ -138,10 +138,10 @@ MODULE MOD_INTERPOLATE
             IF (y(i).GT.0) THEN
                 w(i) = 1/(DSQRT(y(i))) ! NOTE(César) : This assumes the spline data are a countlike simulation/set
             ELSE
-                CALL LOG_HEADER()
+                CALL LOG_ERROR_HEADER()
                 CALL LOG_ERROR('The specified interpolation file ('//TRIM(interpolator_file)//') requires positive y data.')
                 CALL LOG_ERROR('Aborting Execution...')
-                CALL LOG_HEADER()
+                CALL LOG_ERROR_HEADER()
                 ! TODO(César) : How do we handle this if we are inside an OpenMPI context???
     ! #ifdef OPENMPI_ON
     !             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
@@ -153,11 +153,11 @@ MODULE MOD_INTERPOLATE
         CALL CURFIT(iopt, m, x, y, w, x(1), x(m), k, s, nest, n, t, c, r, wrk, lwrk, iwrk, ierr)
 
         IF(ierr.GT.0) THEN
-            CALL LOG_HEADER()
+            CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Failed to calculate b-spline coefficients and/or knots.')
             CALL LOG_ERROR('ierr='//TRIM(ADJUSTL(INT_TO_STR_INLINE(ierr))))
             CALL LOG_ERROR('Aborting Execution...')
-            CALL LOG_HEADER()
+            CALL LOG_ERROR_HEADER()
             ! TODO(César) : How do we handle this if we are inside an OpenMPI context???
 ! #ifdef OPENMPI_ON
 !             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)

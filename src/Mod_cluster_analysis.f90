@@ -39,10 +39,10 @@ CONTAINS
     ELSE IF (cluster_method .EQ. 'k') THEN
       CALL KNN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     ELSE
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL LOG_ERROR('Error of the cluster analysis method name in Mod_cluster_analaysis module.')
       CALL LOG_ERROR('Check the manual and the input file.')
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       STOP
     END IF
 
@@ -197,9 +197,9 @@ CONTAINS
 !    WRITE(*,*) 'n_iteration = ', i, 'minimal n. of neighbours = ', min_nn, 'present accuracy = ', max_accuracy
 
     IF(i.EQ.iter_max) THEN
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL LOG_ERROR('Maximal number of iteration is reached. Change something.')
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
     END IF
 
 
@@ -221,10 +221,10 @@ CONTAINS
        IF(p_cluster(j).EQ.0) THEN
           ncluster = ncluster + 1
           IF (ncluster.GT.ncluster_max) THEN
-             CALL LOG_HEADER()
+             CALL LOG_ERROR_HEADER()
              CALL LOG_ERROR('Too many clusters more than '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ncluster_max))))
              CALL LOG_ERROR('Change cluster recognition parameters in mean-shift.')
-             CALL LOG_HEADER()
+             CALL LOG_ERROR_HEADER()
              STOP
           END IF
           mean_cluster(ncluster,:) = p_mean_shift(j,:)
@@ -334,10 +334,10 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
           nn=0
           ncluster=ncluster+1
           IF (ncluster.GT.ncluster_max) THEN
-             CALL LOG_HEADER()
+             CALL LOG_ERROR_HEADER()
              CALL LOG_ERROR('Too many clusters more than '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ncluster_max))))
              CALL LOG_ERROR('Change cluster recognition parameters in DBSCAN.')
-             CALL LOG_HEADER()
+             CALL LOG_ERROR_HEADER()
              STOP
           END IF
           not_cluster(i)=0
@@ -390,10 +390,10 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     CALL LOG_TRACE('Minimal n. of neighbours = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(min_nn))))
     CALL LOG_TRACE('Number of outliers       = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(COUNT(p_cluster==0)))))
     IF(COUNT(p_cluster==0)>=np/5.0) THEN
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL LOG_ERROR('Too many outliers.')
       CALL LOG_ERROR('Change cluster recognition parameters in DBSCAN.')
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       STOP
     END IF
 
@@ -552,10 +552,10 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     END DO
 
     IF (ncluster.GT.ncluster_max) THEN
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL LOG_ERROR('Too many clusters more than '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ncluster_max))))
       CALL LOG_ERROR('Change cluster recognition parameters in agglomerative.')
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       STOP
     END IF
 
@@ -708,10 +708,10 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
             !!$OMP END PARALLEL DO
             ncluster_new=ncluster_new+ncluster_temp-1 !update number of cluster
             IF (ncluster_new .GT.ncluster_max) THEN
-              CALL LOG_HEADER()
+              CALL LOG_ERROR_HEADER()
               CALL LOG_ERROR('Too many clusters more than '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ncluster_max))))
               CALL LOG_ERROR('Change cluster recognition parameters in KNN.')
-              CALL LOG_HEADER()
+              CALL LOG_ERROR_HEADER()
               STOP
             END IF
             np_temp=0
@@ -727,10 +727,10 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     ncluster=ncluster_new
 
     IF (ncluster.GT.ncluster_max) THEN
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       CALL LOG_ERROR('Too many clusters more than '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ncluster_max))))
       CALL LOG_ERROR('Change cluster recognition parameters in KNN.')
-      CALL LOG_HEADER()
+      CALL LOG_ERROR_HEADER()
       STOP
     END IF
 

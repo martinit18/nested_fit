@@ -219,11 +219,11 @@ MODULE MOD_USERFCN
             CALL GET_USER_FUNC_PROCPTR(func_header, USERFCN, loaded_ok)
 
             IF(.NOT.loaded_ok) THEN
-                CALL LOG_HEADER()
+                CALL LOG_ERROR_HEADER()
                 CALL LOG_ERROR('Failed to load proc address.')
                 CALL LOG_ERROR('Maybe the specified function name is incorrect/not in the cache.')
                 CALL LOG_ERROR('Aborting Execution...')
-                CALL LOG_HEADER()
+                CALL LOG_ERROR_HEADER()
                 STOP
             ENDIF
         ELSE

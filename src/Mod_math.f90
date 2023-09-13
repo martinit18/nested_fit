@@ -96,11 +96,11 @@ MODULE MOD_MATH
             ! Note(César): Thechnically I don't think this will ever print
             ! Since it is used for the constant part of the likelihood for poisson dist
             ! And the input file is already checked for negative values...
-            CALL LOG_HEADER()
+            CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Error while calling DLOG_FAC with argument: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(n))))
             CALL LOG_ERROR('DLOG_FAC domain is valid only for n >= 0.')
             CALL LOG_ERROR('Aborting Execution...')
-            CALL LOG_HEADER()
+            CALL LOG_ERROR_HEADER()
             CALL HALT_EXECUTION()
         ELSE IF(n.EQ.0) THEN
             ! 0!=1 so log(0!) = 0
@@ -127,11 +127,11 @@ MODULE MOD_MATH
 
         CALL DPSORT(asort,n,iwksp,1,ier)
         IF(ier.GT.0) THEN
-            CALL LOG_HEADER()
+            CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('In subroutine `SORTN`.')
             CALL LOG_ERROR('DPSORT returned the following error: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ier))))
             CALL LOG_ERROR('Aborting Execution...')
-            CALL LOG_HEADER()
+            CALL LOG_ERROR_HEADER()
             CALL HALT_EXECUTION()
         ENDIF
 
@@ -161,11 +161,11 @@ MODULE MOD_MATH
 
         CALL DPSORT(asort,n,iwksp,1,ier)
         IF(ier.GT.0) THEN
-            CALL LOG_HEADER()
+            CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('In subroutine `SORTN2`.')
             CALL LOG_ERROR('DPSORT returned the following error: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ier))))
             CALL LOG_ERROR('Aborting Execution...')
-            CALL LOG_HEADER()
+            CALL LOG_ERROR_HEADER()
             CALL HALT_EXECUTION()
         ENDIF
 

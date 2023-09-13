@@ -252,11 +252,11 @@ MODULE MOD_INPUTPARSE
         ) THEN
             INPUTDATA_CONVERT_VAL_LOGICAL = .FALSE.
         ELSE
-            CALL LOG_HEADER()
+            CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Failed to convert value `'//TRIM(this%data)//'` to logical.')
             CALL LOG_ERROR('Expected `true/false` or `True/False` or `TRUE/FALSE`.')
             CALL LOG_ERROR('Aborting Execution...')
-            CALL LOG_HEADER()
+            CALL LOG_ERROR_HEADER()
             STOP
             ! NOTE(César) : This works before OpenMPI init!
         ENDIF
@@ -280,10 +280,10 @@ MODULE MOD_INPUTPARSE
         CALL TRY_PARSE_INT(this%data, INPUTDATA_CONVERT_VAL_INTEGER, error)
 
         IF(error) THEN
-            CALL LOG_HEADER()
+            CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Failed to convert value `'//TRIM(this%data)//'` to integer.')
             CALL LOG_ERROR('Aborting Execution...')
-            CALL LOG_HEADER()
+            CALL LOG_ERROR_HEADER()
             STOP
             ! NOTE(César) : This works before OpenMPI init!
         ENDIF
@@ -299,10 +299,10 @@ MODULE MOD_INPUTPARSE
         CALL TRY_PARSE_REAL(this%data, INPUTDATA_CONVERT_VAL_REAL, error)
 
         IF(error) THEN
-            CALL LOG_HEADER()
+            CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Failed to convert value `'//TRIM(this%data)//'` to real.')
             CALL LOG_ERROR('Aborting Execution...')
-            CALL LOG_HEADER()
+            CALL LOG_ERROR_HEADER()
             STOP
             ! NOTE(César) : This works before OpenMPI init!
         ENDIF

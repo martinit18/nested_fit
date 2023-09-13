@@ -47,11 +47,11 @@ c     Choose your model (see below for definition)
       ELSE IF(funcname.EQ.'ROCKING_CURVE_SET') THEN
             SELECT_USERFCN_SET = 17
       ELSE
-         CALL LOG_HEADER()
+         CALL LOG_ERROR_HEADER()
          CALL LOG_ERROR('Legacy function `'//TRIM(funcname)//'` does not exist.')
          CALL LOG_ERROR('Check in the manual for legacy function names.')
          CALL LOG_ERROR('Aborting Execution...')
-         CALL LOG_HEADER()
+         CALL LOG_ERROR_HEADER()
          STOP
       END IF
 
