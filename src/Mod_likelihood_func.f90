@@ -63,10 +63,7 @@ CONTAINS
           CALL LOG_ERROR('Error of the search type name in Mod_search_new_point module.')
           CALL LOG_ERROR('Check the manual and the input file.')
           CALL LOG_HEADER()
-#ifdef OPENMPI_ON
-          CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-          STOP
+          CALL HALT_EXECUTION()
       END IF
   END SUBROUTINE INIT_SEARCH_METHOD
 
