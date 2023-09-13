@@ -5,6 +5,8 @@ MODULE MOD_PARAMETERS
 
   ! General parameters
   INTEGER(4), PARAMETER :: maxdata=10000, nsetmax=10
+  INTEGER(4), PARAMETER :: specstrmaxcol = 32
+  CHARACTER(16)         :: fileformat = '.csv'
 
   ! Input variables
   CHARACTER(128), DIMENSION(nsetmax) :: filename
