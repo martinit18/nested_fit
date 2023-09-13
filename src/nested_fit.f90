@@ -592,6 +592,7 @@ PROGRAM NESTED_FIT
          WRITE(*,*) 'Evidence average:', evsum_final
          WRITE(*,*) 'Evidence standard deviation:', evsum_err
          WRITE(*,*) '-----------------------------------------------------------------------------------'
+
          
          OPEN(23,FILE='nf_output_tries.dat',STATUS= 'UNKNOWN')
          WRITE(23,*) 'Number_of_tries ', ntry

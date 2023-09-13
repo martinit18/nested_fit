@@ -280,7 +280,7 @@ MODULE MOD_AUTOFUNC
             CALL LOG_ERROR('Aborting Execution...')
             CALL LOG_ERROR_HEADER()
             CALL FreeParseOutput(parsed_data)
-            STOP
+            CALL HALT_EXECUTION()
         ENDIF
         
         ! Initialize Fortran side struct with well defined types

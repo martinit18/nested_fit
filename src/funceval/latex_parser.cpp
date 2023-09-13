@@ -738,7 +738,7 @@ static std::pair<std::string, std::vector<std::string>> HandleHeader(const std::
 
 extern "C" ParseOutput ParseLatexToF90(const char* input_stream)
 {
-    ParseOutput return_val;
+    ParseOutput return_val = { 0 };
     return_val.error = LTXP_ERR_NOERR;
 
     auto split = SplitExpression(input_stream, &return_val.error);
