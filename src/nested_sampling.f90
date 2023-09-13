@@ -167,10 +167,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
      CALL LOG_ERROR('Too few livepoints for too many max_steps.')
      CALL LOG_ERROR('Step volumes cannot be calculated correctly.')
      CALL LOG_HEADER()
-#ifdef OPENMPI_ON
-     CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-     STOP
+     CALL HALT_EXECUTION()
   END IF
   DO l=1, maxstep
      tstep(l) = DEXP(-DFLOAT(l)/DFLOAT(nlive))
@@ -269,20 +266,14 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
               CALL LOG_ERROR('Too many cluster analysis for an iteration.')
               CALL LOG_ERROR('Change cluster recognition parameters.')
               CALL LOG_HEADER()
-#ifdef OPENMPI_ON
-              CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-              STOP
+              CALL HALT_EXECUTION()
            END IF
            IF(n_call_cluster>=n_call_cluster_max) THEN
               CALL LOG_HEADER()
               CALL LOG_ERROR('Too many cluster analysis.')
               CALL LOG_ERROR('Change cluster recognition parameters.')
               CALL LOG_HEADER()
-#ifdef OPENMPI_ON
-              CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-              STOP
+              CALL HALT_EXECUTION()
            END IF
            make_cluster_internal=.true.
            need_cluster=.true.
@@ -307,20 +298,14 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
               CALL LOG_ERROR('Too many cluster analysis for an iteration.')
               CALL LOG_ERROR('Change cluster recognition parameters.')
               CALL LOG_HEADER()
-#ifdef OPENMPI_ON
-              CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-              STOP
+              CALL HALT_EXECUTION()
            END IF
            IF(n_call_cluster>=n_call_cluster_max) THEN
               CALL LOG_HEADER()
               CALL LOG_ERROR('Too many cluster analysis.')
               CALL LOG_ERROR('Change cluster recognition parameters.')
               CALL LOG_HEADER()
-#ifdef OPENMPI_ON
-              CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-              STOP
+              CALL HALT_EXECUTION()
            END IF
            make_cluster_internal=.true.
            need_cluster=.true.
@@ -378,10 +363,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
            CALL LOG_ERROR('No improvement in the likelihood value after finding the new point...')
            CALL LOG_ERROR('j = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(jlim)))//'old min like = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(min_live_like)))//'new min like = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(live_like_new(it)))))
            CALL LOG_HEADER()
-#ifdef OPENMPI_ON
-           CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-           STOP
+           CALL HALT_EXECUTION()
         ELSE IF (jlim.EQ.1) THEN
            live_like(1) = live_like_new(it)
            live(1,:) = live_new(it,:)
@@ -562,10 +544,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 #endif
 
   IF(((evtotest-evsum).GE.evaccuracy).AND.(n.GE.nstep)) THEN
-#ifdef OPENMPI_ON
-      CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-      STOP
+   CALL HALT_EXECUTION()
   ENDIF
 
   ! Store the last live points
