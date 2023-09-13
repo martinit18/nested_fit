@@ -101,10 +101,7 @@ MODULE MOD_MATH
             CALL LOG_ERROR('DLOG_FAC domain is valid only for n >= 0.')
             CALL LOG_ERROR('Aborting Execution...')
             CALL LOG_HEADER()
-! #ifdef OPENMPI_ON
-!             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-! #endif
-            STOP
+            CALL HALT_EXECUTION()
         ELSE IF(n.EQ.0) THEN
             ! 0!=1 so log(0!) = 0
             DLOG_FAC = 0.
@@ -135,10 +132,7 @@ MODULE MOD_MATH
             CALL LOG_ERROR('DPSORT returned the following error: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ier))))
             CALL LOG_ERROR('Aborting Execution...')
             CALL LOG_HEADER()
-! #ifdef OPENMPI_ON
-!             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-! #endif
-            STOP
+            CALL HALT_EXECUTION()
         ENDIF
 
         DO i=1,n
@@ -172,10 +166,7 @@ MODULE MOD_MATH
             CALL LOG_ERROR('DPSORT returned the following error: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ier))))
             CALL LOG_ERROR('Aborting Execution...')
             CALL LOG_HEADER()
-! #ifdef OPENMPI_ON
-!             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-! #endif
-            STOP
+            CALL HALT_EXECUTION()
         ENDIF
 
         DO i=1,n
