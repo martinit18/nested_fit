@@ -175,7 +175,7 @@ MODULE MOD_INPUTPARSE
             ENDIF
 
             ! Ignore inline comments
-            ! NOTE(Cesar): FORTRAN does not have operator short-circuit (I think) so we need an else if here
+            ! NOTE(César): FORTRAN does not have operator short-circuit (I think) so we need an else if here
             !              https://fortranwiki.org/fortran/show/short-circuiting
             lastidx = INDEX(line, '#')
             IF(lastidx.EQ.0) THEN
@@ -193,6 +193,9 @@ MODULE MOD_INPUTPARSE
             IF(i.EQ.0) THEN
                 ! `key` should have the last key here
                 CALL config%find(key, last_value, find_error) ! `find_error` should never be true here
+
+                CALL LOG_TRACE(TRIM(key)//' = '//TRIM(ADJUSTL(line(i+1:lastidx))))
+
                 CALL config%insert(key, InputDataGenericValue_t(TRIM(ADJUSTL(last_value%toCharacter()))//' '//TRIM(ADJUSTL(line(i+1:lastidx)))))
                 CYCLE
             ENDIF
