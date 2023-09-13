@@ -2,12 +2,16 @@ MODULE MOD_LOGGER
     USE MOD_TIMESTAMP
     IMPLICIT NONE
 
-    PUBLIC :: START_LOG, CLOSE_LOG, LOG_ERROR, LOG_WARNING, LOG_MESSAGE, LOG_TRACE, LOG_HEADER,&
+    PUBLIC :: START_LOG, CLOSE_LOG, LOG_ERROR, LOG_WARNING, LOG_MESSAGE, LOG_TRACE, LOG_HEADER, LOG_VERBOSITY,&
               REAL_TO_STR_INLINE, INT_TO_STR_INLINE, INT8_TO_STR_INLINE
     PRIVATE
 
     CHARACTER(64), PARAMETER :: log_file_name = 'nf_loglast.log'
     INTEGER      , PARAMETER :: log_file_unit = 999
+
+    CHARACTER(16), PARAMETER :: verbosity_levels(5) = [CHARACTER(LEN=16) :: 'none', 'error', 'warning', 'message', 'trace']
+    !                                                     verbosity levels  =  0       1         2          3         4
+    INTEGER                  :: logger_verbosity = 4 ! Default verbosity max (trace can revert to message case not defined)
 
     CONTAINS
 
@@ -19,6 +23,25 @@ MODULE MOD_LOGGER
         CLOSE(log_file_unit)
     END SUBROUTINE
 
+    SUBROUTINE LOG_VERBOSITY(verbosity)
+        CHARACTER(*), INTENT(IN) :: verbosity
+        INTEGER :: i
+
+        DO i = 1, 5
+            IF(TRIM(verbosity).EQ.verbosity_levels(i)) THEN
+                CALL LOG_TRACE('Chaning verbosity level to: '//TRIM(verbosity)//'.')
+                logger_verbosity = i - 1
+                RETURN
+            ENDIF
+        END DO
+        
+        CALL LOG_HEADER()
+        CALL LOG_ERROR('Selected verbosity level ('//TRIM(verbosity)//') does not exist.')
+        CALL LOG_ERROR('Available options = [''none'', ''error'', ''warning'', ''message'', ''trace'']') ! Hardcoded for simplicity
+        CALL LOG_HEADER()
+    END SUBROUTINE
+
+    ! NOTE(César): This is quite cumbersome
     SUBROUTINE LOG_HEADER()
         WRITE(*,*)     '------------------------------------------------------------------------------------------------------------------'
     END SUBROUTINE
@@ -41,16 +64,19 @@ MODULE MOD_LOGGER
 
     SUBROUTINE LOG_ERROR(msg)
         CHARACTER(*), INTENT(IN) :: msg
+        IF(logger_verbosity.LT.1) RETURN
         CALL LOG_GENERIC('<ERROR>', msg, CHAR(27)//'[31m')
     END SUBROUTINE
 
     SUBROUTINE LOG_WARNING(msg)
         CHARACTER(*), INTENT(IN) :: msg
+        IF(logger_verbosity.LT.2) RETURN
         CALL LOG_GENERIC('<WARNING>', msg, CHAR(27)//'[33m')
     END SUBROUTINE
 
     SUBROUTINE LOG_MESSAGE(msg)
         CHARACTER(*), INTENT(IN) :: msg
+        IF(logger_verbosity.LT.3) RETURN
         CALL LOG_GENERIC('<ATTENTION>', msg, CHAR(27)//'[39m')
     END SUBROUTINE
 
@@ -58,10 +84,13 @@ MODULE MOD_LOGGER
         CHARACTER(*), INTENT(IN) :: msg
 #ifndef LTRACE
         RETURN ! NOTE(César): LOG_TRACE should be optimized out with just a return statement ??
-#endif
+#else
+        IF(logger_verbosity.LT.4) RETURN
         CALL LOG_GENERIC('<TRACE>', msg, CHAR(27)//'[39m')
+#endif
     END SUBROUTINE
 
+    ! TODO(César): Even tho this is used mainly for logging, it should be moved out of here
     FUNCTION REAL_TO_STR_INLINE(val)
         REAL(8), INTENT(IN) :: val
         CHARACTER(32)       :: REAL_TO_STR_INLINE
