@@ -13,7 +13,7 @@ set(nested_res_name nested_res_V4p5.py)
 
 # The nested_fit version being built -> This gets copied everywhere inside the project code
 # For more info see the 'src/Mod_metadata.f90.in' file
-set(project_version 4.5.2)
+set(project_version 5.0.0)
 
 # Global options
 option(DEBUG "Enable debug mode." OFF)
@@ -88,12 +88,17 @@ set(SRC_FILES_COMM
     src/Mod_userfcn.f90
 
     src/Mod_logger.f90
+
+    src/helper/halt.f90
+    src/helper/strutil.f90
 )
 
 set(SRC_EXTERNAL_FUNCS
     src/helper/hash.f90
     src/Mod_interpolate.f90
     src/functions/internal_funcs.f90
+    src/Mod_logger.f90      # NOTE(César): Required for logging from the shared lib
+    src/Mod_timestamp.f90   # NOTE(César): Required for logging from the shared lib
     src/functions/WOFZ.f
 )
 
