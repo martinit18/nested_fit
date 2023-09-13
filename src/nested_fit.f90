@@ -169,6 +169,13 @@ PROGRAM NESTED_FIT
   LOGICAL   :: input_error_bars=.FALSE.
   CHARACTER :: input_dimensions='1'
 
+  INTERFACE
+   SUBROUTINE DISABLE_STDOUT() BIND(c, name='DisableStdout')
+      USE, INTRINSIC :: iso_c_binding
+      IMPLICIT NONE
+   END SUBROUTINE
+  END INTERFACE
+
   ! Init the logger file
   CALL START_LOG()
 
@@ -223,7 +230,7 @@ PROGRAM NESTED_FIT
   ))
 
   CALL ADD_ARGUMENT(argdef_t("suppress-output", "so", .FALSE.,&
-    "Supresses all output. Usefull for automation / when console ouput is not required. &
+    "Suppresses all output. Useful for automation / when console ouput is not required. &
      This is the linux equivalent of doing './nested_fitx.x.x > /dev/null'.",&
     B_SUPPRESSOUTPUT&
   ))
@@ -585,9 +592,7 @@ PROGRAM NESTED_FIT
          WRITE(*,*) 'Evidence average:', evsum_final
          WRITE(*,*) 'Evidence standard deviation:', evsum_err
          WRITE(*,*) '-----------------------------------------------------------------------------------'
-
-
-         !IF(arg.EQ. ' ') THEN
+         
          OPEN(23,FILE='nf_output_tries.dat',STATUS= 'UNKNOWN')
          WRITE(23,*) 'Number_of_tries ', ntry
          WRITE(23,*) 'Evidence_average:', evsum_final
@@ -597,7 +602,6 @@ PROGRAM NESTED_FIT
             WRITE(23,*)  itry , nall_try(itry), evsum_final_try(itry), live_like_max_try(itry)
          END DO
          CLOSE(23)
-         !END IF
 
          ! Assemble all points and weights
          DO itry=1,ntry
@@ -632,14 +636,10 @@ PROGRAM NESTED_FIT
 
       ! Calculate the uncertanity of the evidence calculation
       ! (See J. Veitch and A. Vecchio, Phys. Rev. D 81, 062003 (2010))
+      ! TODO(César): There is a better way to do this
       evsum_err_est = DSQRT(DBLE(nall))/(nlive*ntry)
 
       ! Calculate the mean and the standard deviation for each parameter
-
-      ! print arrays sizes
-      !write(*,*) 'nall', nall
-      !write(*,*) 'weight_par dimensions', shape(weight_par)
-      !write(*,*) 'weight dimensions', shape(weight)
 
       ! Normalize the weights
       weight_tot = 0.
@@ -720,8 +720,6 @@ PROGRAM NESTED_FIT
       ! Final actions for the likelihood function
       CALL FINAL_LIKELIHOOD(live_max,par_mean,par_median_w)
 
-
-      !END IF
       !-----------------Calculate information and bayesian complexity --------------------------
       ! Calculation of the mean loglikelihood
       live_like_mean = 0.
@@ -744,17 +742,8 @@ PROGRAM NESTED_FIT
       ELSE
          nexp= 0
       END IF
-      !write(*,*) info, DEXP(info), ntry, FLOOR(DEXP(info)*ntry), nexp, live_like_mean,  evsum_final
-      !pause
 
       ! ---------------- Write results on screen and files -------------------------------------
-      !OPEN(23,FILE='nf_output_points.dat',STATUS= 'UNKNOWN')
-      !WRITE(23,*) '# n     lnlikelihood     weight      parameters'
-      !DO j=1,nall
-      !   WRITE(23,*) j, live_like_final(j), weight(j), live_final(j,:)
-      !END DO
-      !CLOSE(23)
-
       ! Write files in the format for GetDist
       ! Data
       OPEN(23,FILE='nf_output_points.txt',STATUS= 'UNKNOWN')
@@ -772,7 +761,7 @@ PROGRAM NESTED_FIT
       ! Range of parameters
       OPEN(23,FILE='nf_output_points.ranges',STATUS= 'UNKNOWN')
       DO i=1,npar
-         WRITE(23,*) par_name(i), par_bnd1(i),par_bnd2(i)
+         WRITE(23,*) par_name(i), par_bnd1(i), par_bnd2(i)
       END DO
       CLOSE(23)
    ENDIF
@@ -803,9 +792,9 @@ PROGRAM NESTED_FIT
   ENDIF
 
 #ifdef OPENMPI_ON
-   DEALLOCATE(live_final_try_instance)
-   DEALLOCATE(live_like_final_try_instance, weight_try_instance, live_max_try_instance)
-   CALL MPI_FINALIZE(mpi_ierror)
+  DEALLOCATE(live_final_try_instance)
+  DEALLOCATE(live_like_final_try_instance, weight_try_instance, live_max_try_instance)
+  CALL MPI_FINALIZE(mpi_ierror)
 #endif
 
 #ifdef NORNG_ON
@@ -1433,6 +1422,7 @@ PROGRAM NESTED_FIT
 
    CALL LOG_VERBOSITY('none')
    opt_suppress_output = .TRUE.
+   CALL DISABLE_STDOUT()
   END SUBROUTINE
 
 END PROGRAM NESTED_FIT
