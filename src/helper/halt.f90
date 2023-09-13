@@ -1,0 +1,6 @@
+SUBROUTINE HALT_EXECUTION()
+#ifdef OPENMPI_ON
+    CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
+#endif
+    STOP
+END SUBROUTINE
