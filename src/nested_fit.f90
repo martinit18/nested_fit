@@ -112,7 +112,8 @@ PROGRAM NESTED_FIT
   INTEGER(4) :: i=0, j=0, k=0
 
   ! Parameters values and co.
-  CHARACTER :: string*128
+  CHARACTER :: string*2048
+  CHARACTER :: spec_str*1024 = 'x,c'
   CHARACTER :: version_file*20
   LOGICAL   :: file_exists
 
@@ -214,8 +215,20 @@ PROGRAM NESTED_FIT
     "Lists all of the functions available in the cache.",&
     B_LSTUSRFUNC&
   ))
+
+  CALL ADD_ARGUMENT(argdef_t("verbosity", "v", .TRUE.,&
+    "Change the verbosity level. &
+     Available levels = ['none', 'error', 'warning', 'message', 'trace'].",&
+    B_SETVERBOSITY&
+  ))
+
+  CALL ADD_ARGUMENT(argdef_t("suppress-output", "so", .FALSE.,&
+    "Supresses all output. Usefull for automation / when console ouput is not required. &
+     This is the linux equivalent of doing './nested_fitx.x.x > /dev/null'.",&
+    B_SUPPRESSOUTPUT&
+  ))
   
-  ! Parse executable arguments (how will this work with MPI??) !!! THIS NEEDS TO COME BEFORE THE MPI_INIT() SUBROUTINE !!!
+  ! Parse executable arguments !!! THIS NEEDS TO COME BEFORE THE MPI_INIT() SUBROUTINE !!!
   CALL PARSE_ARGUMENTS()
 
 #ifdef OPENMPI_ON
@@ -236,9 +249,7 @@ PROGRAM NESTED_FIT
       CALL sleep(1)
   ENDIF
 
-  !IF(static_seed) THEN
   CALL RANDOM_SEED(PUT=seed_array)
-  !ENDIF
 #endif
 
 #ifdef OPENMPI_ON
@@ -269,10 +280,7 @@ PROGRAM NESTED_FIT
          CALL LOG_ERROR('Input file ('//TRIM(opt_input_file)//') was not found.')
          CALL LOG_ERROR('Aborting Execution...')
          CALL LOG_HEADER()
-#ifdef OPENMPI_ON
-         CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-         STOP
+         CALL HALT_EXECUTION()
       ENDIF
 
       CALL PARSE_INPUT(TRIM(opt_input_file), input_config)
@@ -290,12 +298,18 @@ PROGRAM NESTED_FIT
          CALL LOG_HEADER()
       END IF
 
+#ifndef FUNC_TARGET
+      ! Prepare the likelihood module to receive values from the input file
+      CALL PREPARE_LIKELIHOOD()
+#endif
+
       ! General configuration
-      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'datafile'  , filename(1)        , MANDATORY=.TRUE. )
-      CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'fileset'   , is_set             , MANDATORY=.FALSE.) !    False by default
-      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'dimensions', input_dimensions   , MANDATORY=.FALSE.) !        1 by default
-      CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'errorbars' , input_error_bars   , MANDATORY=.FALSE.) !    False by default
-      CALL POPULATE_DATATYPE         (input_dimensions, input_error_bars, data_type)                      ! TODO(César): Remove this
+      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'datafiles' , string             , MANDATORY=.TRUE. )
+      CALL POPULATE_INPUTFILES       (string)
+      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'specstr'   , spec_str           , MANDATORY=.FALSE.) !      x,c by default
+      CALL POPULATE_DATATYPE         (spec_str, data_type)
+      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'filefmt'   , fileformat         , MANDATORY=.FALSE.) !     .csv by default
+      CALL POPULATE_FILEFMT          (fileformat)
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'likelihood', likelihood_funcname, MANDATORY=.FALSE.) ! GAUSSIAN by default
 
       ! Search configuration
@@ -421,10 +435,7 @@ PROGRAM NESTED_FIT
          CALL LOG_HEADER()
          CALL LOG_ERROR('Set of 2D files not yet implemented. Change your input file.')
          CALL LOG_HEADER()
-#ifdef OPENMPI_ON
-         CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-         STOP
+         CALL HALT_EXECUTION()
       END IF
   END IF
 
@@ -947,18 +958,12 @@ PROGRAM NESTED_FIT
                CALL LOG_ERROR('min >= max.')
                CALL LOG_ERROR('Aborting Execution...')
                CALL LOG_HEADER()
-#ifdef OPENMPI_ON
-               CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-               STOP
+               CALL HALT_EXECUTION()
             END IF
          END DO
 
       ELSE
-#ifdef OPENMPI_ON
-         CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-         STOP
+         CALL HALT_EXECUTION()
       ENDIF
       CALL PARSE_LATEX_DEALLOC(parse_result)
    ELSE
@@ -969,17 +974,151 @@ PROGRAM NESTED_FIT
    ENDIF
   END SUBROUTINE
 
-  SUBROUTINE POPULATE_DATATYPE(dimensions, errorbars, output)
-   CHARACTER   , INTENT(IN)  :: dimensions
-   LOGICAL     , INTENT(IN)  :: errorbars
-   CHARACTER(3), INTENT(OUT) :: output
+  SUBROUTINE POPULATE_FILEFMT(format)
+   IMPLICIT NONE
+   CHARACTER(LEN=16), INTENT(INOUT) :: format
 
-   output(1:1) = dimensions
-   IF(errorbars) THEN
+   CALL STR_TO_LOWER(format)
+   IF((TRIM(format).NE.'.csv').AND.(TRIM(format).NE.'.tsv')) THEN
+      CALL LOG_HEADER()
+      CALL LOG_ERROR('Unrecognized filefmt: `'//TRIM(format)//'`.')
+      CALL LOG_ERROR('Aborting Execution...')
+      CALL LOG_HEADER()
+      CALL HALT_EXECUTION()
+   ENDIF
+
+  END SUBROUTINE
+
+  SUBROUTINE POPULATE_INPUTFILES(filestr)
+   IMPLICIT NONE
+   CHARACTER(LEN=*), INTENT(IN) :: filestr
+   INTEGER                      :: count
+
+   CALL SPLIT_INPUT_ON(',', filestr, filename, count, nsetmax)
+
+   IF(count.GT.1) THEN
+      ! We have a set of files
+      is_set = .TRUE.
+   ELSE
+      is_set = .FALSE.
+   ENDIF
+
+  END SUBROUTINE
+
+
+  SUBROUTINE POPULATE_DATATYPE(specstr, output)
+   IMPLICIT NONE
+   CHARACTER(LEN=*), INTENT(IN)  :: specstr
+   CHARACTER(3)    , INTENT(OUT) :: output
+   CHARACTER(64)                 :: specifiers(specstrmaxcol)
+   CHARACTER                     :: dimensions
+   INTEGER                       :: count
+   INTEGER                       :: i, j
+   INTEGER                       :: order_int
+   LOGICAL                       :: found_spec, spec_err
+
+! Ignore populating the data for the nested_fit_func target
+#ifndef FUNC_TARGET
+   ! Declare the valid spec string fields
+   CHARACTER(32), PARAMETER :: spec_fields(7) = [CHARACTER(LEN=32) ::&
+         'x',&
+         'y',&
+         ! 'xe',&
+         ! 'ye',&
+         'c',&
+         'ce',&
+         't',&
+         'i',&
+         'img'&
+      ]
+
+   CALL SPLIT_INPUT_ON(',', specstr, specifiers, count, specstrmaxcol)
+   
+   IF(count.LT.1) THEN
+      CALL LOG_HEADER()
+      CALL LOG_ERROR('Specified `specstr` is not valid.')
+      CALL LOG_ERROR('Aborting Execution...')
+      CALL LOG_HEADER()
+      CALL HALT_EXECUTION()
+   ENDIF
+
+   CALL specstr_ordermap%insert('ncols', count)
+
+   ! NOTE(César): Special case for image data (legacy 2D)
+   IF(TRIM(spec_str).EQ.'img') THEN
+      CALL specstr_ordermap%insert('img_v', 1)
+      output = '2c'
+      RETURN
+   ELSE IF(INDEX(spec_str, 'img').GT.0) THEN
+      CALL LOG_HEADER()
+      CALL LOG_ERROR('Specified `specstr` is not valid.')
+      CALL LOG_ERROR('Spec name `img` is an exclusive spec. But other specs were found.')
+      CALL LOG_ERROR('Aborting Execution...')
+      CALL LOG_HEADER()
+      CALL HALT_EXECUTION()
+   ENDIF
+   
+   dimensions = ' '
+   found_spec = .FALSE.
+   DO i = 1, count
+      ! Try and find a spec
+      DO j = 1, 7
+         IF(TRIM(specifiers(i)).EQ.TRIM(spec_fields(j))) THEN
+            CALL LOG_TRACE('specstr: Found valid specifier `'//TRIM(spec_fields(j))//'`.')
+            ! HACK(César): This is required for the hash to work with some keys (why ???)
+            CALL specstr_ordermap%insert(TRIM(spec_fields(j))//'_v', i)
+            found_spec = .TRUE.
+            GOTO 919
+         ENDIF
+      END DO
+
+      919   CONTINUE
+      IF(.NOT.found_spec) THEN
+         CALL LOG_HEADER()
+         CALL LOG_ERROR('Specified `specstr` is not valid.')
+         CALL LOG_ERROR('Spec name `'//TRIM(specifiers(i))//'` is not a valid name.')
+         CALL LOG_ERROR('Aborting Execution...')
+         CALL LOG_HEADER()
+         CALL HALT_EXECUTION()
+      ENDIF
+      found_spec = .FALSE.
+   END DO
+
+   CALL specstr_ordermap%find('x_v', order_int, spec_err)
+   IF(spec_err) THEN
+      CALL LOG_HEADER()
+      CALL LOG_ERROR('Specified `specstr` is valid.')
+      CALL LOG_ERROR('But spec `x` is required and was not found.')
+      CALL LOG_ERROR('Aborting Execution...')
+      CALL LOG_HEADER()
+      CALL HALT_EXECUTION()
+   ENDIF
+   dimensions = '1'
+
+   CALL specstr_ordermap%find('y_v', order_int, spec_err)
+   IF(.NOT.spec_err) THEN
+      dimensions = '2'
+   ENDIF
+
+   CALL specstr_ordermap%find('c_v', order_int, spec_err)
+   IF(spec_err) THEN
+      CALL LOG_HEADER()
+      CALL LOG_ERROR('Specified `specstr` is valid.')
+      CALL LOG_ERROR('But spec `c` is required and was not found.')
+      CALL LOG_ERROR('Aborting Execution...')
+      CALL LOG_HEADER()
+      CALL HALT_EXECUTION()
+   ENDIF
+
+   output(1:1) = dimensions(1:1)
+
+   CALL specstr_ordermap%find('ce_v', order_int, spec_err)
+   IF(.NOT.spec_err) THEN
       output(2:2) = 'e'
    ELSE
       output(2:2) = 'c'
    ENDIF
+#endif
   END SUBROUTINE
 
   SUBROUTINE FIELD_FROM_INPUT_REAL(config, field_name, field_value, mandatory)
@@ -1277,6 +1416,21 @@ PROGRAM NESTED_FIT
    CALL RECOMPILE_CACHE()
 
    STOP
+  END SUBROUTINE
+
+  SUBROUTINE B_SETVERBOSITY(this, invalue)
+   CLASS(argdef_t), INTENT(IN)    :: this
+   CHARACTER(LEN=512), INTENT(IN) :: invalue
+
+   CALL LOG_VERBOSITY(invalue)
+  END SUBROUTINE
+
+  SUBROUTINE B_SUPPRESSOUTPUT(this, invalue)
+   CLASS(argdef_t), INTENT(IN)    :: this
+   CHARACTER(LEN=512), INTENT(IN) :: invalue
+   
+   CALL LOG_VERBOSITY('none')
+   ! TODO(César): Maybe somehow suppress stdout
   END SUBROUTINE
 
 END PROGRAM NESTED_FIT
