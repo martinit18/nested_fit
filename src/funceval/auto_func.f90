@@ -255,11 +255,11 @@ MODULE MOD_AUTOFUNC
     END SUBROUTINE
 
     FUNCTION PARSE_LATEX(expression) RESULT(parsed_data_f)
-        CHARACTER(LEN=*), INTENT(IN)             :: expression
-        TYPE(ParseOutput_t)                      :: parsed_data
-        TYPE(ParseLatex_t)                       :: parsed_data_f
-        CHARACTER(c_char), DIMENSION(:), POINTER :: c_expression
-        CHARACTER(128)                           :: error_msg
+        CHARACTER(LEN=*), INTENT(IN)               :: expression
+        TYPE(ParseOutput_t)                        :: parsed_data
+        TYPE(ParseLatex_t)                         :: parsed_data_f
+        CHARACTER(c_char), DIMENSION(:)  , POINTER :: c_expression
+        CHARACTER(128)                             :: error_msg
 
         ! Parse the expression
         CALL F_C_STRING_ALLOC(expression, c_expression)
@@ -276,7 +276,7 @@ MODULE MOD_AUTOFUNC
             CALL GetErrorMsg(parsed_data, error_msg)
             CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Failed to parse the LaTeX code provided.')
-            CALL LOG_ERROR('Error message = '//TRIM(error_msg)//'.')
+            CALL LOG_ERROR('Error message = '//TRIM(error_msg(1:INDEX(error_msg, c_null_char)-1))//'.')
             CALL LOG_ERROR('Aborting Execution...')
             CALL LOG_ERROR_HEADER()
             CALL FreeParseOutput(parsed_data)
