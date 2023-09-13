@@ -31,7 +31,136 @@ MODULE MOD_LIKELIHOOD
   ! Likelihood variables
   REAL(8) :: const_ll = 0.
 
+  ! A generic string map for the specstr input parsing when loading the datafile
+  TYPE :: SpecMapPair_t
+   CHARACTER(128)               :: key   = ''
+   INTEGER                      :: value
+   TYPE(SpecMapPair_t), POINTER :: next  => null()
+   LOGICAL                      :: valid = .FALSE.
+  END TYPE SpecMapPair_t  
+  TYPE :: SpecMap_t
+   ! PRIVATE
+   TYPE(SpecMapPair_t), ALLOCATABLE :: pairs(:)
+   INTEGER                          :: capacity = 0
+   INTEGER                          :: length   = 0  
+   CONTAINS
+   PROCEDURE :: init   => SPEC_MAP_INIT
+   PROCEDURE :: free   => SPEC_MAP_FREE
+   PROCEDURE :: find   => SPEC_MAP_FIND
+   PROCEDURE :: insert => SPEC_MAP_INSERT
+  END TYPE SpecMap_t
+
+  TYPE(SpecMap_t) :: specstr_ordermap
+
 CONTAINS
+
+   SUBROUTINE SPEC_MAP_INIT(map, cap)
+      CLASS(SpecMap_t), INTENT(OUT) :: map
+      INTEGER         , INTENT(IN)  :: cap
+
+      IF(map%capacity.NE.0) RETURN
+
+      map%capacity = cap
+      map%length = 0
+      ALLOCATE(map%pairs(cap))
+   END SUBROUTINE
+
+   RECURSIVE SUBROUTINE CLEAR_LL(parent)
+      TYPE(SpecMapPair_t), POINTER, INTENT(INOUT) :: parent
+
+      IF(ASSOCIATED(parent%next)) THEN
+         CALL CLEAR_LL(parent%next)
+      ENDIF
+      DEALLOCATE(parent)
+   END SUBROUTINE
+
+   SUBROUTINE SPEC_MAP_FREE(map)
+      CLASS(SpecMap_t), INTENT(INOUT) :: map
+      INTEGER                         :: i
+
+      IF(map%capacity.NE.0) THEN
+
+         DO i = 1, map%capacity
+            IF(ASSOCIATED(map%pairs(i)%next)) THEN
+                  CALL CLEAR_LL(map%pairs(i)%next)
+            ENDIF
+         END DO
+
+         DEALLOCATE(map%pairs)
+      ENDIF
+   END SUBROUTINE
+
+   SUBROUTINE SPEC_MAP_FIND(map, key, output, error)
+      USE iso_fortran_env
+      CLASS(SpecMap_t), INTENT(IN), TARGET :: map
+      CHARACTER(*)    , INTENT(IN)         :: key
+      integer         , INTENT(OUT)        :: output
+      LOGICAL         , INTENT(OUT)        :: error
+      TYPE(SpecMapPair_t), POINTER         :: pair
+      INTEGER                              :: hash
+      INTEGER                              :: index
+
+      CALL MURMURHASH2_32(key, LEN_TRIM(key), hash)
+
+      index = MODULO(hash, map%capacity)
+      pair  => map%pairs(index)
+
+      IF(.NOT.pair%valid) THEN
+         error = .TRUE.
+         RETURN
+      ENDIF
+
+      DO
+         IF(TRIM(pair%key).EQ.TRIM(key)) THEN
+            error  = .FALSE.
+            output = pair%value
+            RETURN
+         ENDIF
+
+         IF(.NOT.ASSOCIATED(pair%next)) THEN
+            error = .TRUE.
+            RETURN
+         ENDIF
+         pair = pair%next
+      END DO
+   END SUBROUTINE
+
+   SUBROUTINE SPEC_MAP_INSERT(map, key, input)
+      CLASS(SpecMap_t)   , INTENT(INOUT), TARGET :: map
+      CHARACTER(*)       , INTENT(IN)            :: key
+      INTEGER            , INTENT(IN)            :: input
+      TYPE(SpECMapPair_t), POINTER               :: pair
+      INTEGER                                    :: hash
+      INTEGER                                    :: index
+
+      CALL MURMURHASH2_32(key, LEN_TRIM(key), hash)
+
+      index = MODULO(hash, map%capacity)
+      pair  => map%pairs(index)
+
+      ! Insert new (without collision)
+      IF(.NOT.pair%valid) THEN
+         map%pairs(index) = SpecMapPair_t(key, input, null(), .TRUE.)
+         RETURN
+      ENDIF
+      
+      DO
+         ! Update
+         IF(TRIM(pair%key).EQ.TRIM(key)) THEN
+            pair%value = input
+            RETURN
+         ENDIF
+
+         ! Insert new (with collision)
+         IF(.NOT.ASSOCIATED(pair%next)) THEN
+            ALLOCATE(pair%next)
+            pair%next = SpecMapPair_t(key, input, null(), .TRUE.)
+            RETURN
+         ENDIF
+
+         pair = pair%next
+      END DO
+   END SUBROUTINE
 
 #define DATA_IS_C   B'00000001'
 #define DATA_IS_E   B'00000010'
@@ -39,6 +168,10 @@ CONTAINS
 #define DATA_IS_2D  B'00100000'
 #define DATA_IS_SET B'10000000'
 #define BIT_CHECK_IF(what) (IAND(dataid, what).GT.0)
+
+  SUBROUTINE PREPARE_LIKELIHOOD()
+   CALL specstr_ordermap%init(64)   ! Init the specstr map for data file load ordering
+  END SUBROUTINE
 
   SUBROUTINE INIT_LIKELIHOOD()
     ! Initialize the normal likelihood with data files and special function
@@ -54,6 +187,9 @@ CONTAINS
 
     ! Initialize likelihood function
     CALL INIT_LIKELIHOOD_FUNC()
+
+    ! Free the spec string map
+    CALL specstr_ordermap%free() ! NOTE(César): This is safe for a non-inited map
 
   END SUBROUTINE INIT_LIKELIHOOD
 
@@ -78,10 +214,7 @@ CONTAINS
       CALL LOG_ERROR('Check the manual and the input file.')
       CALL LOG_MESSAGE('Available options: [RANDOM_WALK, UNIFORM, SLICE_SAMPLING, SLICE_SAMPLING_ADAPT]')
       CALL LOG_HEADER()
-#ifdef OPENMPI_ON
-      CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-      STOP
+      CALL HALT_EXECUTION()
     END IF
   END SUBROUTINE INIT_SEARCH_METHOD
 
@@ -100,10 +233,7 @@ CONTAINS
          CALL LOG_ERROR('Check the manual and the input file.')
          CALL LOG_MESSAGE('Available options: [GAUSSIAN, MOD_JEFFREYS]')
          CALL LOG_HEADER()
-#ifdef OPENMPI_ON
-         CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-         STOP
+         CALL HALT_EXECUTION()
       END IF
 
       ! Note(César): This only works because INIT_FUNCTIONS is called earlier
@@ -112,10 +242,7 @@ CONTAINS
          CALL LOG_ERROR('Count based data does not support non Gaussian likelihood functions.')
          CALL LOG_ERROR('Check the manual and the input file.')
          CALL LOG_HEADER()
-#ifdef OPENMPI_ON
-         CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-         STOP
+         CALL HALT_EXECUTION()
       END IF
 
   END SUBROUTINE INIT_LIKELIHOOD_FUNC
@@ -123,7 +250,9 @@ CONTAINS
   SUBROUTINE READ_DATA()
     ! Subroutine to read data files
     INTEGER(4) :: k=0
-    REAL(8), DIMENSION(maxdata,nsetmax) :: x_tmp=0, nc_tmp=0, nc_err_tmp=0
+    !  REAL(8), DIMENSION(maxdata,nsetmax) :: x_tmp=0, nc_tmp=0, nc_err_tmp=0
+    REAL(8), DIMENSION(maxdata,nsetmax) :: x_tmp=0, y_tmp=0, xe_tmp=0, ye_tmp=0, c_tmp=0, ce_tmp=0
+    
 
     ! READ DATA, calculate the constants for the likelihood function
     ! Initialize
@@ -131,195 +260,223 @@ CONTAINS
     ndata_set = 0
     const_ll = 0.
 
-    IF (data_type.EQ.'1c') THEN
-       ! Case 1D with counts ----------------------------------------------------------------
-       DO k=1,nset
-          CALL READ_FILE_COUNTS(filename(k),xmin(k),xmax(k),ndata_set(k), &
-               x_tmp(:,k),nc_tmp(:,k))
-          CALL LOG_TRACE('File: '//TRIM(filename(k))//' ('//TRIM(ADJUSTL(INT_TO_STR_INLINE(k)))//'/'//TRIM(ADJUSTL(INT_TO_STR_INLINE(nset)))//')')
-          CALL LOG_TRACE('Data count: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ndata_set(k)))))
-          CALL LOG_TRACE('Constant evidence: '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(const_ll))))
-       END DO
-       ! Allocate set of data
-       ndata = MAXVAL(ndata_set)
-       ALLOCATE(x(ndata,nset),nc(ndata,nset))
-       x = 0.
-       nc = 0.
-       DO k=1,nset
-          x(1:ndata_set(k),k)  = x_tmp(1:ndata_set(k),k)
-          nc(1:ndata_set(k),k) = nc_tmp(1:ndata_set(k),k)
-       END DO
-    ELSE IF (data_type.EQ.'1e') THEN
-       ! Case 1D with errorbars -------------------------------------------------------------------
-       DO k=1,nset
-          CALL READ_FILE_ERRORBARS(filename(k),xmin(k),xmax(k),ndata_set(k), &
-               x_tmp(:,k),nc_tmp(:,k),nc_err_tmp(:,k))
-          CALL LOG_TRACE('File: '//TRIM(filename(k))//' ('//TRIM(ADJUSTL(INT_TO_STR_INLINE(k)))//'/'//TRIM(ADJUSTL(INT_TO_STR_INLINE(nset)))//')')
-          CALL LOG_TRACE('Data count: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ndata_set(k)))))
-          CALL LOG_TRACE('Constant evidence: '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(const_ll))))
-       END DO
-       ! Allocate set of data
-       ndata = MAXVAL(ndata_set)
-       ALLOCATE(x(ndata,nset),nc(ndata,nset),nc_err(ndata,nset))
-       x = 0.
-       nc = 0.
-       nc_err = 0.
-       DO k=1,nset
-          x(1:ndata_set(k),k)  = x_tmp(1:ndata_set(k),k)
-          nc(1:ndata_set(k),k) = nc_tmp(1:ndata_set(k),k)
-          nc_err(1:ndata_set(k),k) = nc_err_tmp(1:ndata_set(k),k)
-       END DO
-    ELSE IF (data_type.EQ.'2c') THEN
-       ! Case 2D with counts in a matrix -------------------------------------------------------------------
-       DO k=1,nset
-          CALL READ_FILE_COUNTS_2D(filename(k),xmin(k),xmax(k),ymin(k),ymax(k),ndata_set(k))
-          CALL LOG_TRACE('File: '//TRIM(filename(k))//' ('//TRIM(ADJUSTL(INT_TO_STR_INLINE(k)))//'/'//TRIM(ADJUSTL(INT_TO_STR_INLINE(nset)))//')')
-          CALL LOG_TRACE('Data count: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ndata_set(k)))))
-          CALL LOG_TRACE('Constant evidence: '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(const_ll))))
+    DO k=1, nset
+      CALL READ_FILE_GENERIC(filename(k), xmin(k), xmax(k), ymin(k), ymax(k), ndata_set(k), x_tmp(:,k),&
+         y_tmp(:,k), xe_tmp(:,k), ye_tmp(:,k), c_tmp(:,k), ce_tmp(:,k))
+    END DO
 
-          IF(ndata.EQ.0) THEN
-            CALL LOG_HEADER()
-            CALL LOG_ERROR('Data count: 0, no data in the selected range. Please check your min max and data.')
-            CALL LOG_HEADER()
-          ENDIF
-       END DO
-    ELSE
-       CALL LOG_HEADER()
-       CALL LOG_ERROR('Invalid data type: '//data_type)
-       CALL LOG_HEADER()
-       STOP
-    END IF
+    ndata = MAXVAL(ndata_set)
+    ALLOCATE(x(ndata,nset),nc(ndata,nset),nc_err(ndata,nset)) ! Even if we are not using ce_tmp
+    x = 0.
+    nc = 0.
+    nc_err = 0.
+    DO k=1,nset
+      x(1:ndata_set(k),k)      = x_tmp(1:ndata_set(k),k)
+      nc(1:ndata_set(k),k)     = c_tmp(1:ndata_set(k),k)
+      nc_err(1:ndata_set(k),k) = ce_tmp(1:ndata_set(k),k)
+    END DO
   END SUBROUTINE READ_DATA
 
   !#####################################################################################################################
 
-  SUBROUTINE READ_FILE_COUNTS(namefile,minx,maxx,datan,x_tmp,nc_tmp)
-    ! Read one file of data
+  SUBROUTINE TRY_GET_COLVAL_REAL(specname, varout, arrin, success)
+   CHARACTER(*) , INTENT(IN)  :: specname
+   REAL(8)      , INTENT(OUT) :: varout
+   CHARACTER(64), INTENT(IN)  :: arrin(specstrmaxcol)
+   LOGICAL      , INTENT(OUT) :: success
+   INTEGER                    :: specorder
+   LOGICAL                    :: error
 
-    USE, INTRINSIC :: IEEE_ARITHMETIC
+   CALL specstr_ordermap%find(TRIM(specname), specorder, error)
+   
+   ! There is no such spec, early out
+   IF(error) THEN
+      varout = 0.
+      success = .FALSE.
+      RETURN
+   ENDIF
 
-    CHARACTER, INTENT(IN) :: namefile*64
-    REAL(8), INTENT(IN) :: minx, maxx
-    INTEGER(4), INTENT(OUT) :: datan
-    REAL(8), DIMENSION(maxdata), INTENT(OUT) :: x_tmp, nc_tmp
-    !
-    INTEGER(4) :: i=0, nd=0
-    REAL(8), DIMENSION(maxdata) :: x_raw=0, nc_raw=0
+   success = .TRUE.
+   READ(arrin(specorder),*) varout
+  END SUBROUTINE
 
-    ! Initialize
-    x_tmp = 0.
-    nc_tmp = 0.
-    datan = 0
-    nd=0
+  SUBROUTINE TRY_GET_COLVAL_CHAR(specname, varout, arrin, success)
+   CHARACTER(*) , INTENT(IN)  :: specname
+   CHARACTER(64), INTENT(OUT) :: varout
+   CHARACTER(64), INTENT(IN)  :: arrin(specstrmaxcol)
+   LOGICAL      , INTENT(OUT) :: success
+   INTEGER                    :: specorder
+   LOGICAL                    :: error
 
-    ! Open file and read
-    OPEN(10,file=namefile,status='old')
-    DO i=1, maxdata
-       READ(10,*,END=20) x_raw(i), nc_raw(i)
-       ! Make test for integer numbers, NaN and infinites
-       IF (ABS(nc_raw(i)-INT(nc_raw(i))).GT.1E-5) THEN
-          CALL LOG_HEADER()
-          CALL LOG_ERROR('Input numbers are not counts and you are using Poisson statistic (no error bar).')
-          CALL LOG_ERROR('At value: '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(nc_raw(i)))))
-          CALL LOG_HEADER()
-#ifdef OPENMPI_ON
-          CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-          STOP
-       ELSE IF (nc_raw(i).LT.0.AND.IEEE_IS_FINITE(nc_raw(i))) THEN
-          ! Check if counts are negative
-          CALL LOG_HEADER()
-          CALL LOG_ERROR('Negative counts are not accepted.')
-          CALL LOG_ERROR('At value: '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(nc_raw(i)))))
-          CALL LOG_HEADER()
-#ifdef OPENMPI_ON
-          CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-          STOP
-       ELSE IF (.NOT.IEEE_IS_FINITE(nc_raw(i)).OR.IEEE_IS_NAN(nc_raw(i))) THEN
-          ! Check infinites and nan
-          CALL LOG_HEADER()
-          CALL LOG_ERROR('Infinite or "NaN" counts are not accepted.')
-          CALL LOG_ERROR('At value: '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(nc_raw(i)))))
-          CALL LOG_HEADER()
-#ifdef OPENMPI_ON
-          CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-          STOP
-       END IF
+   CALL specstr_ordermap%find(TRIM(specname), specorder, error)
+   
+   ! There is no such spec, early out
+   IF(error) THEN
+      varout = ' '
+      success = .FALSE.
+      RETURN
+   ENDIF
 
-       ! Select the data
-       IF(x_raw(i).GE.minx.AND.x_raw(i).LE.maxx) THEN
-          nd = nd + 1
-          x_tmp(nd) = x_raw(i)
-          nc_tmp(nd) = nc_raw(i)
-          ! Calculation of the constant part of the likelihood with Poisson distribution
-          !IF (nc_tmp(nd).GT.0.) const_ll = const_ll - DFAC_LN(INT(nc_tmp(nd)))
-          ! Uses of the gamma function gamma(n) = (n-1)!
-          IF (nc_tmp(nd).GT.0.) const_ll = const_ll - DLOG_FAC(INT(nc_tmp(nd)))
-       END IF
-    ENDDO
+   success = .TRUE.
+   varout = arrin(specorder)
+  END SUBROUTINE
 
-20  CONTINUE
-    CLOSE(10)
-    datan = nd
+  FUNCTION IS_POISSON_COUNT(val)
+   USE, INTRINSIC :: IEEE_ARITHMETIC
+   REAL(8), INTENT(IN) :: val
+   LOGICAL             :: IS_POISSON_COUNT
 
-  END SUBROUTINE READ_FILE_COUNTS
+   IF (ABS(val-INT(val)).GT.1E-5) THEN ! Make test for integer numbers, NaN and infinites
+      CALL LOG_HEADER()
+      CALL LOG_ERROR('Input number is not integer and you are using Poisson statistic (no error bar).')
+      CALL LOG_HEADER()
+      IS_POISSON_COUNT = .FALSE.
+      RETURN
+   ELSE IF (val.LT.0.AND.IEEE_IS_FINITE(val)) THEN ! Check if counts are negative
+      CALL LOG_HEADER()
+      CALL LOG_ERROR('Input number is negative and you are using Poisson statistic (no error bar).')
+      CALL LOG_HEADER()
+      IS_POISSON_COUNT = .FALSE.
+      RETURN
+   ELSE IF (.NOT.IEEE_IS_FINITE(val).OR.IEEE_IS_NAN(val)) THEN ! Check infinites and nan
+      CALL LOG_HEADER()
+      CALL LOG_ERROR('Infinite or "NaN" counts are not accepted.')
+      CALL LOG_HEADER()
+      IS_POISSON_COUNT = .FALSE.
+      RETURN
+   END IF
 
-  !#####################################################################################################################
+   IS_POISSON_COUNT = .TRUE.
+  END FUNCTION
 
-  SUBROUTINE READ_FILE_ERRORBARS(namefile,minx,maxx,datan,x_tmp,nc_tmp,nc_err_tmp)
-    ! Read one file of data
-    CHARACTER, INTENT(IN) :: namefile*64
-    REAL(8), INTENT(IN) :: minx, maxx
-    INTEGER(4), INTENT(OUT) :: datan
-    REAL(8), DIMENSION(maxdata), INTENT(OUT) :: x_tmp, nc_tmp, nc_err_tmp
-    !
-    INTEGER(4) :: i=0, nd = 0
-    REAL(8), DIMENSION(maxdata) :: x_raw=0, nc_raw=0, nc_err_raw=0
-    REAL(8), PARAMETER :: pi=3.141592653589793d0
+  ! NOTE(César): Experimental substitute for the READ_FILE_* subroutines using the `specstr` from the input file (or the default one)
+  SUBROUTINE READ_FILE_GENERIC(namefile, minx, maxx, miny, maxy, datan, x_tmp, y_tmp, xe_tmp, ye_tmp, c_tmp, ce_tmp)
+   USE, INTRINSIC :: IEEE_ARITHMETIC
+   CHARACTER                  , INTENT(IN)  :: namefile*64
+   REAL(8)                    , INTENT(IN)  :: minx, maxx, miny, maxy
+   INTEGER(4)                 , INTENT(OUT) :: datan
+   REAL(8), DIMENSION(maxdata), INTENT(OUT) :: x_tmp, y_tmp, xe_tmp, ye_tmp, c_tmp, ce_tmp
 
+   CHARACTER(64)                            :: cvars(specstrmaxcol)
+   INTEGER                                  :: ncols, expected_ncols, i, nd
+   LOGICAL                                  :: spec_err
+   CHARACTER(1024)                          :: line
+   CHARACTER(64)                            :: dummy
 
-    ! Initialize
-    x_tmp = 0.
-    nc_tmp = 0.
-    nc_err_tmp = 0.
-    nd = 0
+   REAL(8), PARAMETER                       :: pi = 3.141592653589793d0
 
-    ! Open file and read
-    OPEN(10,file=namefile,status='old')
-    DO i=1, maxdata
-       READ(10,*,END=20) x_raw(i), nc_raw(i), nc_err_raw(i)
-       ! Select the data
-       IF(x_raw(i).GE.minx.AND.x_raw(i).LE.maxx) THEN
-          nd = nd + 1
-          x_tmp(nd) = x_raw(i)
-          nc_tmp(nd) = nc_raw(i)
-          nc_err_tmp(nd) = nc_err_raw(i)
-          IF (nc_err_tmp(nd).LE.0.) THEN
-             CALL LOG_HEADER()
-             CALL LOG_ERROR('Errorbar with a value equal to 0 or negative.')
-             CALL LOG_ERROR('At value: '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(nc_err_raw(i)))))
-             CALL LOG_HEADER()
-#ifdef OPENMPI_ON
-             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-             STOP
-          END IF
-          ! Calculation of the constant part of the likelihood with Gaussian distribution
-          const_ll = -DLOG(nc_err_raw(i))
-       END IF
-    ENDDO
+   ! Which data types are present in the input file
+   LOGICAL :: img_present
+   LOGICAL :: x_present
+   LOGICAL :: y_present
+   LOGICAL :: c_present
+   LOGICAL :: ce_present
+   LOGICAL :: t_present
+   LOGICAL :: i_present
 
-20  CONTINUE
-    CLOSE(10)
-    ! Calculation of the constant part of the likelihood with Gaussian distribution
-    const_ll = const_ll - nd*DLOG(2*pi)/2
-    datan = nd
+   ! Initialize
+   x_tmp  = 0.
+   y_tmp  = 0.
+   xe_tmp = 0. ! NOTE(César): Reserved for future use.
+   ye_tmp = 0. ! NOTE(César): Reserved for future use.
+   c_tmp  = 0.
+   ce_tmp = 0.
+   cvars  = ' '
+   nd     = 0
 
-  END SUBROUTINE READ_FILE_ERRORBARS
+   ! Get the number of columns declared on the specstr
+   CALL specstr_ordermap%find('ncols', expected_ncols, spec_err) ! spec_err should always be false here
+   
+   ! Is the input a 2D image ?
+   CALL specstr_ordermap%find('img_v', i, spec_err) ! i is a dummy here
 
-    !#####################################################################################################################
+   IF(.NOT.spec_err) THEN
+      ! Using legacy function for now
+      CALL READ_FILE_COUNTS_2D(namefile, minx, maxx, miny, maxy, datan)
+
+      IF(datan.EQ.0) THEN
+         CALL LOG_HEADER()
+         CALL LOG_ERROR('Data count: 0, no data in the selected range. Please check your min max and data.')
+         CALL LOG_HEADER()
+      ENDIF
+      RETURN
+   ENDIF
+
+   ! Open file and read for non image data format
+   OPEN(10,file=namefile,status='old')
+   DO i=1, maxdata
+      READ(10,'(a)',END=20) line
+
+      ! Format the line according to the specifiers (CSV)
+      IF(TRIM(fileformat).EQ.'.csv') THEN
+         CALL SPLIT_INPUT_ON(',', line, cvars, ncols, specstrmaxcol)
+         ! write(*,*) TRIM(line), cvars, ncols
+      ELSE IF(TRIM(fileformat).EQ.'.tsv') THEN
+         CALL SPLIT_INPUT_ON(CHAR(9), line, cvars, ncols, specstrmaxcol)
+      ENDIF
+
+      ! File does not contain the expected amount of columns
+      IF(ncols.NE.expected_ncols) THEN
+         CALL LOG_HEADER()
+         CALL LOG_ERROR('Input file does not have the layout specified in the `specstr`.')
+         CALL LOG_ERROR('At line: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.')
+         CALL LOG_ERROR('Aborting Execution...')
+         CALL LOG_HEADER()
+         CALL HALT_EXECUTION()
+      ENDIF
+
+      ! Parse each cell
+      ! TODO(César): This should really run before the loop once to figure out the indices
+      CALL TRY_GET_COLVAL_REAL('x_v'  , x_tmp(i) , cvars, x_present  ) ! Try for x
+      CALL TRY_GET_COLVAL_REAL('c_v'  , c_tmp(i) , cvars, c_present  ) ! Try for c
+      CALL TRY_GET_COLVAL_REAL('ce_v' , ce_tmp(i), cvars, ce_present ) ! Try for ce
+      CALL TRY_GET_COLVAL_CHAR('i_v'  , dummy    , cvars, i_present  ) ! Try for i
+      
+      ! CALL TRY_GET_COLVAL_REAL('y_v'  , y_tmp(i) , cvars, y_present) ! Try for y ! TODO(César): Reserved for future use.
+      ! CALL TRY_GET_COLVAL_REAL('t_v'  , t_tmp(i) , cvars, t_present) ! Try for t ! TODO(César): Reserved for future use.
+
+      IF(c_present.AND.(.NOT.ce_present).AND.x_present.AND.(.NOT.y_present)) THEN
+         ! 1D without errorbars (poisson)
+         IF(.NOT.IS_POISSON_COUNT(c_tmp(i))) THEN
+            CALL HALT_EXECUTION()
+         ENDIF
+
+         IF(x_tmp(i).GE.minx.AND.x_tmp(i).LE.maxx) THEN
+            nd = nd + 1
+            x_tmp(nd) = x_tmp(i)
+            c_tmp(nd) = c_tmp(i)
+            ! Calculation of the constant part of the likelihood with Poisson distribution
+            ! Uses of the gamma function gamma(n) = (n-1)!
+            IF (c_tmp(nd).GT.0.) const_ll = const_ll - DLOG_FAC(INT(c_tmp(nd)))
+         END IF
+      ELSE IF(c_present.AND.ce_present.AND.x_present.AND.(.NOT.y_present)) THEN
+         ! 1D with errorbars (gaussian)
+         IF(x_tmp(i).GE.minx.AND.x_tmp(i).LE.maxx) THEN
+            nd = nd + 1
+            x_tmp(nd) = x_tmp(i)
+            c_tmp(nd) = c_tmp(i)
+            ce_tmp(nd) = ce_tmp(i)
+            IF (ce_tmp(nd).LE.0.) THEN
+               CALL LOG_HEADER()
+               CALL LOG_ERROR('Errorbar with a value equal to 0 or negative.')
+               CALL LOG_ERROR('At value: '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(ce_tmp(i)))))
+               CALL LOG_HEADER()
+               CALL HALT_EXECUTION()
+            END IF
+            ! Calculation of the constant part of the likelihood with Gaussian distribution
+            const_ll = -DLOG(ce_tmp(i)) ! NOTE(César): ??
+         END IF
+      ENDIF
+   ENDDO
+
+   20 CONTINUE
+   CLOSE(10)
+
+   IF(c_present.AND.ce_present.AND.x_present.AND.(.NOT.y_present)) THEN
+      const_ll = const_ll - nd*DLOG(2*pi)/2
+   ENDIF
+   datan = nd
+  END SUBROUTINE
 
   SUBROUTINE READ_FILE_COUNTS_2D(namefile,minx,maxx,miny,maxy,datan)
     ! Read one file of data
@@ -350,10 +507,7 @@ CONTAINS
        CALL LOG_HEADER()
        CALL LOG_ERROR('Negative counts are not accepted.')
        CALL LOG_HEADER()
-#ifdef OPENMPI_ON
-       CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-       STOP
+       CALL HALT_EXECUTION()
     END IF
 
     ! Substitute infinites and nan with negative counts
@@ -429,8 +583,8 @@ CONTAINS
     ! ------------------------------ !
     ! ud = undefined (space for a 3d analysis [b6] and other distributions [b2, b3])
     ! yn = 0/1 -> n/y
-    ! TODO(Cesar): The e/c 1/2 could live in the same bit, making comparisons even faster
-    ! TODO(Cesar): But there wouldn't be much space for working with other values in the future
+    ! TODO(César): The e/c 1/2 could live in the same bit, making comparisons even faster
+    ! TODO(César): But there wouldn't be much space for working with other values in the future
     
     ! Is the data 1 or 2-D ?
     IF(data_type(1:1).EQ.'1') THEN
@@ -463,10 +617,7 @@ CONTAINS
           CALL LOG_HEADER()
           CALL LOG_ERROR('Sets for 2D functions are not yet implemented.')
           CALL LOG_HEADER()
-#ifdef OPENMPI_ON
-          CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-          STOP
+          CALL HALT_EXECUTION()
        END IF
        funcid = SELECT_USERFCN_SET(funcname)
     END IF
@@ -555,10 +706,7 @@ CONTAINS
                   CALL LOG_ERROR(TRIM(par_name(np))//' = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(par(np)))))
                 END DO
                 CALL LOG_HEADER()
-#ifdef OPENMPI_ON
-                CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-                STOP ! TODO(Cesar): Handle all of these errors for the case of MPI
+                CALL HALT_EXECUTION()
              END IF
           END DO
        END DO
@@ -582,9 +730,7 @@ CONTAINS
                   CALL LOG_ERROR(TRIM(par_name(np))//' = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(par(np)))))
                 END DO
                 CALL LOG_HEADER()
-#ifdef OPENMPI_ON
-                CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
+                CALL HALT_EXECUTION()
                 STOP
              END IF
           END DO
@@ -623,6 +769,10 @@ CONTAINS
           ! Calculate the function (not SIMD optimisable)
           DO i=1, ndata_set(k)
              enc(i, k) = USERFCN(x(i, k),npar,par)
+             IF(x(i, k).EQ.107) THEN
+               ! CALL LOG_TRACE('enc('//TRIM(REAL_TO_STR_INLINE(x(i, k)))//') = '//TRIM(REAL_TO_STR_INLINE(enc(i, k))))
+               ! CALL LOG_TRACE('A = '//TRIM(REAL_TO_STR_INLINE(par(1))))
+             ENDIF
           END DO
           ! Calculate the likelihood
           !$OMP SIMD REDUCTION(+:ll_tmp)
@@ -1070,9 +1220,7 @@ CONTAINS
 
   SUBROUTINE DEALLOCATE_DATA()
 
-    IF (data_type.EQ.'1c') THEN
-       DEALLOCATE(x,nc)
-    ELSE IF (data_type.EQ.'1e') THEN
+    IF ((data_type.EQ.'1c').OR.(data_type.EQ.'1e')) THEN
        DEALLOCATE(x,nc,nc_err)
     ELSE IF (data_type.EQ.'2c') THEN
        DEALLOCATE(adata)
