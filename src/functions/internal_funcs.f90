@@ -20,6 +20,7 @@ END FUNCTION
 
 FUNCTION Interpolate(interpolator_file, x, s)
     USE MOD_INTERPOLATE
+    USE MOD_LOGGER
     IMPLICIT NONE
     CHARACTER(*), INTENT(IN) :: interpolator_file
     REAL(8),      INTENT(IN) :: x
