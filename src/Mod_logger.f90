@@ -49,17 +49,23 @@ MODULE MOD_LOGGER
 
     SUBROUTINE LOG_ERROR_HEADER()
         IF(logger_verbosity.LT.1) RETURN
+        WRITE(*,'(a)', advance='no') ' '//CHAR(27)//'[31m'
         CALL LOG_HEADER()
+        WRITE(*, '(a)', advance='no') char(27)//'[0m'
     END SUBROUTINE
 
     SUBROUTINE LOG_WARNING_HEADER()
         IF(logger_verbosity.LT.2) RETURN
+        WRITE(*,'(a)', advance='no') ' '//CHAR(27)//'[33m'
         CALL LOG_HEADER()
+        WRITE(*, '(a)', advance='no') char(27)//'[0m'
     END SUBROUTINE
 
     SUBROUTINE LOG_MESSAGE_HEADER()
         IF(logger_verbosity.LT.3) RETURN
+        WRITE(*,'(a)', advance='no') ' '//CHAR(27)//'[39m'
         CALL LOG_HEADER()
+        WRITE(*, '(a)', advance='no') char(27)//'[0m'
     END SUBROUTINE
 
     SUBROUTINE LOG_GENERIC(level, msg, colorid)
