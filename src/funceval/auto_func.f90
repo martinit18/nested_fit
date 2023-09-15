@@ -276,7 +276,7 @@ MODULE MOD_AUTOFUNC
             CALL GetErrorMsg(parsed_data, error_msg)
             CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Failed to parse the LaTeX code provided.')
-            CALL LOG_ERROR('Error message = '//TRIM(error_msg(1:INDEX(error_msg, c_null_char)-1))//'.')
+            CALL LOG_ERROR('Error code = '//TRIM(error_msg(1:INDEX(error_msg, c_null_char)-1))//'.')
             CALL LOG_ERROR('Aborting Execution...')
             CALL LOG_ERROR_HEADER()
             CALL FreeParseOutput(parsed_data)
