@@ -346,7 +346,7 @@ PROGRAM NESTED_FIT
       CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.ymax', ymax(1), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
 
       ! Legacy stuff required
-      ! TODO(César): Deprecate this
+      ! TODO(César): Deprecate this (whenever we implement the convolution function)
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'lr'    , lr    , MANDATORY=.FALSE.) ! r by default
       CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'npoint', npoint, MANDATORY=.FALSE.) ! 0 by default
       CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'nwidth', nwidth, MANDATORY=.FALSE.) ! 0 by default
@@ -356,18 +356,18 @@ PROGRAM NESTED_FIT
       CALL CONFIGURE_USERFUNCTION()
 
       ! Read set of spectra file parameter
-      IF (is_set) THEN
-         OPEN (UNIT=88, FILE='nf_input_set.dat', STATUS='old')
-         READ(88,*,ERR=11,END=11) nset
-         DO k = 2, nset
-            READ(88,*,ERR=11,END=11) xmin(k), xmax(k), string
-         END DO
-         DO k = 2, nset
-            READ(88,*,ERR=11,END=11) filename(k)
-         END DO
-      11   CONTINUE
-         CLOSE(88)
-      ENDIF
+      ! IF (is_set) THEN
+      !    OPEN (UNIT=88, FILE='nf_input_set.dat', STATUS='old')
+      !    ! READ(88,*,ERR=11,END=11) nset
+      !    DO k = 2, nset
+      !       READ(88,*,ERR=11,END=11) xmin(k), xmax(k), string ! TODO
+      !    END DO
+      !    ! DO k = 2, nset
+      !    !    READ(88,*,ERR=11,END=11) filename(k)
+      !    ! END DO
+      ! 11   CONTINUE
+      !    CLOSE(88)
+      ! ENDIF
   ENDIF
 
   ! Receive data from the mpi root node
@@ -593,7 +593,7 @@ PROGRAM NESTED_FIT
          WRITE(*,*) 'Evidence standard deviation:', evsum_err
          WRITE(*,*) '-----------------------------------------------------------------------------------'
 
-         
+
          OPEN(23,FILE='nf_output_tries.dat',STATUS= 'UNKNOWN')
          WRITE(23,*) 'Number_of_tries ', ntry
          WRITE(23,*) 'Evidence_average:', evsum_final
@@ -895,8 +895,16 @@ PROGRAM NESTED_FIT
    TYPE(ParseLatex_t)             :: parse_result
    INTEGER                        :: i
    LOGICAL                        :: fix_logical = .FALSE.
+   CHARACTER(128)                 :: legacy_param_keys(64)
+   CHARACTER(128)                 :: legacy_param_names(64)
+   INTEGER                        :: legacy_param_count
+   TYPE(InputDataGenericValue_t)  :: legacy_param
+   LOGICAL                        :: error
+   CHARACTER(128)                 :: splitarr(16)
+   INTEGER                        :: splitarr_count
 
    ! Check if the function is legacy or not
+   CALL LOG_TRACE(TRIM(funcname))
    IF(.NOT.IS_LEGACY_USERFCN(TRIM(funcname))) THEN
       ! Try to extract an expression
       parse_result = PARSE_LATEX(TRIM(funcname))
@@ -906,7 +914,7 @@ PROGRAM NESTED_FIT
          CALL COMPILE_CACHE_FUNC(parse_result, definition)
 
          npar = parse_result%num_params
-         
+
          ! Allocate space for parameters and initialize
          ALLOCATE(live_max(npar),par_num(npar),par_name(npar),par_in(npar),par_step(npar), &
             par_bnd1(npar),par_bnd2(npar),par_fix(npar), &
@@ -932,11 +940,11 @@ PROGRAM NESTED_FIT
          par_p99_w = 0.
 
          ! Handle the arguments from the input file
-         DO i=1, parse_result%num_params
+         DO i=1, npar
             key         = 'function.params.'//TRIM(parse_result%parameter_names(i))//'.'
-            CALL LOG_TRACE('Reading key: '//key)
             par_num(i)  = i
             par_name(i) = TRIM(parse_result%parameter_names(i))
+            CALL LOG_TRACE('Reading key: '//key)
             CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'value', par_in(i)  , MANDATORY=.TRUE. )
             CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'step' , par_step(i), MANDATORY=.FALSE.) !    -1 by default
             CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'min'  , par_bnd1(i), MANDATORY=.TRUE. )
@@ -953,7 +961,6 @@ PROGRAM NESTED_FIT
                CALL HALT_EXECUTION()
             END IF
          END DO
-
       ELSE
          CALL HALT_EXECUTION()
       ENDIF
@@ -961,9 +968,79 @@ PROGRAM NESTED_FIT
    ELSE
       ! Use the function as is (legacy mode)
       ! Nothing to be done here (for now)
-      ! Continue as is
-      CONTINUE
+      ! Get legacy required parameters
+      CALL input_config%subkeys_of('function.params.', legacy_param_keys, legacy_param_count)
+      DO i = 1, legacy_param_count
+         legacy_param_keys(i) = legacy_param_keys(i)(1:INDEX(legacy_param_keys(i), '.', back=.TRUE.)-1)
+      END DO
+      CALL STR_ARRAY_UNIQUE(legacy_param_keys, legacy_param_count)
+      
+      IF(legacy_param_count.EQ.0) THEN
+         CALL LOG_ERROR_HEADER()
+         CALL LOG_ERROR('Function legacy mode detected.')
+         CALL LOG_ERROR('But no parameters found.')
+         CALL LOG_ERROR('Aborting Execution...')
+         CALL LOG_ERROR_HEADER()
+         CALL HALT_EXECUTION()
+      ENDIF
+
+      npar = legacy_param_count
+
+      CALL LOG_TRACE('Legacy parameters found:')
+      DO i = 1, npar
+         CALL LOG_TRACE(TRIM(legacy_param_keys(i)))
+      END DO
+
+      ! Allocate space for parameters and initialize
+      ALLOCATE(live_max(npar),par_num(npar),par_name(npar),par_in(npar),par_step(npar), &
+         par_bnd1(npar),par_bnd2(npar),par_fix(npar), &
+         par_mean(npar),par_sd(npar), &
+         par_median_w(npar), &
+         par_m68_w(npar),par_p68_w(npar),par_m95_w(npar),par_p95_w(npar),par_m99_w(npar),par_p99_w(npar))
+      live_max = 0.
+      par_num = 0
+      par_name = ' '
+      par_in = 0.
+      par_step = 0.
+      par_bnd1 = 0.
+      par_bnd2 = 0.
+      par_fix = 0
+      par_mean = 0.
+      par_sd = 0.
+      par_median_w = 0.
+      par_m68_w = 0.
+      par_p68_w = 0.
+      par_m95_w = 0.
+      par_p95_w = 0.
+      par_m99_w = 0.
+      par_p99_w = 0.
+
+      ! Handle the arguments from the input file
+      DO i=1, npar
+         CALL SPLIT_INPUT_ON('.', legacy_param_keys(i), splitarr, splitarr_count, 16)
+         key         = TRIM(legacy_param_keys(i))//'.'
+         par_name(i) = TRIM(splitarr(splitarr_count))
+         CALL LOG_TRACE('Reading key: '//key)
+         CALL FIELD_FROM_INPUT_INTEGER(input_config, TRIM(key)//'npar' , par_num(i)          , MANDATORY=.TRUE. )
+         CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'value', par_in(par_num(i))  , MANDATORY=.TRUE. )
+         CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'step' , par_step(par_num(i)), MANDATORY=.FALSE.) !    -1 by default
+         CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'min'  , par_bnd1(par_num(i)), MANDATORY=.TRUE. )
+         CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'max'  , par_bnd2(par_num(i)), MANDATORY=.TRUE. )
+         CALL FIELD_FROM_INPUT_LOGICAL(input_config, TRIM(key)//'fixed', fix_logical         , MANDATORY=.FALSE.) ! False by default
+         par_fix(par_num(i)) = fix_logical ! Implicit conversion
+
+         IF (par_bnd1(par_num(i)).GE.par_bnd2(par_num(i))) THEN
+            CALL LOG_ERROR_HEADER()
+            CALL LOG_ERROR('Bad limits for parameter `'//TRIM(splitarr(splitarr_count))//'`.')
+            CALL LOG_ERROR('min >= max.')
+            CALL LOG_ERROR('Aborting Execution...')
+            CALL LOG_ERROR_HEADER()
+            CALL HALT_EXECUTION()
+         END IF
+      END DO
+
    ENDIF
+
   END SUBROUTINE
 
   SUBROUTINE POPULATE_FILEFMT(format)
@@ -990,7 +1067,13 @@ PROGRAM NESTED_FIT
 
    IF(count.GT.1) THEN
       ! We have a set of files
+      CALL LOG_TRACE('Running for a set of files.')
+
       is_set = .TRUE.
+      nset = count
+      DO i = 1, count
+         filename(i) = ADJUSTL(filename(i)) ! Skip possible left spaces from comma separation
+      END DO
    ELSE
       is_set = .FALSE.
    ENDIF
