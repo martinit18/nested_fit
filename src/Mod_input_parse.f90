@@ -35,10 +35,11 @@ MODULE MOD_INPUTPARSE
         INTEGER                               :: length   = 0
 
         CONTAINS
-        PROCEDURE, PUBLIC :: init   => INPUTDATA_MAP_INIT
-        PROCEDURE, PUBLIC :: free   => INPUTDATA_MAP_FREE
-        PROCEDURE, PUBLIC :: find   => INPUTDATA_MAP_FIND
-        PROCEDURE, PUBLIC :: insert => INPUTDATA_MAP_INSERT
+        PROCEDURE, PUBLIC :: init       => INPUTDATA_MAP_INIT
+        PROCEDURE, PUBLIC :: free       => INPUTDATA_MAP_FREE
+        PROCEDURE, PUBLIC :: find       => INPUTDATA_MAP_FIND
+        PROCEDURE, PUBLIC :: insert     => INPUTDATA_MAP_INSERT
+        PROCEDURE, PUBLIC :: subkeys_of => INPUTDATA_MAP_SUBKEYSOF
     END TYPE InputDataMap_t
 
     TYPE :: IntegerStack_t
@@ -417,6 +418,37 @@ MODULE MOD_INPUTPARSE
             ENDIF
 
             pair = pair%next
+        END DO
+    END SUBROUTINE
+
+    ! Max subkeys = 64
+    SUBROUTINE INPUTDATA_MAP_SUBKEYSOF(map, key, output, count)
+        CLASS(InputDataMap_t)   , INTENT(INOUT), TARGET :: map
+        CHARACTER(*)            , INTENT(IN)            :: key
+        CHARACTER(128)          , INTENT(OUT)           :: output(64)
+        INTEGER                 , INTENT(OUT)           :: count
+        INTEGER                                         :: i
+        TYPE(InputDataMapPair_t), POINTER               :: next
+        
+        count = 0
+
+        ! Iterate over the map (this takes time)
+        DO i = 1, SIZE(map%pairs)
+            ! Found subkey
+            IF(INDEX(TRIM(map%pairs(i)%key), TRIM(key)).NE.0) THEN
+                count = count + 1
+                output(count) = map%pairs(i)%key
+            ENDIF
+
+            next => map%pairs(i)%next
+            DO WHILE(ASSOCIATED(next))
+                ! Found subkey
+                IF(INDEX(TRIM(next%key), TRIM(key)).NE.0) THEN
+                    count = count + 1
+                    output(count) = next%key
+                ENDIF
+                next => next%next
+            END DO
         END DO
     END SUBROUTINE
 
