@@ -3,7 +3,7 @@ SUBROUTINE SPLIT_INPUT_ON(char, input, output, count, arrsize)
    CHARACTER(LEN=1) , INTENT(IN)  :: char
    CHARACTER(LEN=*) , INTENT(IN)  :: input
    INTEGER          , INTENT(IN)  :: arrsize
-   CHARACTER(LEN=64), INTENT(OUT) :: output(arrsize)
+   CHARACTER(LEN=*) , INTENT(OUT) :: output(arrsize)
    INTEGER          , INTENT(OUT) :: count
    INTEGER                        :: i
    CHARACTER(LEN=2048)            :: ninput
@@ -32,6 +32,7 @@ SUBROUTINE SPLIT_INPUT_ON(char, input, output, count, arrsize)
 END SUBROUTINE
 
 SUBROUTINE STR_TO_LOWER(input)
+   IMPLICIT NONE
    CHARACTER(LEN=*) , INTENT(INOUT) :: input
    INTEGER :: i, code
 
@@ -41,4 +42,26 @@ SUBROUTINE STR_TO_LOWER(input)
          input(i:i) = CHAR(code + 32) ! NOTE(César): 'a' - 'A'
       ENDIF
    END DO
+END SUBROUTINE
+
+! TODO(César): Use a tree for very large arrays to be faster to compute unique
+SUBROUTINE STR_ARRAY_UNIQUE(array, countout)
+   IMPLICIT NONE
+   CHARACTER(*), INTENT(INOUT)           :: array(countout)
+   CHARACTER(LEN(array(1)))              :: arrcpy(countout)
+   INTEGER     , INTENT(INOUT)           :: countout
+   INTEGER                               :: i, j
+
+   countout = 1
+   DO i = 1, SIZE(array)
+      DO j = 1, countout
+         IF(TRIM(array(i)).EQ.TRIM(arrcpy(j))) GOTO 173
+      END DO
+      arrcpy(countout) = array(i)
+      countout = countout + 1
+      173 CONTINUE
+   END DO
+
+   countout = countout - 1
+   array = arrcpy
 END SUBROUTINE
