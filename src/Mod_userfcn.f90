@@ -16,8 +16,8 @@ MODULE MOD_USERFCN
 
     FUNCTION IS_LEGACY_USERFCN(funcname)
         IMPLICIT NONE
-        CHARACTER(64), INTENT(IN) :: funcname
-        LOGICAL                   :: IS_LEGACY_USERFCN
+        CHARACTER(*), INTENT(IN) :: funcname
+        LOGICAL                  :: IS_LEGACY_USERFCN
         
         ! Legacy stuff
         IF(funcname.EQ.'GAUSS') THEN
@@ -203,6 +203,44 @@ MODULE MOD_USERFCN
         ELSE IF(funcname.EQ.'ELEVEN_GAUSS_WF_CORREL_BG') THEN
             IS_LEGACY_USERFCN = .TRUE.
         ELSE IF(funcname.EQ.'ELEVEN_GAUSS_WF_CORREL_BG2') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+
+        ! For Set functions
+        ELSE IF(funcname.EQ.'GAUSS_BG_SET') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+        ELSE IF(funcname.EQ.'DOUBLE_EXPSIMP') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+        ELSE IF(funcname.EQ.'DOUBLE_EXPSIN') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+        ELSE IF(funcname.EQ.'DOUBLE_EXPSIN_BIS') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+        ELSE IF(funcname.EQ.'DOUBLE_TWO_EXPSIN') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+        ELSE IF(funcname.EQ.'TRIPLE_EXPSIMP') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+        ELSE IF(funcname.EQ.'TRIPLE_EXPSIN') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+        ELSE IF(funcname.EQ.'TRIPLE_EXPSIN_BIS') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+        ELSE IF(funcname.EQ.'TRIPLE_EXPSIN_TRIS') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+        ELSE IF(funcname.EQ.'WEIBULL_EL_LASER') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+        ELSE IF(funcname.EQ.'SIX_GAUSS_ERF_FREESIG_POLY_SET') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+        ELSE IF(funcname.EQ.'SIX_GAUSS_ERF_FREESIG_POLY_SET2') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+        ELSE IF(funcname.EQ.'SIX_GAUSS_ERF_FREESIG_POLY_SET3') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+        ELSE IF(funcname.EQ.'FOUR_GAUSS_ERF_TWO_GAUSS_SET') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+        ELSE IF(funcname.EQ.'FOUR_GAUSS_ERF_TWO_GAUSS_STAN_SET') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+        ELSE IF(funcname.EQ.'FOUR_GAUSS_ERF_TWO_GAUSS_STAN2_SET') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+        ELSE IF(funcname.EQ.'FOUR_GAUSS_ERF_TWO_GAUSS_STAN3_SET') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+        ELSE IF(funcname.EQ.'ROCKING_CURVE_SET') THEN
             IS_LEGACY_USERFCN = .TRUE.
         ELSE
             IS_LEGACY_USERFCN = .FALSE.
