@@ -306,8 +306,10 @@ add_custom_command(TARGET ${nested_fit_target}
 )
 
 # Compile the object files of the internal functions the user will be able to natively use in their expressions
-set_source_files_properties(${SRC_DIERCKX} PROPERTIES COMPILE_FLAGS "-fPIC -g -O0 -ffree-line-length-0")
-set_source_files_properties(${SRC_EXTERNAL_FUNCS} PROPERTIES COMPILE_FLAGS "-fPIC -g -O0 -Wall -ffree-line-length-0")
+#TODO(César): Use generator expression for compile flags here too
+#TODO(César): Optimize fPIC with https://www.macieira.org/blog/2012/01/sorry-state-of-dynamic-libraries-on-linux/
+set_source_files_properties(${SRC_DIERCKX} PROPERTIES COMPILE_FLAGS "-fPIC -fno-semantic-interposition -static -O2 -ffree-line-length-0")
+set_source_files_properties(${SRC_EXTERNAL_FUNCS} PROPERTIES COMPILE_FLAGS "-fPIC -fno-semantic-interposition -static -O2 -Wall -ffree-line-length-0")
 add_library(internal_functions OBJECT ${SRC_EXTERNAL_FUNCS} ${SRC_DIERCKX})
 add_custom_target(copy_internal_functions ALL
     DEPENDS internal_functions

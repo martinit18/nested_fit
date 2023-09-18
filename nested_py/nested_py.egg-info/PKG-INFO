@@ -8,3 +8,9 @@ Project-URL: Bug Tracker, https://github.com/martinit18/nested_fit/issues
 Classifier: Programming Language :: Python :: 3
 Classifier: License :: OSI Approved :: MIT License
 Classifier: Operating System :: OS Independent
+Requires-Dist: pandas
+Requires-Dist: numpy
+Requires-Dist: matplotlib
+Requires-Dist: scipy
+Requires-Dist: getdist
+Requires-Dist: tqdm
