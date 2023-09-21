@@ -100,7 +100,11 @@ Running `make like` will only build the first executable while running `make fun
 
 **Makefile options**
 
-The options for the Makefile are the same as the one for the CMake. For an option to be set to OFF, it needs to be commented in the Makefile.
+You can choose which compiler to use with the `COMP` option:
+- `ifort` when it is set to `i`,
+- `gfortran` when it is set to `g` .  
+
+The other options for the Makefile are the same as the ones for the CMake. For an option to be set to OFF, it needs to be commented in the Makefile.
 
 ### General comments
 

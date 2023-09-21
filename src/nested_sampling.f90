@@ -359,6 +359,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
         ! Reorder found point (no parallel here) and make the required calculation for the evidence
         ! Reorder point
         ! Order and exclude last point
+        jlim=0
         IF (live_like_new(it).GT.live_like(nlive)) THEN
             jlim = nlive
         ELSE
@@ -379,7 +380,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
         ! Insert the new one
         IF (jlim.LT.1.OR.jlim.GT.nlive) THEN
            WRITE(*,*) 'Problem in the search method, or in the calculations'
-           WRITE(*,*) 'No improvement in the likelihood value after finding the new point'
+           WRITE(*,*) 'No improvement in the likelihood value after finding the new point at iteration', n
            WRITE(*,*) 'j = ', jlim, 'old min like = ', min_live_like, 'new min like = ', live_like_new
            STOP
         ELSE IF (jlim.EQ.1) THEN
