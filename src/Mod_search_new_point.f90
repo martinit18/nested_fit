@@ -830,7 +830,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
          ELSE
             part_like=min_live_like-1
          END IF
-         DO WHILE(part_like.LT.min_live_like)
+         DO WHILE((part_like.LT.min_live_like) .OR. (.NOT. test_bnd))
 204        ntries=ntries+1
            IF(ntries .GT. maxtries) THEN
              n_ntries=n_ntries+1
