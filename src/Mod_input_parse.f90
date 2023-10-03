@@ -150,17 +150,39 @@ MODULE MOD_INPUTPARSE
         idx = 0
     END SUBROUTINE
 
+    FUNCTION IS_INLINE_SCOPE(input)
+        CHARACTER(*), INTENT(IN)  :: input
+        LOGICAL                   :: IS_INLINE_SCOPE
+
+        IF(input(1:1).EQ.'{'.AND.input(LEN_TRIM(input):LEN_TRIM(input)).EQ.'}') THEN
+            IS_INLINE_SCOPE = .TRUE.
+            RETURN
+        ENDIF
+
+        IF(input(1:1).EQ.'{') THEN
+            CALL LOG_ERROR_HEADER()
+            CALL LOG_ERROR('YAML parser: Mismatching `{` symbol.')
+            CALL LOG_ERROR('Aborting Execution...')
+            CALL LOG_ERROR_HEADER()
+            CALL HALT_EXECUTION()
+        ENDIF
+
+        IS_INLINE_SCOPE = .FALSE.
+    END FUNCTION
+
     SUBROUTINE PARSE_INPUT(filename, config)
         CHARACTER(*)        , INTENT(IN)  :: filename
         TYPE(InputDataMap_t), INTENT(OUT) :: config
 
-        INTEGER                       :: i, lblanks, top, count, nbindex, lastidx
-        CHARACTER(512)                :: line, key
+        INTEGER                       :: i, j, splitidx, lblanks, top, count, nbindex, lastidx, ninline_vars, dstart, dend
+        CHARACTER(512)                :: line, key, inline_key, inline_dict
         CHARACTER(128)                :: name
         TYPE(IntegerStack_t)          :: parent_stack
         CHARACTER(128), DIMENSION(32) :: scope = ''
         LOGICAL                       :: empty_stack, find_error
         TYPE(InputDataGenericValue_t) :: last_value
+
+        CHARACTER(128), DIMENSION(64) :: inline_variables
         
         CALL config%init(512) ! Make a big map
 
@@ -185,6 +207,15 @@ MODULE MOD_INPUTPARSE
                 lastidx = LEN_TRIM(line)
             ELSE
                 lastidx = LEN_TRIM(line(1:(lastidx - 1)))
+            ENDIF
+
+            ! Line cannot start with an inline scope
+            IF(INDEX(TRIM(ADJUSTL(line)), '{').EQ.1) THEN
+                CALL LOG_ERROR_HEADER()
+                CALL LOG_ERROR('YAML parser: Inline parameters should be on the same line as their key.')
+                CALL LOG_ERROR('Aborting Execution...')
+                CALL LOG_ERROR_HEADER()
+                CALL HALT_EXECUTION()
             ENDIF
             
             ! Process line and get scope
@@ -226,6 +257,27 @@ MODULE MOD_INPUTPARSE
                 ! Make the key based on current scope
                 CALL MAKE_SCOPE_STRING(scope, count, key)
                 
+                IF(IS_INLINE_SCOPE(TRIM(ADJUSTL(line(i+1:lastidx))))) THEN
+                    ! We are before an inline scope like `{ key1: val1, key2: val2, ... }`
+                    ! Nesting these type of scopes is not allowed for now
+                    inline_dict = TRIM(ADJUSTL(line(i+1:lastidx)))
+
+                    dstart = INDEX(inline_dict, '{')
+                    dend   = INDEX(inline_dict, '}')
+
+                    CALL SPLIT_INPUT_ON(',', inline_dict(dstart+1:dend-1), inline_variables, ninline_vars, 64)
+    
+                    DO j = 1, ninline_vars
+                        splitidx = INDEX(inline_variables(j), ':')
+                        inline_key = TRIM(key)//'.'//TRIM(ADJUSTL(inline_variables(j)(:splitidx-1)))
+
+                        CALL LOG_TRACE(TRIM(inline_key)//' = '//TRIM(ADJUSTL(inline_variables(j)(splitidx+1:))))
+                        
+                        CALL config%insert(inline_key, InputDataGenericValue_t(TRIM(ADJUSTL(inline_variables(j)(splitidx+1:)))))
+                    END DO
+                    CYCLE
+                ENDIF
+
                 CALL LOG_TRACE(TRIM(key)//' = '//TRIM(ADJUSTL(line(i+1:lastidx))))
 
                 ! There is content in the line => map it
