@@ -14,6 +14,9 @@ MODULE MOD_LIKELIHOOD
   ! Math module
   USE MOD_MATH
 
+  ! Options
+  USE MOD_OPTIONS
+
 #ifdef OPENMPI_ON
    USE MPI
 #endif
@@ -358,10 +361,11 @@ CONTAINS
    REAL(8), DIMENSION(maxdata), INTENT(OUT) :: x_tmp, y_tmp, xe_tmp, ye_tmp, c_tmp, ce_tmp
 
    CHARACTER(64)                            :: cvars(specstrmaxcol)
-   INTEGER                                  :: ncols, expected_ncols, i, nd
-   LOGICAL                                  :: spec_err
+   INTEGER                                  :: ncols, expected_ncols, i, j, nd
+   LOGICAL                                  :: spec_err, is_not_real
    CHARACTER(1024)                          :: line
    CHARACTER(64)                            :: dummy
+   REAL(8)                                  :: dummy_real
 
    REAL(8), PARAMETER                       :: pi = 3.141592653589793d0
 
@@ -415,6 +419,21 @@ CONTAINS
          CALL SPLIT_INPUT_ON(CHAR(9), line, cvars, ncols, specstrmaxcol)
       ENDIF
 
+      IF(opt_file_has_header.AND.i.EQ.1) THEN
+         DO j=1, ncols
+            CALL TRY_PARSE_REAL(cvars(j), dummy_real, is_not_real)
+            IF(.NOT.is_not_real) THEN
+               CALL LOG_WARNING_HEADER()
+               CALL LOG_WARNING('Input file specified a header on the data file.')
+               CALL LOG_WARNING('But the header appears to have real formatted data.')
+               CALL LOG_WARNING('Values could be being unintentionally ignored...')
+               CALL LOG_WARNING('At column: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(j))))
+               CALL LOG_WARNING_HEADER()
+            ENDIF
+         END DO
+         CYCLE
+      ENDIF
+
       ! File does not contain the expected amount of columns
       IF(ncols.NE.expected_ncols) THEN
          CALL LOG_ERROR_HEADER()
@@ -464,7 +483,7 @@ CONTAINS
                CALL HALT_EXECUTION()
             END IF
             ! Calculation of the constant part of the likelihood with Gaussian distribution
-            const_ll = -DLOG(ce_tmp(i)) ! NOTE(César): ??
+            const_ll = const_ll - DLOG(ce_tmp(i))
          END IF
       ENDIF
    ENDDO

@@ -316,7 +316,8 @@ PROGRAM NESTED_FIT
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'filefmt'   , fileformat         , MANDATORY=.FALSE.) !     .csv by default
       CALL POPULATE_FILEFMT          (fileformat)
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'likelihood', likelihood_funcname, MANDATORY=.FALSE.) ! GAUSSIAN by default
-
+      CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'fileheader', opt_file_has_header, MANDATORY=.FALSE.) !    False by default
+      
       ! Search configuration
       CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.livepoints', nlive        , MANDATORY=.TRUE. )
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'search.method'    , search_method, MANDATORY=.TRUE. )
@@ -326,7 +327,7 @@ PROGRAM NESTED_FIT
       CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.tries_mult', maxntries    , MANDATORY=.TRUE. )
       CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.num_tries' , ntry         , MANDATORY=.FALSE.) !      1 by default
       CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.max_steps' , maxstep_try  , MANDATORY=.FALSE.) ! 100000 by default
-
+      
       ! Convergence configuration
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'convergence.method'   , conv_method, MANDATORY=.TRUE.)
       CALL FIELD_FROM_INPUT_REAL     (input_config, 'convergence.accuracy' , evaccuracy , MANDATORY=.TRUE.)
