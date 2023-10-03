@@ -9,24 +9,29 @@ function:
   # expression: GAUSS_BG                               # Legacy mode
   expression: f(x, A, u, d) = A\exp(-(x-u)^2/d)        # Interpret mode
   params:
-    A:
-      # npar:  1             # Legacy mode only
-      value: 0
-      step: -1
-      min:   1
-      max:   100
-    u:
-      # npar:  2             # Legacy mode only
-      value: 0
-      step: -1
-      min:   0
-      max:   100
-    d:
-      # npar:  3             # Legacy mode only
-      value: 1
-      step: -1
-      min:   1
-      max:   100
+    # A:
+    #   # npar:  1             # Legacy mode only
+    #   value: 0
+    #   step: -1
+    #   min:   1
+    #   max:   100
+    # u:
+    #   # npar:  2             # Legacy mode only
+    #   value: 0
+    #   step: -1
+    #   min:   0
+    #   max:   100
+    # d:
+    #   # npar:  3             # Legacy mode only
+    #   value: 1
+    #   step: -1
+    #   min:   1
+    #   max:   100
+
+    # Alternate syntax (needs to be one-line)
+    A: { value: 0, step: -1, min: 1, max: 100 }
+    u: { value: 0, step: -1, min: 0, max: 100 }
+    d: { value: 1, step: -1, min: 1, max: 100 }
 
 data:
   xmin: 1
