@@ -23,3 +23,6 @@ __pycache__/
 
 # Python build metadata
 nested_py/*.egg-info/
+
+# Logfiles
+*.log
