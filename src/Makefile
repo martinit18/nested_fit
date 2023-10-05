@@ -1,8 +1,8 @@
 #  Automatic Time-stamp: <Last changed by martino on Tuesday 08 June 2021 at CEST 15:08:06>
 # Copyright M. Trassinelli
-# Last modified: 2023/08/14 23:03:54
+# Last modified: 2023/09/29 09:18:09
 
-VERSION_FULL = 4.5.4
+VERSION_FULL = 4.5.5
 VERSION = 4.5
 
 NAME    = nested_fit$(VERSION_FULL)
