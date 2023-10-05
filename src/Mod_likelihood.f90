@@ -271,7 +271,7 @@ CONTAINS
              STOP
           END IF
           ! Calculation of the constant part of the likelihood with Gaussian distribution
-          const_ll = -DLOG(nc_err_raw(i))
+          const_ll = const_ll - DLOG(nc_err_raw(i))
        END IF
     ENDDO
 

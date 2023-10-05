@@ -99,6 +99,8 @@ CONTAINS
       SELECT_LIKELIHOODFCN = 6
     ELSE IF(funcname.eq.'TEST_LOGGAMMA') THEN
       SELECT_LIKELIHOODFCN = 7
+    ELSE IF(funcname.eq.'ENERGY_LJ_3D_PBC') THEN
+      SELECT_LIKELIHOODFCN = 8
     ELSE
        WRITE(*,*) 'Error of the function name in Mod_likelihood_test module'
        WRITE(*,*) 'Check the manual and the input file'
@@ -133,6 +135,8 @@ CONTAINS
        LOGLIKELIHOOD = ENERGY_HARM_3D(par)
     CASE (7)
        LOGLIKELIHOOD = TEST_LOGGAMMA(par)
+    CASE (8)
+       LOGLIKELIHOOD = ENERGY_LJ_3D_PBC(par)
     END SELECT
 
 
@@ -398,6 +402,45 @@ CONTAINS
   END FUNCTION TEST_LOGGAMMA
   
 !#####################################################################################################################   
+
+  REAL(8) FUNCTION ENERGY_LJ_3D_PBC(par)
+    !> The parameters are the positions of the points (...,x_i,y_i,z_i,....)
+    !> Potential of the form 4*eps*((rij/r0)**12-(rij/r0)**6) with rij=sqrt((x_i-x_j)**2+(y_i-y_j)**2+(z_i-z_j)**2) with periodic boundary conditions
+
+    REAL(8), DIMENSION(:), INTENT(IN) :: par
+    REAL(8), PARAMETER :: pi=3.141592653589793d0
+    REAL(8), PARAMETER ::  eps=1.
+    REAL(8), DIMENSION(SIZE(par)-1) :: x     
+    INTEGER(4) :: N, i, j
+    REAL(8) :: rij, ener, r0, dx, dy, dz, box_x, box_y, box_z
+
+    r0=par(1)
+    x = par(2:)
+    N=INT(SIZE(x)/3)
+    box_x=par_bnd2(2)-par_bnd1(2)
+    box_y=par_bnd2(3)-par_bnd1(3)
+    box_z=par_bnd2(4)-par_bnd1(4)
+    
+    ener=0.
+    DO i=1,N
+      DO j=i+1,N
+        dx=x(i*3-2)-x(j*3-2)
+        dy=x(i*3-1)-x(j*3-1)
+        dz=x(i*3)-x(j*3)
+        dx=dx-box_x*NINT(dx/box_x)
+        dy=dy-box_y*NINT(dy/box_y)
+        dz=dz-box_z*NINT(dz/box_z)
+        rij=SQRT(dx**2+dy**2+dz**2)
+        IF(rij<=3*r0) ener=ener+4*eps*((r0/rij)**12-(r0/rij)**6-(1./3.)**12+(1./3.)**6) 
+      END DO    
+    END DO
+    
+    !ener=ener+0.5*k*(SUM(x(1:npar:2))**2+SUM(x(2:npar:2))**2)!/npar
+
+    ENERGY_LJ_3D_PBC=-ener*1./N
+  END FUNCTION ENERGY_LJ_3D_PBC
+  
+  !##################################################################################################################### 
 
 
 END MODULE MOD_LIKELIHOOD

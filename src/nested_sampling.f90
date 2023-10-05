@@ -335,14 +335,15 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
 
      DO it = 1, nth
         
-        ! If the parallely computed live point is not good anymore, skip it.
-        ! Otherwise take it for loop calculation
-        IF ((it.GT.1).AND.(live_like_new(it).LT.min_live_like)) THEN
-           CYCLE
-        ELSE
+        ! If the parallely computed live point is still good, take it for loop calculation.
+        ! Otherwise skip it
+        IF ((live_like_new(it).GT.min_live_like)) THEN
            n = n + 1
            n_call_cluster_it=0
+        ELSE
+           CYCLE
         ENDIF
+
 
         ! Calculate steps, mass and rest each time
         ! trapezoidal rule applied here (Skilling Entropy 2006)
@@ -359,6 +360,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
         ! Reorder found point (no parallel here) and make the required calculation for the evidence
         ! Reorder point
         ! Order and exclude last point
+        jlim=0
         IF (live_like_new(it).GT.live_like(nlive)) THEN
             jlim = nlive
         ELSE
@@ -379,8 +381,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
         ! Insert the new one
         IF (jlim.LT.1.OR.jlim.GT.nlive) THEN
            WRITE(*,*) 'Problem in the search method, or in the calculations'
-           WRITE(*,*) 'No improvement in the likelihood value after finding the new point'
-           WRITE(*,*) 'j = ', jlim, 'old min like = ', min_live_like, 'new min like = ', live_like_new
+           WRITE(*,*) 'No improvement in the likelihood value after finding the new point at iteration', n
+           WRITE(*,*) 'j = ', jlim, 'old min like = ', min_live_like, 'new min like = ', live_like_new(it)
            STOP
         ELSE IF (jlim.EQ.1) THEN
            live_like(1) = live_like_new(it)

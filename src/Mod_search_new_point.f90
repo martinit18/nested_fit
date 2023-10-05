@@ -775,6 +775,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     start_jump_t=matmul(inv_chol,start_jump) !start jump in the new space
 #endif
 
+
     ! Make several consecutive casual jumps in the region with loglikelyhood > minlogll
 700 CONTINUE
     DO i=1,njump
@@ -829,7 +830,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
          ELSE
             part_like=min_live_like-1
          END IF
-         DO WHILE(part_like.LT.min_live_like)
+         DO WHILE((part_like.LT.min_live_like) .OR. (.NOT. test_bnd))
 204        ntries=ntries+1
            IF(ntries .GT. maxtries) THEN
              n_ntries=n_ntries+1
@@ -1324,14 +1325,14 @@ SUBROUTINE CHOLESKY(D,cov,chol) !calculates the cholesky decomposition of the co
    INTEGER(4) :: i,j,k
    chol=0
    chol(1,1)=SQRT(cov(1,1))
-   !$OMP SIMD
+   !!$OMP SIMD
    DO i=2,D
      chol(i,1)=cov(i,1)/chol(1,1)
    END DO
    !!$OMP SIMD
    DO i=2,D
      chol(i,i)=cov(i,i)
-     !$OMP SIMD
+     !!$OMP SIMD
      DO k=1,i-1
        chol(i,i)=chol(i,i)-chol(i,k)**2
      END DO
@@ -1339,7 +1340,7 @@ SUBROUTINE CHOLESKY(D,cov,chol) !calculates the cholesky decomposition of the co
      !!$OMP SIMD
      DO j=i+1,D
        chol(j,i)=cov(i,j)
-       !$OMP SIMD
+       !!$OMP SIMD
        DO k=1,i-1
          chol(j,i)=chol(j,i)-chol(i,k)*chol(j,k)
        END DO
@@ -1354,7 +1355,7 @@ SUBROUTINE TRIANG_INV(D,mat,mat_inv) !calculates the inverse of the cholesky dec
    REAL(8), DIMENSION(D,D), INTENT(OUT) :: mat_inv
    INTEGER(4) :: i,j,k
    mat_inv=0
-   !$OMP SIMD
+   !!$OMP SIMD
    DO i=1,D
      mat_inv(i,i)=1./mat(i,i)
    END DO
@@ -1363,7 +1364,7 @@ SUBROUTINE TRIANG_INV(D,mat,mat_inv) !calculates the inverse of the cholesky dec
    DO j=1,D-1
      !!$OMP SIMD
      DO i=1,D-j
-       !$OMP SIMD
+       !!$OMP SIMD
        DO k=1,j
           mat_inv(i+j,i)=mat_inv(i+j,i)-mat(i+k,i)*mat_inv(i+j,i+k)
        END DO
