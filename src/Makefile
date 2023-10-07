@@ -23,6 +23,7 @@ OPENMP = ON #Enable/Disable OpenMP.
 #OPENMPI = ON #Enable/Disable OpenMPI.
 #AUTOTESTS = ON #Automatically run tests after compiling.
 #LAPACK = ON #Enable/Disable LAPACK.
+#TRACE = ON #Enable trace logging
 
 
 .SUFFIXES : .f90 .f .o .c .mod
