@@ -458,7 +458,7 @@ MODULE MOD_AUTOFUNC
         CHARACTER(LEN=512), INTENT(IN) :: original_data
         CHARACTER(LEN=128)             :: filename
         INTEGER                        :: status
-        CHARACTER(128)                 :: funcname
+        CHARACTER(128)                 :: funcname, funcname_lowercase
         INTEGER                        :: argc
         CHARACTER(512)                 :: expression
         INTEGER                        :: i
@@ -466,10 +466,13 @@ MODULE MOD_AUTOFUNC
         funcname   = parse_data%function_name
         argc       = parse_data%num_params + 1
         expression = parse_data%infixcode_f90
+
+        funcname_lowercase = funcname
+        CALL STR_TO_LOWER(funcname_lowercase)
         
         WRITE(filename, '(a,a)') TRIM(nf_cache_folder), 'last_compile.f90'
         OPEN(UNIT=77, FILE=TRIM(filename), STATUS='UNKNOWN')
-            WRITE(77,'(a)') 'function '//TRIM(funcname)//"(x, npar, params) bind(c, name='"//TRIM(funcname)//"_')"
+            WRITE(77,'(a)') 'function '//TRIM(funcname)//"(x, npar, params) bind(c, name='"//TRIM(funcname_lowercase)//"_')"
             WRITE(77,'(a)') char(9)//'use, intrinsic :: iso_c_binding'
             WRITE(77,'(a)') char(9)//'implicit none'
             WRITE(77,'(a)') char(9)//'real(8), intent(in) :: x'
