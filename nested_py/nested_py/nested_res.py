@@ -107,7 +107,7 @@ class Analysis(object):
             input_data = yaml.load(f, Loader=SafeLoader)
         
         # The parameters are read with their comment and/or definition
-        # Program version
+        # Program version TODO(César): Allow backward compatibility here
         from importlib.metadata import version as imp_version
         if input_data['version'] < int(float(imp_version("nested_res"))):
             sys.exit('Wrong input file version. Please check.')
