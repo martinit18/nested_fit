@@ -44,7 +44,7 @@ c################################### USERFCN DEFINITION ########################
             SELECT_USERFCN = 17
       ELSE IF(funcname.EQ.'SIX_GAUSS_DBEXPBG_WF') THEN
             SELECT_USERFCN = 18
-      ELSE IF(funcname.EQ.'EIGHT_GAUSS_POLYBG_WF') THEN
+      ELSE IF(funcname.EQ.'EIGHT_GAUSS_POLYBG') THEN
             SELECT_USERFCN = 19
       ELSE IF(funcname.EQ.'EIGHT_VOIGT_POLYBG_WF') THEN
             SELECT_USERFCN = 20
@@ -210,7 +210,7 @@ c################################### USERFCN DEFINITION ########################
       REAL*8 LORE, LORENORM, LORE_BG, DOUBLE_LORE_WF_BG
       REAL*8 SIX_LORE_WF_BG, SIX_LORE_WF_REL_BG, CONS
       REAL*8 SIX_VOIGT_BG, SIX_VOIGT_XRD, SIX_VOIGT_EXP_BG
-      REAL*8 EIGHT_GAUSS_POLYBG_WF, EIGHT_VOIGT_POLYBG_WF
+      REAL*8 EIGHT_GAUSS_POLYBG, EIGHT_VOIGT_POLYBG_WF
       REAL*8 EXPFCN, ERFFCN,BS_EM, BS_EM2, BS_EM_NM
       REAL*8 POWER, POWER_CONST, ND_M_PLEIADES
       REAL*8 POLY, SIX_VOIGT_POLYBG,SIX_VOIGT_EXP_POLYBG
@@ -291,7 +291,7 @@ c     Choose your model (see below for definition)
       CASE (18)
             USERFCN = SIX_GAUSS_DBEXPBG_WF(x,npar,val)
       CASE (19)
-            USERFCN = EIGHT_GAUSS_POLYBG_WF(x,npar,val)
+            USERFCN = EIGHT_GAUSS_POLYBG(x,npar,val)
       CASE (20)
             USERFCN = EIGHT_VOIGT_POLYBG_WF(x,npar,val)
       CASE (21)
@@ -1180,19 +1180,19 @@ c     Quadruple exponential background
 
 c _______________________________________________________________________________________________
 
-      FUNCTION EIGHT_GAUSS_POLYBG_WF(X,npar,val)
+      FUNCTION EIGHT_GAUSS_POLYBG(X,npar,val)
 c     6 Normalized Gaussian distribution plus exponential background
 c     The value of 'amp' is the value of the surface below the curve
       IMPLICIT NONE
       INTEGER*4 npar
       REAL*8 val(npar),val1(3),val2(3),val3(3),val4(3),val5(3),val6(3)
       REAL*8 val7(3), val8(3), valp(8)
-      REAL*8 EIGHT_GAUSS_POLYBG_WF, POLY, GAUSS, x
+      REAL*8 EIGHT_GAUSS_POLYBG, POLY, GAUSS, x
       REAL*8 pi
       PARAMETER(pi=3.141592653589793d0)
-      REAL*8 x01, x02, x03, x04, x05, x06, x07, x08
+      REAL*8 xbg, x01, x02, x03, x04, x05, x06, x07, x08
       REAL*8 amp1, amp2, amp3, amp4, amp5, amp6, amp7, amp8
-      REAL*8 sigma1,sigma2,sigma3,sigma4,sigma5,sigma6,sigma7,sigma8
+      REAL*8 sigma
       REAL*8 a,b,c,d,e,f,g
 
       x01    = val(1)
@@ -1211,65 +1211,59 @@ c     The value of 'amp' is the value of the surface below the curve
       amp6   = val(14)
       amp7   = val(15)
       amp8   = val(16)
-      sigma1 = val(17)
-      sigma2 = val(18)
-      sigma3 = val(19)
-      sigma4 = val(20)
-      sigma5 = val(21)
-      sigma6 = val(22)
-      sigma7 = val(23)
-      sigma8 = val(24)
-      a      = val(25)
-      b      = val(26)
-      c      = val(27)
-      d      = val(28)
-      e      = val(29)
-      f      = val(30)
-      g      = val(31)
+      sigma  = val(17)
+      xbg    = val(18)
+      a      = val(19)
+      b      = val(20)
+      c      = val(21)
+      d      = val(22)
+      e      = val(23)
+      f      = val(24)
+      g      = val(25)
 
 
 c     first gauss peak
       val1(1) = x01
       val1(2) = amp1
-      val1(3) = sigma1
+      val1(3) = sigma
 
 c     second gauss peak
       val2(1) = x02
       val2(2) = amp2
-      val2(3) = sigma2
+      val2(3) = sigma
 
 c     third gauss peak
       val3(1) = x03
       val3(2) = amp3
-      val3(3) = sigma3
+      val3(3) = sigma
 
 c     fourth gauss peak
       val4(1) = x04
       val4(2) = amp4
-      val4(3) = sigma4
+      val4(3) = sigma
 
 c     fifth gauss peak
       val5(1) = x05
       val5(2) = amp5
-      val5(3) = sigma5
+      val5(3) = sigma
 
 c     sixth gauss peak
       val6(1) = x06
       val6(2) = amp6
-      val6(3) = sigma6
+      val6(3) = sigma
 
 c     seventh gauss peak
       val7(1) = x07
       val7(2) = amp7
-      val7(3) = sigma7
+      val7(3) = sigma
 
 c     eighth gauss peak
       val8(1) = x08
       val8(2) = amp8
-      val8(3) = sigma8
+      val8(3) = sigma
 
 c     polynomial background
-      valp(1) = 0.
+      valp(1) = xbg
       valp(2) = a
       valp(3) = b
       valp(4) = c
@@ -1278,7 +1272,7 @@ c     polynomial background
       valp(7) = f
       valp(8) = g
 
-      EIGHT_GAUSS_POLYBG_WF = GAUSS(x,3,val1) + GAUSS(x,3,val2) +
+      EIGHT_GAUSS_POLYBG = GAUSS(x,3,val1) + GAUSS(x,3,val2) +
      + GAUSS(x,3,val3) +  GAUSS(x,3,val4) + GAUSS(x,3,val5)
      + + GAUSS(x,3,val6) + GAUSS(x,3,val7)+ GAUSS(x,3,val8) +
      + POLY(x,8,valp)
