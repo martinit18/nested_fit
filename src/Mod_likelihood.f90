@@ -1,5 +1,5 @@
 MODULE MOD_LIKELIHOOD
-  ! Automatic Time-stamp: <Last changed by martino on Thursday 20 July 2023 at CEST 12:34:25>
+  ! Automatic Time-stamp: <Last changed by martino on Wednesday 11 October 2023 at CEST 09:39:50>
   ! Module of the likelihood function for data analysis
 
   ! Module for the input parameter definition
@@ -201,24 +201,24 @@ CONTAINS
     OPEN(10,file=namefile,status='old')
     DO i=1, maxdata
        READ(10,*,END=20) x_raw(i), nc_raw(i)
-       ! Make test for integer numbers, NaN and infinites
-       IF (ABS(nc_raw(i)-INT(nc_raw(i))).GT.1E-5) THEN
-          WRITE(*,*) 'Attention, input numbers are not counts and you are using Poisson statistic (no error bar)'
-          WRITE(*,*) 'n. counts = ', nc_raw(i)
-          WRITE(*,*) 'Change something!'
-          STOP
-       ELSE IF (nc_raw(i).LT.0.AND.IEEE_IS_FINITE(nc_raw(i))) THEN
-          ! Check if counts are negative
-          WRITE(*,*) 'Negative counts are not accepted. Change input file'
-          STOP
-       ELSE IF (.NOT.IEEE_IS_FINITE(nc_raw(i)).OR.IEEE_IS_NAN(nc_raw(i))) THEN
-          ! Check infinites and nan
-          WRITE(*,*) 'Infinite or "NaN" counts are not accepted. Change input file'
-          STOP
-       END IF
-
        ! Select the data
        IF(x_raw(i).GE.minx.AND.x_raw(i).LE.maxx) THEN
+          ! Make test for integer numbers, NaN and infinites
+          IF (ABS(nc_raw(i)-INT(nc_raw(i))).GT.1E-5) THEN
+             WRITE(*,*) 'Attention, input numbers are not counts and you are using Poisson statistic (no error bar)'
+             WRITE(*,*) 'n. counts = ', nc_raw(i)
+             WRITE(*,*) 'Change something!'
+             STOP
+          ELSE IF (nc_raw(i).LT.0.AND.IEEE_IS_FINITE(nc_raw(i))) THEN
+             ! Check if counts are negative
+             WRITE(*,*) 'Negative counts are not accepted. Change input file'
+             STOP
+          ELSE IF (.NOT.IEEE_IS_FINITE(nc_raw(i)).OR.IEEE_IS_NAN(nc_raw(i))) THEN
+             ! Check infinites and nan
+             WRITE(*,*) 'Infinite or "NaN" counts are not accepted. Change input file'
+             STOP
+          END IF
+          ! 
           nd = nd + 1
           x_tmp(nd) = x_raw(i)
           nc_tmp(nd) = nc_raw(i)
