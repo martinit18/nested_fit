@@ -843,8 +843,7 @@ c     The value of 'amp' is the value of the surface below the curve
       amp2  = val(7)
       amp3  = val(8)
       amp4  = val(9)
-c      sigma = val(10)
-      sigma = 12.d0
+      sigma = val(10)
 
 c     first gauss peak
       val1(1) = x01
