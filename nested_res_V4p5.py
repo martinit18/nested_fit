@@ -336,56 +336,56 @@ class Analysis(object):
         output_data['niter'] = int(lines[2].split()[1])
 
         # Number of likelihood function calls
-        output_data['ncall'] = int(lines[2].split()[1])
+        output_data['ncall'] = int(lines[3].split()[1])
 
         # Number of live points
-        output_data['nlive_out'] = int(lines[3].split()[1])
+        output_data['nlive_out'] = int(lines[4].split()[1])
         if input_data['nlive'] != output_data['nlive_out'] :
-            print('input nlive', input_data['nlive'], 'output nlive', output_data['nlive'])
+            print('input nlive', input_data['nlive'], 'output nlive', output_data['nlive_out'])
             sys.exit('Check your input/output files')
 
         # Final evidence
-        output_data['evidence'] = float(lines[4].split()[1])
+        output_data['evidence'] = float(lines[5].split()[1])
 
         # Evidence estimated error
-        output_data['evidence_err_est'] = float(lines[5].split()[1])
+        output_data['evidence_err_est'] = float(lines[6].split()[1])
 
         # Evidence evaluated errors
-        output_data['evidence_err'] = float(lines[6].split()[1])
+        output_data['evidence_err'] = float(lines[7].split()[1])
 
         # Max likelihood
-        output_data['like_max'] = float(lines[8].split()[1])
+        output_data['like_max'] = float(lines[9].split()[1])
 
         # Max parameter set
-        output_data['max'] = [float(lines[10+index].split()[1]) for index in range(npar)]
+        output_data['max'] = [float(lines[11+index].split()[1]) for index in range(npar)]
 
         # Average and standard deviation of parameters
         #output_data['mean']= [[float(lines[10+npar+index].split()[1]),float(lines[10+npar+index].split()[3])] for index in range(npar)]
-        output_data['mean'] = [float(lines[12+npar+index].split()[1]) for index in range(npar)]
-        output_data['sd']   = [float(lines[12+npar+index].split()[3]) for index in range(npar)]
+        output_data['mean'] = [float(lines[13+npar+index].split()[1]) for index in range(npar)]
+        output_data['sd']   = [float(lines[13+npar+index].split()[3]) for index in range(npar)]
 
         # Confidence levels of parameters
         #output_data['conf_level'] = [[float(lines[12+2*npar+index].split()[1]),float(lines[12+2*npar+index].split()[2]),float(lines[12+2*npar+index].split()[3]),float(lines[12+2*npar+index].split()[5]),float(lines[12+2*npar+index].split()[6]),float(lines[12+2*npar+index].split()[7])] for index in range(npar)]
-        output_data['conf_level_m99'] = [float(lines[14+2*npar+index].split()[1]) for index in range(npar)]
-        output_data['conf_level_m95'] = [float(lines[14+2*npar+index].split()[2]) for index in range(npar)]
-        output_data['conf_level_m68'] = [float(lines[14+2*npar+index].split()[3]) for index in range(npar)]
-        output_data['conf_level_p68'] = [float(lines[14+2*npar+index].split()[5]) for index in range(npar)]
-        output_data['conf_level_p95'] = [float(lines[14+2*npar+index].split()[6]) for index in range(npar)]
-        output_data['conf_level_p99'] = [float(lines[14+2*npar+index].split()[7]) for index in range(npar)]
+        output_data['conf_level_m99'] = [float(lines[15+2*npar+index].split()[1]) for index in range(npar)]
+        output_data['conf_level_m95'] = [float(lines[15+2*npar+index].split()[2]) for index in range(npar)]
+        output_data['conf_level_m68'] = [float(lines[15+2*npar+index].split()[3]) for index in range(npar)]
+        output_data['conf_level_p68'] = [float(lines[15+2*npar+index].split()[5]) for index in range(npar)]
+        output_data['conf_level_p95'] = [float(lines[15+2*npar+index].split()[6]) for index in range(npar)]
+        output_data['conf_level_p99'] = [float(lines[15+2*npar+index].split()[7]) for index in range(npar)]
 
         # Median of parameters
-        output_data['median'] = [float(lines[14+2*npar+index].split()[4]) for index in range(npar)]
+        output_data['median'] = [float(lines[15+2*npar+index].split()[4]) for index in range(npar)]
 
         # Information
-        output_data['information'] =  float(lines[16+3*npar].split()[1])
+        output_data['information'] =  float(lines[17+3*npar].split()[1])
 
         # Complexity
-        output_data['complexity'] =  float(lines[18+3*npar].split()[1])
+        output_data['complexity'] =  float(lines[19+3*npar].split()[1])
 
         # Calculation information
-        output_data['n_cores'] =  int(lines[20+3*npar].split()[1])
-        output_data['cpu_computation_time'] =  float(lines[21+3*npar].split()[1])
-        output_data['real_computation_time'] =  float(lines[21+3*npar].split()[2])
+        output_data['n_cores'] =  int(lines[21+3*npar].split()[1])
+        output_data['cpu_computation_time'] =  float(lines[22+3*npar].split()[1])
+        output_data['real_computation_time'] =  float(lines[22+3*npar].split()[2])
 
         return output_data
 

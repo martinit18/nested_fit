@@ -220,8 +220,9 @@ Additional information can be found in the reference articles.
 
 ## Present version and history of the past versions
 
-The present version is 4.5.2
+The present version is 4.5.6
 New features:
+- New exercices
 - New modified Jeffreys likelihood for data
 - Number of calls recorded in the main output file
 - No limitation in number of steps 
