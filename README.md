@@ -35,11 +35,12 @@ email: c.godinho AT campus.fct.unl.pt
 
 ## Installation instructions ##
 
+If you have to install everything from scratch, please refer to the file *STEPBYSTEP_INSTALL.md*
 ### With CMake
 **Prerequisite**:
 - CMake
 - Fortran compiler (gfortran by default)
-- Python 3 with numpy, scipy, matplotlib, pandas, getdist
+- Python 3 with numpy, scipy, matplotlib, pandas, getdist, anesthetic
 
 **Instruction**:
 1. Download the latest version or clone the repository
