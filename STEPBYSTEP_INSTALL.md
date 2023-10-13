@@ -14,8 +14,9 @@ Installation of the main code and python package dependencies can be found at th
 1) If you do not have a virtual machine, install it from the app Microsoft store with the Window Subsystem for Linux. 
     - Go to the store
     - Find *Ubuntu*, choose the distribution you like and install it
-1) Open a linux emulator terminal
-1) Follow the linux installation instruction here below
+    (if you have some troubles for this part, have a look to specific helps [here](https://learn.microsoft.com/en-us/windows/wsl/install) as example)
+2) Open a linux emulator terminal
+3) Follow the linux installation instruction here below
 
 
 ## For Linux
@@ -31,7 +32,7 @@ This installation assumes that you have bash as shell.
 1) In the terminal, install the requested python packages, if not already installed, with\
  `pip install numpy scipy matplotlib ipython jupyter pandas getdist anesthetic`
 2) Choose a directory and go on it
-3) Clone the program with\
+3) Expand the zip file [here](https://github.com/martinit18/nested_fit/releases/tag/v4.5.6) or clone the program with git with\
 `git clone https://github.com/martinit18/nested_fit`
 4) create a directory `bin` in your home (normally the place where you are when you open a new terminal)
 5) Go  to the directory build and run\
@@ -39,7 +40,12 @@ This installation assumes that you have bash as shell.
 and then\
  `make`
 6) In the file `.bashrc` in your home put the line\
-`export PATH=$HOME/bin:$PATH`
+`export PATH=$HOME/bin:$PATH` 
 
-Now if everything works, you can run `nested_fit` from terminal anywere you are.
+Now if everything works, you can run `nested_fit` from terminal anywere you are.\
+To test it
+ - Go to the distribution directory `examples/data_analysis/gauss_bg`
+ - Run `nested_fit5.5.6`
+ - If everything works, the program will run and produce a series of `nf_output_*` files including `nf_output_res.dat`
 
+More details on the program itself can be found in the `README` file.
