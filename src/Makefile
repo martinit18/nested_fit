@@ -1,6 +1,6 @@
 #  Automatic Time-stamp: <Last changed by martino on Tuesday 08 June 2021 at CEST 15:08:06>
 # Copyright M. Trassinelli
-# Last modified: 2023/10/12 17:20:37
+# Last modified: 2023/10/20 14:51:31
 
 VERSION_FULL = 4.5.6
 VERSION = 4.5
@@ -10,7 +10,7 @@ NAME    = nested_fit$(VERSION_FULL)
 NAME_FUNC    = nested_fit_func$(VERSION_FULL)
 
 #Choose option for makefile. Comment if not used
-COMP = i #g for gfortran, i for ifort
+COMP = g #g for gfortran, i for ifort
 #DEBUG = ON #Enable debug mode.
 #NORNG = ON #Uses the same set seed. Useful for testing
 OPENMP = ON #Enable/Disable OpenMP.

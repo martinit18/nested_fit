@@ -32,20 +32,26 @@ This installation assumes that you have bash as shell.
 1) In the terminal, install the requested python packages, if not already installed, with\
  `pip install numpy scipy matplotlib ipython jupyter pandas getdist anesthetic`
 2) Choose a directory and go on it
-3) Expand the zip file [here](https://github.com/martinit18/nested_fit/releases/tag/v4.5.6) or clone the program with git with\
+3) Expand the zip file [here](https://github.com/martinit18/nested_fit/tags) or clone the program with git with\
 `git clone https://github.com/martinit18/nested_fit`
-4) create a directory `bin` in your home (normally the place where you are when you open a new terminal)
-5) Go  to the directory build and run\
+4) create the directory `bin` (`mkdir bin`) in your home (normally the place where you are when you open a new terminal)
+5) go to the decompressed directory and create the directory `build`:\
+`cd nested_fit-xxx` (where `xxx` is the present version number)\
+`mkdir build`\
+`cd build`
+6) Go  to the directory build and run\
 `cmake ..`\
 and then\
  `make`
-6) In the file `.bashrc` in your home put the line\
+7) In the file `.bashrc` in your home put the line\
 `export PATH=$HOME/bin:$PATH` 
 
-Now if everything works, you can run `nested_fit` from terminal anywere you are.\
-To test it
+Now if everything works, you can run `nested_fit` from terminal anywere you are.
+
+## Testing the code
+
  - Go to the distribution directory `examples/data_analysis/gauss_bg`
- - Run `nested_fit5.5.6`
+ - Run `nested_fitxxx` (where `xxx` is the present version number) 
  - If everything works, the program will run and produce a series of `nf_output_*` files including `nf_output_res.dat`
 
 More details on the program itself can be found in the `README` file.
