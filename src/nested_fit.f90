@@ -619,9 +619,6 @@ PROGRAM NESTED_FIT
 
       ! ------------Calculate the final parameters, errors and data  --------------------------
 
-      ! Calculate the uncertanity of the evidence calculation
-      ! (See J. Veitch and A. Vecchio, Phys. Rev. D 81, 062003 (2010))
-      evsum_err_est = DSQRT(DBLE(nall))/(nlive*ntry)
 
       ! Calculate the mean and the standard deviation for each parameter
 
@@ -735,6 +732,14 @@ PROGRAM NESTED_FIT
       END IF
       !write(*,*) info, DEXP(info), ntry, FLOOR(DEXP(info)*ntry), nexp, live_like_mean,  evsum_final
       !pause
+
+      ! Calculate the uncertanity of the evidence calculation
+      ! (See J. Veitch and A. Vecchio, Phys. Rev. D 81, 062003 (2010)), but not really and strange behaviour
+      ! evsum_err_est = DSQRT(DBLE(nall))/(nlive*ntry)
+      ! Skilling uncertainty
+      evsum_err_est = DSQRT(info/nlive)
+      ! Empirical
+      ! evsum_err_est = DSQRT(DBLE(nall)/ntry)/(nlive)
 
       ! ---------------- Write results on screen and files -------------------------------------
 
