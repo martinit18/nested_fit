@@ -341,10 +341,19 @@ PROGRAM NESTED_FIT
 
       ! Data configuration
       ! TODO(César): Make this not mandatory and get bounds from data file
-      CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.xmin', xmin(1), MANDATORY=.TRUE. )
-      CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.xmax', xmax(1), MANDATORY=.TRUE. )
-      CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.ymin', ymin(1), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
-      CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.ymax', ymax(1), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
+      IF(is_set) THEN
+         DO i = 1, nset
+            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.xmin', xmin(1), MANDATORY=.TRUE. )
+            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.xmax', xmax(1), MANDATORY=.TRUE. )
+            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.ymin', ymin(1), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
+            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.ymax', ymax(1), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
+         END DO
+      ELSE
+         CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.xmin', xmin(1), MANDATORY=.TRUE. )
+         CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.xmax', xmax(1), MANDATORY=.TRUE. )
+         CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.ymin', ymin(1), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
+         CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.ymax', ymax(1), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
+      ENDIF
 
       ! Legacy stuff required
       ! TODO(César): Deprecate this (whenever we implement the convolution function)
@@ -353,7 +362,13 @@ PROGRAM NESTED_FIT
       CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'nwidth', nwidth, MANDATORY=.FALSE.) ! 0 by default
       
       ! Function configuration
-      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'function.expression', funcname, MANDATORY=.TRUE.) ! LaTeX Expression or Legacy name
+      IF(is_set) THEN
+         DO i = 1, nset
+            CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'function.expression_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i))), funcname, MANDATORY=.TRUE.) ! LaTeX Expression or Legacy name
+         END DO
+      ELSE
+         CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'function.expression', funcname, MANDATORY=.TRUE.) ! LaTeX Expression or Legacy name
+      ENDIF
       CALL CONFIGURE_USERFUNCTION()
 
       ! Read set of spectra file parameter
