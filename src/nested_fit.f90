@@ -5,7 +5,7 @@ PROGRAM NESTED_FIT
   ! 4.5  New modified Jeffreys likelihood for data
   ! 4.4  New "write_input" function in python library
   !      New fit functions
-  !      External LAPACK library link option 
+  !      External LAPACK library link option
   !      OpenMP for parallel search of new points
   !      OpenMPI support (only available for number of tries)
   !      New user function calling method
@@ -163,11 +163,6 @@ PROGRAM NESTED_FIT
   
   ! Map for the config reading
   TYPE(InputDataMap_t) :: input_config
-
-  ! Superfluous variables for backwards compatibility
-  ! TODO(César): Get rid of this
-  LOGICAL   :: input_error_bars=.FALSE.
-  CHARACTER :: input_dimensions='1'
 
   INTERFACE
    SUBROUTINE DISABLE_STDOUT() BIND(c, name='DisableStdout')
@@ -364,12 +359,12 @@ PROGRAM NESTED_FIT
       ! Function configuration
       IF(is_set) THEN
          DO i = 1, nset
-            CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'function.expression_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i))), funcname, MANDATORY=.TRUE.) ! LaTeX Expression or Legacy name
+            CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'function.expression_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i))), funcname(i), MANDATORY=.TRUE.) ! LaTeX Expression or Legacy name
          END DO
       ELSE
-         CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'function.expression', funcname, MANDATORY=.TRUE.) ! LaTeX Expression or Legacy name
+         CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'function.expression', funcname(1), MANDATORY=.TRUE.) ! LaTeX Expression or Legacy name
       ENDIF
-      CALL CONFIGURE_USERFUNCTION()
+      CALL CONFIGURE_USERFUNCTION(is_set)
 
       ! Read set of spectra file parameter
       ! IF (is_set) THEN
@@ -409,7 +404,7 @@ PROGRAM NESTED_FIT
       CALL MPI_Bcast(cluster_par2, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(ntry, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(maxstep_try, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(funcname, 64, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
+      CALL MPI_Bcast(funcname(1), 64, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(lr, 1, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(npoint, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
       CALL MPI_Bcast(nwidth, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
@@ -906,9 +901,44 @@ PROGRAM NESTED_FIT
    WRITE(*,*) 'Time elapsed (tot and real in s):           ', seconds, seconds_omp
   END SUBROUTINE
 
-  SUBROUTINE CONFIGURE_USERFUNCTION()
+  SUBROUTINE FIND_TOTAL_PARAMS_USERFUNCTION(parse_results, parameters, vsize)
+    TYPE(ParseLatex_t), INTENT(IN), DIMENSION(:) :: parse_results
+    CHARACTER(64), INTENT(OUT), DIMENSION(:)     :: parameters
+    INTEGER, INTENT(OUT)                         :: vsize
+    INTEGER                                      :: i, j, k
+
+    IF(SIZE(parse_results).EQ.1) THEN
+      ! Avoid calling expensive STR_ARRAY_UNIQUE
+      DO i = 1, SIZE(parse_results(1)%parameter_names)
+        parameters(i) = TRIM(parse_results(1)%parameter_names(i))
+      END DO
+      vsize = SIZE(parse_results(1)%parameter_names)
+    ELSE
+      k = 0
+      DO i = 1, SIZE(parse_results)
+        DO j = 1, SIZE(parse_results(i)%parameter_names)
+          k = k + 1
+          parameters(k) = TRIM(parse_results(i)%parameter_names(j))
+        END DO
+      END DO
+    
+      CALL STR_ARRAY_UNIQUE(parameters, k)
+      vsize = k
+
+      DO i = 1, vsize
+        CALL LOG_TRACE('Userfunction found param: '//TRIM(parameters(i)))
+      END DO
+
+    ENDIF
+  END SUBROUTINE
+
+  SUBROUTINE CONFIGURE_USERFUNCTION(is_set)
+   LOGICAL, INTENT(IN)            :: is_set
+
    CHARACTER(512)                 :: definition, key
-   TYPE(ParseLatex_t)             :: parse_result
+   TYPE(ParseLatex_t)             :: parse_result(nsetmax)
+   CHARACTER(64)                  :: parameters(64*nsetmax) ! 64 params per set function
+   INTEGER                        :: numparams
    INTEGER                        :: i
    LOGICAL                        :: fix_logical = .FALSE.
    CHARACTER(128)                 :: legacy_param_keys(64)
@@ -918,69 +948,103 @@ PROGRAM NESTED_FIT
    LOGICAL                        :: error
    CHARACTER(128)                 :: splitarr(16)
    INTEGER                        :: splitarr_count
+   
+   ! CALL LOG_TRACE(TRIM(funcname))
 
    ! Check if the function is legacy or not
-   CALL LOG_TRACE(TRIM(funcname))
-   IF(.NOT.IS_LEGACY_USERFCN(TRIM(funcname))) THEN
+   IF(.NOT.IS_LEGACY_USERFCN(TRIM(funcname(1)))) THEN ! If the first function is legacy, we don't need to worry about this
       ! Try to extract an expression
-      parse_result = PARSE_LATEX(TRIM(funcname))
+      DO i = 1, nset
+        parse_result(i) = PARSE_LATEX(TRIM(funcname(i)))
 
-      IF(parse_result%error.EQ.0) THEN
-         definition = TRIM(funcname(INDEX(funcname, '=')+1:LEN_TRIM(funcname)))
-         CALL COMPILE_CACHE_FUNC(parse_result, definition)
+        ! Stop execution if parsing failed
+        IF(parse_result(i)%error.NE.0) CALL HALT_EXECUTION()
 
-         npar = parse_result%num_params
+        definition = TRIM(funcname(i)(INDEX(funcname(i), '=')+1:LEN_TRIM(funcname(i))))
+        
+        ! TODO(César): For now set functions must have the same parameters, even if unused
+        ! CALL CAT_TO_STR(parse_result%parameter_names, current_params, ',') 
 
-         ! Allocate space for parameters and initialize
-         ALLOCATE(live_max(npar),par_num(npar),par_name(npar),par_in(npar),par_step(npar), &
-            par_bnd1(npar),par_bnd2(npar),par_fix(npar), &
-            par_mean(npar),par_sd(npar), &
-            par_median_w(npar), &
-            par_m68_w(npar),par_p68_w(npar),par_m95_w(npar),par_p95_w(npar),par_m99_w(npar),par_p99_w(npar))
-         live_max = 0.
-         par_num = 0
-         par_name = ' '
-         par_in = 0.
-         par_step = 0.
-         par_bnd1 = 0.
-         par_bnd2 = 0.
-         par_fix = 0
-         par_mean = 0.
-         par_sd = 0.
-         par_median_w = 0.
-         par_m68_w = 0.
-         par_p68_w = 0.
-         par_m95_w = 0.
-         par_p95_w = 0.
-         par_m99_w = 0.
-         par_p99_w = 0.
+        ! IF(i.NE.1) THEN
+        !   IF(current_params.NE.last_params) THEN
+        !     CALL LOG_ERROR_HEADER()
+        !     CALL LOG_ERROR('When in set mode, the keys `function.expression_<n>` must have functions with non-exclusive parameters.')
+        !     CALL LOG_ERROR('Aborting Execution...')
+        !     CALL LOG_ERROR_HEADER()
+        !     CALL HALT_EXECUTION()
+        !   END IF
+        ! END IF
+        
+        ! All fine, so just compile the function
+        CALL COMPILE_CACHE_FUNC(parse_result(i), definition)
+        
+        ! Get the function with the most parameters
+        ! npar = MAX(npar, parse_result%num_params)
+        ! 
+        ! ! Get the new max parse result
+        ! IF(npar.EQ.parse_result%num_params) THEN
+        !   IF(master_parse_result%valid) CALL PARSE_LATEX_DEALLOC(master_parse_result)
+        !   master_parse_result = parse_result
+        ! ELSE
+        !   CALL PARSE_LATEX_DEALLOC(parse_result)
+        ! ENDIF
+      END DO
+      
+      ! Now figure out the required parameters (relatively complex for a set)
+      CALL FIND_TOTAL_PARAMS_USERFUNCTION(parse_result(1:nset), parameters, numparams)
+      npar = numparams
 
-         ! Handle the arguments from the input file
-         DO i=1, npar
-            key         = 'function.params.'//TRIM(parse_result%parameter_names(i))//'.'
-            par_num(i)  = i
-            par_name(i) = TRIM(parse_result%parameter_names(i))
-            CALL LOG_TRACE('Reading key: '//key)
-            CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'value', par_in(i)  , MANDATORY=.TRUE. )
-            CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'step' , par_step(i), MANDATORY=.FALSE.) !    -1 by default
-            CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'min'  , par_bnd1(i), MANDATORY=.TRUE. )
-            CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'max'  , par_bnd2(i), MANDATORY=.TRUE. )
-            CALL FIELD_FROM_INPUT_LOGICAL(input_config, TRIM(key)//'fixed', fix_logical, MANDATORY=.FALSE.) ! False by default
-            par_fix(i) = fix_logical ! Implicit conversion
+      ! Deallocate all of the parsed data
+      DO i = 1, nset
+        CALL PARSE_LATEX_DEALLOC(parse_result(i))
+      END DO
 
-            IF (par_bnd1(i).GE.par_bnd2(i)) THEN
-               CALL LOG_ERROR_HEADER()
-               CALL LOG_ERROR('Bad limits for parameter `'//TRIM(parse_result%parameter_names(i))//'`.')
-               CALL LOG_ERROR('min >= max.')
-               CALL LOG_ERROR('Aborting Execution...')
-               CALL LOG_ERROR_HEADER()
-               CALL HALT_EXECUTION()
-            END IF
-         END DO
-      ELSE
-         CALL HALT_EXECUTION()
-      ENDIF
-      CALL PARSE_LATEX_DEALLOC(parse_result)
+      ! Allocate space for parameters and initialize
+      ALLOCATE(live_max(npar),par_num(npar),par_name(npar),par_in(npar),par_step(npar), &
+        par_bnd1(npar),par_bnd2(npar),par_fix(npar), &
+        par_mean(npar),par_sd(npar), &
+        par_median_w(npar), &
+        par_m68_w(npar),par_p68_w(npar),par_m95_w(npar),par_p95_w(npar),par_m99_w(npar),par_p99_w(npar))
+      live_max = 0.
+      par_num = 0
+      par_name = ' '
+      par_in = 0.
+      par_step = 0.
+      par_bnd1 = 0.
+      par_bnd2 = 0.
+      par_fix = 0
+      par_mean = 0.
+      par_sd = 0.
+      par_median_w = 0.
+      par_m68_w = 0.
+      par_p68_w = 0.
+      par_m95_w = 0.
+      par_p95_w = 0.
+      par_m99_w = 0.
+      par_p99_w = 0.
+
+      ! Handle the arguments from the input file
+      DO i=1, npar
+        key         = 'function.params.'//TRIM(parameters(i))//'.'
+        par_num(i)  = i
+        par_name(i) = TRIM(parameters(i))
+        CALL LOG_TRACE('Reading key: '//key)
+        CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'value', par_in(i)  , MANDATORY=.TRUE. )
+        CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'step' , par_step(i), MANDATORY=.FALSE.) !    -1 by default
+        CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'min'  , par_bnd1(i), MANDATORY=.TRUE. )
+        CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'max'  , par_bnd2(i), MANDATORY=.TRUE. )
+        CALL FIELD_FROM_INPUT_LOGICAL(input_config, TRIM(key)//'fixed', fix_logical, MANDATORY=.FALSE.) ! False by default
+        par_fix(i) = fix_logical ! Implicit conversion
+
+        IF (par_bnd1(i).GE.par_bnd2(i)) THEN
+          CALL LOG_ERROR_HEADER()
+          CALL LOG_ERROR('Bad limits for parameter `'//TRIM(parameters(i))//'`.')
+          CALL LOG_ERROR('min >= max.')
+          CALL LOG_ERROR('Aborting Execution...')
+          CALL LOG_ERROR_HEADER()
+          CALL HALT_EXECUTION()
+        END IF
+      END DO
    ELSE
       ! Use the function as is (legacy mode)
       ! Nothing to be done here (for now)
@@ -1091,6 +1155,7 @@ PROGRAM NESTED_FIT
          filename(i) = ADJUSTL(filename(i)) ! Skip possible left spaces from comma separation
       END DO
    ELSE
+      nset = 1
       is_set = .FALSE.
    ENDIF
 
@@ -1291,7 +1356,7 @@ PROGRAM NESTED_FIT
    IF(error.AND.mandatory) THEN
       CALL LOG_ERROR_HEADER()
       CALL LOG_ERROR('Input config for parameter `'//TRIM(field_name)//'` was not found and is mandatory.')
-      CALL LOG_ERROR('Type `Delete` to delete the cache?')
+      CALL LOG_ERROR('Aborting Execution...')
       CALL LOG_ERROR_HEADER()
       STOP
    ELSEIF(error) THEN
