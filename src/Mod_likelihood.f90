@@ -627,9 +627,9 @@ CONTAINS
     ! Init the funcid for function names
     IF(.NOT.BIT_CHECK_IF(DATA_IS_SET)) THEN
        IF(BIT_CHECK_IF(DATA_IS_1D)) THEN
-          CALL SET_USERFUNC_PROCPTR(funcname)
+          CALL SET_USERFUNC_PROCPTR(funcname(1))
        ELSE
-          funcid = SELECT_USERFCN_2D(funcname)
+          funcid = SELECT_USERFCN_2D(funcname(1))
        END IF
     ELSE
        IF(BIT_CHECK_IF(DATA_IS_2D)) THEN
@@ -638,35 +638,35 @@ CONTAINS
           CALL LOG_ERROR_HEADER()
           CALL HALT_EXECUTION()
        END IF
-       funcid = SELECT_USERFCN_SET(funcname)
+       CALL SET_USERFUNC_SET_PROCPTR(funcname(1))
     END IF
 
     ! Initialise functions if needed
     IF (.NOT.BIT_CHECK_IF(DATA_IS_SET)) THEN
-       IF(funcname.EQ.'ROCKING_CURVE') THEN
+       IF(funcname(1).EQ.'ROCKING_CURVE') THEN
           ! Passing as argument the smoothing factors to be adjusted case by case
           ! Suggestion for the values: s between m-sqrt(2*m),m+sqrt(2*m)
           ! with m the number of points
           CALL INIT_ROCKING(par_in(6),par_in(7))
-       ELSE IF(funcname.EQ.'TWO_INTERP_VOIGT_POLY'&
-            .OR.funcname.EQ.'TWO_INTERP_VOIGT_POLY_X0') THEN
+       ELSE IF(funcname(1).EQ.'TWO_INTERP_VOIGT_POLY'&
+            .OR.funcname(1).EQ.'TWO_INTERP_VOIGT_POLY_X0') THEN
           ! Passing as argument the smoothing factors to be adjusted case by case
           ! Suggestion for the values: s between m-sqrt(2*m),m+sqrt(2*m)
           ! with m the number of points
           CALL INIT_TWO_INTERP(par_in(14),par_in(15))
-       ELSE IF(funcname.EQ.'THREE_INTERP_VOIGT_POLY') THEN
+       ELSE IF(funcname(1).EQ.'THREE_INTERP_VOIGT_POLY') THEN
           ! Passing as argument the smoothing factors to be adjusted case by case
           ! Suggestion for the values: s between m-sqrt(2*m),m+sqrt(2*m)
           ! with m the number of points
           CALL INIT_THREE_INTERP(par_in(12),par_in(13),par_in(14))
-       ELSE IF(funcname.EQ.'SIX_GAUSS_SHIRLEYBG'&
-            .OR.funcname.EQ.'SIX_VOIGT_SHIRLEYBG'&
-            .OR.funcname.EQ.'SIX_VOIGT_PARA_SHIRBG_SIG_PLEIADES'&
-            .OR.funcname.EQ.'SIX_VOIGT_PARAMETER_SHIRLEYBG_PLEIADES') THEN
+       ELSE IF(funcname(1).EQ.'SIX_GAUSS_SHIRLEYBG'&
+            .OR.funcname(1).EQ.'SIX_VOIGT_SHIRLEYBG'&
+            .OR.funcname(1).EQ.'SIX_VOIGT_PARA_SHIRBG_SIG_PLEIADES'&
+            .OR.funcname(1).EQ.'SIX_VOIGT_PARAMETER_SHIRLEYBG_PLEIADES') THEN
           CALL INIT_SHIRLEY(ndata,x(:,1),nc(:,1))
        END IF
     ELSE
-       IF(funcname.EQ.'ROCKING_CURVE_SET') THEN
+       IF(funcname(1).EQ.'ROCKING_CURVE_SET') THEN
           ! Passing as argument the smoothing factors to be adjusted case by case
           ! Suggestion for the values: s between m-sqrt(2*m),m+sqrt(2*m)
           ! with m the number of points
@@ -702,7 +702,7 @@ CONTAINS
     !
     REAL(8) :: enc
     INTEGER(4) :: i, j, k, np
-    REAL(8) :: USERFCN_SET, USERFCN_2D, xx, yy
+    REAL(8) :: USERFCN_2D, xx, yy
 
     ncall=ncall+1
     IF (BIT_CHECK_IF(DATA_IS_C).AND.BIT_CHECK_IF(DATA_IS_1D)) THEN
@@ -713,7 +713,7 @@ CONTAINS
              IF (.NOT.BIT_CHECK_IF(DATA_IS_SET)) THEN
                 enc = USERFCN(x(i,k),npar,par)
              ELSE
-                enc = USERFCN_SET(x(i,k),npar,par,funcid,k)
+                enc = USERFCN_SET(x(i,k),npar,par,k)
              END IF
              IF (enc.LE.0) THEN
                 CALL LOG_ERROR_HEADER()
@@ -771,7 +771,6 @@ CONTAINS
     
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
     !
-    REAL(8) :: USERFCN_SET
     REAL(8) :: ll_tmp, rk, rk2
     REAL(8), DIMENSION(ndata, nset) :: enc
     INTEGER(4) :: i, k
@@ -788,10 +787,8 @@ CONTAINS
           ! Calculate the function (not SIMD optimisable)
           DO i=1, ndata_set(k)
              enc(i, k) = USERFCN(x(i, k),npar,par)
-             IF(x(i, k).EQ.107) THEN
-               ! CALL LOG_TRACE('enc('//TRIM(REAL_TO_STR_INLINE(x(i, k)))//') = '//TRIM(REAL_TO_STR_INLINE(enc(i, k))))
-               ! CALL LOG_TRACE('A = '//TRIM(REAL_TO_STR_INLINE(par(1))))
-             ENDIF
+             ! CALL LOG_TRACE('enc('//TRIM(REAL_TO_STR_INLINE(x(i, k)))//') = '//TRIM(REAL_TO_STR_INLINE(enc(i, k))))
+             ! CALL LOG_TRACE('A = '//TRIM(REAL_TO_STR_INLINE(par(1))))
           END DO
           ! Calculate the likelihood
           !$OMP SIMD REDUCTION(+:ll_tmp)
@@ -805,6 +802,7 @@ CONTAINS
              ! Calculate the function (not SIMD optimisable)
              DO i=1, ndata_set(k)
                 enc(i,k) = USERFCN(x(i,k),npar,par)
+               !  CALL LOG_TRACE('x = '//TRIM(REAL_TO_STR_INLINE(x(i,k)))//', y = '//TRIM(REAL_TO_STR_INLINE(enc(i, k)))//', par(1)= '//TRIM(REAL_TO_STR_INLINE(par(1)))//', par(2) ='//TRIM(REAL_TO_STR_INLINE(par(2))))
              END DO
              ! Calculate the likelihood
              !$OMP SIMD REDUCTION(+:ll_tmp)
@@ -833,7 +831,7 @@ CONTAINS
              ! Poisson distribution calculation --------------------------------------------------
              ! Calculate the function (not SIMD optimisable)
              DO i=1, ndata_set(k)
-                enc(i,k) = USERFCN_SET(x(i,k),npar,par,funcid,k)
+                enc(i,k) = USERFCN_SET(x(i,k),npar,par,k)
              END DO
              ! Calculate the likelihood
              !$OMP SIMD REDUCTION(+:ll_tmp)
@@ -845,7 +843,7 @@ CONTAINS
              ! Normal (Gaussian) distribution calculation --------------------------------------
              ! Calculate the function (not SIMD optimisable)
              DO i=1, ndata_set(k)
-                enc(i,k) = USERFCN_SET(x(i,k),npar,par,funcid,k)
+                enc(i,k) = USERFCN_SET(x(i,k),npar,par,k)
              END DO
              ! Calculate the likelihood
              !$OMP SIMD REDUCTION(+:ll_tmp)
@@ -935,7 +933,6 @@ CONTAINS
     REAL(8), DIMENSION(npar), INTENT(IN) :: live_max, par_mean, par_median_w
     !
     INTEGER(8), PARAMETER :: maxfit = 10000
-    REAL(8) :: USERFCN_SET
     REAL(8) :: minx=0., maxx=0., xfit=0., dx=0., enc = 0.
     INTEGER(4) :: i=0, k=0
     ! Stuff to save separate components
@@ -996,7 +993,7 @@ CONTAINS
           OPEN (UNIT=30, FILE=out_filename, STATUS='unknown')
           WRITE(30,*)'# x    y data    y theory      y diff    y err'
           DO i=1, ndata_set(k)
-             enc = USERFCN_SET(x(i,k),npar,live_max,funcid,k)
+             enc = USERFCN_SET(x(i,k),npar,live_max,k)
              IF (data_type.EQ.'1e') THEN
                 WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ',  nc_err(i,k)
              ELSE IF (data_type.EQ.'1c') THEN
@@ -1009,7 +1006,7 @@ CONTAINS
           OPEN (UNIT=30, FILE=out_filename, STATUS='unknown')
           WRITE(30,*)'# x    y data    y theory      y diff    y err'
           DO i=1, ndata_set(k)
-             enc = USERFCN_SET(x(i,k),npar,live_max,funcid,k)
+             enc = USERFCN_SET(x(i,k),npar,live_max,k)
              IF (data_type.EQ.'1e') THEN
                 WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ',  nc_err(i,k)
              ELSE IF (data_type.EQ.'1c') THEN
@@ -1022,7 +1019,7 @@ CONTAINS
           OPEN (UNIT=30, FILE=out_filename, STATUS='unknown')
           WRITE(30,*)'# x    y data    y theory      y diff    y err'
           DO i=1, ndata_set(k)
-             enc = USERFCN_SET(x(i,k),npar,live_max,funcid,k)
+             enc = USERFCN_SET(x(i,k),npar,live_max,k)
              IF (data_type.EQ.'1e') THEN
                 WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ',  nc_err(i,k)
              ELSE IF (data_type.EQ.'1c') THEN
@@ -1084,7 +1081,7 @@ CONTAINS
           DO i=1, maxfit
              xfit = minx + (i-1)*dx
              !WRITE(30, *) xfit, USERFCN_SET(xfit,npar,live_max,funcname,k)
-             yfit = USERFCN_SET(xfit,npar,live_max,funcid,k)
+             yfit = USERFCN_SET(xfit,npar,live_max,k)
           ENDDO
           CLOSE(40)
 
@@ -1094,7 +1091,7 @@ CONTAINS
           DO i=1, maxfit
              xfit = minx + (i-1)*dx
              !WRITE(30, *) xfit, USERFCN_SET(xfit,npar,live_max,funcname,k)
-             yfit = USERFCN_SET(xfit,npar,par_mean,funcid,k)
+             yfit = USERFCN_SET(xfit,npar,par_mean,k)
           ENDDO
           CLOSE(40)
 
@@ -1104,7 +1101,7 @@ CONTAINS
           DO i=1, maxfit
              xfit = minx + (i-1)*dx
              !WRITE(30, *) xfit, USERFCN_SET(xfit,npar,live_max,funcname,k)
-             yfit = USERFCN_SET(xfit,npar,par_median_w,funcid,k)
+             yfit = USERFCN_SET(xfit,npar,par_median_w,k)
           ENDDO
           CLOSE(40)
        END DO
@@ -1145,7 +1142,7 @@ CONTAINS
     ares = 0.
 
     ! If "LINE" profile, prepare for projection
-    IF (INDEX(funcname,"_LINE").NE.0) THEN
+    IF (INDEX(funcname(1),"_LINE").NE.0) THEN
        hx   = 0.
        hnc  = 0.
        henc = 0.
@@ -1172,7 +1169,7 @@ CONTAINS
              WRITE(20,*) adata(i,:)
              xx = i - 0.5 + xmin(k) ! Real coordinates are given by the bins, the center of the bin.
              ! If "LINE" profile, built the projection
-             IF (INDEX(funcname,"_LINE").NE.0) THEN
+             IF (INDEX(funcname(1),"_LINE").NE.0) THEN
                 hx(i) = xx
              END IF
              DO j=1, ny
@@ -1181,7 +1178,7 @@ CONTAINS
                    yy = j - 0.5 + ymin(k) ! additional -1 to take well into account xmin,ymin
                    aenc(i,j) = USERFCN_2D(xx,yy,npar,live_max,funcid)
                    ares(i,j) = adata(i,j) - aenc(i,j)
-                   IF (INDEX(funcname,"_LINE").NE.0) THEN
+                   IF (INDEX(funcname(1),"_LINE").NE.0) THEN
                       ix = CEILING(xx - b*(yy-y0) - c*(yy-y0)**2 - xmin(k))
                       IF (ix.GE.1.AND.ix.LE.nx) THEN
                          hnc(ix)  = hnc(ix) + adata(i,j)
@@ -1200,7 +1197,7 @@ CONTAINS
           CLOSE(20)
 
           ! Write projection
-          IF (INDEX(funcname,"_LINE").NE.0) THEN
+          IF (INDEX(funcname(1),"_LINE").NE.0) THEN
              ! max likelihood values -------------------------------------------------------------
              OPEN (UNIT=20, FILE='nf_output_data_max.dat', STATUS='unknown')
              WRITE(20,*)'# x    y data    y theory      y diff    y err'
