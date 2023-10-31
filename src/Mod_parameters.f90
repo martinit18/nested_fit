@@ -29,11 +29,11 @@ MODULE MOD_PARAMETERS
   REAL(8)    :: cluster_par1=0.4, cluster_par2=0.1
 
   ! Function
-  CHARACTER(512)              :: funcname
-  CHARACTER                   :: lr= 'r'
-  INTEGER(4)                  :: npoint=0, nwidth=0
-  REAL(8), DIMENSION(nsetmax) :: xmin=0., xmax=0., ymin=0., ymax=0.
-  INTEGER(4)                  :: npar=0
+  CHARACTER(512), DIMENSION(nsetmax)     :: funcname
+  CHARACTER                              :: lr= 'r'
+  INTEGER(4)                             :: npoint=0, nwidth=0
+  REAL(8), DIMENSION(nsetmax)            :: xmin=0., xmax=0., ymin=0., ymax=0.
+  INTEGER(4)                             :: npar=0
   INTEGER(4), ALLOCATABLE,  DIMENSION(:) :: par_num, par_fix
   CHARACTER,  ALLOCATABLE, DIMENSION(:)  :: par_name*10
   REAL(8), ALLOCATABLE, DIMENSION(:)     :: par_step, par_in, par_bnd1, par_bnd2
