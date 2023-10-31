@@ -7,10 +7,19 @@ MODULE MOD_USERFCN
     USE MOD_AUTOFUNC
     IMPLICIT NONE
 
-    PUBLIC :: USERFCN, IS_LEGACY_USERFCN, SET_USERFUNC_PROCPTR
+    PUBLIC :: USERFCN, USERFCN_SET, IS_LEGACY_USERFCN, SET_USERFUNC_PROCPTR, SET_USERFUNC_SET_PROCPTR
     PRIVATE
     
-    PROCEDURE(proc_ptr_t), POINTER :: USERFCN => null()
+    PROCEDURE(proc_ptr_t)    , POINTER :: USERFCN     => null()
+    PROCEDURE(proc_ptr_set_t), POINTER :: USERFCN_SET => null()
+
+    TYPE arr_proc_ptr
+        PROCEDURE(proc_ptr_t), POINTER, NOPASS :: ptr => null()
+    END TYPE arr_proc_ptr
+    
+    TYPE(arr_proc_ptr), DIMENSION(32) :: SET_PTR_ARR
+
+    INTEGER :: SET_PTR_COUNT = 0
 
     CONTAINS
 
@@ -251,9 +260,11 @@ MODULE MOD_USERFCN
         CHARACTER(512), INTENT(IN) :: funcname
         CHARACTER(128)             :: func_header
         LOGICAL                    :: loaded_ok
-        
+
         IF(.NOT.IS_LEGACY_USERFCN(funcname)) THEN
             func_header = TRIM(funcname(1:INDEX(funcname, '(')-1))
+            CALL LOG_TRACE('Setting user function pointer named => '//TRIM(func_header))
+
             CALL GET_USER_FUNC_PROCPTR(func_header, USERFCN, loaded_ok)
 
             IF(.NOT.loaded_ok) THEN
@@ -266,9 +277,50 @@ MODULE MOD_USERFCN
             ENDIF
         ELSE
             ! Set the legacy function pointer
+            CALL LOG_TRACE('Setting user function pointer named => '//TRIM(funcname))
             CALL SET_LEGACY_FUNC(funcname)
         ENDIF
     END SUBROUTINE
+
+    SUBROUTINE SET_USERFUNC_SET_PROCPTR(funcname)
+        CHARACTER(512), INTENT(IN) :: funcname
+        CHARACTER(128)             :: func_header
+        LOGICAL                    :: loaded_ok
+
+        IF(.NOT.IS_LEGACY_USERFCN(funcname)) THEN
+            func_header = TRIM(funcname(1:INDEX(funcname, '(')-1))
+            CALL LOG_TRACE('Setting user function pointer set named => '//TRIM(func_header))
+            
+            CALL GET_USER_FUNC_PROCPTR(func_header, SET_PTR_ARR(1)%ptr, loaded_ok)
+
+            IF(.NOT.loaded_ok) THEN
+                CALL LOG_ERROR_HEADER()
+                CALL LOG_ERROR('Failed to load proc address.')
+                CALL LOG_ERROR('Maybe the specified function name is incorrect/not in the cache.')
+                CALL LOG_ERROR('Aborting Execution...')
+                CALL LOG_ERROR_HEADER()
+                STOP
+            ENDIF
+        ELSE
+            ! Set the legacy function pointer
+            CALL LOG_TRACE('Setting user function set pointer named => '//TRIM(funcname))
+            CALL SET_LEGACY_FUNC(funcname)
+        ENDIF
+    END SUBROUTINE
+    
+    ! This get's pointed by the USERFCN_SET pointer when we are using parsed functions
+    FUNCTION USER_FUNCTION_SET_AUTO_PTR(x, npar, params, sid)
+        USE, INTRINSIC :: iso_c_binding
+        IMPLICIT NONE
+        REAL(8), INTENT(IN) :: x
+        INTEGER, INTENT(IN) :: npar
+        REAL(8), INTENT(IN) :: params(npar)
+        INTEGER, INTENT(IN) :: sid
+        REAL(c_double)      :: USER_FUNCTION_SET_AUTO_PTR
+
+        ! use : nsetmax
+
+    END FUNCTION
 
     SUBROUTINE SET_LEGACY_FUNC(funcname)
         CHARACTER(128), INTENT(IN) :: funcname
@@ -518,46 +570,51 @@ MODULE MOD_USERFCN
             USERFCN => ELEVEN_GAUSS_WF_CORREL_BG
         ELSE IF(funcname.EQ.'ELEVEN_GAUSS_WF_CORREL_BG2') THEN
             USERFCN => ELEVEN_GAUSS_WF_CORREL_BG2
-        ELSE IF(funcname.EQ.'GAUSS_BG_SET') THEN ! Set start
-            USERFCN => GAUSS_BG_SET
+
+        ! Set start
+        ELSE IF(funcname.EQ.'GAUSS_BG_SET') THEN
+            USERFCN_SET => GAUSS_BG_SET
         ELSE IF(funcname.EQ.'DOUBLE_EXPSIMP') THEN
-            USERFCN => DOUBLE_EXPSIMP
+            USERFCN_SET => DOUBLE_EXPSIMP
         ELSE IF(funcname.EQ.'DOUBLE_EXPSIN') THEN
-            USERFCN => DOUBLE_EXPSIN
+            USERFCN_SET => DOUBLE_EXPSIN
         ELSE IF(funcname.EQ.'DOUBLE_EXPSIN_BIS') THEN
-            USERFCN => DOUBLE_EXPSIN_BIS
+            USERFCN_SET => DOUBLE_EXPSIN_BIS
         ELSE IF(funcname.EQ.'DOUBLE_TWO_EXPSIN') THEN
-            USERFCN => DOUBLE_TWO_EXPSIN
+            USERFCN_SET => DOUBLE_TWO_EXPSIN
         ELSE IF(funcname.EQ.'TRIPLE_EXPSIMP') THEN
-            USERFCN => TRIPLE_EXPSIMP
+            USERFCN_SET => TRIPLE_EXPSIMP
         ELSE IF(funcname.EQ.'TRIPLE_EXPSIN') THEN
-            USERFCN => TRIPLE_EXPSIN
+            USERFCN_SET => TRIPLE_EXPSIN
         ELSE IF(funcname.EQ.'TRIPLE_EXPSIN_BIS') THEN
-            USERFCN => TRIPLE_EXPSIN_BIS
+            USERFCN_SET => TRIPLE_EXPSIN_BIS
         ELSE IF(funcname.EQ.'TRIPLE_EXPSIN_TRIS') THEN
-            USERFCN => TRIPLE_EXPSIN_TRIS
+            USERFCN_SET => TRIPLE_EXPSIN_TRIS
         ELSE IF(funcname.EQ.'WEIBULL_EL_LASER') THEN
-            USERFCN => WEIBULL_EL_LASER
+            USERFCN_SET => WEIBULL_EL_LASER
         ELSE IF(funcname.EQ.'SIX_GAUSS_ERF_FREESIG_POLY_SET') THEN
-            USERFCN => SIX_GAUSS_ERF_FREESIG_POLY_SET
+            USERFCN_SET => SIX_GAUSS_ERF_FREESIG_POLY_SET
         ELSE IF(funcname.EQ.'SIX_GAUSS_ERF_FREESIG_POLY_SET2') THEN
-            USERFCN => SIX_GAUSS_ERF_FREESIG_POLY_SET2
+            USERFCN_SET => SIX_GAUSS_ERF_FREESIG_POLY_SET2
         ELSE IF(funcname.EQ.'SIX_GAUSS_ERF_FREESIG_POLY_SET3') THEN
-            USERFCN => SIX_GAUSS_ERF_FREESIG_POLY_SET3
+            USERFCN_SET => SIX_GAUSS_ERF_FREESIG_POLY_SET3
         ELSE IF(funcname.EQ.'FOUR_GAUSS_ERF_TWO_GAUSS_SET') THEN
-            USERFCN => FOUR_GAUSS_ERF_TWO_GAUSS_SET
+            USERFCN_SET => FOUR_GAUSS_ERF_TWO_GAUSS_SET
         ELSE IF(funcname.EQ.'FOUR_GAUSS_ERF_TWO_GAUSS_STAN_SET') THEN
-            USERFCN => FOUR_GAUSS_ERF_TWO_GAUSS_STAN_SET
+            USERFCN_SET => FOUR_GAUSS_ERF_TWO_GAUSS_STAN_SET
         ELSE IF(funcname.EQ.'FOUR_GAUSS_ERF_TWO_GAUSS_STAN2_SET') THEN
-            USERFCN => FOUR_GAUSS_ERF_TWO_GAUSS_STAN2_SET
+            USERFCN_SET => FOUR_GAUSS_ERF_TWO_GAUSS_STAN2_SET
         ELSE IF(funcname.EQ.'FOUR_GAUSS_ERF_TWO_GAUSS_STAN3_SET') THEN
-            USERFCN => FOUR_GAUSS_ERF_TWO_GAUSS_STAN3_SET
+            USERFCN_SET => FOUR_GAUSS_ERF_TWO_GAUSS_STAN3_SET
         ELSE IF(funcname.EQ.'ROCKING_CURVE_SET') THEN
-            USERFCN => ROCKING_CURVE_SET
+            USERFCN_SET => ROCKING_CURVE_SET
         ENDIF
 #else
     ! There is no USERFCN for functions
     USERFCN => null()
+
+    ! There is no USERFCN_SET for functions
+    USERFCN_SET => null()
 #endif
     END SUBROUTINE
 
