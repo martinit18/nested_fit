@@ -925,6 +925,7 @@ PROGRAM NESTED_FIT
       CALL STR_ARRAY_UNIQUE(parameters, k)
       vsize = k
 
+      CALL LOG_TRACE('Running parameter detection for `set` mode...')
       DO i = 1, vsize
         CALL LOG_TRACE('Userfunction found param: '//TRIM(parameters(i)))
       END DO
