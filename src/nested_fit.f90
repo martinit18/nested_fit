@@ -948,11 +948,10 @@ PROGRAM NESTED_FIT
    LOGICAL                        :: error
    CHARACTER(128)                 :: splitarr(16)
    INTEGER                        :: splitarr_count
-   
-   ! CALL LOG_TRACE(TRIM(funcname))
 
    ! Check if the function is legacy or not
-   IF(.NOT.IS_LEGACY_USERFCN(TRIM(funcname(1)))) THEN ! If the first function is legacy, we don't need to worry about this
+   ! If the first function is legacy, we don't need to worry about this
+   IF(.NOT.IS_LEGACY_USERFCN(TRIM(funcname(1)))) THEN
       ! Try to extract an expression
       DO i = 1, nset
         parse_result(i) = PARSE_LATEX(TRIM(funcname(i)))
@@ -962,32 +961,8 @@ PROGRAM NESTED_FIT
 
         definition = TRIM(funcname(i)(INDEX(funcname(i), '=')+1:LEN_TRIM(funcname(i))))
         
-        ! TODO(César): For now set functions must have the same parameters, even if unused
-        ! CALL CAT_TO_STR(parse_result%parameter_names, current_params, ',') 
-
-        ! IF(i.NE.1) THEN
-        !   IF(current_params.NE.last_params) THEN
-        !     CALL LOG_ERROR_HEADER()
-        !     CALL LOG_ERROR('When in set mode, the keys `function.expression_<n>` must have functions with non-exclusive parameters.')
-        !     CALL LOG_ERROR('Aborting Execution...')
-        !     CALL LOG_ERROR_HEADER()
-        !     CALL HALT_EXECUTION()
-        !   END IF
-        ! END IF
-        
         ! All fine, so just compile the function
         CALL COMPILE_CACHE_FUNC(parse_result(i), definition)
-        
-        ! Get the function with the most parameters
-        ! npar = MAX(npar, parse_result%num_params)
-        ! 
-        ! ! Get the new max parse result
-        ! IF(npar.EQ.parse_result%num_params) THEN
-        !   IF(master_parse_result%valid) CALL PARSE_LATEX_DEALLOC(master_parse_result)
-        !   master_parse_result = parse_result
-        ! ELSE
-        !   CALL PARSE_LATEX_DEALLOC(parse_result)
-        ! ENDIF
       END DO
       
       ! Now figure out the required parameters (relatively complex for a set)
