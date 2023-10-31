@@ -41,7 +41,7 @@ CONTAINS
     !   CALL INIT_ROSENBROCK()
     !END IF
     
-    funcid = SELECT_LIKELIHOODFCN(funcname)
+    funcid = SELECT_LIKELIHOODFCN(funcname(1))
 
   END SUBROUTINE INIT_LIKELIHOOD
 
