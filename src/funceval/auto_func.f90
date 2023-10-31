@@ -24,6 +24,7 @@ MODULE MOD_AUTOFUNC
         CLEAN_AUTOFUNC, &
         ParseLatex_t, &
         proc_ptr_t, &
+        proc_ptr_set_t, &
         PARSE_LATEX, &
         PARSE_LATEX_DEALLOC, &
         GET_USER_FUNC_PROCPTR, &
@@ -64,6 +65,8 @@ MODULE MOD_AUTOFUNC
 
         CHARACTER(512)                           :: infixcode_f90
         INTEGER                                  :: error
+
+        LOGICAL                                  :: valid = .FALSE.
     END TYPE ParseLatex_t
 
     ! latex_parser.cpp interface
@@ -159,6 +162,19 @@ MODULE MOD_AUTOFUNC
             REAL(c_double)      :: proc_ptr_t
         END FUNCTION proc_ptr_t
     END INTERFACE
+    
+    ! NOTE(Cesar): This is done like so due to backwards compatibility needed for legacy set functions
+    ABSTRACT INTERFACE
+        FUNCTION proc_ptr_set_t(x, npar, params, sid)
+            USE, INTRINSIC :: iso_c_binding
+            IMPLICIT NONE
+            REAL(8), INTENT(IN) :: x
+            INTEGER, INTENT(IN) :: npar
+            REAL(8), INTENT(IN) :: params(npar)
+            INTEGER, INTENT(IN) :: sid
+            REAL(c_double)      :: proc_ptr_set_t
+        END FUNCTION proc_ptr_set_t
+    END INTERFACE
 
     CONTAINS
 
@@ -223,6 +239,7 @@ MODULE MOD_AUTOFUNC
         f_type%num_funcs   = c_type%num_funcs
         f_type%num_builtin = c_type%num_builtin
         f_type%error       = c_type%error
+        f_type%valid       = .TRUE.
 
         ! Function name
         CALL C_F_STRING(c_type%function_name, f_type%function_name)
@@ -292,7 +309,9 @@ MODULE MOD_AUTOFUNC
 
     SUBROUTINE PARSE_LATEX_DEALLOC(parsed_data)
         TYPE(ParseLatex_t), INTENT(INOUT) :: parsed_data
-
+        
+        parsed_data%valid = .FALSE.
+    
         DEALLOCATE(parsed_data%parameter_names)
         DEALLOCATE(parsed_data%parameter_identifiers)
         DEALLOCATE(parsed_data%functions)
