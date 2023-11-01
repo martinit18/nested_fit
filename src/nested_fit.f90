@@ -364,7 +364,7 @@ PROGRAM NESTED_FIT
       ELSE
          CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'function.expression', funcname(1), MANDATORY=.TRUE.) ! LaTeX Expression or Legacy name
       ENDIF
-      CALL CONFIGURE_USERFUNCTION(is_set)
+      CALL CONFIGURE_USERFUNCTION()
 
       ! Read set of spectra file parameter
       ! IF (is_set) THEN
@@ -933,8 +933,7 @@ PROGRAM NESTED_FIT
     ENDIF
   END SUBROUTINE
 
-  SUBROUTINE CONFIGURE_USERFUNCTION(is_set)
-   LOGICAL, INTENT(IN)            :: is_set
+  SUBROUTINE CONFIGURE_USERFUNCTION()
 
    CHARACTER(512)                 :: definition, key
    TYPE(ParseLatex_t)             :: parse_result(nsetmax)
@@ -945,8 +944,6 @@ PROGRAM NESTED_FIT
    CHARACTER(128)                 :: legacy_param_keys(64)
    CHARACTER(128)                 :: legacy_param_names(64)
    INTEGER                        :: legacy_param_count
-   TYPE(InputDataGenericValue_t)  :: legacy_param
-   LOGICAL                        :: error
    CHARACTER(128)                 :: splitarr(16)
    INTEGER                        :: splitarr_count
 
@@ -956,7 +953,7 @@ PROGRAM NESTED_FIT
       ! Try to extract an expression
       DO i = 1, nset
         parse_result(i) = PARSE_LATEX(TRIM(funcname(i)))
-
+        
         ! Stop execution if parsing failed
         IF(parse_result(i)%error.NE.0) CALL HALT_EXECUTION()
 
