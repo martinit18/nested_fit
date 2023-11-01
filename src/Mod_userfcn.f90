@@ -5,6 +5,7 @@
 MODULE MOD_USERFCN
     USE MOD_LOGGER
     USE MOD_AUTOFUNC
+    USE MOD_PARAMETERS
     IMPLICIT NONE
 
     PUBLIC :: USERFCN, USERFCN_SET, IS_LEGACY_USERFCN, SET_USERFUNC_PROCPTR, SET_USERFUNC_SET_PROCPTR
@@ -269,7 +270,7 @@ MODULE MOD_USERFCN
 
             IF(.NOT.loaded_ok) THEN
                 CALL LOG_ERROR_HEADER()
-                CALL LOG_ERROR('Failed to load proc address.')
+                CALL LOG_ERROR('Failed to load proc address for function => '//TRIM(func_header))
                 CALL LOG_ERROR('Maybe the specified function name is incorrect/not in the cache.')
                 CALL LOG_ERROR('Aborting Execution...')
                 CALL LOG_ERROR_HEADER()
@@ -283,28 +284,32 @@ MODULE MOD_USERFCN
     END SUBROUTINE
 
     SUBROUTINE SET_USERFUNC_SET_PROCPTR(funcname)
-        CHARACTER(512), INTENT(IN) :: funcname
+        CHARACTER(512), INTENT(IN) :: funcname(nsetmax)
         CHARACTER(128)             :: func_header
         LOGICAL                    :: loaded_ok
+        INTEGER                    :: i
 
-        IF(.NOT.IS_LEGACY_USERFCN(funcname)) THEN
-            func_header = TRIM(funcname(1:INDEX(funcname, '(')-1))
-            CALL LOG_TRACE('Setting user function pointer set named => '//TRIM(func_header))
+        IF(.NOT.IS_LEGACY_USERFCN(funcname(1))) THEN
+            ! Setup the user function for each available set
+            DO i = 1, nset
+                func_header = TRIM(funcname(i)(1:INDEX(funcname(i), '(')-1))
+                CALL LOG_TRACE('Setting user function pointer set named => '//TRIM(func_header))
+                CALL GET_USER_FUNC_PROCPTR(func_header, SET_PTR_ARR(i)%ptr, loaded_ok)
             
-            CALL GET_USER_FUNC_PROCPTR(func_header, SET_PTR_ARR(1)%ptr, loaded_ok)
-
-            IF(.NOT.loaded_ok) THEN
-                CALL LOG_ERROR_HEADER()
-                CALL LOG_ERROR('Failed to load proc address.')
-                CALL LOG_ERROR('Maybe the specified function name is incorrect/not in the cache.')
-                CALL LOG_ERROR('Aborting Execution...')
-                CALL LOG_ERROR_HEADER()
-                STOP
-            ENDIF
+                IF(.NOT.loaded_ok) THEN
+                    CALL LOG_ERROR_HEADER()
+                    CALL LOG_ERROR('Failed to load proc address for function => '//TRIM(func_header))
+                    CALL LOG_ERROR('Maybe the specified function name is incorrect/not in the cache.')
+                    CALL LOG_ERROR('Aborting Execution...')
+                    CALL LOG_ERROR_HEADER()
+                    CALL HALT_EXECUTION()
+                ENDIF
+            END DO
+            USERFCN_SET => USER_FUNCTION_SET_AUTO_PTR
         ELSE
             ! Set the legacy function pointer
-            CALL LOG_TRACE('Setting user function set pointer named => '//TRIM(funcname))
-            CALL SET_LEGACY_FUNC(funcname)
+            CALL LOG_TRACE('Setting user function set pointer named => '//TRIM(funcname(1)))
+            CALL SET_LEGACY_FUNC(funcname(1))
         ENDIF
     END SUBROUTINE
     
@@ -318,8 +323,7 @@ MODULE MOD_USERFCN
         INTEGER, INTENT(IN) :: sid
         REAL(c_double)      :: USER_FUNCTION_SET_AUTO_PTR
 
-        ! use : nsetmax
-
+        USER_FUNCTION_SET_AUTO_PTR = SET_PTR_ARR(sid)%ptr(x, npar, params)
     END FUNCTION
 
     SUBROUTINE SET_LEGACY_FUNC(funcname)
