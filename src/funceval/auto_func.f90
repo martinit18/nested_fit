@@ -13,6 +13,7 @@
 MODULE MOD_AUTOFUNC
     USE MOD_LOGGER
     USE MOD_METADATA
+    USE MOD_OPTIONS
     USE iso_c_binding
     IMPLICIT NONE
     
@@ -472,6 +473,51 @@ MODULE MOD_AUTOFUNC
         RETURN
     END FUNCTION
 
+    SUBROUTINE COMPILE_CACHE_FUNC_NATIVE(filename)
+        CHARACTER(LEN=*), INTENT(IN) :: filename
+
+        CHARACTER(128) :: ext
+        CHARACTER(8)   :: supported_fext(4) = [ CHARACTER(8) :: 'f90', 'f', 'F', 'F90' ]
+        CHARACTER(8)   :: supported_cext(4) = [ CHARACTER(8) :: 'cpp', 'cxx', 'c++', 'inl' ]
+        CHARACTER(128) :: ext_help_text
+        CHARACTER(64)  :: compiler_spec
+
+        ! NOTE(César): We support two languagues for function definitions: F and C++
+        CALL FILENAME_FIND_EXT(filename, ext)
+
+        IF(ANY(supported_fext.EQ.ext)) THEN
+            compiler_spec = TRIM(opt_f90_comp_cmd)
+        ELSE IF(ANY(supported_cext.EQ.ext)) THEN
+            compiler_spec = TRIM(opt_cpp_comp_cmd)
+        ELSE
+            IF(ext.EQ.'') THEN
+                CALL LOG_ERROR_HEADER()
+                CALL LOG_ERROR('No extension found when compiling native function from file: '//TRIM(filename))
+                CALL LOG_ERROR('Please use a valid Fortran or c++ extension for your functions.')
+                CALL LOG_ERROR('Aborting execution...')
+                CALL LOG_ERROR_HEADER()
+            ELSE
+                CALL LOG_ERROR_HEADER()
+                CALL LOG_ERROR('Extension `'//TRIM(ext)//'` is not recognized as a valid fortran or c++ extension.')
+                CALL LOG_ERROR('Aborting execution...')
+                CALL LOG_ERROR_HEADER()
+            ENDIF
+
+            CALL LOG_MESSAGE_HEADER()
+            CALL ARRAY_JOIN(supported_fext, ', ', ext_help_text)
+            CALL LOG_MESSAGE('Recognized Fortran extensions : ['//TRIM(ext_help_text)//']')
+            CALL ARRAY_JOIN(supported_cext, ', ', ext_help_text)
+            CALL LOG_MESSAGE('Recognized c++ extensions : ['//TRIM(ext_help_text)//']')
+            CALL LOG_MESSAGE_HEADER()
+
+            CALL HALT_EXECUTION()
+        ENDIF
+
+        ! TODO(César): Regex the input file to figure out the function name, just like we do on CMake side.
+        ! TODO
+       
+    END SUBROUTINE
+
     SUBROUTINE COMPILE_CACHE_FUNC(parse_data, original_data)
         TYPE(ParseLatex_t), INTENT(IN) :: parse_data
         CHARACTER(LEN=512), INTENT(IN) :: original_data
@@ -525,7 +571,7 @@ MODULE MOD_AUTOFUNC
             WRITE(77,'(a)') 'end function '//TRIM(funcname)
         CLOSE(77)
 
-        CALL EXECUTE_COMMAND_LINE('gfortran -c -shared -O3 -w -fPIC '//TRIM(filename)//' -o '//TRIM(nf_cache_folder)//TRIM(funcname)//'.o', EXITSTAT=status)
+        CALL EXECUTE_COMMAND_LINE(TRIM(opt_f90_comp_cmd)//' '//TRIM(filename)//' -o '//TRIM(nf_cache_folder)//TRIM(funcname)//'.o', EXITSTAT=status)
         IF(status.NE.0) THEN
             CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Failed to compile the function provided.')
@@ -541,7 +587,7 @@ MODULE MOD_AUTOFUNC
     SUBROUTINE RECOMPILE_CACHE()
         INTEGER :: status
 
-        CALL EXECUTE_COMMAND_LINE('gcc -shared -fPIC '//TRIM(nf_cache_folder)//'*.o -o '//TRIM(dll_name), EXITSTAT=status)
+        CALL EXECUTE_COMMAND_LINE(TRIM(opt_lnk_cmd)//' '//TRIM(nf_cache_folder)//'*.o -o '//TRIM(dll_name), EXITSTAT=status)
         IF(status.NE.0) THEN
             CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Failed to link the function provided.')

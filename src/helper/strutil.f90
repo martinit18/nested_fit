@@ -65,3 +65,35 @@ SUBROUTINE STR_ARRAY_UNIQUE(array, countout)
    countout = countout - 1
    array = arrcpy
 END SUBROUTINE
+
+SUBROUTINE FILENAME_FIND_EXT(filename, ext)
+    IMPLICIT NONE
+    CHARACTER(*), INTENT(IN)  :: filename
+    CHARACTER(*), INTENT(OUT) :: ext
+
+    CHARACTER(128) :: ext_tmp(16) ! NOTE(César): Filenames with 16+ `.` chars will fail
+    INTEGER        :: total_sz
+
+    CALL SPLIT_INPUT_ON('.', filename, ext_tmp, total_sz, 16)
+
+    IF(total_sz.NE.1) THEN
+        ext = TRIM(ext_tmp(total_sz))
+    ELSE
+        ext = ''
+    ENDIF
+END SUBROUTINE
+
+SUBROUTINE ARRAY_JOIN(array, ch, output)
+    IMPLICIT NONE
+    CHARACTER(*), INTENT(IN) :: array(:)
+    CHARACTER(1), INTENT(IN) :: ch
+    CHARACTER(LEN=LEN(array(1))*SIZE(array)), INTENT(OUT) :: output
+
+    INTEGER :: i
+    
+    output = TRIM(array(1))
+    
+    DO i = 2, SIZE(array)
+        output = output//ch//TRIM(array(i))
+    END DO
+END SUBROUTINE

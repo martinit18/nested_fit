@@ -7,4 +7,10 @@ MODULE MOD_OPTIONS
     LOGICAL :: opt_suppress_output = .FALSE.
     LOGICAL :: opt_file_has_header = .FALSE.
     
+    ! TODO(César): This should be in a config file.
+    ! TODO(César): Also add this to the nf cache to load on next runs.
+    CHARACTER(LEN=512) :: opt_cpp_comp_cmd = 'g++ -c -shared -O3 -w -fPIC'
+    CHARACTER(LEN=512) :: opt_f90_comp_cmd = 'gfortran -c -shared -O3 -w -fPIC'
+    CHARACTER(LEN=512) :: opt_lnk_cmd      = 'gcc -shared -fPIC'
+    
 END MODULE MOD_OPTIONS

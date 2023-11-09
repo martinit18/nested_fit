@@ -188,7 +188,28 @@ PROGRAM NESTED_FIT
     "Overwrites the input filename. The input filename defaults to 'nf_input.dat'.",&
     B_INPUTFILE&
   ))
-   
+
+  CALL ADD_ARGUMENT(argdef_t("compile-cpp", "cc", .FALSE.,&
+    "Changes the compilation command for c++ when adding a raw function via the `function-add` command &
+     or the input file. This defaults to the g++ compiler: 'g++ -c -shared -O3 -w -fPIC'. &
+     LaTeX functions always compile to Fortran internally. Refer to the `compile-f90` command to change their &
+     compilation command.",&
+    B_CPPCMPCMD&
+  ))
+
+  CALL ADD_ARGUMENT(argdef_t("compile-f90", "cf", .FALSE.,&
+    "Changes the compilation command for Fortran when adding a raw function via the `function-add` command &
+     or the input file. This defaults to the gfortran compiler: 'gfortran -c -shared -O3 -w -fPIC'. &
+     LaTeX functions always compile to Fortran internally. This command also executes on their evaluation.",&
+    B_F90CMPCMD&
+  ))
+
+  CALL ADD_ARGUMENT(argdef_t("cache-link", "cl", .FALSE.,&
+    "Changes the link command for c++/Fortran when adding a raw function via the `function-add` command or the input file. &
+     Defaults to the gcc compiler: 'gcc -shared -fPIC'.",&
+    B_LNKCMD&
+  ))
+
   CALL ADD_ARGUMENT(argdef_t("cache-delete", "cd", .FALSE.,&
     "Deletes the user defined functions in the cache folder.",&
     B_DELCACHE&
@@ -1561,6 +1582,30 @@ PROGRAM NESTED_FIT
    CALL LOG_VERBOSITY('none')
    opt_suppress_output = .TRUE.
    CALL DISABLE_STDOUT()
+  END SUBROUTINE
+
+  SUBROUTINE B_CPPCMPCMD(this, invalue)
+   CLASS(argdef_t), INTENT(IN)    :: this
+   CHARACTER(LEN=512), INTENT(IN) :: invalue
+   
+   opt_cpp_comp_cmd = TRIM(invalue)
+   
+  END SUBROUTINE
+
+  SUBROUTINE B_F90CMPCMD(this, invalue)
+   CLASS(argdef_t), INTENT(IN)    :: this
+   CHARACTER(LEN=512), INTENT(IN) :: invalue
+   
+   opt_f90_comp_cmd = TRIM(invalue)
+   
+  END SUBROUTINE
+
+  SUBROUTINE B_LNKCMD(this, invalue)
+   CLASS(argdef_t), INTENT(IN)    :: this
+   CHARACTER(LEN=512), INTENT(IN) :: invalue
+   
+   opt_lnk_cmd = TRIM(invalue)
+   
   END SUBROUTINE
 
 END PROGRAM NESTED_FIT

@@ -11,6 +11,9 @@ bin/
 # vscode settings
 .vscode/
 
+# ccls cache
+.ccls-cache/
+
 # vscode line counter
 .VSCodeCounter/
 
