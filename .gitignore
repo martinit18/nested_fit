@@ -29,3 +29,7 @@ nested_py/*.egg-info/
 
 # Logfiles
 *.log
+
+# Ignore the api source (local only - César)
+src/api/
+

@@ -199,7 +199,7 @@ PROGRAM NESTED_FIT
 
   CALL ADD_ARGUMENT(argdef_t("compile-f90", "cf", .FALSE.,&
     "Changes the compilation command for Fortran when adding a raw function via the `function-add` command &
-     or the input file. This defaults to the gfortran compiler: 'gfortran -c -shared -O3 -w -fPIC'. &
+     or the input file. This defaults to the gfortran compiler: 'gfortran -cpp -c -shared -O3 -w -fPIC'. &
      LaTeX functions always compile to Fortran internally. This command also executes on their evaluation.",&
     B_F90CMPCMD&
   ))
@@ -1412,16 +1412,39 @@ PROGRAM NESTED_FIT
    CHARACTER(LEN=512), INTENT(IN) :: invalue
    CHARACTER(LEN=512)             :: definition
    TYPE(ParseLatex_t)             :: parse_result
-
-   parse_result = PARSE_LATEX(TRIM(invalue))
-
-   IF(parse_result%error.EQ.0) THEN
-      definition = TRIM(invalue(INDEX(invalue, '=')+1:LEN_TRIM(invalue)))
-      CALL COMPILE_CACHE_FUNC(parse_result, definition)
+   INTEGER                        :: last_char
+   
+   last_char = LEN_TRIM(invalue)
+   IF(last_char.LT.5) THEN
+      CALL LOG_ERROR_HEADER()
+      CALL LOG_ERROR('Failed to add user function.')
+      CALL LOG_ERROR('Must provide a LaTeX expression or a f90/c++ file.')
+      CALL LOG_ERROR('Aborting Execution...')
+      CALL LOG_ERROR_HEADER()
+      STOP
    ENDIF
 
-   CALL PARSE_LATEX_DEALLOC(parse_result)
-   STOP
+   ! NOTE(César) : Checking for an extension could work if the string ends in .ccc
+   !               Where this 'ccc' could only be chars or it could be confused
+   !               with a number end in latex (e.g. x + 1.342)
+   !               So checking for an extension is not that trivial
+   !               If the extension does not match a cpp or f90 one just assume we have latex code
+   
+   ! Detect if the input is latex or a file
+   IF(HAS_VALID_CPP_EXT(TRIM(invalue)).OR.HAS_VALID_F90_EXT(TRIM(invalue))) THEN
+      CALL COMPILE_CACHE_FUNC_NATIVE(TRIM(invalue))
+      STOP
+   ELSE
+      parse_result = PARSE_LATEX(TRIM(invalue))
+
+      IF(parse_result%error.EQ.0) THEN
+         definition = TRIM(invalue(INDEX(invalue, '=')+1:LEN_TRIM(invalue)))
+         CALL COMPILE_CACHE_FUNC(parse_result, definition)
+      ENDIF
+
+      CALL PARSE_LATEX_DEALLOC(parse_result)
+      STOP
+   ENDIF
   END SUBROUTINE
 
   SUBROUTINE B_RUNUSRFUNC(this, invalue)

@@ -773,7 +773,7 @@ extern "C" ParseOutput ParseLatexToF90(const char* input_stream)
     const std::vector<int>         call_argc  = std::get<3>(output);
     const std::vector<std::string> custom_bi  = std::get<4>(output);
 
-    // Make sure there is no 'rogue' parameters
+    // Make sure there are no 'rogue' parameters
     for(const auto& p : header_out.second)
     {
         if(std::find(parameters.begin(), parameters.end(), p) == parameters.end())

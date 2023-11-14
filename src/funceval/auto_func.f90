@@ -18,6 +18,7 @@ MODULE MOD_AUTOFUNC
     IMPLICIT NONE
     
     PUBLIC :: COMPILE_CACHE_FUNC, &
+        COMPILE_CACHE_FUNC_NATIVE, &
         RECOMPILE_CACHE, &
         LOAD_DLL_PROC, &
         FREE_DLL, &
@@ -31,7 +32,9 @@ MODULE MOD_AUTOFUNC
         GET_USER_FUNC_PROCPTR, &
         GET_CACHE_SIZE, &
         GET_CACHE, &
-        cache_entry_t
+        cache_entry_t, &
+        HAS_VALID_CPP_EXT, &
+        HAS_VALID_F90_EXT
     PRIVATE
 
     TYPE, BIND(c) :: ParseOutput_t
@@ -69,6 +72,23 @@ MODULE MOD_AUTOFUNC
 
         LOGICAL                                  :: valid = .FALSE.
     END TYPE ParseLatex_t
+
+    TYPE, BIND(c) :: NativeOutput_t
+        TYPE(c_ptr)    :: function_name
+        TYPE(c_ptr)    :: parameter_names
+        INTEGER(c_int) :: num_params
+        INTEGER(c_int) :: error
+    END TYPE NativeOutput_t
+
+    TYPE :: ParseNative_t
+        CHARACTER(128)                           :: function_name
+        CHARACTER(64), DIMENSION(:), ALLOCATABLE :: parameter_names
+        INTEGER                                  :: num_params
+
+        INTEGER                                  :: error
+
+        LOGICAL                                  :: valid = .FALSE.
+    END TYPE
 
     ! latex_parser.cpp interface
     INTERFACE
@@ -143,14 +163,41 @@ MODULE MOD_AUTOFUNC
             TYPE(c_funptr) :: dlsym
             TYPE(c_ptr), VALUE :: handle
             CHARACTER(c_char), INTENT(IN) :: name(*)
-         END FUNCTION
+        END FUNCTION
    
-         FUNCTION dlclose(handle) BIND(c,name="dlclose")
+        FUNCTION dlclose(handle) BIND(c,name="dlclose")
             USE iso_c_binding
             IMPLICIT NONE
             INTEGER(c_int) :: dlclose
             TYPE(c_ptr), VALUE :: handle
-         END FUNCTION
+        END FUNCTION
+    END INTERFACE
+    
+    ! native_parser.cpp interface
+    INTERFACE
+        FUNCTION ParseNativeFunc(lang, filename) RESULT(output) BIND(c,name="ParseNativeFunc")
+            USE iso_c_binding
+            IMPORT :: NativeOutput_t
+            IMPLICIT NONE
+            CHARACTER(c_char), INTENT(IN)  :: lang(*)
+            CHARACTER(c_char), INTENT(IN)  :: filename(*)
+            TYPE(NativeOutput_t)           :: output
+        END FUNCTION
+        
+        SUBROUTINE FreeNativeOutput(parsedata) BIND(c, name='FreeNativeOutput')
+            USE, INTRINSIC :: iso_c_binding
+            IMPORT :: NativeOutput_t
+            IMPLICIT NONE
+            TYPE(NativeOutput_t), INTENT(IN) :: parsedata
+        END SUBROUTINE
+
+        SUBROUTINE GetNativeErrorMsg(parsedata, message) BIND(c, name='GetNativeErrorMsg')
+            USE, INTRINSIC :: iso_c_binding
+            IMPORT :: NativeOutput_t
+            IMPLICIT NONE
+            TYPE(NativeOutput_t), INTENT(IN)             :: parsedata
+            CHARACTER(c_char), INTENT(OUT), DIMENSION(*) :: message
+        END SUBROUTINE
     END INTERFACE
 
     ABSTRACT INTERFACE
@@ -226,7 +273,67 @@ MODULE MOD_AUTOFUNC
         INTEGER                       :: i
 
         READ(input,*) output(1:size)
-    END SUBROUTINE   
+    END SUBROUTINE  
+
+    SUBROUTINE C_F_PARSESTRUCT_NATIVE(c_type, f_type)
+        USE iso_c_binding
+        TYPE(NativeOutput_t), INTENT(IN) :: c_type
+        TYPE(ParseNative_t), INTENT(OUT) :: f_type
+        CHARACTER(4096)                  :: tmp_string
+
+        ! easy copying the 'simpler' datatypes
+        f_type%num_params = c_type%num_params
+        f_type%error = c_type%error
+        f_type%valid = .TRUE.
+
+        ! Function name
+        CALL C_F_STRING(c_type%function_name, f_type%function_name)
+
+        ! Parameter names
+        CALL C_F_STRING(c_type%parameter_names, tmp_string)
+        ALLOCATE(f_type%parameter_names(f_type%num_params))
+        CALL STRING_SPLIT(tmp_string, f_type%parameter_names, f_type%num_params)
+    END SUBROUTINE
+
+    FUNCTION PARSE_NATIVE(lang, filename) RESULT(parsed_data_f)
+        CHARACTER(LEN=*), INTENT(IN)               :: lang
+        CHARACTER(LEN=*), INTENT(IN)               :: filename
+        TYPE(NativeOutput_t)                       :: parsed_data
+        TYPE(ParseNative_t)                        :: parsed_data_f
+        CHARACTER(c_char), DIMENSION(:)  , POINTER :: c_lang, c_filename
+        CHARACTER(128)                             :: error_msg
+
+        CALL F_C_STRING_ALLOC(lang, c_lang)
+        CALL F_C_STRING_ALLOC(filename, c_filename)
+        parsed_data = ParseNativeFunc(c_lang(1), c_filename(1)) ! Do the heavy lifting
+        CALL F_C_STRING_DEALLOC(c_lang)
+        CALL F_C_STRING_DEALLOC(c_filename)
+        
+        IF(parsed_data%error.NE.0) THEN
+            CALL GetNativeErrorMsg(parsed_data, error_msg)
+            CALL LOG_ERROR_HEADER()
+            CALL LOG_ERROR('Failed to load the native code provided.')
+            CALL LOG_ERROR('Error code = '//TRIM(error_msg(1:INDEX(error_msg, c_null_char)-1))//'.')
+            CALL LOG_ERROR('Aborting Execution...')
+            CALL LOG_ERROR_HEADER()
+            CALL FreeNativeOutput(parsed_data)
+            CALL HALT_EXECUTION()
+        ENDIF
+        
+        ! Initialize Fortran side struct with well defined types
+        CALL C_F_PARSESTRUCT_NATIVE(parsed_data, parsed_data_f)
+
+        ! Clean up C side
+        CALL FreeNativeOutput(parsed_data)
+    END FUNCTION
+
+    SUBROUTINE PARSE_NATIVE_DEALLOC(parsed_data)
+        TYPE(ParseNative_t), INTENT(INOUT) :: parsed_data
+        
+        parsed_data%valid = .FALSE.
+    
+        DEALLOCATE(parsed_data%parameter_names)
+    END SUBROUTINE
 
     SUBROUTINE C_F_PARSESTRUCT(c_type, f_type)
         USE iso_c_binding
@@ -473,22 +580,55 @@ MODULE MOD_AUTOFUNC
         RETURN
     END FUNCTION
 
+    FUNCTION HAS_VALID_F90_EXT(string)
+        CHARACTER(LEN=*), INTENT(IN)  :: string
+        CHARACTER(32)                 :: ext
+        LOGICAL                       :: HAS_VALID_F90_EXT
+
+        HAS_VALID_F90_EXT = .FALSE.
+        CALL FILENAME_FIND_EXT(string, ext)
+        IF(ANY([ CHARACTER(8) :: 'f90', 'f', 'F', 'F90' ].EQ.ext)) HAS_VALID_F90_EXT = .TRUE.
+    END FUNCTION
+
+    FUNCTION HAS_VALID_CPP_EXT(string)
+        CHARACTER(LEN=*), INTENT(IN)  :: string
+        CHARACTER(32)                 :: ext
+        LOGICAL                       :: HAS_VALID_CPP_EXT
+
+        HAS_VALID_CPP_EXT = .FALSE.
+        CALL FILENAME_FIND_EXT(string, ext)
+        IF(ANY([ CHARACTER(8) :: 'cpp', 'cxx', 'c++', 'inl' ].EQ.ext)) HAS_VALID_CPP_EXT = .TRUE.
+    END FUNCTION 
+
     SUBROUTINE COMPILE_CACHE_FUNC_NATIVE(filename)
         CHARACTER(LEN=*), INTENT(IN) :: filename
 
         CHARACTER(128) :: ext
+        CHARACTER(3)   :: lang
         CHARACTER(8)   :: supported_fext(4) = [ CHARACTER(8) :: 'f90', 'f', 'F', 'F90' ]
         CHARACTER(8)   :: supported_cext(4) = [ CHARACTER(8) :: 'cpp', 'cxx', 'c++', 'inl' ]
         CHARACTER(128) :: ext_help_text
         CHARACTER(64)  :: compiler_spec
+        CHARACTER(512) :: output
+        INTEGER        :: status
+        
+        CHARACTER(c_char), DIMENSION(:), POINTER :: c_input_lang
+        CHARACTER(c_char), DIMENSION(:), POINTER :: c_input_filename
+        CHARACTER(c_char), DIMENSION(:), POINTER :: c_output
+        INTEGER(c_int)                           :: c_error
+
+        TYPE(ParseNative_t) :: parsed_data
+        CHARACTER(512) :: long_filename
 
         ! NOTE(César): We support two languagues for function definitions: F and C++
         CALL FILENAME_FIND_EXT(filename, ext)
 
         IF(ANY(supported_fext.EQ.ext)) THEN
             compiler_spec = TRIM(opt_f90_comp_cmd)
+            lang = "f90"
         ELSE IF(ANY(supported_cext.EQ.ext)) THEN
             compiler_spec = TRIM(opt_cpp_comp_cmd)
+            lang = "cpp"
         ELSE
             IF(ext.EQ.'') THEN
                 CALL LOG_ERROR_HEADER()
@@ -512,10 +652,28 @@ MODULE MOD_AUTOFUNC
 
             CALL HALT_EXECUTION()
         ENDIF
+        
+        parsed_data = PARSE_NATIVE(lang, filename)
 
-        ! TODO(César): Regex the input file to figure out the function name, just like we do on CMake side.
-        ! TODO
-       
+        CALL LOG_TRACE('Compiling native function `'//TRIM(parsed_data%function_name)//'` from file `'//TRIM(filename)//'`.')
+        
+        CALL EXECUTE_COMMAND_LINE(TRIM(compiler_spec)//' '//TRIM(filename)//' -o '//TRIM(nf_cache_folder)//TRIM(parsed_data%function_name)//'.o', EXITSTAT=status)
+        IF(status.NE.0) THEN
+            CALL LOG_ERROR_HEADER()
+            CALL LOG_ERROR('Failed to compile the function provided.')
+            CALL LOG_ERROR('Aborting Execution...')
+            CALL LOG_ERROR_HEADER()
+            CALL HALT_EXECUTION()
+        ENDIF
+        CALL RECOMPILE_CACHE()
+        ! TODO(César): Find the param count from regex (#define/variable? on outer scope)
+        !              Probably a define??
+        long_filename = ''
+        long_filename = TRIM(filename)
+        CALL UPDATE_CACHE(TRIM(parsed_data%function_name), parsed_data%num_params + 1, long_filename)
+        CALL WRITE_CACHE()
+
+        CALL PARSE_NATIVE_DEALLOC(parsed_data)
     END SUBROUTINE
 
     SUBROUTINE COMPILE_CACHE_FUNC(parse_data, original_data)
@@ -537,7 +695,7 @@ MODULE MOD_AUTOFUNC
         
         WRITE(filename, '(a,a)') TRIM(nf_cache_folder), 'last_compile.f90'
         OPEN(UNIT=77, FILE=TRIM(filename), STATUS='UNKNOWN')
-            WRITE(77,'(a)') 'function '//TRIM(funcname)//"(x, npar, params) bind(c, name='"//TRIM(funcname_lowercase)//"_')"
+            WRITE(77,'(a)') 'function '//TRIM(funcname)//"(x, npar, params) bind(c, name='"//TRIM(funcname_lowercase)//"')"
             WRITE(77,'(a)') char(9)//'use, intrinsic :: iso_c_binding'
             WRITE(77,'(a)') char(9)//'implicit none'
             WRITE(77,'(a)') char(9)//'real(8), intent(in) :: x'
@@ -577,7 +735,7 @@ MODULE MOD_AUTOFUNC
             CALL LOG_ERROR('Failed to compile the function provided.')
             CALL LOG_ERROR('Aborting Execution...')
             CALL LOG_ERROR_HEADER()
-            STOP ! NOTE(César) : This works, before MPI init!!
+            CALL HALT_EXECUTION()
         ENDIF
         CALL RECOMPILE_CACHE()
         CALL UPDATE_CACHE(TRIM(funcname), argc, original_data)
@@ -593,7 +751,7 @@ MODULE MOD_AUTOFUNC
             CALL LOG_ERROR('Failed to link the function provided.')
             CALL LOG_ERROR('Aborting Execution...')
             CALL LOG_ERROR_HEADER()
-            STOP ! NOTE(César) : This works, before MPI init!!
+            CALL HALT_EXECUTION()
         ENDIF
     END SUBROUTINE
 
@@ -635,7 +793,7 @@ MODULE MOD_AUTOFUNC
             RETURN
         ENDIF
 
-        procaddr = dlsym(fileaddr, TRIM(procname)//'_'//c_null_char)
+        procaddr = dlsym(fileaddr, TRIM(procname)//c_null_char)
         IF(.NOT.c_associated(procaddr)) THEN
             CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Could not load dynamic function ('//TRIM(procname)//').')

@@ -182,6 +182,7 @@ set(CFG_FILES
 
 set(SRC_FILES_CXX
     src/helper/disable_stdout.cpp
+    src/funceval/native_parser.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/latex_parser.cpp
 )
 
