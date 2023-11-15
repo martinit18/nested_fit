@@ -666,8 +666,7 @@ MODULE MOD_AUTOFUNC
             CALL HALT_EXECUTION()
         ENDIF
         CALL RECOMPILE_CACHE()
-        ! TODO(César): Find the param count from regex (#define/variable? on outer scope)
-        !              Probably a define??
+
         long_filename = ''
         long_filename = TRIM(filename)
         CALL UPDATE_CACHE(TRIM(parsed_data%function_name), parsed_data%num_params + 1, long_filename)

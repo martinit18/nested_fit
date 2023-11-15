@@ -189,7 +189,7 @@ PROGRAM NESTED_FIT
     B_INPUTFILE&
   ))
 
-  CALL ADD_ARGUMENT(argdef_t("compile-cpp", "cc", .FALSE.,&
+  CALL ADD_ARGUMENT(argdef_t("compile-cpp", "cc", .TRUE.,&
     "Changes the compilation command for c++ when adding a raw function via the `function-add` command &
      or the input file. This defaults to the g++ compiler: 'g++ -c -shared -O3 -w -fPIC'. &
      LaTeX functions always compile to Fortran internally. Refer to the `compile-f90` command to change their &
@@ -197,16 +197,16 @@ PROGRAM NESTED_FIT
     B_CPPCMPCMD&
   ))
 
-  CALL ADD_ARGUMENT(argdef_t("compile-f90", "cf", .FALSE.,&
+  CALL ADD_ARGUMENT(argdef_t("compile-f90", "cf", .TRUE.,&
     "Changes the compilation command for Fortran when adding a raw function via the `function-add` command &
      or the input file. This defaults to the gfortran compiler: 'gfortran -cpp -c -shared -O3 -w -fPIC'. &
      LaTeX functions always compile to Fortran internally. This command also executes on their evaluation.",&
     B_F90CMPCMD&
   ))
 
-  CALL ADD_ARGUMENT(argdef_t("cache-link", "cl", .FALSE.,&
+  CALL ADD_ARGUMENT(argdef_t("cache-link", "cl", .TRUE.,&
     "Changes the link command for c++/Fortran when adding a raw function via the `function-add` command or the input file. &
-     Defaults to the gcc compiler: 'gcc -shared -fPIC'.",&
+     Also gets triggered on `cache-recompile` commands. Defaults to the gcc compiler: 'gcc -shared -fPIC'.",&
     B_LNKCMD&
   ))
 
