@@ -53,10 +53,6 @@ FUNCTION Interpolate(interpolator_file, x, s)
         CALL LOG_ERROR('Aborting Execution...')
         CALL LOG_ERROR_HEADER()
 
-        ! TODO(César) : How do we handle this if we are inside an OpenMPI context???
-! #ifdef OPENMPI_ON
-!         CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-! #endif
-        STOP
+        CALL HALT_EXECUTION()
     ENDIF
 END FUNCTION
