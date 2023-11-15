@@ -205,7 +205,7 @@ add_executable(${nested_fit_target_func}
 )
 
 # TODO(César): This assumes we are using gfortran!
-set(SRC_FLAGS_D     -cpp -O0 -Wall -g -ffree-line-length-0 -ffixed-line-length-0)
+set(SRC_FLAGS_D     -cpp -O0 -Wall -g -ffree-line-length-0 -ffixed-line-length-0 -Wno-ampersand -Wno-tabs -Wno-unused-dummy-argument)
 set(SRC_FLAGS_R     -cpp -O2 -static -ffree-line-length-0 -ffixed-line-length-0)
 
 set(SRC_FLAGS_CXX_D -O0 -Wall -pedantic -g)      # Be pedantic
