@@ -13,7 +13,7 @@
 #include <limits>
 #include <cmath> 
 
-// E.g. Linear function with params (using a tuple)
+// E.g. Linear function with params (using a pair)
 using DoublePair = std::pair<double, double>;
 static double linear(const double x, const DoublePair& params)
 {
