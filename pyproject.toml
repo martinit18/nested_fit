@@ -3,9 +3,9 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "nested_py"
-version = "4.5"
-description = "A python integration of the nested_fit package."
+name = "nested_fit"
+version = "5.0.0"
+description = "The nested_fit package."
 
 authors = [
     {name = "Martino Trassinelli"},
@@ -14,8 +14,10 @@ authors = [
 ]
 
 classifiers = [
+    "Programming Language :: Fortran",
+    "Programming Language :: C++",
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: MIT License", # What license are we using really?
     "Operating System :: OS Independent"
 ]
 
@@ -27,9 +29,6 @@ dependencies = [
     "getdist",
     "tqdm"
 ]
-
-# [project.scripts]
-# install_script = "nested_py.install:start"
 
 [project.urls]
 "Homepage" = "https://github.com/martinit18/nested_fit"

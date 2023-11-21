@@ -25,7 +25,10 @@ tests/*/nf_input.dat
 __pycache__/
 
 # Python build metadata
-nested_py/*.egg-info/
+*.egg-info/
+
+# Python dist build
+dist/
 
 # Logfiles
 *.log

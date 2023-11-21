@@ -4,16 +4,12 @@ cmake_minimum_required(VERSION 3.10)
 # Custom variables are here for now #
 #####################################
 
-# Tests 
-#enable_testing()
-#add_subdirectory(tests)
-
-# The latest nested_res -> This gets copied to the user bin/
-set(nested_res_name nested_res_V4p5.py)
-
 # The nested_fit version being built -> This gets copied everywhere inside the project code
 # For more info see the 'src/Mod_metadata.f90.in' file
-set(project_version 5.0.0)
+# Read the version from the .toml file since this is what will be pushed to the repo
+file(READ "pyproject.toml" tomlfile)
+string(REGEX MATCH "version = \"([0-9]+\\.[0-9]+\\.[0-9]+)\"" vn ${tomlfile})
+set(project_version ${CMAKE_MATCH_1})
 
 # Global options
 option(DEBUG "Enable debug mode." OFF)
@@ -22,8 +18,8 @@ option(OPENMP "Enable/Disable OpenMP." OFF)
 option(OPENMPI "Enable/Disable OpenMPI." OFF)
 option(AUTOTESTS "Automatically run tests after compiling." OFF)
 option(LAPACK "Enable/Disable LAPACK." OFF)
-option(BUILD_NESTED_PY "Automatically build nested_res for PyPI." OFF)
 option(LTRACE "Enable trace logging." OFF)
+option(INSTALL_SYSTEM_WIDE "Install on '/usr/local' instead of '$HOME/.local'." OFF)
 
 if(OPENMPI AND WIN32)
     message(FATAL_ERROR "Windows builds don't currently support OpenMPI.")
@@ -42,6 +38,17 @@ project(nested_fit VERSION ${project_version} LANGUAGES Fortran CXX)
 #    find_package(BLAS REQUIRED)
 #    find_package(LAPACK REQUIRED)
 #endif()
+
+if(NOT INSTALL_SYSTEM_WIDE)
+    if(WIN32)
+        # On Windows, install on the user folder under 'nested_fit'
+        set(CMAKE_INSTALL_PREFIX $ENV{USERPROFILE}/nested_fit)
+    else()
+        # On Linux/MacOS install on the home/.local
+        set(CMAKE_INSTALL_PREFIX $ENV{HOME}/.local)
+    endif()
+endif()
+message(STATUS "Install prefix set to: ${CMAKE_INSTALL_PREFIX}") 
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
@@ -317,44 +324,6 @@ add_custom_target(copy_internal_functions ALL
     COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_OBJECTS:internal_functions> ${nested_fit_cache_folder}
     COMMAND_EXPAND_LISTS
 )
-
-if(BUILD_NESTED_PY)
-    find_package(Python COMPONENTS Interpreter QUIET)
-    set(nested_res_dist_dir ${CMAKE_BINARY_DIR}/nested_py)
-    if(Python_FOUND)
-        # Upgrade the PyPA's build
-        install(CODE
-            "# add_custom_command(TARGET ${nested_fit_target} POST_BUILD
-            execute_process(
-                COMMAND ${Python_EXECUTABLE} -m pip install --upgrade build
-            )"
-        )
-
-        # Just build the package
-        install(CODE
-            "# add_custom_command(TARGET ${nested_fit_target} POST_BUILD
-            execute_process(
-                COMMAND ${Python_EXECUTABLE} -m build ${CMAKE_SOURCE_DIR}/nested_py/ --outdir ${nested_res_dist_dir}
-            )"
-        )
-
-        # No need to build from wheel (we got the source)
-        install(CODE "execute_process(COMMAND ${Python_EXECUTABLE} -m pip install ${CMAKE_SOURCE_DIR}/nested_py/)")
-
-        # Make a custom target for python also, not requiring installation
-        add_custom_target(nested_py
-            ${Python_EXECUTABLE} -m pip install --upgrade build
-            COMMAND ${Python_EXECUTABLE} -m build ${CMAKE_SOURCE_DIR}/nested_py/ --outdir ${nested_res_dist_dir}
-            BYPRODUCTS *.whl
-        )
-
-        # Add a custom target for publishing python to the online PyPI index
-        # TODO(César)
-    else()
-        message(WARNING "Python not found. nested_res will not be built/installed on the system.")
-        message(WARNING "If you wish to build, install python3 and re-run this command.")
-    endif()
-endif()
 
 install(TARGETS ${nested_fit_target}      DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
 install(TARGETS ${nested_fit_target_func} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)

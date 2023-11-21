@@ -1,9 +1,0 @@
-pyproject.toml
-nested_py/__init__.py
-nested_py/nested_res.py
-nested_py/nested_run.py
-nested_py.egg-info/PKG-INFO
-nested_py.egg-info/SOURCES.txt
-nested_py.egg-info/dependency_links.txt
-nested_py.egg-info/requires.txt
-nested_py.egg-info/top_level.txt
