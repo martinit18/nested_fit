@@ -18,14 +18,12 @@ jobs:
                 build_type: [Release]
                 toolchain:
                     - {compiler: gcc, version: 13}
-                    - {compiler: gcc, version: 12}
-                    - {compiler: gcc, version: 11}
-                    - {compiler: gcc, version: 10}
                     - {compiler: gcc, version: 9}
-                    - {compiler: intel-classic, version: '2021.10'}
+                    # ifort is not supported on the experimental branch as of November 2023
+                    # - {compiler: intel-classic, version: '2021.10'}
                 exclude:
                     - os: macos-latest
-                      toolchain: {compiler: gcc, verion: 9} # gcc >= 10 on macos
+                      toolchain: {compiler: gcc, verion: 9} # gcc > 9 on macos
         steps:
         - uses: actions/checkout@v3
 
