@@ -33,24 +33,24 @@ jobs:
                     - os: ubuntu-latest
                       c_compiler: cl
             
-            steps:
-            - uses: actions/checkout@v3
+        steps:
+        - uses: actions/checkout@v3
 
-            - name: Set reusable strings
-              id: strings
-              shell: bash
-              run: |
-                  echo "build-output-dir=${{github.workspace}}/build" >> "$GITHUB_OUTPUT"
+        - name: Set reusable strings
+          id: strings
+          shell: bash
+          run: |
+              echo "build-output-dir=${{github.workspace}}/build" >> "$GITHUB_OUTPUT"
 
-            - name: Configure CMake
-              run: >
-                  cmake -B ${{steps.strings.outputs.build-output-dir}}
-                  -DCMAKE_CXX_COMPILER=${{matrix.cpp_compiler}}
-                  -DCMAKE_C_COMPILER=${{matrix.c_compiler}}
-                  -DCMAKE_FORTRAN_COMPILER=${{matrix.f_compiler}}
-                  -DCMAKE_BUILD_TYPE=${{matrix.build_type}}
-                  -S ${{github.workspace}}
+        - name: Configure CMake
+          run: >
+              cmake -B ${{steps.strings.outputs.build-output-dir}}
+              -DCMAKE_CXX_COMPILER=${{matrix.cpp_compiler}}
+              -DCMAKE_C_COMPILER=${{matrix.c_compiler}}
+              -DCMAKE_FORTRAN_COMPILER=${{matrix.f_compiler}}
+              -DCMAKE_BUILD_TYPE=${{matrix.build_type}}
+              -S ${{github.workspace}}
 
-            - name: Build
-              run: cmake --build ${{steps.strings.outputs.build-output-dir}} --config ${{matrix.build_type}}
+        - name: Build
+          run: cmake --build ${{steps.strings.outputs.build-output-dir}} --config ${{matrix.build_type}}
 
