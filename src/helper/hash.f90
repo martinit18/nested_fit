@@ -21,7 +21,7 @@ SUBROUTINE MURMURHASH2_32(input, len, output)
     CHARACTER , INTENT(IN)  :: input(len)
     INTEGER(4), INTENT(OUT) :: output
     
-    INTEGER(4), PARAMETER :: m = '5bd1e995'X
+    INTEGER(4), PARAMETER :: m = 1540483477
     INTEGER(4), PARAMETER :: r = 24
     INTEGER(4)            :: h, k, l, i
 
