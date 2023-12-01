@@ -4,12 +4,23 @@ cmake_minimum_required(VERSION 3.10)
 # Custom variables are here for now #
 #####################################
 
+#####################################
+# This CMake file also generates an #
+# autoconf file alongside an auto   #
+# make one. This is done to support #
+# backwards compatibility for older #
+# systems.                          #
+#####################################
+include(cmake/autoconf_gen.cmake)
+
 # The nested_fit version being built -> This gets copied everywhere inside the project code
 # For more info see the 'src/Mod_metadata.f90.in' file
 # Read the version from the .toml file since this is what will be pushed to the repo
 file(READ "pyproject.toml" tomlfile)
 string(REGEX MATCH "version = \"([0-9]+\\.[0-9]+\\.[0-9]+)\"" vn ${tomlfile})
 set(project_version ${CMAKE_MATCH_1})
+
+ac_set_project_version(${project_version})
 
 # Global options
 option(DEBUG "Enable debug mode." OFF)
@@ -21,6 +32,16 @@ option(LAPACK "Enable/Disable LAPACK." OFF)
 option(LTRACE "Enable trace logging." OFF)
 option(INSTALL_SYSTEM_WIDE "Install on '/usr/local' instead of '$HOME/.local'." OFF) # Requires privileged user
 
+# Compatibility Global options
+ac_add_option("debug" "Enable debug mode." OFF)
+ac_add_option("norng" "Uses the same set seed. Useful for testing." OFF)
+ac_add_option("openmp" "Enable/Disable OpenMP." OFF)
+ac_add_option("openmpi" "Enable/Disable OpenMPI." OFF)
+ac_add_option("autotests" "Automatically run tests after compiling." OFF)
+ac_add_option("lapack" "Enable/Disable LAPACK." OFF)
+ac_add_option("ltrace" "Enable trace logging." OFF)
+ac_add_option("install_system_wide" "Install on '/usr/local' instead of '$HOME/.local'." OFF)
+
 if(OPENMPI AND WIN32)
     message(FATAL_ERROR "Windows builds don't currently support OpenMPI.")
 endif()
@@ -29,10 +50,19 @@ if(LTRACE)
     add_definitions(-DLTRACE)
 endif()
 
+am_inline_code("
+AM_COND_IF(
+    [ltrace],
+    [AC_DEFINE(ltrace)]
+)
+")
+
 #####################################
 #####################################
 
 project(nested_fit VERSION ${project_version} LANGUAGES Fortran CXX)
+
+ac_set_project_name("nested_fit")
 
 #if(LAPACK)
 #    find_package(BLAS REQUIRED)
@@ -50,6 +80,10 @@ if(NOT INSTALL_SYSTEM_WIDE)
 endif()
 message(STATUS "Install prefix set to: ${CMAKE_INSTALL_PREFIX}") 
 
+am_inline_code("
+AM_COND_IF([install_system_wide], [], [prefix = $HOME/.local])
+")
+message(STATUS ${AUTO_MAKE_INLINE_CODE})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
 set(nested_fit_version_full_str "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}.${CMAKE_PROJECT_VERSION_PATCH}")

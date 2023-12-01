@@ -1,0 +1,7 @@
+# This file is configured by cmake
+AC_INIT([@project_name@], [@project_version@])
+AC_OUTPUT
+
+AM_INIT_AUTOMAKE
+AC_CONFIG_FILES([Makefile])
+AC_PROG_CXX
