@@ -116,7 +116,7 @@ MODULE MOD_INTERPOLATE
 
         r    = 0
         nest = m+k+1
-        n = m - 1
+        n = m / 2
         lwrk = (m*(k+1)+nest*(7+3*k))*2
         CALL LOG_TRACE('Interpolator working sizes: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(nest)))//' '//TRIM(ADJUSTL(INT_TO_STR_INLINE(lwrk)))//' '//TRIM(ADJUSTL(INT_TO_STR_INLINE(n))))
         ALLOCATE(wrk(lwrk), iwrk(nest))
