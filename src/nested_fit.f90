@@ -2,6 +2,14 @@ PROGRAM NESTED_FIT
   ! Time-stamp: <Last changed by martino on Monday 07 June 2021 at CEST 10:29:22>
   !
   ! Please read README and LICENSE files for more information
+  ! 5.0  Update README.md
+  !      Add CI support via github actions. Only available for linux and macOS.
+  !      Add support to fully install via pip.
+  !      Add python package install support (not published).
+  !      Support custom data file column ordering/separation. Support .csv, .tsv
+  !      New native function parser that reads users Fortran or C/C++ files with functions.
+  !      New LaTeX function parser that reads user inline functions.
+  !      Complete overhaul of input file and function user function definition.
   ! 4.5  New modified Jeffreys likelihood for data
   ! 4.4  New "write_input" function in python library
   !      New fit functions
