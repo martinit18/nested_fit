@@ -1,7 +1,53 @@
 # This file is configured by cmake
 AC_INIT([@project_name@], [@project_version@])
-AC_OUTPUT
 
 AM_INIT_AUTOMAKE
-AC_CONFIG_FILES([Makefile])
 AC_PROG_CXX
+
+AC_ARG_ENABLE(
+    [debug],
+    AS_HELP_STRING([--enable-debug], ["Enable debug mode."])
+)
+AC_ARG_ENABLE(
+    [norng],
+    AS_HELP_STRING([--enable-norng],
+                   ["Use the same set seed. Usefull for testing"])
+)
+AC_ARG_ENABLE(
+    [openmp],
+    AS_HELP_STRING([--enable-openmp], ["Enable OpenMP."])
+)
+AC_ARG_ENABLE(
+    [openmpi],
+    AS_HELP_STRING([--enable-openmpi], ["Enable OpenMPI."])
+)
+AC_ARG_ENABLE(
+    [autotests],
+    AS_HELP_STRING([--enable-autotests],
+                   ["Automatically run tests after compiling."])
+)
+AC_ARG_ENABLE(
+    [lapack],
+    AS_HELP_STRING([--enable-lapack], ["Enable LAPACK."])
+)
+AC_ARG_ENABLE(
+    [ltrace],
+    AS_HELP_STRING([--enable-ltrace], ["Enable trace logging."])
+)
+AC_ARG_ENABLE(
+    [istall-system-wide],
+    AS_HELP_STRING([--enable-install-system-wide],
+                   ["Install on '/usr/local' instead of '$HOME/.local'."])
+)
+
+AM_CONDITIONAL([LTRACE], [test x$ltrace = xtrue])
+AM_COND_IF(
+    [LTRACE],
+    [AC_DEFINE(LTRACE)]
+)
+
+AM_CONDITIONAL([INSTALL_SYSTEM_WIDE], [test x$install-system-wide = xtrue])
+AM_COND_IF([INSTALL_SYSTEM_WIDE], [], [prefix = $HOME/.local])
+
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

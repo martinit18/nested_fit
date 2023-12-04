@@ -31,16 +31,17 @@ option(AUTOTESTS "Automatically run tests after compiling." OFF)
 option(LAPACK "Enable/Disable LAPACK." OFF)
 option(LTRACE "Enable trace logging." OFF)
 option(INSTALL_SYSTEM_WIDE "Install on '/usr/local' instead of '$HOME/.local'." OFF) # Requires privileged user
+option(CREATE_AUTOCONF "Builds a 'configure' script for older systems." OFF)
 
-# Compatibility Global options
-ac_add_option("debug" "Enable debug mode." OFF)
-ac_add_option("norng" "Uses the same set seed. Useful for testing." OFF)
-ac_add_option("openmp" "Enable/Disable OpenMP." OFF)
-ac_add_option("openmpi" "Enable/Disable OpenMPI." OFF)
-ac_add_option("autotests" "Automatically run tests after compiling." OFF)
-ac_add_option("lapack" "Enable/Disable LAPACK." OFF)
-ac_add_option("ltrace" "Enable trace logging." OFF)
-ac_add_option("install_system_wide" "Install on '/usr/local' instead of '$HOME/.local'." OFF)
+# # Compatibility Global options
+# ac_add_option("debug" "Enable debug mode." OFF)
+# ac_add_option("norng" "Uses the same set seed. Useful for testing." OFF)
+# ac_add_option("openmp" "Enable/Disable OpenMP." OFF)
+# ac_add_option("openmpi" "Enable/Disable OpenMPI." OFF)
+# ac_add_option("autotests" "Automatically run tests after compiling." OFF)
+# ac_add_option("lapack" "Enable/Disable LAPACK." OFF)
+# ac_add_option("ltrace" "Enable trace logging." OFF)
+# ac_add_option("install_system_wide" "Install on '/usr/local' instead of '$HOME/.local'." OFF)
 
 if(OPENMPI AND WIN32)
     message(FATAL_ERROR "Windows builds don't currently support OpenMPI.")
@@ -50,19 +51,20 @@ if(LTRACE)
     add_definitions(-DLTRACE)
 endif()
 
-am_inline_code("
-AM_COND_IF(
-    [ltrace],
-    [AC_DEFINE(ltrace)]
-)
-")
+# am_inline_code("
+# AM_COND_IF(
+#     [ltrace],
+#     [AC_DEFINE(ltrace)]
+# )
+# ")
 
 #####################################
 #####################################
 
-project(nested_fit VERSION ${project_version} LANGUAGES Fortran CXX)
+set(project_name nested_fit)
+project(${project_name} VERSION ${project_version} LANGUAGES Fortran CXX)
 
-ac_set_project_name("nested_fit")
+# ac_set_project_name("nested_fit")
 
 #if(LAPACK)
 #    find_package(BLAS REQUIRED)
@@ -80,9 +82,9 @@ if(NOT INSTALL_SYSTEM_WIDE)
 endif()
 message(STATUS "Install prefix set to: ${CMAKE_INSTALL_PREFIX}") 
 
-am_inline_code("
-AM_COND_IF([install_system_wide], [], [prefix = $HOME/.local])
-")
+# am_inline_code("
+# AM_COND_IF([install_system_wide], [], [prefix = $HOME/.local])
+# ")
 message(STATUS ${AUTO_MAKE_INLINE_CODE})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
@@ -367,5 +369,22 @@ if(OPENMPI)
     install(TARGETS ${nested_fit_mpi_child_comm_proc_name} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
 endif()
 
+# configure compatibility files for autoconf / automake
+if(CREATE_AUTOCONF)
+    configure_file(configure.ac.in configure.ac @ONLY)
+    configure_file(Makefile.am.in Makefile.am @ONLY)
+
+    file(WRITE ${CMAKE_BINARY_DIR}/NEWS "")
+    file(WRITE ${CMAKE_BINARY_DIR}/COPYING "")
+    file(WRITE ${CMAKE_BINARY_DIR}/ChangeLog "")
+    file(WRITE ${CMAKE_BINARY_DIR}/README "")
+    file(WRITE ${CMAKE_BINARY_DIR}/AUTHORS "")
+    
+    execute_process(COMMAND autoreconf -vif)
+
+    # Run auto config
+    file(COPY ${CMAKE_BINARY_DIR}/configure DESTINATION ${CMAKE_CURRENT_LIST_DIR})
+    # file(COPY ${CMAKE_BINARY_DIR}/install-sh DESTINATION ${CMAKE_CURRENT_LIST_DIR})
+endif()
 # enable_testing() Don't use CTest
 add_subdirectory(tests)

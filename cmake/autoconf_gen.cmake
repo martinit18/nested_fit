@@ -39,5 +39,7 @@ function(am_inline_code code)
     set(AUTO_MAKE_INLINE_CODE ${AUTO_MAKE_INLINE_CODE} PARENT_SCOPE)
 endfunction(am_inline_code)
 
+# Make a mixture of makefile + inline code from cmake when configuring autotools
+
 # function()
 
