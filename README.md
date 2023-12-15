@@ -99,6 +99,7 @@ If Python is found an utility for running and analysing data using nested_fit is
 |AUTOTESTS           | Automatically run tests after compiling.                             | OFF     |
 |LAPACK              | Use LAPACK library functions instead of the internal ones.           | OFF     |
 |LTRACE              | Enable trace logging output. Will hinder performance.                | OFF     |
+|PPROF               | Enable performance counter profilling.                               | OFF     |
 |INSTALL_SYSTEM_WIDE | Install for all users (differs for each OS). Requires elevated user. | OFF     |
 
 

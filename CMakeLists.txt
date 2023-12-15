@@ -11,6 +11,9 @@ file(READ "pyproject.toml" tomlfile)
 string(REGEX MATCH "version = \"([0-9]+\\.[0-9]+\\.[0-9]+)\"" vn ${tomlfile})
 set(project_version ${CMAKE_MATCH_1})
 
+# This is just for the clangd LSP
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Global options
 option(DEBUG "Enable debug mode." OFF)
 option(NORNG "Uses the same set seed. Useful for testing." OFF)
@@ -19,6 +22,7 @@ option(OPENMPI "Enable/Disable OpenMPI." OFF)
 option(AUTOTESTS "Automatically run tests after compiling." OFF)
 option(LAPACK "Enable/Disable LAPACK." OFF)
 option(LTRACE "Enable trace logging." OFF)
+option(PPROF "Enable performance counter profilling." OFF)
 option(INSTALL_SYSTEM_WIDE "Install on '/usr/local' instead of '$HOME/.local'." OFF) # Requires privileged user
 
 if(OPENMPI AND WIN32)
@@ -38,6 +42,20 @@ project(nested_fit VERSION ${project_version} LANGUAGES Fortran CXX)
 #    find_package(BLAS REQUIRED)
 #    find_package(LAPACK REQUIRED)
 #endif()
+
+if(PPROF)
+    add_definitions(-DPPROF)
+    include(FetchContent)
+    FetchContent_Declare(
+        stperf
+        GIT_REPOSITORY https://github.com/lPrimemaster/stperf.git
+    )
+    FetchContent_MakeAvailable(stperf)
+else()
+    # Make that so C++ does not complaint
+    add_definitions(-DST_PROF)
+    add_definitions(-DST_PROF_NAMED)
+endif()
 
 if(NOT INSTALL_SYSTEM_WIDE)
     if(WIN32)
@@ -95,6 +113,8 @@ set(SRC_FILES_COMM
     src/Mod_userfcn.f90
 
     src/Mod_logger.f90
+
+    src/Mod_perfprof.f90
 
     src/helper/halt.f90
     src/helper/strutil.f90
@@ -215,8 +235,8 @@ add_executable(${nested_fit_target_func}
 set(SRC_FLAGS_D     -cpp -O0 -Wall -g -ffree-line-length-0 -ffixed-line-length-0 -Wno-ampersand -Wno-tabs -Wno-unused-dummy-argument)
 set(SRC_FLAGS_R     -cpp -O2 -static -ffree-line-length-0 -ffixed-line-length-0)
 
-set(SRC_FLAGS_CXX_D -O0 -Wall -pedantic -g)      # Be pedantic
-set(SRC_FLAGS_CXX_R -O2 -Wall -pedantic -static) # Be pedantic on release too
+set(SRC_FLAGS_CXX_D -O0 -Wall -pedantic -g -Wno-missing-field-initializers)      # Be pedantic
+set(SRC_FLAGS_CXX_R -O2 -Wall -pedantic -static -Wno-missing-field-initializers) # Be pedantic on release too
 
 
 # NOTE(César): This is required to preprocessor the OpenMP comments
@@ -268,6 +288,14 @@ endif()
 
 target_link_libraries(${nested_fit_target}      PUBLIC dl)
 target_link_libraries(${nested_fit_target_func} PUBLIC dl)
+
+if(PPROF)
+    target_include_directories(${nested_fit_target}      PRIVATE ${stperf_SOURCE_DIR})
+    target_include_directories(${nested_fit_target_func} PRIVATE ${stperf_SOURCE_DIR})
+
+    target_link_libraries(${nested_fit_target}      PRIVATE stperf)
+    target_link_libraries(${nested_fit_target_func} PRIVATE stperf)
+endif()
 
 if(OPENMP)
     target_link_options(${nested_fit_target}      PRIVATE "-fopenmp")

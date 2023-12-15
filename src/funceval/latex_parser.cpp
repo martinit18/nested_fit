@@ -11,7 +11,6 @@
 // - Superscript is not allowed (only for powers)
 
 // Lets keep C++11 compliant
-#include <memory>
 #include <regex>
 #include <string>
 #include <cstring>
@@ -20,6 +19,10 @@
 #include <map>
 #include <cassert>
 #include <fstream>
+
+#ifdef PPROF
+#include <stperf.h>
+#endif
 
 extern "C" struct ParseOutput
 {
@@ -68,6 +71,7 @@ static std::vector<std::pair<std::string, std::string>> FindArgs(
     std::function<bool(const std::string&, const std::string&)> replace_check = std::function<bool(const std::string&, const std::string&)>([](const std::string&, const std::string&) -> bool { return true; })
 )
 {
+    ST_PROF;
     std::vector<std::pair<std::string, std::string>> args;
     std::smatch match;
     std::string::const_iterator searchStart(input.cbegin());
@@ -121,6 +125,7 @@ static std::vector<std::string> FindArg(
     std::function<std::string(const std::string&)> replace_template
 )
 {
+    ST_PROF;
     std::vector<std::string> args;
     std::smatch match;
     std::string::const_iterator searchStart(input.cbegin());
@@ -157,6 +162,7 @@ static std::vector<std::string> FindArg(
 
 static std::vector<std::string> FindStrings(const std::string& input)
 {
+    ST_PROF;
     std::vector<std::string> strings;
     std::smatch match;
     std::string::const_iterator searchStart(input.cbegin());
@@ -171,6 +177,7 @@ static std::vector<std::string> FindStrings(const std::string& input)
 
 static void ReplaceToken(const std::string& token, const std::string& replacement, std::string& input)
 {
+    ST_PROF;
     std::smatch match;
     std::string::const_iterator searchStart(input.cbegin());
     std::vector<std::pair<std::ptrdiff_t, std::size_t>> replace;
@@ -197,6 +204,7 @@ static void InsertAfterToken(
     std::function<bool(const std::ptrdiff_t&, const std::string&)> condition
 )
 {
+    ST_PROF;
     std::smatch match;
     std::string::const_iterator searchStart(input.cbegin());
     std::vector<std::ptrdiff_t> position;
@@ -221,6 +229,7 @@ static void InsertAfterToken(
 
 static std::string RemoveAll(const std::string& input, const std::string& kw)
 {
+    ST_PROF;
     std::string output;
     output.reserve(input.length());
     std::string::size_type lastPos = 0;
@@ -241,6 +250,7 @@ static std::string RemoveAll(const std::string& input, const std::string& kw)
 
 static std::string StripInput(const std::string& input, const std::vector<std::string>& keywords, std::string extra_regex = std::string())
 {
+    ST_PROF;
     std::string output = input;
     
     for(const auto& kw : keywords)
@@ -259,6 +269,7 @@ static std::string StripInput(const std::string& input, const std::vector<std::s
 
 static void AddMultiplicationSignsReduceVars(std::string& input, const std::vector<std::pair<std::string, std::string>>& user_funcs, const std::vector<std::string>& builtin_funcs)
 {
+    ST_PROF;
     if(user_funcs.size() > ('Z' - 'A' + 1))
     {
         std::cout << "Parsing : For now, only " << ('Z' - 'A' + 1) << " function calls are allowed per expression" << std::endl;
@@ -416,6 +427,7 @@ static void AddMultiplicationSignsReduceVars(std::string& input, const std::vect
 
 static std::vector<std::string> ExtractParameters(const std::string& stripped_input)
 {
+    ST_PROF;
     std::vector<std::string> parameters;
     std::smatch match;
     std::string::const_iterator searchStart(stripped_input.cbegin());
@@ -443,6 +455,7 @@ static std::vector<std::string> ExtractParameters(const std::string& stripped_in
 
 static std::vector<std::string> StringSplit(const std::string& input, const char delimiter)
 {
+    ST_PROF;
     std::vector<std::string> output;
     std::stringstream ss(input);
     std::string token;
@@ -457,6 +470,7 @@ static std::vector<std::string> StringSplit(const std::string& input, const char
 
 static std::string ArrayifyFunctionCall(const std::string& argument_string)
 {
+    ST_PROF;
     auto arguments = StringSplit(argument_string, ',');
     
     // Force the array elements to be real
@@ -472,6 +486,7 @@ static std::string ArrayifyFunctionCall(const std::string& argument_string)
 
 static std::string TrimLR(const std::string& input)
 {
+    ST_PROF;
     std::string output(input);
     output.erase(output.begin(), std::find_if(output.begin(), output.end(), [](unsigned char ch) {
         return !std::isspace(ch);
@@ -484,6 +499,7 @@ static std::string TrimLR(const std::string& input)
 
 static int ArgumentCount(const std::string& input)
 {
+    ST_PROF;
     if(TrimLR(input).size() == 0) return 0;
 
     int argc = 1;
@@ -500,6 +516,10 @@ static int ArgumentCount(const std::string& input)
 
 static std::tuple<std::string, std::vector<std::string>, std::vector<std::string>, std::vector<int>, std::vector<std::string>> SimplifyInput(const std::string& input_stream, const std::vector<std::string>& declared_args, int* error)
 {
+    ST_PROF;
+    // Reserved for future use
+    static_cast<void>(declared_args);
+
     const std::string start_string(input_stream);
     std::string input(input_stream);
     std::smatch match;
@@ -572,6 +592,7 @@ static std::tuple<std::string, std::vector<std::string>, std::vector<std::string
         return a1 + "(" + a2 + ")"; // NOTE(César) : This never runs
     },
     [=](const std::string& a1, const std::string& a2) { // Skip if this is not a built-in
+        static_cast<void>(a2);
         if(f90_builtins.find(a1) != f90_builtins.end() || std::find(custom_builtins.begin(), custom_builtins.end(), a1) != custom_builtins.end())
         {
             return true;
@@ -684,6 +705,7 @@ static std::tuple<std::string, std::vector<std::string>, std::vector<std::string
 
 static std::pair<std::string, std::string> SplitExpression(const std::string& input, int* error)
 {
+    ST_PROF;
     auto loc = input.find('=');
     if(loc != std::string::npos)
     {
@@ -700,6 +722,7 @@ static std::pair<std::string, std::string> SplitExpression(const std::string& in
 
 static std::pair<std::string, std::vector<std::string>> HandleHeader(const std::string& input, int* error)
 {
+    ST_PROF;
     std::pair<std::string, std::vector<std::string>> output;
     if(error != nullptr) *error = LTXP_ERR_NOERR;
 
@@ -741,6 +764,7 @@ static std::pair<std::string, std::vector<std::string>> HandleHeader(const std::
 
 extern "C" ParseOutput ParseLatexToF90(const char* input_stream)
 {
+    ST_PROF;
     ParseOutput return_val = { 0 };
     return_val.error = LTXP_ERR_NOERR;
 
@@ -838,6 +862,7 @@ extern "C" ParseOutput ParseLatexToF90(const char* input_stream)
 
 extern "C" void FreeParseOutput(ParseOutput* output)
 {
+    ST_PROF;
     if(output != nullptr)
     {
         if(output->function_name)         free(output->function_name);
@@ -853,6 +878,7 @@ extern "C" void FreeParseOutput(ParseOutput* output)
 
 extern "C" void GetErrorMsg(ParseOutput* output, char* buffer)
 {
+    ST_PROF;
     if(output->error)
     {
         strcpy(buffer, error_map.at(output->error).c_str());
@@ -865,6 +891,7 @@ extern "C" void GetErrorMsg(ParseOutput* output, char* buffer)
 */
 extern "C" void CheckParseValidity(ParseOutput* output, const char* function_cache_path)
 {
+    ST_PROF;
     std::ifstream input(function_cache_path);
     std::string line;
 
