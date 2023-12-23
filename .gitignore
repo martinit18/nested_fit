@@ -6,6 +6,7 @@
 *.o
 *.mod
 build/
+build-aux/
 bin/
 
 # vscode settings
@@ -38,3 +39,6 @@ src/api/
 
 # Ignore autoconf/automake stuff
 autom4te.cache/
+aclocal.m4
+configure.ac
+Makefile.am
