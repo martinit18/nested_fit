@@ -1,0 +1,9 @@
+bin_PROGRAMS = @nested_fit_target_ac@ @nested_fit_target_func_ac@
+
+@AUTO_MAKE_INLINE_CODE_PRE@
+
+@nested_fit_target_ac@_SOURCES = @SRC_SLATEC_AC@ @SRC_DIERCKX_AC@ @SRC_FILES_COMM_AC@ @SRC_FILES_DATA_AC@ @SRC_FILES_CXX_AC@
+
+@nested_fit_target_func_ac@_SOURCES = @SRC_FILES_COMM_AC@ @SRC_FILES_FUNC_AC@
+
+@AUTO_MAKE_INLINE_CODE@

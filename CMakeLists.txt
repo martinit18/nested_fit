@@ -1,17 +1,24 @@
 cmake_minimum_required(VERSION 3.10)
 
 #####################################
-# Custom variables are here for now #
-#####################################
-
-#####################################
 # This CMake file also generates an #
 # autoconf file alongside an auto   #
 # make one. This is done to support #
 # backwards compatibility for older #
 # systems.                          #
 #####################################
-include(cmake/autoconf_gen.cmake)
+set(AUTO_MAKE_INLINE_CODE "")
+set(AUTO_MAKE_INLINE_CODE_PRE "")
+
+macro(ac_dec_obj_dep name deps)
+    string(APPEND AUTO_MAKE_INLINE_CODE "${name}.o: ${deps}.o\n")
+endmacro(ac_dec_obj_dep)
+
+macro(ac_inline_generic code)
+    string(APPEND AUTO_MAKE_INLINE_CODE_PRE "${code}\n")
+endmacro(ac_inline_generic)
+#####################################
+#####################################
 
 # The nested_fit version being built -> This gets copied everywhere inside the project code
 # For more info see the 'src/Mod_metadata.f90.in' file
@@ -19,8 +26,6 @@ include(cmake/autoconf_gen.cmake)
 file(READ "pyproject.toml" tomlfile)
 string(REGEX MATCH "version = \"([0-9]+\\.[0-9]+\\.[0-9]+)\"" vn ${tomlfile})
 set(project_version ${CMAKE_MATCH_1})
-
-ac_set_project_version(${project_version})
 
 # Global options
 option(DEBUG "Enable debug mode." OFF)
@@ -33,16 +38,6 @@ option(LTRACE "Enable trace logging." OFF)
 option(INSTALL_SYSTEM_WIDE "Install on '/usr/local' instead of '$HOME/.local'." OFF) # Requires privileged user
 option(CREATE_AUTOCONF "Builds a 'configure' script for older systems." OFF)
 
-# # Compatibility Global options
-# ac_add_option("debug" "Enable debug mode." OFF)
-# ac_add_option("norng" "Uses the same set seed. Useful for testing." OFF)
-# ac_add_option("openmp" "Enable/Disable OpenMP." OFF)
-# ac_add_option("openmpi" "Enable/Disable OpenMPI." OFF)
-# ac_add_option("autotests" "Automatically run tests after compiling." OFF)
-# ac_add_option("lapack" "Enable/Disable LAPACK." OFF)
-# ac_add_option("ltrace" "Enable trace logging." OFF)
-# ac_add_option("install_system_wide" "Install on '/usr/local' instead of '$HOME/.local'." OFF)
-
 if(OPENMPI AND WIN32)
     message(FATAL_ERROR "Windows builds don't currently support OpenMPI.")
 endif()
@@ -51,20 +46,11 @@ if(LTRACE)
     add_definitions(-DLTRACE)
 endif()
 
-# am_inline_code("
-# AM_COND_IF(
-#     [ltrace],
-#     [AC_DEFINE(ltrace)]
-# )
-# ")
-
 #####################################
 #####################################
 
 set(project_name nested_fit)
 project(${project_name} VERSION ${project_version} LANGUAGES Fortran CXX)
-
-# ac_set_project_name("nested_fit")
 
 #if(LAPACK)
 #    find_package(BLAS REQUIRED)
@@ -82,25 +68,19 @@ if(NOT INSTALL_SYSTEM_WIDE)
 endif()
 message(STATUS "Install prefix set to: ${CMAKE_INSTALL_PREFIX}") 
 
-# am_inline_code("
-# AM_COND_IF([install_system_wide], [], [prefix = $HOME/.local])
-# ")
-message(STATUS ${AUTO_MAKE_INLINE_CODE})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
 set(nested_fit_version_full_str "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}.${CMAKE_PROJECT_VERSION_PATCH}")
-string(LENGTH ${nested_fit_version_full_str} nested_fit_version_full_str_len)
 
 set(nested_fit_version_str "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}")
-string(LENGTH ${nested_fit_version_str} nested_fit_version_str_len)
 
 string(CONCAT nested_fit_mpi_child_comm_proc_name "nf_child_proc" ${nested_fit_version_full_str})
-string(LENGTH ${nested_fit_mpi_child_comm_proc_name} nested_fit_mpi_child_comm_proc_name_len)
 
 string(CONCAT nested_fit_target "nested_fit" ${nested_fit_version_full_str})
 string(CONCAT nested_fit_target_func "nested_fit_func" ${nested_fit_version_full_str})
-string(LENGTH ${nested_fit_target} nested_fit_target_len)
-string(LENGTH ${nested_fit_target_func} nested_fit_target_func_len)
+
+string(REPLACE "." "_" nested_fit_target_ac ${nested_fit_target})
+string(REPLACE "." "_" nested_fit_target_func_ac ${nested_fit_target_func})
 
 set(SRC_FILES_COMM
     src/Mod_cluster_analysis.f90
@@ -135,13 +115,25 @@ set(SRC_FILES_COMM
     src/helper/halt.f90
     src/helper/strutil.f90
 )
+string(REPLACE ";" " " SRC_FILES_COMM_AC "${SRC_FILES_COMM}")
+ac_dec_obj_dep("src/Mod_cluster_analysis" "src/Mod_logger")
+ac_dec_obj_dep("src/Mod_logger" "src/Mod_timestamp")
+ac_dec_obj_dep("src/Mod_cluster_analysis" "src/Mod_parameters")
+ac_dec_obj_dep("src/Mod_search_new_point" "src/Mod_likelihood")
+ac_dec_obj_dep("src/Mod_likelihood" "src/Mod_userfcn")
+ac_dec_obj_dep("src/Mod_userfcn" "src/funceval/auto_func")
+ac_dec_obj_dep("src/funceval/auto_func" "src/Mod_metadata")
+ac_dec_obj_dep("src/funceval/auto_func" "src/Mod_options")
+ac_dec_obj_dep("src/Mod_likelihood" "src/Mod_math")
+ac_dec_obj_dep("src/nested_fit" "src/Mod_input_parse")
+ac_dec_obj_dep("src/nested_fit" "src/cli/argparse")
 
 set(SRC_EXTERNAL_FUNCS
     src/helper/hash.f90
     src/Mod_interpolate.f90
     src/functions/internal_funcs.f90
-    src/Mod_logger.f90      # NOTE(César): Required for logging from the shared lib
-    src/Mod_timestamp.f90   # NOTE(César): Required for logging from the shared lib
+    src/Mod_logger.f90      # NOTE :(César) Required for logging from the shared lib
+    src/Mod_timestamp.f90   # NOTE :(César) Required for logging from the shared lib
     src/functions/WOFZ.f
 )
 
@@ -152,18 +144,24 @@ set(SRC_FILES_DATA
     src/USERFCN_SET.f
     src/USERFCN.f
 )
+string(REPLACE ";" " " SRC_FILES_DATA_AC "${SRC_FILES_DATA}")
 
 set(SRC_FILES_FUNC
     src/Mod_likelihood_func.f90
 )
+string(REPLACE ";" " " SRC_FILES_FUNC_AC "${SRC_FILES_FUNC}")
 
 set(CHILD_SRC_FILES
     src/helper/mpi_status_process.f90
     src/Mod_mpi.f90
 )
 
-file(GLOB SRC_DIERCKX ${CMAKE_SOURCE_DIR}/src/DIERCKX/*.f)
-file(GLOB SRC_SLATEC  ${CMAKE_SOURCE_DIR}/src/SLATEC/*.f)
+file(GLOB SRC_DIERCKX RELATIVE ${CMAKE_SOURCE_DIR} src/DIERCKX/*.f)
+string(REPLACE ";" " " SRC_DIERCKX_AC "${SRC_DIERCKX}")
+
+file(GLOB SRC_SLATEC  RELATIVE ${CMAKE_SOURCE_DIR} src/SLATEC/*.f)
+string(REPLACE ";" " " SRC_SLATEC_AC "${SRC_SLATEC}")
+
 #file(GLOB SRC_LAPACK  ${CMAKE_SOURCE_DIR}/src/LAPACK/*.f ${CMAKE_SOURCE_DIR}/src/LAPACK/*.F)
 
 if(OPENMP AND OPENMPI)
@@ -204,7 +202,6 @@ if(WIN32)
 else()
     set(nested_fit_cache_folder $ENV{HOME}/.nested_fit/)
 endif()
-string(LENGTH ${nested_fit_cache_folder} nested_fit_cache_folder_len)
 message(STATUS "Setting cache folder location: ${nested_fit_cache_folder}")
 
 # Create the internal functions imutable cache config
@@ -217,7 +214,7 @@ foreach(i ${internal_funcs_declaration})
 endforeach()
 configure_file(src/funceval/latex_parser.cpp latex_parser.cpp @ONLY)
 
-configure_file(src/Mod_metadata.f90.in Mod_metadata.f90)
+configure_file(src/Mod_metadata.f90.in Mod_metadata.f90 @ONLY)
 
 set(CFG_FILES
     ${CMAKE_CURRENT_BINARY_DIR}/Mod_metadata.f90
@@ -227,6 +224,9 @@ set(SRC_FILES_CXX
     src/helper/disable_stdout.cpp
     src/funceval/native_parser.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/latex_parser.cpp
+)
+set(SRC_FILES_CXX_AC
+    "src/helper/disable_stdout.cpp src/funceval/latex_parser.cpp src/funceval/native_parser.cpp"
 )
 
 add_executable(${nested_fit_target}
@@ -254,6 +254,17 @@ set(SRC_FLAGS_R     -cpp -O2 -static -ffree-line-length-0 -ffixed-line-length-0)
 set(SRC_FLAGS_CXX_D -O0 -Wall -pedantic -g)      # Be pedantic
 set(SRC_FLAGS_CXX_R -O2 -Wall -pedantic -static) # Be pedantic on release too
 
+# NOTE(César): Autoconf will use release only for now
+#              (this is semi ok, since it is not intended to be a used in a dev env)
+#              This behaviour is basically just inside configure.ac.in
+string(REPLACE ";" " " AC_FLAGS_CXX "${SRC_FLAGS_CXX_R}")
+string(REPLACE ";" " " AC_FLAGS_CF  "${SRC_FLAGS_R}")
+ac_inline_generic("CPPFLAGS = ${AC_FLAGS_CXX}")
+ac_inline_generic("FCFLAGS = ${AC_FLAGS_CF}")
+ac_inline_generic("FFLAGS = ${AC_FLAGS_CF}")
+
+# NOTE: (César) This approach does not work for windows (but autoconf does not either)
+ac_inline_generic("LDFLAGS = -lgfortran -ldl")
 
 # NOTE(César): This is required to preprocessor the OpenMP comments
 set(SRC_FLAGS_OMP "")
@@ -371,20 +382,25 @@ endif()
 
 # configure compatibility files for autoconf / automake
 if(CREATE_AUTOCONF)
-    configure_file(configure.ac.in configure.ac @ONLY)
-    configure_file(Makefile.am.in Makefile.am @ONLY)
+    message(STATUS "Generated the following dependecies:")
+    message(STATUS "\n${AUTO_MAKE_INLINE_CODE}")
+    configure_file(configure.ac.in ${CMAKE_SOURCE_DIR}/configure.ac @ONLY)
+    configure_file(Makefile.am.in ${CMAKE_SOURCE_DIR}/Makefile.am @ONLY)
 
-    file(WRITE ${CMAKE_BINARY_DIR}/NEWS "")
-    file(WRITE ${CMAKE_BINARY_DIR}/COPYING "")
-    file(WRITE ${CMAKE_BINARY_DIR}/ChangeLog "")
-    file(WRITE ${CMAKE_BINARY_DIR}/README "")
-    file(WRITE ${CMAKE_BINARY_DIR}/AUTHORS "")
+    file(WRITE ${CMAKE_SOURCE_DIR}/NEWS "")
+    file(WRITE ${CMAKE_SOURCE_DIR}/COPYING "")
+    file(WRITE ${CMAKE_SOURCE_DIR}/ChangeLog "")
+    file(WRITE ${CMAKE_SOURCE_DIR}/README "")
+    file(WRITE ${CMAKE_SOURCE_DIR}/AUTHORS "")
     
-    execute_process(COMMAND autoreconf -vif)
-
-    # Run auto config
-    file(COPY ${CMAKE_BINARY_DIR}/configure DESTINATION ${CMAKE_CURRENT_LIST_DIR})
-    # file(COPY ${CMAKE_BINARY_DIR}/install-sh DESTINATION ${CMAKE_CURRENT_LIST_DIR})
+    execute_process(COMMAND autoreconf --verbose --install --force WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+    
+    file(REMOVE ${CMAKE_SOURCE_DIR}/INSTALL)
+    file(REMOVE ${CMAKE_SOURCE_DIR}/NEWS)
+    file(REMOVE ${CMAKE_SOURCE_DIR}/COPYING)
+    file(REMOVE ${CMAKE_SOURCE_DIR}/ChangeLog)
+    file(REMOVE ${CMAKE_SOURCE_DIR}/README)
+    file(REMOVE ${CMAKE_SOURCE_DIR}/AUTHORS)
 endif()
 # enable_testing() Don't use CTest
 add_subdirectory(tests)

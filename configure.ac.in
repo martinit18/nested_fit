@@ -1,8 +1,14 @@
-# This file is configured by cmake
+# This file is configured by cmake on CI and is intended for older systems compatibility only
+# Prefer the use of cmake only.
 AC_INIT([@project_name@], [@project_version@])
 
-AM_INIT_AUTOMAKE
-AC_PROG_CXX
+AC_CONFIG_AUX_DIR([build-aux])
+
+AM_INIT_AUTOMAKE([subdir-objects foreign])
+AC_PROG_CXX # C++
+AC_PROG_CC  # C
+AC_PROG_F77 # F77
+AC_PROG_FC  # F
 
 AC_ARG_ENABLE(
     [debug],
@@ -47,7 +53,30 @@ AM_COND_IF(
 )
 
 AM_CONDITIONAL([INSTALL_SYSTEM_WIDE], [test x$install-system-wide = xtrue])
-AM_COND_IF([INSTALL_SYSTEM_WIDE], [], [prefix = $HOME/.local])
+AM_COND_IF([INSTALL_SYSTEM_WIDE], [$prefix = $HOME/.local])
+AC_MSG_NOTICE([Configuring install prefix... ($prefix)])
+
+AC_SUBST(exec_prefix, [bin])
+AC_MSG_NOTICE([Configuring binary prefix... ($exec_prefix)])
+
+AC_SUBST(nested_fit_version_full_str, [@nested_fit_version_full_str@])
+AC_SUBST(nested_fit_version_str, [@nested_fit_version_str@])
+AC_SUBST(nested_fit_mpi_child_comm_proc_name, [@nested_fit_mpi_child_comm_proc_name@])
+AC_SUBST(nested_fit_parallel_on, [@nested_fit_parallel_on@])
+AC_SUBST(nested_fit_parallel_mpi_on, [@nested_fit_parallel_mpi_on@])
+AC_SUBST(nested_fit_static_seed, [@nested_fit_static_seed@])
+AC_SUBST(nested_fit_cache_folder, [$HOME/.nested_fit/])
+AC_SUBST(nested_fit_target, [@nested_fit_target@])
+AC_SUBST(nested_fit_target_func, [@nested_fit_target_func@])
+AC_MSG_NOTICE([Setting version -- $nested_fit_target])
+
+# envsubst < Mod_metadata.f90.in > Mod_metadata.f90
+AC_CONFIG_FILES([src/Mod_metadata.f90])
+AC_MSG_NOTICE([Writing metadata file.])
+
+AC_SUBST(Internal_CustomBuiltins, [@Internal_CustomBuiltins@])
+AC_CONFIG_FILES([src/funceval/latex_parser.cpp:src/funceval/latex_parser.cpp])
+AC_MSG_NOTICE([Writing C++ parsers.])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
