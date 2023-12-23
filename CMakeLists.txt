@@ -264,6 +264,7 @@ ac_inline_generic("FCFLAGS = ${AC_FLAGS_CF}")
 ac_inline_generic("FFLAGS = ${AC_FLAGS_CF}")
 
 # NOTE: (César) This approach does not work for windows (but autoconf does not either)
+#               Also assuming gfortran here
 ac_inline_generic("LDFLAGS = -lgfortran -ldl")
 
 # NOTE(César): This is required to preprocessor the OpenMP comments
@@ -401,6 +402,11 @@ if(CREATE_AUTOCONF)
     file(REMOVE ${CMAKE_SOURCE_DIR}/ChangeLog)
     file(REMOVE ${CMAKE_SOURCE_DIR}/README)
     file(REMOVE ${CMAKE_SOURCE_DIR}/AUTHORS)
+
+    # Remove autoconf stuff from src tree
+    file(REMOVE ${CMAKE_SOURCE_DIR}/aclocal.m4)
+    file(REMOVE ${CMAKE_SOURCE_DIR}/configure.ac)
+    file(REMOVE ${CMAKE_SOURCE_DIR}/Makefile.am)
 endif()
 # enable_testing() Don't use CTest
 add_subdirectory(tests)
