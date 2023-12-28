@@ -581,6 +581,7 @@ PACKAGE_STRING='nested_fit 5.0.0'
 PACKAGE_BUGREPORT=''
 PACKAGE_URL=''
 
+ac_default_prefix=~/.local
 ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
@@ -595,8 +596,6 @@ nested_fit_parallel_on
 nested_fit_mpi_child_comm_proc_name
 nested_fit_version_str
 nested_fit_version_full_str
-INSTALL_SYSTEM_WIDE_FALSE
-INSTALL_SYSTEM_WIDE_TRUE
 LTRACE_FALSE
 LTRACE_TRUE
 ac_ct_FC
@@ -699,14 +698,10 @@ ac_user_opts='
 enable_option_checking
 enable_silent_rules
 enable_dependency_tracking
-enable_debug
-enable_norng
 enable_openmp
 enable_openmpi
-enable_autotests
 enable_lapack
 enable_ltrace
-enable_istall_system_wide
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1354,23 +1349,13 @@ Optional Features:
                           do not reject slow dependency extractors
   --disable-dependency-tracking
                           speeds up one-time build
-  --enable-debug          "Enable debug mode."
-
-  --enable-norng          "Use the same set seed. Usefull for testing"
-
   --enable-openmp         "Enable OpenMP."
 
   --enable-openmpi        "Enable OpenMPI."
 
-  --enable-autotests      "Automatically run tests after compiling."
-
   --enable-lapack         "Enable LAPACK."
 
   --enable-ltrace         "Enable trace logging."
-
-  --enable-install-system-wide
-                          "Install on '/usr/local' instead of '$HOME/.local'."
-
 
 Some influential environment variables:
   CXX         C++ compiler command
@@ -4427,16 +4412,15 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
   # F
 
-# Check whether --enable-debug was given.
-if test "${enable_debug+set}" = set; then :
-  enableval=$enable_debug;
-fi
-
-# Check whether --enable-norng was given.
-if test "${enable_norng+set}" = set; then :
-  enableval=$enable_norng;
-fi
-
+# AC_ARG_ENABLE(
+#     [debug],
+#     AS_HELP_STRING([--enable-debug], ["Enable debug mode."])
+# )
+# AC_ARG_ENABLE(
+#     [norng],
+#     AS_HELP_STRING([--enable-norng],
+#                    ["Use the same set seed. Usefull for testing"])
+# )
 # Check whether --enable-openmp was given.
 if test "${enable_openmp+set}" = set; then :
   enableval=$enable_openmp;
@@ -4447,11 +4431,11 @@ if test "${enable_openmpi+set}" = set; then :
   enableval=$enable_openmpi;
 fi
 
-# Check whether --enable-autotests was given.
-if test "${enable_autotests+set}" = set; then :
-  enableval=$enable_autotests;
-fi
-
+# AC_ARG_ENABLE(
+#     [autotests],
+#     AS_HELP_STRING([--enable-autotests],
+#                    ["Automatically run tests after compiling."])
+# )
 # Check whether --enable-lapack was given.
 if test "${enable_lapack+set}" = set; then :
   enableval=$enable_lapack;
@@ -4459,16 +4443,18 @@ fi
 
 # Check whether --enable-ltrace was given.
 if test "${enable_ltrace+set}" = set; then :
-  enableval=$enable_ltrace;
+  enableval=$enable_ltrace; ltrace=on
+
 fi
 
-# Check whether --enable-istall-system-wide was given.
-if test "${enable_istall_system_wide+set}" = set; then :
-  enableval=$enable_istall_system_wide;
-fi
-
-
- if test x$ltrace = xtrue; then
+# AC_ARG_ENABLE(
+#     [install-system-wide],
+#     AS_HELP_STRING([--enable-install-system-wide],
+#                    ["Install on '/usr/local' instead of '$HOME/.local'."]),
+#     [AC_PREFIX_DEFAULT([/usr/local])], [AC_PREFIX_DEFAULT([~/.local])]
+# )
+#
+ if test "$ltrace" = "on"; then
   LTRACE_TRUE=
   LTRACE_FALSE='#'
 else
@@ -4476,30 +4462,8 @@ else
   LTRACE_FALSE=
 fi
 
-if test -z "$LTRACE_TRUE"; then :
-  $as_echo "#define LTRACE 1" >>confdefs.h
 
 
-fi
-
- if test x$install-system-wide = xtrue; then
-  INSTALL_SYSTEM_WIDE_TRUE=
-  INSTALL_SYSTEM_WIDE_FALSE='#'
-else
-  INSTALL_SYSTEM_WIDE_TRUE='#'
-  INSTALL_SYSTEM_WIDE_FALSE=
-fi
-
-if test -z "$INSTALL_SYSTEM_WIDE_TRUE"; then :
-  $prefix = $HOME/.local
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: Configuring install prefix... ($prefix)" >&5
-$as_echo "$as_me: Configuring install prefix... ($prefix)" >&6;}
-
-exec_prefix=bin
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: Configuring binary prefix... ($exec_prefix)" >&5
-$as_echo "$as_me: Configuring binary prefix... ($exec_prefix)" >&6;}
 
 nested_fit_version_full_str=5.0.0
 
@@ -4712,10 +4676,6 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${LTRACE_TRUE}" && test -z "${LTRACE_FALSE}"; then
   as_fn_error $? "conditional \"LTRACE\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${INSTALL_SYSTEM_WIDE_TRUE}" && test -z "${INSTALL_SYSTEM_WIDE_FALSE}"; then
-  as_fn_error $? "conditional \"INSTALL_SYSTEM_WIDE\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 

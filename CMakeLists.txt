@@ -150,6 +150,7 @@ set(SRC_FILES_FUNC
     src/Mod_likelihood_func.f90
 )
 string(REPLACE ";" " " SRC_FILES_FUNC_AC "${SRC_FILES_FUNC}")
+# ac_dec_obj_dep("src/Mod_likelihood_func" "")
 
 set(CHILD_SRC_FILES
     src/helper/mpi_status_process.f90
@@ -405,8 +406,8 @@ if(CREATE_AUTOCONF)
 
     # Remove autoconf stuff from src tree
     file(REMOVE ${CMAKE_SOURCE_DIR}/aclocal.m4)
-    file(REMOVE ${CMAKE_SOURCE_DIR}/configure.ac)
-    file(REMOVE ${CMAKE_SOURCE_DIR}/Makefile.am)
+    # file(REMOVE ${CMAKE_SOURCE_DIR}/configure.ac)
+    # file(REMOVE ${CMAKE_SOURCE_DIR}/Makefile.am)
 endif()
 # enable_testing() Don't use CTest
 add_subdirectory(tests)
