@@ -1,4 +1,4 @@
-c     Automatic Time-stamp: <Last changed by martino on Friday 23 June 2023 at CEST 10:18:48>
+c     Automatic Time-stamp: <Last changed by martino on Thursday 28 December 2023 at CET 14:14:42>
 c################################### USERFCN DEFINITION #####################################
 
       FUNCTION SELECT_USERFCN(funcname)
@@ -188,7 +188,7 @@ c################################### USERFCN DEFINITION ########################
             SELECT_USERFCN = 89  
       ELSE IF(funcname.EQ.'ELEVEN_GAUSS_WF_CORREL_BG') THEN
             SELECT_USERFCN = 90      
-      ELSE IF(funcname.EQ.'ELEVEN_GAUSS_WF_CORREL_BG2') THEN
+      ELSE IF(funcname.EQ.'ELEVEN_GAUSS_WF_POISSON_BG') THEN
             SELECT_USERFCN = 91      
       ELSE
             WRITE(*,*) 'Error in the function name def. in USERFCN'
@@ -246,7 +246,7 @@ c################################### USERFCN DEFINITION ########################
       REAL*8 x
       REAL*8 ELEVEN_GAUSS_WF_REL_BG, ELEVEN_GAUSS_WF_CORREL_BG
       REAL*8 DOUBLE_GAUSS_BG_Si
-      REAL*8 EIGHT_GAUSS_WF_REL_BG, ELEVEN_GAUSS_WF_CORREL_BG2
+      REAL*8 EIGHT_GAUSS_WF_REL_BG, ELEVEN_GAUSS_WF_POISSON_BG
       INTEGER*4 funcid
 
 
@@ -435,7 +435,7 @@ c     Choose your model (see below for definition)
       CASE (90)
             USERFCN = ELEVEN_GAUSS_WF_CORREL_BG(x, npar, val)   
       CASE (91)
-            USERFCN = ELEVEN_GAUSS_WF_CORREL_BG2(x, npar, val)                    
+            USERFCN = ELEVEN_GAUSS_WF_POISSON_BG(x, npar, val)                    
       END SELECT
 
       RETURN
@@ -6492,8 +6492,8 @@ c     Save the different components
       RETURN
       END
 
-c     _______________________________________________________________________________________________
-      FUNCTION ELEVEN_GAUSS_WF_CORREL_BG2(X,npar,val)
+c_______________________________________________________________________________________________
+      FUNCTION ELEVEN_GAUSS_WF_POISSON_BG(X,npar,val)
 c     2 Normalized Gaussian distribution plus background
 c     The value of 'amp' is the value of the surface below the curve
       IMPLICIT NONE
@@ -6501,10 +6501,11 @@ c     The value of 'amp' is the value of the surface below the curve
       REAL*8 val(npar), vall1(3), vall2(3), vall3(3)
       REAL*8 vall4(3), vall5(3), vall6(3), vall7(3), vall8(3)
       REAL*8 vall9(3), vall10(3), vall11(3)
-      REAL*8 ELEVEN_GAUSS_WF_CORREL_BG2, GAUSS, x
+      REAL*8 ELEVEN_GAUSS_WF_POISSON_BG, GAUSS, x
       REAL*8 pi
       PARAMETER(pi=3.141592653589793d0)
-      REAL*8 x01, amp5, sigma, bg, x0amp, sigamp, dx
+      REAL*8 x01, amp5, sigma, bg, mu, pamp, pamp5
+      INTEGER*4 k, kf
       REAL*8 dx02
       REAL*8 dx03
       REAL*8 dx04
@@ -6532,42 +6533,49 @@ c     The value of 'amp' is the value of the surface below the curve
       x10     = val(11)
       x11     = val(12)
       amp5    = val(13)
-      x0amp   = val(14)
-      sigamp  = val(15)
-      amp9    = val(16)
-      amp10   = val(17)
-      amp11   = val(18)
-      sigma   = val(19)
-      dsigma  = val(20)
+      mu      = val(14)
+      amp9    = val(15)
+      amp10   = val(16)
+      amp11   = val(17)
+      sigma   = val(18)
+      dsigma  = val(19)
       
 c     All positions are considered with respect to the line 5
+c     Calculate Poisson amplitude for line 5 (-> 4 electrons in n=2)
+      k  = 4
+      kf = 24
+      pamp5 = mu**k * DEXP(-mu) / kf
       
 c     first Gaussian peak
-      dx = -dx05
+      k  = 8
+      kf = 40320
+      pamp = mu**k * DEXP(-mu) / kf
       vall1(1) = x01
-      vall1(2) = amp5*EXP(-(dx-x0amp)**2/(2*sigamp**2
-     +     -(dx05-x0amp)**2/(2*sigamp**2) )) 
+      vall1(2) = amp5/pamp5*pamp
       vall1(3) = sigma
       
 c     second Gaussian peak
-      dx = dx02-dx05
+      k  = 7
+      kf = 5040
+      pamp = mu**k * DEXP(-mu) / kf
       vall2(1) = x01 + dx02 
-      vall2(2) = amp5*EXP(-(dx-x0amp)**2/(2*sigamp**2)
-     +     +(dx05-x0amp)**2/(2*sigamp**2))
+      vall2(2) = amp5/pamp5*pamp
       vall2(3) = sigma
       
 c     third Gaussian peak
-      dx = dx03-dx05
+      k  = 6
+      kf = 720
+      pamp = mu**k * DEXP(-mu) / kf
       vall3(1) = x01 + dx03 
-      vall3(2) = amp5*EXP(-(dx-x0amp)**2/(2*sigamp**2)
-     +     +(dx05-x0amp)**2/(2*sigamp**2))
+      vall3(2) = amp5/pamp5*pamp
       vall3(3) = sigma
       
 c     fourth Gaussian peak
-      dx = dx04-dx05
+      k  = 5
+      kf = 120
+      pamp = mu**k * DEXP(-mu) / kf
       vall4(1) = x01 + dx04 
-      vall4(2) =amp5*EXP(-(dx-x0amp)**2/(2*sigamp**2)
-     +     +(dx05-x0amp)**2/(2*sigamp**2))
+      vall4(2) = amp5/pamp5*pamp
       vall4(3) = sigma
       
 c     fifth Gaussian peak
@@ -6576,23 +6584,27 @@ c     fifth Gaussian peak
       vall5(3) = sigma
       
 c     sixth Gaussian peak
-      dx = dx06-dx05
+      k  = 3
+      kf = 6
+      pamp = mu**k * DEXP(-mu) / kf
       vall6(1) = x01 + dx06
-      vall6(2) = amp5*EXP(-(dx-x0amp)**2/(2*sigamp**2)
-     +     +(dx05-x0amp)**2/(2*sigamp**2))
+      vall6(2) = amp5/pamp5*pamp
       vall6(3) = sigma
       
 c     seventh Gaussian peak
-      dx = dx07-dx05
+      k  = 2
+      kf = 2
+      pamp = mu**k * DEXP(-mu) / kf
       vall7(1) = x01 + dx07 
-      vall7(2) = amp5*EXP(-(dx-x0amp)**2/(2*sigamp**2)
-     +     +(dx05-x0amp)**2/(2*sigamp**2))
+      vall7(2) = amp5/pamp5*pamp
       vall7(3) = sigma
       
 c     eighth Gaussian peak
+      k  = 1
+      kf = 1
+      pamp = mu**k * DEXP(-mu) / kf
       vall8(1) = x01 + dx08
-      vall8(2) = amp5*EXP(-(dx-x0amp)**2/(2*sigamp**2)
-     +     +(dx05-x0amp)**2/(2*sigamp**2))
+      vall8(2) = amp5/pamp5*pamp
       vall8(3) = sigma
       
 c     ninth Gaussian peak
@@ -6610,7 +6622,7 @@ c     eleventh Gaussian peak
       vall11(2) = amp11
       vall11(3) = sigma*dsigma
       
-      ELEVEN_GAUSS_WF_CORREL_BG2 = GAUSS(x,3,vall1) + GAUSS(x,3,vall2)
+      ELEVEN_GAUSS_WF_POISSON_BG = GAUSS(x,3,vall1) + GAUSS(x,3,vall2)
      +     + GAUSS(x,3,vall3) + GAUSS(x,3,vall4)  + GAUSS(x,3,vall5)
      +     + GAUSS(x,3,vall6) + GAUSS(x,3,vall7) + GAUSS(x,3,vall8)
      +     + GAUSS(x,3,vall9) + GAUSS(x,3,vall10) + GAUSS(x,3,vall11) 
@@ -6619,7 +6631,7 @@ c     eleventh Gaussian peak
       
 c     Save the different components
       IF(plot) THEN
-         WRITE(40,*) x, ELEVEN_GAUSS_WF_CORREL_BG2,
+         WRITE(40,*) x, ELEVEN_GAUSS_WF_POISSON_BG,
      +        GAUSS(x,3,vall1), GAUSS(x,3,vall2), GAUSS(x,3,vall3),
      +        GAUSS(x,3,vall4), GAUSS(x,3,vall5), GAUSS(x,3,vall6),
      +        GAUSS(x,3,vall7), GAUSS(x,3,vall8), GAUSS(x,3,vall9),
