@@ -6374,7 +6374,7 @@ c     The value of 'amp' is the value of the surface below the curve
       REAL*8 ELEVEN_GAUSS_WF_CORREL_BG, GAUSS, x
       REAL*8 pi
       PARAMETER(pi=3.141592653589793d0)
-      REAL*8 x01, amp5, sigma, bg, da, db, dx
+      REAL*8 x01, amp18, sigma, bg, da, db, dx, amp_tmp
       REAL*8 dx02
       REAL*8 dx03
       REAL*8 dx04
@@ -6401,7 +6401,7 @@ c     The value of 'amp' is the value of the surface below the curve
       x09     = val(10)
       x10     = val(11)
       x11     = val(12)
-      amp5     = val(13)
+      amp18   = val(13)
       da      = val(14)
       db      = val(15)
       amp9    = val(16)
@@ -6415,48 +6415,61 @@ c     All positions are considered with respect to the line 5
 c     first Gaussian peak
       dx = -dx05
       vall1(1) = x01
-      vall1(2) = amp5*EXP(1+ da*dx + db*dx**2)
+      vall1(2) = EXP(1+ da*dx + db*dx**2)
       vall1(3) = sigma
 
 c     second Gaussian peak
       dx = dx02-dx05
       vall2(1) = x01 + dx02 
-      vall2(2) = amp5*EXP(1+ da*dx + db*dx**2)
+      vall2(2) = EXP(1+ da*dx + db*dx**2)
       vall2(3) = sigma
 
 c     third Gaussian peak
       dx = dx03-dx05
       vall3(1) = x01 + dx03 
-      vall3(2) = amp5*EXP(1+ da*dx + db*dx**2)
+      vall3(2) = EXP(1+ da*dx + db*dx**2)
       vall3(3) = sigma
 
 c     fourth Gaussian peak
       dx = dx04-dx05
       vall4(1) = x01 + dx04 
-      vall4(2) =amp5*EXP(1+ da*dx + db*dx**2)
+      vall4(2) = EXP(1+ da*dx + db*dx**2)
       vall4(3) = sigma
 
 c     fifth Gaussian peak
       vall5(1) = x01 + dx05
-      vall5(2) = amp5 
+      vall5(2) = 1. 
       vall5(3) = sigma
 
 c     sixth Gaussian peak
       dx = dx06-dx05
       vall6(1) = x01 + dx06
-      vall6(2) = amp5*EXP(1+ da*dx + db*dx**2)
+      vall6(2) = EXP(1+ da*dx + db*dx**2)
       vall6(3) = sigma
 
 c     seventh Gaussian peak
       dx = dx07-dx05
       vall7(1) = x01 + dx07 
-      vall7(2) = amp5*EXP(1+ da*dx + db*dx**2)
+      vall7(2) = EXP(1+ da*dx + db*dx**2)
       vall7(3) = sigma
 
 c     eighth Gaussian peak
       vall8(1) = x01 + dx08
-      vall8(2) = amp5*EXP(1+ da*dx + db*dx**2)
+      vall8(2) = EXP(1+ da*dx + db*dx**2)
       vall8(3) = sigma
+
+c     renormalize amplitudes of the first 8 lines with an unique one
+      amp_tmp = vall1(2) + vall2(2) + vall3(2) + vall4(2)
+     +      + vall5(2) + vall6(2) + vall7(2) + vall8(2)
+
+      vall1(2) = amp18*vall1(2)/amp_tmp
+      vall2(2) = amp18*vall2(2)/amp_tmp
+      vall3(2) = amp18*vall3(2)/amp_tmp
+      vall4(2) = amp18*vall4(2)/amp_tmp
+      vall5(2) = amp18*vall5(2)/amp_tmp
+      vall6(2) = amp18*vall6(2)/amp_tmp
+      vall7(2) = amp18*vall7(2)/amp_tmp
+      vall8(2) = amp18*vall8(2)/amp_tmp
       
 c     ninth Gaussian peak
       vall9(1) = x09
@@ -6532,7 +6545,7 @@ c     The value of 'amp' is the value of the surface below the curve
       x09     = val(10)
       x10     = val(11)
       x11     = val(12)
-      amp18    = val(13)
+      amp18   = val(13)
       mu      = val(14)
       amp9    = val(15)
       amp10   = val(16)
