@@ -6517,7 +6517,7 @@ c     The value of 'amp' is the value of the surface below the curve
       REAL*8 ELEVEN_GAUSS_WF_POISSON_BG, GAUSS, x
       REAL*8 pi
       PARAMETER(pi=3.141592653589793d0)
-      REAL*8 x01, amp18, sigma, bg, mu, pamp, amp_tmp
+      REAL*8 x01, amp18, sigma, bg, mu, amp_tmp
       INTEGER*4 k, kf
       REAL*8 dx02
       REAL*8 dx03
@@ -6552,82 +6552,67 @@ c     The value of 'amp' is the value of the surface below the curve
       amp11   = val(17)
       sigma   = val(18)
       dsigma  = val(19)
-      
-      amp_tmp = 0.
 
 c     first Gaussian peak
       k  = 8
       kf = 40320
-      pamp = mu**k * DEXP(-mu) / kf
-      amp_tmp = pamp + amp_tmp
       vall1(1) = x01
-      vall1(2) = pamp
+      vall1(2) = mu**k * DEXP(-mu) / kf
       vall1(3) = sigma
       
 c     second Gaussian peak
       k  = 7
       kf = 5040
-      pamp = mu**k * DEXP(-mu) / kf
-      amp_tmp = pamp + amp_tmp
       vall2(1) = x01 + dx02 
-      vall2(2) = pamp
+      vall2(2) = mu**k * DEXP(-mu) / kf
       vall2(3) = sigma
       
 c     third Gaussian peak
       k  = 6
       kf = 720
-      pamp = mu**k * DEXP(-mu) / kf
-      amp_tmp = pamp + amp_tmp
       vall3(1) = x01 + dx03 
-      vall3(2) = pamp
+      vall3(2) = mu**k * DEXP(-mu) / kf
       vall3(3) = sigma
       
 c     fourth Gaussian peak
       k  = 5
       kf = 120
-      pamp = mu**k * DEXP(-mu) / kf
-      amp_tmp = pamp + amp_tmp
       vall4(1) = x01 + dx04 
-      vall4(2) = pamp
+      vall4(2) = mu**k * DEXP(-mu) / kf
       vall4(3) = sigma
       
 c     fifth Gaussian peak
       k  = 4
       kf = 24
-      pamp = mu**k * DEXP(-mu) / kf
-      amp_tmp = pamp + amp_tmp
       vall5(1) = x01 + dx05
-      vall5(2) = pamp
+      vall5(2) = mu**k * DEXP(-mu) / kf
       vall5(3) = sigma
       
 c     sixth Gaussian peak
       k  = 3
       kf = 6
-      pamp = mu**k * DEXP(-mu) / kf
-      amp_tmp = pamp + amp_tmp
       vall6(1) = x01 + dx06
-      vall6(2) = pamp
+      vall6(2) = mu**k * DEXP(-mu) / kf
       vall6(3) = sigma
       
 c     seventh Gaussian peak
       k  = 2
       kf = 2
-      pamp = mu**k * DEXP(-mu) / kf
-      amp_tmp = pamp + amp_tmp
       vall7(1) = x01 + dx07 
-      vall7(2) = pamp
+      vall7(2) = mu**k * DEXP(-mu) / kf
       vall7(3) = sigma
       
 c     eighth Gaussian peak
       k  = 1
       kf = 1
-      pamp = mu**k * DEXP(-mu) / kf
-      amp_tmp = pamp + amp_tmp
       vall8(1) = x01 + dx08
-      vall8(2) = pamp
+      vall8(2) = mu**k * DEXP(-mu) / kf
       vall8(3) = sigma
 
 c     renormalize amplitudes of the first 8 lines with an unique one
+      amp_tmp = vall1(2) + vall2(2) + vall3(2) + vall4(2)
+     +      + vall5(2) + vall6(2) + vall7(2) + vall8(2)
+
       vall1(2) = amp18*vall1(2)/amp_tmp
       vall2(2) = amp18*vall2(2)/amp_tmp
       vall3(2) = amp18*vall3(2)/amp_tmp
