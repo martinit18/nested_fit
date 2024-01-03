@@ -136,6 +136,25 @@ set(SRC_EXTERNAL_FUNCS
     src/Mod_timestamp.f90   # NOTE :(César) Required for logging from the shared lib
     src/functions/WOFZ.f
 )
+set(SRC_EXTERNAL_FUNCS_AC_F90 "")
+set(SRC_EXTERNAL_FUNCS_AC_F77 "")
+
+foreach(file ${SRC_EXTERNAL_FUNCS})
+    get_filename_component(file_ext ${file} EXT)
+    string(REGEX REPLACE "\\.[^.]*$" "" file_noext ${file})
+
+    if(${file_ext} STREQUAL ".f")
+        set(SRC_EXTERNAL_FUNCS_AC_F77 "${SRC_EXTERNAL_FUNCS_AC_F77} ${file_noext}.o")
+    else()
+        set(SRC_EXTERNAL_FUNCS_AC_F90 "${SRC_EXTERNAL_FUNCS_AC_F90} ${file_noext}.o")
+    endif()
+
+    message(STATUS "file -> ${file} | ${file_noext}.o")
+endforeach()
+
+ac_dec_obj_dep("src/Mod_interpolate" "src/Mod_logger")
+ac_dec_obj_dep("src/functions/internal_funcs" "src/Mod_logger")
+# ac_dec_obj_dep("src/functions/internal_funcs" "src/hash")
 
 set(SRC_FILES_DATA
     src/Mod_likelihood.f90
@@ -150,7 +169,6 @@ set(SRC_FILES_FUNC
     src/Mod_likelihood_func.f90
 )
 string(REPLACE ";" " " SRC_FILES_FUNC_AC "${SRC_FILES_FUNC}")
-# ac_dec_obj_dep("src/Mod_likelihood_func" "")
 
 set(CHILD_SRC_FILES
     src/helper/mpi_status_process.f90
@@ -266,7 +284,7 @@ ac_inline_generic("FFLAGS = ${AC_FLAGS_CF}")
 
 # NOTE: (César) This approach does not work for windows (but autoconf does not either)
 #               Also assuming gfortran here
-ac_inline_generic("LDFLAGS = -lgfortran -ldl")
+ac_inline_generic("LIBS = -lgfortran -ldl")
 
 # NOTE(César): This is required to preprocessor the OpenMP comments
 set(SRC_FLAGS_OMP "")
@@ -365,8 +383,12 @@ add_custom_command(TARGET ${nested_fit_target}
 # Compile the object files of the internal functions the user will be able to natively use in their expressions
 #TODO(César): Use generator expression for compile flags here too
 #TODO(César): Optimize fPIC with https://www.macieira.org/blog/2012/01/sorry-state-of-dynamic-libraries-on-linux/
-set_source_files_properties(${SRC_DIERCKX} PROPERTIES COMPILE_FLAGS "-fPIC -fno-semantic-interposition -static -O2 -ffree-line-length-0")
-set_source_files_properties(${SRC_EXTERNAL_FUNCS} PROPERTIES COMPILE_FLAGS "-fPIC -fno-semantic-interposition -static -O2 -Wall -ffree-line-length-0")
+set(SRC_DIERCKX_OBJ_FLAGS "-fPIC -fno-semantic-interposition -static -O2 -ffree-line-length-0")
+set_source_files_properties(${SRC_DIERCKX} PROPERTIES COMPILE_FLAGS "${SRC_DIERCKX_OBJ_FLAGS}")
+
+set(SRC_EXTERNAL_FUNCS_OBJ_FLAGS "-fPIC -fno-semantic-interposition -static -O2 -Wall -ffree-line-length-0")
+set_source_files_properties(${SRC_EXTERNAL_FUNCS} PROPERTIES COMPILE_FLAGS "${SRC_EXTERNAL_FUNCS_OBJ_FLAGS}")
+
 add_library(internal_functions OBJECT ${SRC_EXTERNAL_FUNCS} ${SRC_DIERCKX})
 add_custom_target(copy_internal_functions ALL
     DEPENDS internal_functions
