@@ -1,0 +1,41 @@
+version:    5.0
+datafiles:  he-histo.csv
+filefmt: .csv
+specstr:    x,c
+likelihood: GAUSSIAN
+
+function:
+  expression: gauss(x, A, u, s, b) = \frac{A}{s\sqrt{2\pi}} \exp{-\frac{(x-u)^2}{2s^2}} + b
+  params:
+    A: { value: 296, step: -1, min: 20, max: 1000 }
+    u: { value: 454.6, step: -1, min: 400, max: 600 }
+    s: { value: 20, step: -1, min: 0, max: 100 }
+    b: { value: 0.11, step: -1, min: 0, max: 0.5 }
+
+data: { xmin: 1, xmax: 1024, ymin: 0, ymax: 0 }
+
+search:
+  livepoints: 200
+  method:     RANDOM_WALK
+  param1:     0.5
+  param2:     3
+  max_tries:  100
+  tries_mult: 10
+  num_tries:  1
+  max_steps:  100000
+
+convergence:
+  method:    LIKE_ACC
+  accuracy:  1.E-05
+  parameter: 0.01
+
+clustering:
+  enabled:   false
+  # method:    f
+  # distance:  0.5
+  # bandwidth: 0.2
+
+# Legacy stuff
+lr: L
+npoint: 500
+nwidth: 20

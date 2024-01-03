@@ -6,6 +6,7 @@
 *.o
 *.mod
 build/
+build-aux/
 bin/
 
 # vscode settings
@@ -39,3 +40,11 @@ dist/
 # Ignore the api source (local only - César)
 src/api/
 
+# Ignore autoconf/automake stuff
+autom4te.cache/
+aclocal.m4
+configure.ac
+Makefile.am
+
+# ??
+configure~
