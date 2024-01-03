@@ -42,3 +42,6 @@ autom4te.cache/
 aclocal.m4
 configure.ac
 Makefile.am
+
+# ??
+configure~
