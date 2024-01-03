@@ -131,10 +131,11 @@ am_nested_fit5_0_0_OBJECTS = src/SLATEC/dpsort.$(OBJEXT) \
 	src/Mod_options.$(OBJEXT) src/funceval/auto_func.$(OBJEXT) \
 	src/functions/WOFZ.$(OBJEXT) src/helper/hash.$(OBJEXT) \
 	src/Mod_input_parse.$(OBJEXT) src/Mod_userfcn.$(OBJEXT) \
-	src/Mod_logger.$(OBJEXT) src/helper/halt.$(OBJEXT) \
-	src/helper/strutil.$(OBJEXT) src/Mod_likelihood.$(OBJEXT) \
-	src/USERFCN_2D.$(OBJEXT) src/USERFCN_SET.$(OBJEXT) \
-	src/USERFCN.$(OBJEXT) src/helper/disable_stdout.$(OBJEXT) \
+	src/Mod_logger.$(OBJEXT) src/Mod_perfprof.$(OBJEXT) \
+	src/helper/halt.$(OBJEXT) src/helper/strutil.$(OBJEXT) \
+	src/Mod_likelihood.$(OBJEXT) src/USERFCN_2D.$(OBJEXT) \
+	src/USERFCN_SET.$(OBJEXT) src/USERFCN.$(OBJEXT) \
+	src/helper/disable_stdout.$(OBJEXT) \
 	src/funceval/latex_parser.$(OBJEXT) \
 	src/funceval/native_parser.$(OBJEXT)
 nested_fit5_0_0_OBJECTS = $(am_nested_fit5_0_0_OBJECTS)
@@ -180,6 +181,7 @@ am_nested_fit_func5_0_0_OBJECTS =  \
 	src/nested_fit_func5_0_0-Mod_input_parse.$(OBJEXT) \
 	src/nested_fit_func5_0_0-Mod_userfcn.$(OBJEXT) \
 	src/nested_fit_func5_0_0-Mod_logger.$(OBJEXT) \
+	src/nested_fit_func5_0_0-Mod_perfprof.$(OBJEXT) \
 	src/helper/nested_fit_func5_0_0-halt.$(OBJEXT) \
 	src/helper/nested_fit_func5_0_0-strutil.$(OBJEXT) \
 	src/nested_fit_func5_0_0-Mod_likelihood_func.$(OBJEXT) \
@@ -295,9 +297,9 @@ am__DIST_COMMON = $(srcdir)/Makefile.in \
 	$(top_srcdir)/build-aux/install-sh \
 	$(top_srcdir)/build-aux/missing \
 	$(top_srcdir)/src/Mod_metadata.f90.in \
-	$(top_srcdir)/src/funceval/latex_parser.cpp AUTHORS COPYING \
-	ChangeLog NEWS README build-aux/compile build-aux/depcomp \
-	build-aux/install-sh build-aux/missing
+	$(top_srcdir)/src/funceval/latex_parser.cpp README.md \
+	build-aux/compile build-aux/depcomp build-aux/install-sh \
+	build-aux/missing
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -327,7 +329,10 @@ AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
-CPPFLAGS = -O2 -Wall -pedantic -static $(am__append_1) $(am__append_4)
+
+# ST_PROF is not compatible with automake for now
+CPPFLAGS = -O2 -Wall -pedantic -static -Wno-missing-field-initializers \
+	$(am__append_1) -DST_PROF -DST_PROF_NAMED $(am__append_4)
 CSCOPE = @CSCOPE@
 CTAGS = @CTAGS@
 CXX = @CXX@
@@ -442,11 +447,11 @@ nested_fit5_0_0_SOURCES = src/SLATEC/dpsort.f src/SLATEC/fdump.f \
 	src/cli/argparse.f90 src/Mod_options.f90 \
 	src/funceval/auto_func.f90 src/functions/WOFZ.f \
 	src/helper/hash.f90 src/Mod_input_parse.f90 \
-	src/Mod_userfcn.f90 src/Mod_logger.f90 src/helper/halt.f90 \
-	src/helper/strutil.f90 src/Mod_likelihood.f90 \
-	src/USERFCN_2D.f90 src/USERFCN_SET.f src/USERFCN.f \
-	src/helper/disable_stdout.cpp src/funceval/latex_parser.cpp \
-	src/funceval/native_parser.cpp
+	src/Mod_userfcn.f90 src/Mod_logger.f90 src/Mod_perfprof.f90 \
+	src/helper/halt.f90 src/helper/strutil.f90 \
+	src/Mod_likelihood.f90 src/USERFCN_2D.f90 src/USERFCN_SET.f \
+	src/USERFCN.f src/helper/disable_stdout.cpp \
+	src/funceval/latex_parser.cpp src/funceval/native_parser.cpp
 nested_fit_func5_0_0_SOURCES = src/SLATEC/dpsort.f src/SLATEC/fdump.f \
 	src/SLATEC/i1mach.f src/SLATEC/j4save.f src/SLATEC/xercnt.f \
 	src/SLATEC/xerhlt.f src/SLATEC/xermsg.f src/SLATEC/xerprn.f \
@@ -462,10 +467,10 @@ nested_fit_func5_0_0_SOURCES = src/SLATEC/dpsort.f src/SLATEC/fdump.f \
 	src/cli/argparse.f90 src/Mod_options.f90 \
 	src/funceval/auto_func.f90 src/functions/WOFZ.f \
 	src/helper/hash.f90 src/Mod_input_parse.f90 \
-	src/Mod_userfcn.f90 src/Mod_logger.f90 src/helper/halt.f90 \
-	src/helper/strutil.f90 src/Mod_likelihood_func.f90 \
-	src/helper/disable_stdout.cpp src/funceval/latex_parser.cpp \
-	src/funceval/native_parser.cpp
+	src/Mod_userfcn.f90 src/Mod_logger.f90 src/Mod_perfprof.f90 \
+	src/helper/halt.f90 src/helper/strutil.f90 \
+	src/Mod_likelihood_func.f90 src/helper/disable_stdout.cpp \
+	src/funceval/latex_parser.cpp src/funceval/native_parser.cpp
 nested_fit_func5_0_0_CPPFLAGS = -DFUNC_TARGET
 nested_fit_func5_0_0_FCFLAGS = -DFUNC_TARGET
 nested_fit_func5_0_0_FFLAGS = -DFUNC_TARGET
@@ -684,6 +689,8 @@ src/Mod_userfcn.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/Mod_logger.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/Mod_perfprof.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 src/helper/halt.$(OBJEXT): src/helper/$(am__dirstamp) \
 	src/helper/$(DEPDIR)/$(am__dirstamp)
 src/helper/strutil.$(OBJEXT): src/helper/$(am__dirstamp) \
@@ -809,6 +816,8 @@ src/nested_fit_func5_0_0-Mod_input_parse.$(OBJEXT):  \
 src/nested_fit_func5_0_0-Mod_userfcn.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/nested_fit_func5_0_0-Mod_logger.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/nested_fit_func5_0_0-Mod_perfprof.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/helper/nested_fit_func5_0_0-halt.$(OBJEXT):  \
 	src/helper/$(am__dirstamp) \
@@ -1167,6 +1176,12 @@ src/nested_fit_func5_0_0-Mod_logger.o: src/Mod_logger.f90
 
 src/nested_fit_func5_0_0-Mod_logger.obj: src/Mod_logger.f90
 	$(AM_V_FC)$(FC) $(nested_fit_func5_0_0_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_0_0-Mod_logger.obj `if test -f 'src/Mod_logger.f90'; then $(CYGPATH_W) 'src/Mod_logger.f90'; else $(CYGPATH_W) '$(srcdir)/src/Mod_logger.f90'; fi`
+
+src/nested_fit_func5_0_0-Mod_perfprof.o: src/Mod_perfprof.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_0_0_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_0_0-Mod_perfprof.o `test -f 'src/Mod_perfprof.f90' || echo '$(srcdir)/'`src/Mod_perfprof.f90
+
+src/nested_fit_func5_0_0-Mod_perfprof.obj: src/Mod_perfprof.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_0_0_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_0_0-Mod_perfprof.obj `if test -f 'src/Mod_perfprof.f90'; then $(CYGPATH_W) 'src/Mod_perfprof.f90'; else $(CYGPATH_W) '$(srcdir)/src/Mod_perfprof.f90'; fi`
 
 src/helper/nested_fit_func5_0_0-halt.o: src/helper/halt.f90
 	$(AM_V_FC)$(FC) $(nested_fit_func5_0_0_FCFLAGS) $(FCFLAGS) -c -o src/helper/nested_fit_func5_0_0-halt.o `test -f 'src/helper/halt.f90' || echo '$(srcdir)/'`src/helper/halt.f90
