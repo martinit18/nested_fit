@@ -6438,7 +6438,7 @@ c     fourth Gaussian peak
 
 c     fifth Gaussian peak
       vall5(1) = x01 + dx05
-      vall5(2) = 1. 
+      vall5(2) = EXP(1.) 
       vall5(3) = sigma
 
 c     sixth Gaussian peak
