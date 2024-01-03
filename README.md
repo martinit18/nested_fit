@@ -42,7 +42,7 @@ email: c.godinho AT campus.fct.unl.pt
 
 The simplest way to install nested_fit.
 
-**Prerequisite**:
+**Prerequisites**:
 - CMake
 - Fortran build toolchain (`gcc`, `g++` and `gfortran` or `ifort` or `ifx`)
 - Python 3 with numpy, scipy, matplotlib, pandas, getdist
@@ -54,7 +54,7 @@ The simplest way to install nested_fit.
 pip install nested_fit
 ```
 
-### From source
+### From source (CMake)
 
 Has more control on system specific optimizations.
 
@@ -66,7 +66,6 @@ Has more control on system specific optimizations.
 **Instruction**:
 
 1. Get nested_fit:
-
 ```sh
 git clone git@github.com:martinit18/nested_fit.git
 ```
@@ -107,33 +106,28 @@ If Python is found an utility for running and analysing data using nested_fit is
 > You can pass in options on the cmake generation step via: `cmake -D<option_name>=<ON/OFF> ..`\
 > These will prevail any time you run your build tools commands.
 
+### From source (GNU autotools)
+:warning: This mode is only for compatibility and supports only a few features. The `CMake` method should be preferred if available.
+1. Get nested_fit:
+```sh
+git clone git@github.com:martinit18/nested_fit.git
+```
+2. Configure:
+```sh
+cd nested_fit
+mkdir build && cd build
+../configure
+```
+3. Install nested_fit:
+```sh
+make install
+```
+
+The outcome of these commands is similar to the `CMake` source build step. Only a few option are available.
+You can check them with: `../configure --help` and take a look under `Optional Features`.
+
 > :warning: For getdist function in the python library: change in the file `xxx/pythonxx/site-packages/getdist/plots.py`,
 `matplotlib.use('Agg')` to `matplotlib.use('TkAgg')`.
-
-
-### From source (Makefile backwards compatibility)
-
-**Prerequisite**:
-- GNU Make (for Mod_metadata.f90 to be updated, GNU Make 4.0 is the minimum version required)
-- Fortran compiler (gfortran by default)
-- Python 3 with numpy, scipy, matplotlib, pandas, getdist (optional)
-
-**Instruction**:
-1. Download the latest version or clone the repository (Same as step 1. from above)
-2. Run the commands:
-```
-cd nested_fit/src/
-make
-```
-These command will build two different executables in the bin directory: 
-- `nested_fitXXX` for likelihood function maximisation for data analysis,
-- `nested_fit_funcXXX` for functions maximisation not using data. 
-
-Running `make like` will only build the first executable while running `make func` will only build the second executable.
-
-**Makefile options**
-
-The options for the Makefile are the same as the one for the CMake. For an option to be set to OFF, it needs to be commented in the Makefile.
 
 ### General comments
 
@@ -194,7 +188,7 @@ function:
     expression: my_func.f90         # Or use Fortran
     expression: GAUSS_BG            # Or use a nested_fit legacy function (deprecated)
 
-    # Or for multiple files use the following nomenclature
+    # Or for multiple files use the following nomenclature (one expressian for each file)
     expression_1: ...
     expression_2: ...
     expression_<n>: ...
@@ -205,7 +199,16 @@ function:
 
 
 ```yaml
-200                 # Number of live points
+search:
+    livepoints: 200     # Number of live points
+    method: RANDOM_WALK # Search method
+    param1: 0.2
+    param2: 20
+    max_tries: 1000
+    tries_mult: 100
+    num_tries: 1
+    max_steps: 100000
+
 LIKE_ACC            # Method used for convergence 
 1.E-05    0.01      # Evidence final accuracy and additional convergence parameter
 ```
@@ -245,8 +248,6 @@ For the second option:
 GAUSS_BG            # Name of the function
 ```
 
-
-
 ```
 L                   # Additional data: left/right (l/r)
 500     20          # Additional data:  npoint, nwidth for convolution
@@ -267,20 +268,21 @@ Additional information can be found in the reference articles.
 
 ## Present version and history of the past versions
 
-The present version is 5.0.0\
+The present version is 5.1.0\
 New features:
-- New modified Jeffreys likelihood for data
-- Update README.md
-- Add CI support via github actions. Only available for linux and macOS.
-- Add support to fully install via pip.
-- Add python package install support (not published).
-- Support custom data file column ordering/separation. Support .csv, .tsv
-- New native function parser that reads users Fortran or C/C++ files with functions.
-- New LaTeX function parser that reads user inline functions.
-- Complete overhaul of input file and function user function definition.
-
+- Add feature for older systems not easily supporting cmake to configure via GNU autotools.
+- Add performance profiling tool boilerplate code enabling a detailed analysis without hindering performance.
 
 Previous versions are:
+ - 5.0 New modified Jeffreys likelihood for data \
+ Update README.md \
+ Add CI support via github actions. Only available for linux and macOS. \
+ Add support to fully install via pip. \
+ Add python package install support (not published). \
+ Support custom data file column ordering/separation. Support .csv, .tsv \
+ New native function parser that reads users Fortran or C/C++ files with functions. \
+ New LaTeX function parser that reads user inline functions. \
+ Complete overhaul of input file and function user function definition.
  - 4.5 New modified Jeffreys likelihood for data
  - 4.4 New "write_input" function in python library \
  New fit functions \
@@ -359,7 +361,8 @@ Previous versions are:
 
 ### Additional included sources
 
-In addition to the original files from the main authors, nesed_fit includes
+In addition to the original files from the main authors, nesed_fit includes:
+- *sterf* package, to profile the code (MIT license). Written by C. A. Godinho.
 - *FITPACK (DIERCKX)* package, to fit and interpolating data with splines (no license)
   - Ref: Paul Dierckx, Curve and Surface Fitting with Splines, Oxford University Press, 1993
  Developer,

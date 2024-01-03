@@ -2,6 +2,8 @@ PROGRAM NESTED_FIT
   ! Time-stamp: <Last changed by martino on Monday 07 June 2021 at CEST 10:29:22>
   !
   ! Please read README and LICENSE files for more information
+  ! 5.1  Add feature for older systems not easily supporting cmake to configure via GNU autotools.
+  !      Add performance profiling tool boilerplate code enabling a detailed analysis without hindering performance.
   ! 5.0  Update README.md
   !      Add CI support via github actions. Only available for linux and macOS.
   !      Add support to fully install via pip.
