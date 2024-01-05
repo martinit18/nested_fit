@@ -17,7 +17,7 @@ classifiers = [
     "Programming Language :: Fortran",
     "Programming Language :: C++",
     "Programming Language :: Python :: 3",
-    "License :: Free To Use But Restricted", # What license are we using really?
+    "License :: Free To Use But Restricted",
     "Operating System :: OS Independent"
 ]
 
