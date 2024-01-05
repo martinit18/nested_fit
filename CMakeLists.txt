@@ -73,6 +73,7 @@ else()
     # Make that so C++ does not complaint
     add_definitions(-DST_PROF)
     add_definitions(-DST_PROF_NAMED)
+    set(CXX_SUPPRESS_STPROF -Wno-unused-value)
 endif()
 
 if(NOT INSTALL_SYSTEM_WIDE)
@@ -290,8 +291,8 @@ add_executable(${nested_fit_target_func}
 set(SRC_FLAGS_D     -cpp -O0 -Wall -g -ffree-line-length-0 -ffixed-line-length-0 -Wno-ampersand -Wno-tabs -Wno-unused-dummy-argument)
 set(SRC_FLAGS_R     -cpp -O2 -static -ffree-line-length-0 -ffixed-line-length-0)
 
-set(SRC_FLAGS_CXX_D -O0 -Wall -pedantic -g -Wno-missing-field-initializers)      # Be pedantic
-set(SRC_FLAGS_CXX_R -O2 -Wall -pedantic -static -Wno-missing-field-initializers) # Be pedantic on release too
+set(SRC_FLAGS_CXX_D -O0 -Wall -pedantic -g -Wno-missing-field-initializers ${CXX_SUPPRESS_STPROF})      # Be pedantic
+set(SRC_FLAGS_CXX_R -O2 -Wall -pedantic -static -Wno-missing-field-initializers ${CXX_SUPPRESS_STPROF}) # Be pedantic on release too
 
 # NOTE(César): Autoconf will use release only for now
 #              (this is semi ok, since it is not intended to be a used in a dev env)
