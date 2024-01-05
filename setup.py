@@ -1,4 +1,4 @@
-from setuptools import setup, Extension
+from setuptools import setup, Extension, find_packages
 from setuptools.command.build_ext import build_ext
 import pathlib
 import os
@@ -12,7 +12,7 @@ class CMakeExt(Extension):
 
         # Get the source dir
         self.src_dir = os.fspath(pathlib.Path(sourcedir).resolve())
-        print(self.src_dir)
+        print(f'[CMakeExt] Source dir: {self.src_dir}')
 
 
 class NFBuildExt(build_ext):
@@ -36,5 +36,7 @@ class NFBuildExt(build_ext):
 
 setup(
     cmdclass={'build_ext': NFBuildExt},
-    ext_modules=[CMakeExt('nested_fit')]
+    ext_modules=[CMakeExt('nested_fit')],
+    packages=find_packages(exclude=['src/']),
+    package_data={'': ['nested_py/*.py']}
 )
