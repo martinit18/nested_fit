@@ -109,6 +109,8 @@ PROGRAM NESTED_FIT
    USE MOD_METADATA
    ! Module for logging and displaying messages
    USE MOD_LOGGER
+   ! Module for performance profiling
+   USE MOD_PERFPROF
    ! Parallelization library !!!CAREFULL to the table dimension in this case!!
    USE OMP_LIB
 
@@ -180,6 +182,11 @@ PROGRAM NESTED_FIT
       IMPLICIT NONE
    END SUBROUTINE
   END INTERFACE
+
+#ifdef PPROF
+  ! Start the top tree profiling (keep this as the first subroutine call)
+  PROFILED(Nested_fit)
+#endif
 
   ! Init the logger file
   CALL START_LOG()
@@ -1424,6 +1431,8 @@ PROGRAM NESTED_FIT
    TYPE(ParseLatex_t)             :: parse_result
    INTEGER                        :: last_char
    
+   PROFILED(B_ADDUSRFUNC)
+
    last_char = LEN_TRIM(invalue)
    IF(last_char.LT.5) THEN
       CALL LOG_ERROR_HEADER()
@@ -1431,7 +1440,7 @@ PROGRAM NESTED_FIT
       CALL LOG_ERROR('Must provide a LaTeX expression or a f90/c++ file.')
       CALL LOG_ERROR('Aborting Execution...')
       CALL LOG_ERROR_HEADER()
-      STOP
+      CALL HALT_EXECUTION()
    ENDIF
 
    ! NOTE(César) : Checking for an extension could work if the string ends in .ccc
@@ -1443,7 +1452,7 @@ PROGRAM NESTED_FIT
    ! Detect if the input is latex or a file
    IF(HAS_VALID_CPP_EXT(TRIM(invalue)).OR.HAS_VALID_F90_EXT(TRIM(invalue))) THEN
       CALL COMPILE_CACHE_FUNC_NATIVE(TRIM(invalue))
-      STOP
+      CALL HALT_EXECUTION()
    ELSE
       parse_result = PARSE_LATEX(TRIM(invalue))
 
@@ -1453,7 +1462,7 @@ PROGRAM NESTED_FIT
       ENDIF
 
       CALL PARSE_LATEX_DEALLOC(parse_result)
-      STOP
+      CALL HALT_EXECUTION()
    ENDIF
   END SUBROUTINE
 

@@ -69,11 +69,18 @@ if(PPROF)
         GIT_REPOSITORY https://github.com/lPrimemaster/stperf.git
     )
     FetchContent_MakeAvailable(stperf)
+
+    # BUG: (César) This is probably a GNU only way of defining macros from the CLI
+    add_definitions("-D'PASTE(x)'='x' -D'CAT(x,y)'='PASTE(x)y'")
+    add_definitions("-D'PROFILED(x)'='TYPE(ScopedPerfTimer) :: CAT(x,__LINE__); CALL CAT(x,__LINE__)%init(\"x\",__LINE__);'")
 else()
     # Make that so C++ does not complaint
     add_definitions(-DST_PROF)
-    add_definitions(-DST_PROF_NAMED)
+    add_definitions("-D'ST_PROF_NAMED(name)'")
     set(CXX_SUPPRESS_STPROF -Wno-unused-value)
+
+    # Make that so Fortran does not complaint
+    add_definitions("-D'PROFILED(x)'=''")
 endif()
 
 if(NOT INSTALL_SYSTEM_WIDE)
@@ -135,6 +142,7 @@ set(SRC_FILES_COMM
 
     src/helper/halt.f90
     src/helper/strutil.f90
+    src/helper/int_stack.f90
 )
 string(REPLACE ";" " " SRC_FILES_COMM_AC "${SRC_FILES_COMM}")
 ac_dec_obj_dep("src/Mod_cluster_analysis" "src/Mod_logger")
@@ -147,6 +155,7 @@ ac_dec_obj_dep("src/funceval/auto_func" "src/Mod_metadata")
 ac_dec_obj_dep("src/funceval/auto_func" "src/Mod_options")
 ac_dec_obj_dep("src/Mod_likelihood" "src/Mod_math")
 ac_dec_obj_dep("src/nested_fit" "src/Mod_input_parse")
+ac_dec_obj_dep("src/Mod_input_parse" "src/helper/int_stack")
 ac_dec_obj_dep("src/nested_fit" "src/cli/argparse")
 
 set(SRC_EXTERNAL_FUNCS

@@ -97,3 +97,45 @@ SUBROUTINE ARRAY_JOIN(array, ch, output)
         output = output//ch//TRIM(array(i))
     END DO
 END SUBROUTINE
+
+! BUG: (César) Not sure why the ALLOCATE causes issues with this function when used from another filename
+!              Maybe scope issues?? Or pass by value? Or by ref?? This is weird...
+
+! SUBROUTINE F_C_STRING_ALLOC(f_string, c_string)
+!     USE iso_c_binding
+!     CHARACTER(c_char), DIMENSION(:), POINTER, INTENT(OUT) :: c_string
+!     CHARACTER(LEN=*), INTENT(IN)                          :: f_string
+!
+!     INTEGER :: len
+!
+!     len = LEN_TRIM(f_string)
+!     ALLOCATE(c_string(len + 1))
+!     c_string = TRANSFER(TRIM(f_string), c_string)
+!     c_string(len + 1) = c_null_char
+! END SUBROUTINE
+!
+! SUBROUTINE F_C_STRING_DEALLOC(c_string)
+!     USE iso_c_binding
+!     CHARACTER(c_char), DIMENSION(:), POINTER, INTENT(INOUT) :: c_string
+!
+!     DEALLOCATE(c_string)
+! END SUBROUTINE
+!
+SUBROUTINE C_F_STRING(c_string, f_string)
+    USE iso_c_binding
+    TYPE(c_ptr), INTENT(IN)                              :: c_string
+    CHARACTER(LEN=*), INTENT(OUT)                        :: f_string
+    CHARACTER(4096), POINTER                             :: f_ptr
+
+    CALL C_F_POINTER(c_string, f_ptr)
+    f_string = f_ptr(1:index(f_ptr, c_null_char)-1)
+END SUBROUTINE
+!
+! SUBROUTINE C_F_INTEGER_ARRAY(c_intarray, f_intarray, f_size)
+!     USE iso_c_binding
+!     TYPE(c_ptr), INTENT(IN)                     :: c_intarray
+!     INTEGER, DIMENSION(:), POINTER, INTENT(OUT) :: f_intarray
+!     INTEGER, INTENT(IN)                         :: f_size
+!
+!     CALL C_F_POINTER(c_intarray, f_intarray, [f_size])
+! END SUBROUTINE

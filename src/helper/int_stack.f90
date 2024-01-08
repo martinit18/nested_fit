@@ -1,3 +1,7 @@
+! Brief  : This module contains a simple integer stack structure
+! Author : César Godinho
+! Date   : 08/01/2024
+
 MODULE MOD_INTSTACK
     USE, INTRINSIC :: iso_c_binding
     IMPLICIT NONE
