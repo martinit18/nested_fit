@@ -74,12 +74,12 @@ if(PPROF)
     add_definitions("-D'PASTE(x)'='x' -D'CAT(x,y)'='PASTE(x)y'")
     add_definitions("-D'PROFILED(x)'='TYPE(ScopedPerfTimer) :: CAT(x,__LINE__); CALL CAT(x,__LINE__)%init(\"x\",__LINE__);'")
 else()
-    # Make that so C++ does not complaint
+    # Make so that C++ does not complaint
     add_definitions(-DST_PROF)
     add_definitions("-D'ST_PROF_NAMED(name)'")
     set(CXX_SUPPRESS_STPROF -Wno-unused-value)
 
-    # Make that so Fortran does not complaint
+    # Make so that Fortran does not complaint
     add_definitions("-D'PROFILED(x)'=''")
 endif()
 

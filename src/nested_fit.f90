@@ -1480,6 +1480,8 @@ PROGRAM NESTED_FIT
    INTEGER              :: nargs
    REAL(8), ALLOCATABLE :: args(:)
    INTEGER              :: i, i0, i1
+    
+   PROFILED(B_RUNUSRFUNC)
 
    ! Find the function name
    function_name = TRIM(ADJUSTL(invalue(1:INDEX(invalue, '(')-1)))
@@ -1519,7 +1521,7 @@ PROGRAM NESTED_FIT
       CALL LOG_ERROR('Maybe the specified function name is incorrect/not in the cache.')
       CALL LOG_ERROR('Aborting Execution...')
       CALL LOG_ERROR_HEADER()
-      STOP
+      CALL HALT_EXECUTION()
    ENDIF
 
    y = fptr(x, nargs, args)
@@ -1529,7 +1531,7 @@ PROGRAM NESTED_FIT
    IF(nargs.GT.0) THEN
       DEALLOCATE(args)
    ENDIF
-   STOP
+   CALL HALT_EXECUTION()
   END SUBROUTINE
 
   SUBROUTINE WRITE_REPEAT_CHAR(val, n)
