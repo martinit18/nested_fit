@@ -83,6 +83,10 @@ class Analysis(object):
         self.df.head()
         self.data = self.df.values
 
+    # Program version TODO: (César) Allow backward compatibility here
+    def check_version(self, version_float):
+        from importlib.metadata import version as imp_version
+        return version_float == float('.'.join(imp_version('nested_fit').split('.')[:2]))
 
 
 ########################################################################################
@@ -107,9 +111,8 @@ class Analysis(object):
             input_data = yaml.load(f, Loader=SafeLoader)
         
         # The parameters are read with their comment and/or definition
-        # Program version TODO(César): Allow backward compatibility here
-        from importlib.metadata import version as imp_version
-        if input_data['version'] < int(float(imp_version("nested_res"))):
+        # Quick parse on the version strings
+        if(not self.check_version(input_data['version'])):
             sys.exit('Wrong input file version. Please check.')
 
         parameters = []
@@ -125,7 +128,6 @@ class Analysis(object):
                 int(v['fixed']) if 'fixed' in v else 0])
             i += 1
         input_data['parameters'] = parameters
-
 
         return input_data, input_comment
 
