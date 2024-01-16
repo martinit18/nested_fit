@@ -64,6 +64,12 @@ MODULE MOD_PERFPROF
             TYPE(stperf_PerfNodeThreadList_t) :: output
         END FUNCTION
 
+        FUNCTION stperf_GetCallTreeDot() RESULT(output) BIND(c, name='stperf_GetCallTreeDot')
+            USE, INTRINSIC :: iso_c_binding
+            IMPLICIT NONE
+            TYPE(c_ptr) :: output
+        END FUNCTION
+
         FUNCTION stperf_GetThreadRoot(tree, tid) RESULT(output) BIND(c, name='stperf_GetThreadRoot')
             USE, INTRINSIC :: iso_c_binding
             IMPORT stperf_PerfNodeThreadList_t
@@ -163,18 +169,34 @@ MODULE MOD_PERFPROF
 
     SUBROUTINE SHUTDOWN_PERF_PROF()
         TYPE(stperf_PerfNodeThreadList_t) :: nodes
-        ! TYPE(c_ptr) :: root
-        TYPE(c_ptr) :: c_report
-        CHARACTER(LEN=4092) :: f_report
+        TYPE(c_ptr) :: c_report, c_dotfile
+        INTEGER(c_size_t) :: c_report_size, c_dotfile_size
+        CHARACTER(LEN=:), ALLOCATABLE :: f_report, f_dotfile
+
 #ifdef PPROF
+        CALL LOG_TRACE('Finalizing performance profiling.')
         CALL stperf_StopCounters()
         nodes = stperf_GetCallTree()
-        ! root  = stperf_GetThreadRoot(nodes, stperf_GetCurrentThreadId())
         c_report = stperf_GetCallTreeString(nodes)
+        c_dotfile = stperf_GetCallTreeDot()
+
+        CALL C_STRING_SIZE(c_report, c_report_size)
+        CALL C_STRING_SIZE(c_dotfile, c_dotfile_size)
+
+        ALLOCATE(CHARACTER(LEN=c_report_size)  :: f_report)
+        ALLOCATE(CHARACTER(LEN=c_dotfile_size) :: f_dotfile)
         
         CALL C_F_STRING(c_report, f_report)
+        CALL C_F_STRING(c_dotfile, f_dotfile)
 
-        WRITE(*,*) f_report
+        CALL LOG_TRACE('PPROF dump:'//NEW_LINE('N')//TRIM(f_report))
+
+        CALL LOG_MESSAGE('Writing nf_pprof.dot...')
+        OPEN(7, FILE='nf_pprof.dot', STATUS='unknown')
+        WRITE(7,'(a)') f_dotfile
+        CLOSE(7)
+
+        DEALLOCATE(f_report, f_dotfile)
 
         CALL stperf_FreeCallTreeString(c_report)
         CALL stperf_FreeCallTree(nodes)
