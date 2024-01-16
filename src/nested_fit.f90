@@ -862,9 +862,13 @@ PROGRAM NESTED_FIT
   ! Close the logger file
   CALL CLOSE_LOG()
 
+  ! Shutdown the performance profiling
+  CALL SHUTDOWN_PERF_PROF()
+
   CONTAINS
 
   SUBROUTINE PRINT_OUTPUT_RESULT()
+   PROFILED(PRINT_OUTPUT_RESULT)
    OPEN(22,FILE='nf_output_res.dat',STATUS= 'UNKNOWN')
    WRITE(22,*) '#############_FINAL_RESULTS_#####################################################################################'
    WRITE(22,*) 'N._of_trials:                          ', ntry
@@ -945,6 +949,8 @@ PROGRAM NESTED_FIT
     INTEGER, INTENT(OUT)                         :: vsize
     INTEGER                                      :: i, j, k
 
+    PROFILED(FIND_TOTAL_PARAMS_USERFUNCTION)
+
     IF(SIZE(parse_results).EQ.1) THEN
       ! Avoid calling expensive STR_ARRAY_UNIQUE
       DO i = 1, SIZE(parse_results(1)%parameter_names)
@@ -984,6 +990,8 @@ PROGRAM NESTED_FIT
    INTEGER                        :: legacy_param_count
    CHARACTER(128)                 :: splitarr(16)
    INTEGER                        :: splitarr_count
+
+   PROFILED(CONFIGURE_USERFUNCTION)
 
    ! Check if the function is legacy or not
    ! If the first function is legacy, we don't need to worry about this
@@ -1403,6 +1411,8 @@ PROGRAM NESTED_FIT
    CHARACTER(LEN=512), INTENT(IN) :: invalue
    CHARACTER(LEN=6) :: delete_ok
 
+   PROFILED(B_DELCACHE)
+
    CALL LOG_MESSAGE_HEADER()
    CALL LOG_MESSAGE('This action is irreversible. All of the user functions will be lost.')
    CALL LOG_MESSAGE('Type `Delete` to delete the cache?')
@@ -1443,11 +1453,11 @@ PROGRAM NESTED_FIT
       CALL HALT_EXECUTION()
    ENDIF
 
-   ! NOTE(César) : Checking for an extension could work if the string ends in .ccc
-   !               Where this 'ccc' could only be chars or it could be confused
-   !               with a number end in latex (e.g. x + 1.342)
-   !               So checking for an extension is not that trivial
-   !               If the extension does not match a cpp or f90 one just assume we have latex code
+   ! NOTE: (César): Checking for an extension could work if the string ends in .ccc
+   !                Where this 'ccc' could only be chars or it could be confused
+   !                with a number end in latex (e.g. x + 1.342)
+   !                So checking for an extension is not that trivial
+   !                If the extension does not match a cpp or f90 one just assume we have latex code
    
    ! Detect if the input is latex or a file
    IF(HAS_VALID_CPP_EXT(TRIM(invalue)).OR.HAS_VALID_F90_EXT(TRIM(invalue))) THEN
@@ -1551,6 +1561,8 @@ PROGRAM NESTED_FIT
    TYPE(cache_entry_t)            :: cache_entry
    CHARACTER(LEN=16)              :: tmp
 
+   PROFILED(B_LSTUSRFUNC)
+
    CALL GET_CACHE_SIZE(n)
 
    IF(n.EQ.0) THEN
@@ -1602,6 +1614,8 @@ PROGRAM NESTED_FIT
   SUBROUTINE B_RECUSRFUNC(this, invalue)
    CLASS(argdef_t), INTENT(IN)    :: this
    CHARACTER(LEN=512), INTENT(IN) :: invalue
+
+   PROFILED(B_RECUSRFUNC)
 
    CALL LOG_MESSAGE_HEADER()
    CALL LOG_MESSAGE('Recompiling cache...')
