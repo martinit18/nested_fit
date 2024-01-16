@@ -6,7 +6,6 @@
 *.o
 *.mod
 build/
-build-aux/
 bin/
 
 # vscode settings
