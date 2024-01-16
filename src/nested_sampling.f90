@@ -32,6 +32,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   USE MOD_OPTIONS
   ! Module for logging
   USE MOD_LOGGER
+  ! Module for proffiling
+  USE MOD_PERFPROF
 
   !
   IMPLICIT NONE
@@ -86,6 +88,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   LOGICAL :: make_cluster_internal, need_cluster
   INTEGER(4) :: n_call_cluster, n_call_cluster_it
   INTEGER(4), PARAMETER :: n_call_cluster_it_max=3, n_call_cluster_max=10
+
+  PROFILED(NESTED_SAMPLING)
 
   ! Initialize variables (with different seeds for different processors)
   gval = 0.
@@ -221,7 +225,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   !----------------------------------------------------------------------------------------!
   n = 1
   DO WHILE (n.LE.nstep)
-
      ! ##########################################################################
      ! Find a new live point
       
