@@ -44,7 +44,7 @@ SUBROUTINE STR_TO_LOWER(input)
    END DO
 END SUBROUTINE
 
-! TODO(César): Use a tree for very large arrays to be faster to compute unique
+! TODO: (César): Use a tree for very large arrays to be faster to compute unique
 SUBROUTINE STR_ARRAY_UNIQUE(array, countout)
    IMPLICIT NONE
    CHARACTER(*), INTENT(INOUT)           :: array(countout)
@@ -120,17 +120,35 @@ END SUBROUTINE
 !
 !     DEALLOCATE(c_string)
 ! END SUBROUTINE
-!
+
+SUBROUTINE C_STRING_SIZE(c_string, len)
+    USE iso_c_binding
+    TYPE(c_ptr)      , INTENT(IN)  :: c_string
+    INTEGER(c_size_t), INTENT(OUT) :: len
+
+    INTERFACE
+        FUNCTION c_strlen(c_stringl) RESULT(lenl) BIND(c, name='strlen')
+            USE, INTRINSIC :: iso_c_binding
+            TYPE(c_ptr), VALUE :: c_stringl
+            INTEGER(c_size_t)  :: lenl
+        END FUNCTION
+    END INTERFACE
+
+    len = c_strlen(c_string)
+END SUBROUTINE
+
 SUBROUTINE C_F_STRING(c_string, f_string)
     USE iso_c_binding
-    TYPE(c_ptr), INTENT(IN)                              :: c_string
-    CHARACTER(LEN=*), INTENT(OUT)                        :: f_string
-    CHARACTER(4096), POINTER                             :: f_ptr
+    TYPE(c_ptr), INTENT(IN)                    :: c_string
+    CHARACTER(LEN=*), INTENT(OUT)              :: f_string
+    CHARACTER(LEN=:), POINTER                  :: f_ptr
+    INTEGER(c_size_t)                          :: c_size
 
+    CALL C_STRING_SIZE(c_string, c_size)
     CALL C_F_POINTER(c_string, f_ptr)
-    f_string = f_ptr(1:index(f_ptr, c_null_char)-1)
+    f_string = f_ptr(1:c_size)
 END SUBROUTINE
-!
+
 ! SUBROUTINE C_F_INTEGER_ARRAY(c_intarray, f_intarray, f_size)
 !     USE iso_c_binding
 !     TYPE(c_ptr), INTENT(IN)                     :: c_intarray
