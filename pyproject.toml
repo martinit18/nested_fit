@@ -27,7 +27,8 @@ dependencies = [
     "matplotlib",
     "scipy",
     "getdist",
-    "tqdm"
+    "tqdm",
+    "plotly"
 ]
 
 [project.urls]
