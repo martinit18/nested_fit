@@ -170,7 +170,7 @@ MODULE MOD_INPUTPARSE
             IF(i.EQ.0) THEN
                 ! `key` should have the last key here
                 CALL config%find(key, last_value, find_error) ! `find_error` should never be true here
-
+                
                 CALL LOG_TRACE(TRIM(key)//' = '//TRIM(ADJUSTL(line(i+1:lastidx))))
 
                 CALL config%insert(key, InputDataGenericValue_t(TRIM(ADJUSTL(last_value%toCharacter()))//' '//TRIM(ADJUSTL(line(i+1:lastidx)))))
@@ -377,7 +377,7 @@ MODULE MOD_INPUTPARSE
                 error = .TRUE.
                 RETURN
             ENDIF
-            pair = pair%next
+            pair => pair%next
         END DO
     END SUBROUTINE
 
