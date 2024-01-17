@@ -10,6 +10,7 @@
 #include <vector>
 #include <queue>
 #include <iostream>
+#include <map>
 
 #ifdef PPROF
 #include <stperf.h>
