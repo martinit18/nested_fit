@@ -414,7 +414,7 @@ MODULE MOD_INPUTPARSE
                 RETURN
             ENDIF
 
-            pair = pair%next
+            pair => pair%next
         END DO
     END SUBROUTINE
 

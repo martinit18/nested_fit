@@ -201,6 +201,13 @@ PROGRAM NESTED_FIT
     B_COMPACT&
   ))
 
+  CALL ADD_ARGUMENT(argdef_t("lib-output", "lo", .FALSE.,&
+    'Sets nested fit console output to be very simple. &
+     Itended only when using the python library as a middle man. But can &
+     be usefull to easily parse the output if wanted.',&
+    B_LIBOUT&
+  ))
+
   CALL ADD_ARGUMENT(argdef_t("input-file", "i", .TRUE.,&
     "Overwrites the input filename. The input filename defaults to 'nf_input.dat'.",&
     B_INPUTFILE&
@@ -1388,6 +1395,12 @@ PROGRAM NESTED_FIT
    CLASS(argdef_t), INTENT(IN) :: this
    CHARACTER(LEN=512), INTENT(IN) :: invalue
    opt_compact_output = .TRUE.
+  END SUBROUTINE
+
+  SUBROUTINE B_LIBOUT(this, invalue)
+   CLASS(argdef_t), INTENT(IN) :: this
+   CHARACTER(LEN=512), INTENT(IN) :: invalue
+   opt_lib_output = .TRUE.
   END SUBROUTINE
 
   SUBROUTINE B_INPUTFILE(this, invalue)

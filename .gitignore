@@ -41,5 +41,5 @@ autom4te.cache/
 configure.ac
 Makefile.am
 
-# ??
+# Apparently autoconf generates a back configure (???)
 configure~

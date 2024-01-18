@@ -83,7 +83,9 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
 #ifdef OPENMPI_ON
   character(LEN=MPI_MAX_PROCESSOR_NAME) :: processor_name
 #endif
-  CHARACTER :: info_string*256
+  CHARACTER :: info_string*4096
+  CHARACTER :: fparname_fmt*32
+  CHARACTER :: fparval_fmt*32
 
   LOGICAL :: make_cluster_internal, need_cluster
   INTEGER(4) :: n_call_cluster, n_call_cluster_it
@@ -116,6 +118,12 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
   too_many_tries = .false.
   make_cluster_internal=.false.
   need_cluster=.false.
+
+  ! If using lo output set the fmt for params and param names
+  IF(opt_lib_output) THEN
+    WRITE(fparval_fmt, '(I8, "(F23.8)")') npar
+    WRITE(fparname_fmt, '(I8, "(A16)")') npar
+  ENDIF
 
   ! ---------- Inintial live points sorting ------------------------------------------------
   CALL LOG_TRACE('Sorting live points. N. of points = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(nlive))))
@@ -472,6 +480,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
                    ' | Es: ', F20.12, ' | Ea: ', ES14.7, ' | Te: ', F6.4, ' |')
               WRITE(*,24) info_string
 24            FORMAT(A150)
+           ELSE IF(opt_lib_output) THEN
+              WRITE(*,*) 'LO | ', itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries, npar, par_name, live(nlive, :)
            ELSE
               WRITE(info_string,23) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
 23            FORMAT('| N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
