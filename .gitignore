@@ -36,9 +36,6 @@ dist/
 # Logfiles
 *.log
 
-# Ignore the api source (local only - César)
-src/api/
-
 # Ignore autoconf/automake stuff
 autom4te.cache/
 configure.ac
