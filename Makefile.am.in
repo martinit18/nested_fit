@@ -17,7 +17,9 @@ FFLAGS += -DLTRACE
 endif
 
 # ST_PROF is not compatible with automake for now
-CPPFLAGS += -DST_PROF -DST_PROF_NAMED
+CPPFLAGS += -DST_PROF -D'ST_PROF_NAMED(name)'
+FCFLAGS += -D'PROFILED(x)'=''
+FFLAGS += -D'PROFILED(x)'=''
 
 if OPENMP
 CPPFLAGS += -fopenmp

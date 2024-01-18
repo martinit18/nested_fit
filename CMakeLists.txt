@@ -55,6 +55,7 @@ endif()
 
 set(project_name nested_fit)
 project(${project_name} VERSION ${project_version} LANGUAGES Fortran CXX)
+
 # Enforce C++14
 set(CMAKE_CXX_STANDARD 14)
 
@@ -151,6 +152,7 @@ ac_dec_obj_dep("src/Mod_cluster_analysis" "src/Mod_logger")
 ac_dec_obj_dep("src/Mod_logger" "src/Mod_timestamp")
 ac_dec_obj_dep("src/Mod_cluster_analysis" "src/Mod_parameters")
 ac_dec_obj_dep("src/Mod_search_new_point" "src/Mod_likelihood")
+ac_dec_obj_dep("src/Mod_search_new_point" "src/Mod_perfprof") # Performance profilling is not compatible with autoconf
 ac_dec_obj_dep("src/Mod_likelihood" "src/Mod_userfcn")
 ac_dec_obj_dep("src/Mod_userfcn" "src/funceval/auto_func")
 ac_dec_obj_dep("src/funceval/auto_func" "src/Mod_metadata")
