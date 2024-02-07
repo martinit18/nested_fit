@@ -12,7 +12,8 @@ MODULE MOD_LIKELIHOOD
   IMPLICIT NONE
 
   ! Data variables
-  INTEGER(4) :: ndata, ncall=0
+  INTEGER(4) :: ndata
+  INTEGER(8) :: ncall=0, ncall9=0
   INTEGER(4), DIMENSION(nsetmax) :: ndata_set=0
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: x, nc, nc_err
   ! Data variable for 2D images
@@ -59,10 +60,12 @@ CONTAINS
        searchid = 0
     ELSE IF(search_method.EQ.'UNIFORM') THEN
        searchid = 1
-    ELSE IF(search_method.EQ.'SLICE_SAMPLING') THEN
+    ELSE IF(search_method.EQ.'SLICE_SAMPLING_TRANSF') THEN
        searchid = 2
-    ELSE IF(search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
+    ELSE IF(search_method.EQ.'SLICE_SAMPLING') THEN
        searchid = 3
+    ELSE IF(search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
+       searchid = 4
     ELSE
        WRITE(*,*) 'Error of the search type name in Mod_search_new_point module'
        WRITE(*,*) 'Check the manual and the input file'
@@ -469,6 +472,11 @@ CONTAINS
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
 
     ncall=ncall+1
+    IF(ncall == 1.E+9) THEN
+       ncall9=ncall9+1
+       ncall=0
+    END IF
+    
     IF (BIT_CHECK_IF(DATA_IS_1D)) THEN
        LOGLIKELIHOOD = LOGLIKELIHOOD_1D(par)
     ELSE IF (BIT_CHECK_IF(DATA_IS_2D)) THEN
@@ -490,6 +498,11 @@ CONTAINS
     REAL(8) :: USERFCN, USERFCN_SET, USERFCN_2D, xx, yy
 
     ncall=ncall+1
+    IF(ncall == 1.E+9) THEN
+       ncall9=ncall9+1
+       ncall=0
+    END IF
+    
     IF (BIT_CHECK_IF(DATA_IS_C).AND.BIT_CHECK_IF(DATA_IS_1D)) THEN
        ! Check if the choosen function assumes zero or negative values
        DO k=1,nset

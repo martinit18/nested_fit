@@ -20,6 +20,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   USE MOD_SEARCH_NEW_POINT
   ! Module for cluster analysis
   USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_on
+  ! Module for covariance matrix
+  USE MOD_COVARIANCE_MATRIX
   ! Module for the metadata
   USE MOD_METADATA
   ! Module for optionals
@@ -86,7 +88,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   CHARACTER :: info_string*256
 
   LOGICAL :: make_cluster, need_cluster
-  INTEGER(4) :: n_call_cluster, n_call_cluster_it
+  INTEGER(4) :: n_call_cluster, n_call_cluster_it, n_mat_cov
   INTEGER(4), PARAMETER :: n_call_cluster_it_max=3, n_call_cluster_max=10
   
   EXTERNAL :: SORTN
@@ -110,6 +112,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   nstep = maxstep - nlive + 1
   n_call_cluster=0
   n_call_cluster_it=0
+  n_mat_cov=0
   !maxtries = 50*njump ! Accept an efficiency of more than 2% for the exploration, otherwise change something
 
   ALLOCATE(live_like_new(nth),live_new(nth,npar),too_many_tries(nth),icluster(nth))
@@ -244,6 +247,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   !                                                                                        !
   !----------------------------------------------------------------------------------------!
   n = 1
+  
+  ! Create covariance matrix and Cholesky decomposition
+  CALL ALLOCATE_PAR_VAR()
+  CALL CREATE_MAT_COV(live(:,par_var))
   DO WHILE (n.LE.nstep)
 
      ! ##########################################################################
@@ -259,7 +266,15 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
             n_call_cluster=n_call_cluster+1
             need_cluster=.false.
          END IF
-    !         n_ntries = 0
+    	 ! n_ntries = 0
+         CALL REALLOCATE_MAT_COV() ! Adapt the covariance matrix and Cholesky decomposition to the number of clusters
+         CALL FILL_MAT_COV(live(:,par_var)) ! Fill the covariance matrix and Cholesky decomposition
+         n_mat_cov=0
+      END IF
+      
+      IF(n_mat_cov .GT. 0.05*nlive) THEN ! If more than 5% of the points have changed, calculate the covariance matrix and Cholesky decomposition again
+         CALL FILL_MAT_COV(live(:,par_var))
+         n_mat_cov=0
       END IF
       
       it = 1
@@ -324,7 +339,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
            GOTO 901
         ELSE
            WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries
-           WRITE(*,*) 'We take the data as they are :-~'
            nstep_final = n - 1
            GOTO 601
         END IF
@@ -332,7 +346,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
      ! -------------------------------------!
      !     Subloop for threads starts       !
      ! -------------------------------------!      
-
+     
+     
      DO it = 1, nth
         
         ! If the parallely computed live point is still good, take it for loop calculation.
@@ -340,6 +355,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
         IF ((live_like_new(it).GT.min_live_like)) THEN
            n = n + 1
            n_call_cluster_it=0
+           n_mat_cov=n_mat_cov+1
         ELSE
            CYCLE
         ENDIF
@@ -408,7 +424,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
 
 
         SELECT CASE (searchid)
-        CASE (2,3)
+        CASE (2,3,4)
            IF(cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
               IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
                  make_cluster=.true.

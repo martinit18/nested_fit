@@ -141,7 +141,7 @@ Together with this file, also the files `nf_output_points.paramnames` and `nf_ou
 A complete selection of input files example is given in the folder `examples` where the implementation of the function of the python library are given.
 
 
-It follwos a complete description of `nf_input.dat` file.
+It follows a complete description of `nf_input.dat` file.
 
 ```
 4.5                 # Program version
@@ -159,7 +159,7 @@ Input:  (x, y, error y)
 Input: xy matrix with number of counts
 - `2s`: two dimensional spectrum with counts. \
 Input: (x, y, n. counts) TO BE IMPLEMENTED
-- `2e`: two dimensional spectrum with counts. \
+- `2e`: two dimensional spectrum with error bars. \
 Input: (x, y, z, error z) TO BE IMPLEMENTED
 
 
@@ -185,9 +185,9 @@ After convergence is reached, all remaining live points are assigned:
 RANDOM_WALK         # Type of search of live points
 0.1  20   100  10   # Param. search algo.(2), max n. tries, max of max tries
 ```
-For the moment, a random walk (`RANDOM_WALK`), a uniform search around each live point (`UNIFORM`), slice sampling (`SLICE_SAMPLING`) and slice sampling with an adaptable step (`SLICE_SAMPLING_ADAPT`) are implemented. The first two parameters of the above line are specific to the search algorithm:
+For the moment, a random walk (`RANDOM_WALK`), a uniform search around each live point (`UNIFORM`), two versions of slice sampling (`SLICE_SAMPLING_TRANSF` and `SLICE_SAMPLING`), corresponding to the search being done in two different spaces (transformed and real), and slice sampling with an adaptable step (`SLICE_SAMPLING_ADAPT`) are implemented. The first two parameters of the above line are specific to the search algorithm:
 - `RANDOM_WALK` par. 1: fraction of standard deviation for each jump, par. 2: number of jumps. Suggested values: 0.1-0.2, 10-40.
-- `SLICE_SAMPLING` and `SLICE_SAMPLING_ADAPT` par. 1: fraction of standard deviation for segment exploration, par. 2: number of jumps. Suggested values: ~1, 3-5.
+- `SLICE_SAMPLING_TRANSF`, `SLICE_SAMPLING` and `SLICE_SAMPLING_ADAPT` par. 1: fraction of standard deviation for segment exploration, par. 2: number of jumps. Suggested values: ~1, 3-5.
 - `UNIFORM` par. 1: fraction of standard deviation for the box size, par. 2: number of jumps. Suggested values: 0.1-1, 1.
 
 
@@ -221,18 +221,20 @@ Additional information can be found in the reference articles.
 
 ## Present version and history of the past versions
 
-The present version is 4.5.7
+The present version is 4.6.0
 New features:
-- New functions
-- New exercices
-- New modified Jeffreys likelihood for data
-- Number of calls recorded in the main output file
-- No limitation in number of steps 
-- Record of birth likelihood values and rank for diagnostics in `nf_output_diag.dat` file
-- Implementation of Anesthetic package for evaluation of evidence uncertainty with one run in python library
-
+- New search method
+- Covariance matrix and its Cholesky decomposition calculated when 5% of the points have changed
+- Number of calls recorded in two variables
 
 Previous versions are:
+ - 4.5 New functions \
+ New exercices \
+ New modified Jeffreys likelihood for data \
+ Number of calls recorded in the main output file \
+ No limitation in number of steps \
+ Record of birth likelihood values and rank for diagnostics in `nf_output_diag.dat` file \
+ Implementation of Anesthetic package for evaluation of evidence uncertainty with one run in python library
  - 4.4 New "write_input" function in python library \
  New fit functions \
  External LAPACK library link option \ 

@@ -2,8 +2,8 @@
 # Copyright M. Trassinelli
 # Last modified: 2023/12/28 14:27:12
 
-VERSION_FULL = 4.5.7
-VERSION = 4.5
+VERSION_FULL = 4.6.0
+VERSION = 4.6
 
 NAME    = nested_fit$(VERSION_FULL)
 
@@ -136,7 +136,7 @@ FFILES  = USERFCN.f USERFCN_SET.f init_interpolation.f \
 	rinteg.f CALGO.ACM/WOFZ.f \
 
 F90FILES_LIKE = Mod_parameters.f90 Mod_timestamp.f90 Mod_likelihood.f90 \
-	Mod_cluster_analysis.f90 Mod_search_new_point.f90 \
+	Mod_cluster_analysis.f90 Mod_covariance_matrix.f90 Mod_search_new_point.f90 \
 	Mod_options.f90 Mod_mpi.f90 Mod_math.f90 \
 	Mod_metadata.f90 \
 	argparse.f90 \
@@ -145,7 +145,7 @@ F90FILES_LIKE = Mod_parameters.f90 Mod_timestamp.f90 Mod_likelihood.f90 \
 	dlog_fac.f90 sortn_slatec.f90 meanvar.f90 randn.f90 shirley_fitpack.f90 \
 
 F90FILES_FUNC = Mod_parameters.f90 Mod_timestamp.f90 Mod_likelihood_func.f90 \
-	Mod_cluster_analysis.f90 Mod_search_new_point.f90 \
+	Mod_cluster_analysis.f90 Mod_covariance_matrix.f90 Mod_search_new_point.f90 \
 	Mod_options.f90 Mod_mpi.f90 Mod_math.f90 \
 	Mod_metadata.f90 \
         argparse.f90 \

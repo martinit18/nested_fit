@@ -8,6 +8,8 @@ MODULE MOD_SEARCH_NEW_POINT
   USE MOD_LIKELIHOOD
   ! Module for cluster analysis
   USE MOD_CLUSTER_ANALYSIS
+  ! Module for covariance matrix
+  USE MOD_COVARIANCE_MATRIX
   
   !$ USE OMP_LIB
 
@@ -16,9 +18,9 @@ MODULE MOD_SEARCH_NEW_POINT
   REAL(8), DIMENSION(:), ALLOCATABLE :: live_ave, live_sd
   INTEGER(4) :: n_call_clusterj=0
   INTEGER(4), PARAMETER :: n_call_cluster_it_maxj=3, n_call_cluster_maxj=10
-#ifdef LAPACK_ON
-  EXTERNAL :: dpotrf, dtrtri, dtrmv
-#endif
+!#ifdef LAPACK_ON
+!  EXTERNAL :: dpotrf, dtrtri, dtrmv
+!#endif
 
 CONTAINS
 
@@ -112,9 +114,12 @@ CONTAINS
          CALL UNIFORM(n,itry,min_live_like,live_like,live, &
           live_like_new,live_new,icluster,ntries,too_many_tries)
       CASE (2)
-         CALL SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
+         CALL SLICE_SAMPLING_TRANSF(n,itry,min_live_like,live_like,live, &
           live_like_new,live_new,icluster,ntries,too_many_tries)
       CASE (3)
+         CALL SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
+          live_like_new,live_new,icluster,ntries,too_many_tries)
+      CASE (4)
          CALL SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
           live_like_new,live_new,icluster,ntries,too_many_tries)
     END SELECT
@@ -229,44 +234,6 @@ CONTAINS
 
              ! If you already did too much tries, gave up or start a cluster analysis
              IF (n_ntries.GE.maxntries) THEN
-
-
-                !IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
-
-                !   IF(n_call_cluster_itj>=n_call_cluster_it_maxj) THEN
-                !     WRITE(*,*) 'Too many cluster analysis for an iteration'
-                !     WRITE(*,*) 'Change cluster recognition parameters'
-                !     STOP
-                !   END IF
-                !   IF(n_call_clusterj>=n_call_cluster_maxj) THEN
-                !     WRITE(*,*) 'Too many cluster analysis'
-                !     WRITE(*,*) 'Change cluster recognition parameters'
-                !     STOP
-                !   END IF
-
-                !   WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
-                !   !
-                !   CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
-                !   ! outputs: p_cluster ! flag of number of appartenance cluster for each live point
-                !   cluster_on = .true.
-                !   n_ntries = 0
-                !   n_call_cluster_itj=n_call_cluster_itj+1
-                !   n_call_clusterj=n_call_clusterj+1
-
-                   ! Choose a new random live point and restart all
-                !   CALL RANDOM_NUMBER(rn)
-                !   istart= FLOOR((nlive-1)*rn+1)
-                !   start_jump = live(istart,:)
-
-                !   GOTO 400
-                
-
-                !ELSE
-                !   WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries*maxntries
-                !   WRITE(*,*) 'We take the data as they are :-~'
-                !   too_many_tries = .true.
-                !   RETURN
-                !END IF
                 too_many_tries=.true.
                 live_like_new=min_live_like
                 live_new = live(1,:)
@@ -505,44 +472,6 @@ CONTAINS
 
              ! If you already did too much tries, gave up or start a cluster analysis
              IF (n_ntries.GE.maxntries) THEN
-
-
-                !IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
-
-                !   IF(n_call_cluster_itj>=n_call_cluster_it_maxj) THEN
-                !     WRITE(*,*) 'Too many cluster analysis for an iteration'
-                !     WRITE(*,*) 'Change cluster recognition parameters'
-                !     STOP
-                !   END IF
-                !   IF(n_call_clusterj>=n_call_cluster_maxj) THEN
-                !     WRITE(*,*) 'Too many cluster analysis'
-                !     WRITE(*,*) 'Change cluster recognition parameters'
-                !     STOP
-                !   END IF
-                !   WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
-                   !
-
-                !   CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
-                   ! outputs: p_cluster ! flag of number of appartenance cluster for each live point
-                !   cluster_on = .true.
-                !   n_ntries = 0
-                !   n_call_cluster_itj=n_call_cluster_itj+1
-                !   n_call_clusterj=n_call_clusterj+1
-
-
-                   ! Choose a new random live point and restart all
-                !   CALL RANDOM_NUMBER(rn)
-                !   istart= FLOOR((nlive-1)*rn+1)
-                !   start_jump = live(istart,:)
-
-                !   GOTO 600
-
-                !ELSE
-                !   WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries*maxntries
-                !   WRITE(*,*) 'We take the data as they are :-~'
-                !   too_many_tries = .true.
-                !   RETURN
-                !END IF
                 too_many_tries=.true.
                 live_like_new=min_live_like
                 live_new = live(1,:)
@@ -653,10 +582,11 @@ CONTAINS
 
   !----------------------------------------------------------------------------------------------------------------------------------------
 
-SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
+SUBROUTINE SLICE_SAMPLING_TRANSF(n,itry,min_live_like,live_like,live, &
        live_like_new,live_new,icluster,ntries,too_many_tries)
 
     !inspired from polychord code
+    ! This is slice sampling performed in the transformed space
 
     USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in
     INTEGER(4), INTENT(IN) :: n, itry
@@ -675,14 +605,11 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     INTEGER(4) :: i, l, j, kr, kl
     REAL(8) :: rn
     INTEGER(4) :: n_call_cluster_itj
-    INTEGER(4) :: dim_eff
+    !INTEGER(4) :: dim_eff
     REAL(8), DIMENSION(:,:),ALLOCATABLE :: basis
-    !REAL(8), DIMENSION(:,:), ALLOCATABLE :: basis
     REAL(8), DIMENSION(:), ALLOCATABLE :: left, right, left_prov,right_prov
     REAL(8), DIMENSION(:,:), ALLOCATABLE  :: live_cov, live_chol, inv_chol
-    REAL(8), DIMENSION(:,:), ALLOCATABLE :: live_nf
     REAL(8), DIMENSION(:), ALLOCATABLE :: start_jump, new_jump, start_jump_t, new_jump_t
-    INTEGER(4), DIMENSION(:), ALLOCATABLE :: par_var
     REAL(8) :: part_like, size_jump, size_jump_save, loglike
     LOGICAL :: test_bnd
     INTEGER(4) :: init_fail, njump
@@ -696,43 +623,22 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     too_many_tries = .false.
     n_call_cluster_itj=0
     gval = 0.
-    dim_eff=npar-SUM(par_fix) !number of parameters not fixed
     size_jump=search_par1
     init_fail=0
     size_jump_save=size_jump
     njump=INT(search_par2) !number of bases used
     IF(.NOT. ALLOCATED(basis)) ALLOCATE(basis(dim_eff,dim_eff), &
         live_cov(dim_eff,dim_eff),live_chol(dim_eff,dim_eff),inv_chol(dim_eff,dim_eff))
-    IF(.NOT. ALLOCATED(live_nf)) ALLOCATE(live_nf(nlive,dim_eff))
+    !IF(.NOT. ALLOCATED(live_nf)) ALLOCATE(live_nf(nlive,dim_eff))
     IF(.NOT. ALLOCATED(start_jump)) ALLOCATE(start_jump(dim_eff),new_jump(dim_eff), &
         start_jump_t(dim_eff),new_jump_t(dim_eff))
-    IF(.NOT. ALLOCATED(par_var)) ALLOCATE(par_var(dim_eff))
+    !IF(.NOT. ALLOCATED(par_var)) ALLOCATE(par_var(dim_eff))
     IF(.NOT. ALLOCATED(left)) ALLOCATE(left(dim_eff),right(dim_eff), &
         left_prov(dim_eff),right_prov(dim_eff))
 
 
     ! Select a live point as starting point
     ntries = 0
-
-    !!$OMP SINGLE
-    !IF(cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
-    !   IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
-    !         WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
-    !         CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
-    !        cluster_on = .true.
-    !         n_ntries = 0
-    !   END IF
-    !END IF
-    !!$OMP END SINGLE
-
-    ! Select only the variables that are not fixed
-    j=1
-    DO i=1,npar
-      IF(par_fix(i).NE.1) THEN
-        par_var(j)=i
-        j=j+1
-      END IF
-    END DO
 
 
 500 CALL RANDOM_NUMBER(rn)
@@ -741,7 +647,6 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
 
     !Select only the variables that are not fixed
     start_jump=start_jump_comp(par_var)
-    live_nf=live(:,par_var)
 
     ! Calculate momenta of the live points
     IF (cluster_on) THEN
@@ -758,19 +663,20 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
        live_ave(:) = cluster_mean(icluster,:)
     END IF
 
-    CALL MAT_COV(live_nf,nlive,dim_eff,istart,live_cov)
+    IF(cluster_on) THEN ! Get the covariance matrix and Cholesky decomposition for the correct cluster
+       live_cov=mat_cov(:,:,icluster)
+       live_chol=mat_chol(:,:,icluster)
+    ELSE
+       live_cov=mat_cov(:,:,1)
+       live_chol=mat_chol(:,:,1)
+    END IF
+    ! Calculate the inverse of the Cholesky matrix
 #ifdef LAPACK_ON
-    live_chol=live_cov
-    CALL dpotrf('L',dim_eff,live_chol,dim_eff,i)
-    DO j=1,dim_eff
-       live_chol(1:(j-1),j)=0
-    END DO
     inv_chol=live_chol
     CALL dtrtri('L','N',dim_eff,inv_chol,dim_eff,i)
     start_jump_t=start_jump
     CALL dtrmv('L','N','N',dim_eff,inv_chol,dim_eff,start_jump_t,1)
 #else
-    CALL CHOLESKY(dim_eff,live_cov,live_chol)
     CALL TRIANG_INV(dim_eff,live_chol,inv_chol)
     start_jump_t=matmul(inv_chol,start_jump) !start jump in the new space
 #endif
@@ -830,7 +736,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
          ELSE
             part_like=min_live_like-1
          END IF
-         DO WHILE((part_like.LT.min_live_like) .OR. (.NOT. test_bnd))
+         DO WHILE((.NOT.(part_like.GT.min_live_like)) .OR. (.NOT. test_bnd))
 204        ntries=ntries+1
            IF(ntries .GT. maxtries) THEN
              n_ntries=n_ntries+1
@@ -841,30 +747,6 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
              'n_ntries =',n_ntries,' over ', maxntries, 'n. step =', n
 
              IF(n_ntries .GE. maxntries) THEN
-               !IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
-               !  IF(n_call_cluster_itj>=n_call_cluster_it_maxj) THEN
-               !    WRITE(*,*) 'Too many cluster analysis for an iteration'
-               !    WRITE(*,*) 'Change cluster recognition parameters'
-               !    STOP
-               !  END IF
-               !  IF(n_call_clusterj>=n_call_cluster_maxj) THEN
-               !    WRITE(*,*) 'Too many cluster analysis'
-               !    WRITE(*,*) 'Change cluster recognition parameters'
-               !    STOP
-               !  END IF
-               !  WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
-               !  CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
-               !  cluster_on = .true.
-               !  n_ntries = 0
-               !  n_call_cluster_itj=n_call_cluster_itj+1
-               !  n_call_clusterj=n_call_clusterj+1
-               !  GOTO 500
-               !ELSE
-               !  WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries
-               !  WRITE(*,*) 'We take the data as they are :-~'
-               !  too_many_tries = .true.
-               !  RETURN
-               !END IF
                too_many_tries=.true.
                live_like_new=min_live_like
                live_new = live(1,:)
@@ -887,6 +769,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
        END DO
      END DO
      
+
     !Find the new point in the original space
 #ifdef LAPACK_ON
      new_jump=new_jump_t
@@ -912,7 +795,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
              ! maximum of the distribution is 1 (and is not normalized to 1 as the previous line)
              gval = dexp(-(new_jump_comp(l)-par_in(l))**2/(2*par_step(l)**2))
              CALL RANDOM_NUMBER(rn)
-             IF (rn.GT.gval) GOTO 700
+             IF (rn.GT.gval) GOTO 700 
           END IF
        END IF
     END DO
@@ -921,14 +804,242 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     loglike = LOGLIKELIHOOD(new_jump_comp)
     IF(loglike.LT.min_live_like) GOTO 700
 
-!    DO l=1,npar
-!      IF (new_jump_comp(l).LT.par_bnd1(l).OR.new_jump_comp(l).GT.par_bnd2(l)) THEN
-!        WRITE(*,*) l, .FALSE.
-!      END IF
-!    END DO
 
     ! Take the last point after jumps as new livepoint
     live_new = new_jump_comp
+    live_like_new = loglike
+400 ntries=ntries/dim_eff
+
+END SUBROUTINE SLICE_SAMPLING_TRANSF
+
+!----------------------------------------------------------------------------------------------
+
+SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
+       live_like_new,live_new,icluster,ntries,too_many_tries)
+
+    !inspired from polychord code
+    ! This is slice sampling performed in the initial space
+
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in
+    INTEGER(4), INTENT(IN) :: n, itry
+    REAL(8), INTENT(IN) :: min_live_like
+    REAL(8), INTENT(IN), DIMENSION(nlive) :: live_like
+    REAL(8), INTENT(IN), DIMENSION(nlive,npar) :: live
+    REAL(8), INTENT(OUT) :: live_like_new
+    REAL(8), DIMENSION(npar), INTENT(OUT) :: live_new
+    INTEGER(4), INTENT(OUT) :: icluster, ntries
+    LOGICAL, INTENT(OUT) :: too_many_tries
+    ! MCMC new point search variables
+    REAL(8) :: gval
+    REAL(8), DIMENSION(npar) :: start_jump, new_jump
+    INTEGER(4) :: istart, n_ntries
+    ! Other variables
+    INTEGER(4) :: i, l, j, kr, kl, m
+    REAL(8) :: rn
+    INTEGER(4) :: n_call_cluster_itj
+    REAL(8), DIMENSION(:,:),ALLOCATABLE :: basis_eff, basis
+    REAL(8), DIMENSION(npar) :: left, right
+    REAL(8), DIMENSION(:,:), ALLOCATABLE  :: live_cov, live_chol
+    REAL(8) :: part_like, size_jump, size_jump_save, loglike
+    LOGICAL :: test_bnd
+    INTEGER(4) :: init_fail, njump
+    ! Find new live points
+    ! ----------------------------------FIND_POINT_MCMC------------------------------------
+    live_new = 0.
+    live_like_new = 0.
+    ntries   = 0
+    istart   = 0
+    n_ntries = 0
+    too_many_tries = .false.
+    n_call_cluster_itj=0
+    gval = 0.
+    !dim_eff=npar-SUM(par_fix) !number of parameters not fixed
+    size_jump=search_par1
+    init_fail=0
+    size_jump_save=size_jump
+    njump=INT(search_par2) !number of bases used
+    IF(.NOT. ALLOCATED(basis_eff)) ALLOCATE(basis_eff(dim_eff,dim_eff), basis(npar,dim_eff), &
+        live_cov(dim_eff,dim_eff),live_chol(dim_eff,dim_eff))!, live_nf(nlive,dim_eff))
+
+
+    ! Select a live point as starting point
+    ntries = 0
+
+500 CALL RANDOM_NUMBER(rn)
+    istart= FLOOR((nlive-1)*rn+1)
+    start_jump = live(istart,:)
+    
+    ! Calculate momenta of the live points
+    IF (cluster_on) THEN
+       ! Identify cluster appartenance
+       icluster = p_cluster(istart)
+       ! Get for the specific cluster if the cluster analysis is on
+       ! Standard deviation
+       live_sd(:) = cluster_std(icluster,:)
+       IF(cluster_std(icluster,1).EQ.0.) THEN
+          ! If the cluster is formed only from one point, take the standard standard deviation
+          CALL REMAKE_LIVE_MEAN_SD(live)
+       END IF
+       ! and mean
+       live_ave(:) = cluster_mean(icluster,:)
+    END IF
+    
+
+    IF(cluster_on) THEN ! Get the covariance matrix and Cholesky decomposition for the correct cluster
+       live_cov=mat_cov(:,:,icluster)
+       live_chol=mat_chol(:,:,icluster)
+    ELSE
+       live_cov=mat_cov(:,:,1)
+       live_chol=mat_chol(:,:,1)
+    END IF
+
+    ! Make several consecutive casual jumps in the region with loglikelyhood > minlogll
+700 CONTINUE
+    DO i=1,njump
+       !ntries=0
+       !Generate a random orthonormal basis
+       CALL BASE_O_N(dim_eff,basis_eff) !basis in transformed space
+       basis_eff=matmul(live_chol,basis_eff) !basis in real space
+       basis=0
+       basis(par_var,:)=basis_eff
+       DO l=1,dim_eff
+         size_jump=search_par1
+         CONTINUE
+         !Place the first interval around the start_jump
+         CALL RANDOM_NUMBER(rn)
+         left=start_jump-rn*basis(:,l)*size_jump
+         right=left+basis(:,l)*size_jump
+         CALL RANDOM_NUMBER(rn)
+         kl=FLOOR(100*rn)
+         kr=100-kl
+         test_bnd=.TRUE.
+         DO m=1,npar
+            IF(left(m).LT.par_bnd1(m) .OR. left(m).GT.par_bnd2(m)) THEN
+               test_bnd=.FALSE.
+               EXIT
+            ENDIF
+         END DO
+         IF(.NOT.test_bnd) GOTO 202
+         !Extend the interval left then right
+         !size_jump_save=size_jump
+         j=1
+         part_like=LOGLIKELIHOOD(left)
+         DO WHILE(part_like.GT.min_live_like .AND. j<=kl) !check if the left boundary verifies the condition
+           left=left-basis(:,l)*size_jump
+           test_bnd=.TRUE.
+           DO m=1,npar
+              IF(left(m).LT.par_bnd1(m) .OR. left(m).GT.par_bnd2(m)) THEN
+                 test_bnd=.FALSE.
+                 EXIT
+              ENDIF
+           END DO
+           IF(.NOT. test_bnd) THEN
+             GOTO 202
+           END IF
+           part_like=LOGLIKELIHOOD(left)
+           j=j+1
+         END DO
+202      test_bnd=.TRUE.
+         DO m=1,npar
+            IF(right(m).LT.par_bnd1(m) .OR. right(m).GT.par_bnd2(m)) THEN
+               test_bnd=.FALSE.
+               EXIT
+            ENDIF
+         END DO
+         IF(.NOT.test_bnd) GOTO 203
+         j=1
+         part_like=LOGLIKELIHOOD(right)
+         !WRITE(*,*) 'Right', part_like, min_live_like
+         DO WHILE(part_like.GT.min_live_like .AND. j<=kr) !check if the right boundary verifies the condition
+           right=right+basis(:,l)*size_jump
+           test_bnd=.TRUE.
+           DO m=1,npar
+              IF(right(m).LT.par_bnd1(m) .OR. right(m).GT.par_bnd2(m)) THEN
+                 test_bnd=.FALSE.
+                 EXIT
+              ENDIF
+           END DO
+           IF(.NOT. test_bnd) THEN
+             GOTO 203
+           END IF
+           part_like=LOGLIKELIHOOD(right)
+           j=j+1
+         END DO
+         !Select new point
+203      CALL RANDOM_NUMBER(rn)
+         new_jump=left+rn*(right-left)
+         ntries=1+ntries
+         test_bnd=.TRUE.
+         DO m=1,npar
+            IF(new_jump(m).LT.par_bnd1(m) .OR. new_jump(m).GT.par_bnd2(m)) THEN
+               test_bnd=.FALSE.
+               EXIT
+            ENDIF
+         END DO !check if the new point is inside the sampled space
+         IF(test_bnd) THEN
+            part_like=LOGLIKELIHOOD(new_jump) !check if the new point verifies the condition
+         ELSE
+            part_like=min_live_like-1
+         END IF
+         !WRITE(*,*) 'New jump', new_jump, part_like, min_live_like
+         DO WHILE((.NOT.(part_like.GT.min_live_like)) .OR. (.NOT. test_bnd))
+204        ntries=ntries+1
+           IF(ntries .GT. maxtries) THEN
+             n_ntries=n_ntries+1
+             ntries=0
+
+             WRITE(*,*) 'Too many tries to find new live points for try n.', &
+             itry,'!!!! More than',maxtries,&
+             'n_ntries =',n_ntries,' over ', maxntries, 'n. step =', n
+
+             IF(n_ntries .GE. maxntries) THEN
+               too_many_tries=.true.
+               live_like_new=min_live_like
+               live_new = live(1,:)
+               GOTO 400
+             END IF
+             GOTO 500
+           END IF
+           IF(DOT_PRODUCT(start_jump-new_jump,start_jump-left)>0) THEN !change the left or right bondary accordingly
+             left=new_jump
+           ELSE
+             right=new_jump
+           END IF
+           CALL RANDOM_NUMBER(rn)
+           new_jump=left+rn*(right-left)
+           test_bnd=.TRUE.
+           DO m=1,npar
+              IF(new_jump(m).LT.par_bnd1(m) .OR. new_jump(m).GT.par_bnd2(m)) THEN
+                 test_bnd=.FALSE.
+                 EXIT
+              ENDIF
+           END DO 
+           IF(.NOT. test_bnd) GOTO 204
+           part_like=LOGLIKELIHOOD(new_jump)
+         END DO
+         start_jump=new_jump
+       END DO
+     END DO
+     
+
+    ! Final check of the last point for gaussian priors
+    DO l=1,npar
+       IF(par_fix(l).NE.1) THEN
+          IF(par_step(l).GT.0) THEN
+             ! maximum of the distribution is 1 (and is not normalized to 1 as the previous line)
+             gval = dexp(-(new_jump(l)-par_in(l))**2/(2*par_step(l)**2))
+             CALL RANDOM_NUMBER(rn)
+             IF (rn.GT.gval) GOTO 700 
+          END IF
+       END IF
+    END DO
+
+    ! Last(maybe useless) check
+    loglike = LOGLIKELIHOOD(new_jump)
+    IF(loglike.LT.min_live_like) GOTO 700
+
+    ! Take the last point after jumps as new livepoint
+    live_new = new_jump
     live_like_new = loglike
 400 ntries=ntries/dim_eff
 
@@ -940,6 +1051,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
        live_like_new,live_new,icluster,ntries,too_many_tries)
 
     !inspired from polychord code
+    ! This is slice sampling with an adaptable size for the step
 
     USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in
     INTEGER(4), INTENT(IN) :: n, itry
@@ -958,14 +1070,10 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     INTEGER(4) :: i, l, j, k
     REAL(8) :: rn
     INTEGER(4) :: n_call_cluster_itj
-    INTEGER(4) :: dim_eff
     REAL(8), DIMENSION(:,:),ALLOCATABLE :: basis
-    !REAL(8), DIMENSION(:,:), ALLOCATABLE :: basis
     REAL(8), DIMENSION(:), ALLOCATABLE :: left, right, left_prov,right_prov
     REAL(8), DIMENSION(:,:), ALLOCATABLE  :: live_cov, live_chol, inv_chol
-    REAL(8), DIMENSION(:,:), ALLOCATABLE :: live_nf
     REAL(8), DIMENSION(:), ALLOCATABLE :: start_jump, new_jump, start_jump_t, new_jump_t
-    INTEGER(4), DIMENSION(:), ALLOCATABLE :: par_var
     REAL(8) :: part_like, size_jump, size_jump_save, loglike
     LOGICAL :: test_bnd
     INTEGER(4) :: init_fail, njump
@@ -979,17 +1087,14 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     too_many_tries = .false.
     n_call_cluster_itj=0
     gval = 0.
-    dim_eff=npar-SUM(par_fix) !number of parameters not fixed
     size_jump=search_par1
     init_fail=0
     size_jump_save=size_jump
     njump=INT(search_par2) !number of bases used
     IF(.NOT. ALLOCATED(basis)) ALLOCATE(basis(dim_eff,dim_eff), &
         live_cov(dim_eff,dim_eff),live_chol(dim_eff,dim_eff),inv_chol(dim_eff,dim_eff))
-    IF(.NOT. ALLOCATED(live_nf)) ALLOCATE(live_nf(nlive,dim_eff))
     IF(.NOT. ALLOCATED(start_jump)) ALLOCATE(start_jump(dim_eff),new_jump(dim_eff), &
         start_jump_t(dim_eff),new_jump_t(dim_eff))
-    IF(.NOT. ALLOCATED(par_var)) ALLOCATE(par_var(dim_eff))
     IF(.NOT. ALLOCATED(left)) ALLOCATE(left(dim_eff),right(dim_eff), &
         left_prov(dim_eff),right_prov(dim_eff))
 
@@ -998,32 +1103,13 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     ntries = 0
 
 
-    !IF(cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
-    !   IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
-    !         WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
-    !         CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
-    !        cluster_on = .true.
-    !         n_ntries = 0
-    !   END IF
-    !END IF
-
-    ! Select only the variables that are not fixed
-    j=1
-    DO i=1,npar
-      IF(par_fix(i).NE.1) THEN
-        par_var(j)=i
-        j=j+1
-      END IF
-    END DO
-
-
 500 CALL RANDOM_NUMBER(rn)
     istart= FLOOR((nlive-1)*rn+1)
     start_jump_comp = live(istart,:)
 
     !Select only the variables that are not fixed
     start_jump=start_jump_comp(par_var)
-    live_nf=live(:,par_var)
+    !live_nf=live(:,par_var)
 
     ! Calculate momenta of the live points
     IF (cluster_on) THEN
@@ -1040,10 +1126,15 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
        live_ave(:) = cluster_mean(icluster,:)
     END IF
 
-    CALL MAT_COV(live_nf,nlive,dim_eff,istart,live_cov)
-    CALL CHOLESKY(dim_eff,live_cov,live_chol)
-    CALL TRIANG_INV(dim_eff,live_chol,inv_chol)
-    start_jump_t=matmul(inv_chol,start_jump) !start jump in the new space
+    IF(cluster_on) THEN ! Get the covariance matrix and Cholesky decomposition for the correct cluster
+       live_cov=mat_cov(:,:,icluster)
+       live_chol=mat_chol(:,:,icluster)
+    ELSE
+       live_cov=mat_cov(:,:,1)
+       live_chol=mat_chol(:,:,1)
+    END IF
+    CALL TRIANG_INV(dim_eff,live_chol,inv_chol) ! Calculate the inverse of the Cholesky matrix
+    start_jump_t=matmul(inv_chol,start_jump) ! start jump in the new space
 
     ! Make several consecutive casual jumps in the region with loglikelyhood > minlogll
 700 CONTINUE
@@ -1131,30 +1222,6 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
              'n_ntries =',n_ntries,' over ', maxntries, 'n. step =', n
 
              IF(n_ntries .GE. maxntries) THEN
-               !IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
-               !  IF(n_call_cluster_itj>=n_call_cluster_it_maxj) THEN
-               !    WRITE(*,*) 'Too many cluster analysis for an iteration'
-               !    WRITE(*,*) 'Change cluster recognition parameters'
-               !    STOP
-               !  END IF
-               !  IF(n_call_clusterj>=n_call_cluster_maxj) THEN
-               !    WRITE(*,*) 'Too many cluster analysis'
-               !    WRITE(*,*) 'Change cluster recognition parameters'
-               !    STOP
-               !  END IF
-               !  WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
-               !  CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
-               !  cluster_on = .true.
-               !  n_ntries = 0
-               !  n_call_cluster_itj=n_call_cluster_itj+1
-               !  n_call_clusterj=n_call_clusterj+1
-               !  GOTO 500
-               !ELSE
-               !  WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries
-               !  WRITE(*,*) 'We take the data as they are :-~'
-               !  too_many_tries = .true.
-               !  RETURN
-               !END IF
                too_many_tries=.true.
                live_like_new=min_live_like
                live_new = live(1,:)
@@ -1205,12 +1272,6 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     loglike = LOGLIKELIHOOD(new_jump)
     IF(loglike.LT.min_live_like) GOTO 700
 
-!    DO l=1,npar
-!      IF (new_jump_comp(l).LT.par_bnd1(l).OR.new_jump_comp(l).GT.par_bnd2(l)) THEN
-!        WRITE(*,*) l, .FALSE.
-!      END IF
-!    END DO
-
     ! Take the last point after jumps as new livepoint
     live_new = new_jump_comp
     live_like_new = loglike
@@ -1236,118 +1297,6 @@ SUBROUTINE BASE_O_N(D,base) !generates an orthonormal basis
     base(:,j)=base(:,j)/NORM2(base(:,j))
   END DO
 END SUBROUTINE BASE_O_N
-
-SUBROUTINE MAT_COV(pts,np,D,istart,cov) !calculates the covariance matrix
-  INTEGER(4), INTENT(IN) :: np, D, istart
-  REAL(8), DIMENSION(np,D), INTENT(IN) :: pts
-  REAL(8), DIMENSION(D,D), INTENT(OUT) :: cov
-  REAL(8), DIMENSION(D) :: mean, mean_prov
-  INTEGER(4) :: i,j, icluster
-
-  IF (cluster_on) THEN
-    ! Identify cluster appartenance
-    icluster = p_cluster(istart)
-    ! Get for the specific cluster if the cluster analysis is on
-    ! Standard deviation
-    IF(cluster_np(icluster).LT.2*D) THEN
-       mean=pts(istart,:)
-       !$OMP SIMD
-       DO i=1,D
-         mean_prov(i)=SUM(pts(:,i))/np
-       END DO
-       !$OMP END SIMD
-       !!$OMP SIMD
-       DO j=1,D
-         !$OMP SIMD
-         DO i=j,D
-           cov(i,j)=SUM((pts(:,i)-mean_prov(i))*(pts(:,j)-mean_prov(j)))/(np-1)
-           cov(j,i)=cov(i,j)
-         END DO
-         !$OMP END SIMD
-       END DO
-       !!$OMP END SIMD
-    ELSE IF(icluster==0) THEN
-       !$OMP SIMD
-       DO i=1,D
-         mean(i)=SUM(pts(:,i))/np
-       END DO
-       !$OMP END SIMD
-       !!$OMP SIMD
-       DO j=1,D
-         !$OMP SIMD
-         DO i=j,D
-           cov(i,j)=SUM((pts(:,i)-mean(i))*(pts(:,j)-mean(j)))/(np-1)
-           cov(j,i)=cov(i,j)
-         END DO
-         !$OMP END SIMD
-       END DO
-       !!$OMP END SIMD
-    ELSE
-       !$OMP SIMD
-       DO i=1,D
-         mean(i)=SUM(pts(:,i),MASK=(p_cluster==icluster))/cluster_np(icluster)
-       END DO
-       !$OMP END SIMD
-       !!$OMP SIMD
-       DO j=1,D
-         !$OMP SIMD
-         DO i=j,D
-           cov(i,j)=SUM((pts(:,i)-mean(i))*(pts(:,j)-mean(j)),MASK=(p_cluster==icluster))/(cluster_np(icluster)-1)
-           cov(j,i)=cov(i,j)
-         END DO
-         !$OMP END SIMD
-       END DO
-       !!$OMP END SIMD
-    END IF
-  ELSE
-    !$OMP SIMD
-    DO i=1,D
-      mean(i)=SUM(pts(:,i))/np
-    END DO
-    !$OMP END SIMD
-    !!$OMP SIMD
-     DO j=1,D
-       !$OMP SIMD
-      DO i=j,D
-        cov(i,j)=SUM((pts(:,i)-mean(i))*(pts(:,j)-mean(j)))/(np-1)
-        cov(j,i)=cov(i,j)
-      END DO
-      !$OMP END SIMD
-    END DO
-    !!$OMP END SIMD
-  END IF
-END SUBROUTINE MAT_COV
-
-SUBROUTINE CHOLESKY(D,cov,chol) !calculates the cholesky decomposition of the covariance matrix
-   INTEGER(4), INTENT(IN) :: D
-   REAL(8), DIMENSION(D,D), INTENT(IN) :: cov
-   REAL(8), DIMENSION(D,D), INTENT(OUT) :: chol
-   INTEGER(4) :: i,j,k
-   chol=0
-   chol(1,1)=SQRT(cov(1,1))
-   !!$OMP SIMD
-   DO i=2,D
-     chol(i,1)=cov(i,1)/chol(1,1)
-   END DO
-   !!$OMP SIMD
-   DO i=2,D
-     chol(i,i)=cov(i,i)
-     !!$OMP SIMD
-     DO k=1,i-1
-       chol(i,i)=chol(i,i)-chol(i,k)**2
-     END DO
-     chol(i,i)=SQRT(chol(i,i))
-     !!$OMP SIMD
-     DO j=i+1,D
-       chol(j,i)=cov(i,j)
-       !!$OMP SIMD
-       DO k=1,i-1
-         chol(j,i)=chol(j,i)-chol(i,k)*chol(j,k)
-       END DO
-       chol(j,i)=chol(j,i)/chol(i,i)
-     END DO
-   END DO
-END SUBROUTINE CHOLESKY
 
 SUBROUTINE TRIANG_INV(D,mat,mat_inv) !calculates the inverse of the cholesky decomposition
    INTEGER(4), INTENT(IN) :: D

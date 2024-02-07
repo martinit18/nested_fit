@@ -13,7 +13,7 @@ set(nested_res_name nested_res_V4p5.py)
 
 # The nested_fit version being built -> This gets copied everywhere inside the project code
 # For more info see the 'src/Mod_metadata.f90.in' file
-set(project_version 4.5.7)
+set(project_version 4.6.0)
 
 # Global options
 option(DEBUG "Enable debug mode." OFF)
@@ -52,6 +52,7 @@ string(LENGTH ${nested_fit_target_func} nested_fit_target_func_len)
 set(SRC_FILES_COMM
 src/Mod_cluster_analysis.f90
     src/Mod_parameters.f90
+    src/Mod_covariance_matrix.f90
     src/Mod_search_new_point.f90    #
     src/Mod_timestamp.f90
 

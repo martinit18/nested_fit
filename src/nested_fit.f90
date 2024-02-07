@@ -785,13 +785,13 @@ PROGRAM NESTED_FIT
       !IF(arg.EQ. ' ') THEN
       OPEN(22,FILE='nf_output_res.dat',STATUS= 'UNKNOWN')
       WRITE(22,*) '#############_FINAL_RESULTS_#####################################################################################'
-      WRITE(22,*) 'N._of_trials:                          ', ntry
-      WRITE(22,*) 'N._of_total_iteration:                 ', nall
-      WRITE(22,*) 'N._of_likelihood_calls:                ', ncall
-      WRITE(22,*) 'N._of_used_livepoints:                 ', nlive
-      WRITE(22,*) 'Final_evidence_(log):                  ', evsum_final
-      WRITE(22,*) 'Evidence_estimated_uncertainty_(log):  ', evsum_err_est
-      WRITE(22,*) 'Evidence_standard_deviation_(log):     ', evsum_err
+      WRITE(22,*) 'N._of_trials:                           	         ', ntry
+      WRITE(22,*) 'N._of_total_iteration:                  	         ', nall
+      WRITE(22,*) 'N._of_likelihood_calls_((1)*1.E+9+(2)):        ', ncall9, ncall
+      WRITE(22,*) 'N._of_used_livepoints:                  	         ', nlive
+      WRITE(22,*) 'Final_evidence_(log):                   	         ', evsum_final
+      WRITE(22,*) 'Evidence_estimated_uncertainty_(log):   	         ', evsum_err_est
+      WRITE(22,*) 'Evidence_standard_deviation_(log):      	         ', evsum_err
       WRITE(22,*) '------------------------------------------------------------------------------------------------------------------'
       WRITE(22,*) 'Max_likelihood_(log):', live_like_max
       WRITE(22,*) 'Max_parameter_set: '
@@ -822,13 +822,13 @@ PROGRAM NESTED_FIT
       WRITE(*,*) ' '
       WRITE(*,*) ' '
       WRITE(*,*) '############## FINAL RESULTS #####################################################################################'
-      WRITE(*,*) 'N. of trials:                         ', ntry
-      WRITE(*,*) 'N. of total iteration:                ', nall
-      WRITE(*,*) 'N. of likelihood calls:               ', ncall
-      WRITE(*,*) 'N. of used livepoints:                ', nlive
-      WRITE(*,*) 'Final evidence (log):                 ', evsum_final
-      WRITE(*,*) 'Evidence estimated uncertainty (log): ', evsum_err_est
-      WRITE(*,*) 'Evidence standard deviation (log):    ', evsum_err
+      WRITE(*,*) 'N. of trials:                           	         ', ntry
+      WRITE(*,*) 'N. of total iteration:                  	         ', nall
+      WRITE(*,*) 'N. of likelihood calls ((1)*1.E+9 + (2)): 	', ncall9, ncall
+      WRITE(*,*) 'N. of used livepoints:                  	         ', nlive
+      WRITE(*,*) 'Final evidence (log):                   	         ', evsum_final
+      WRITE(*,*) 'Evidence estimated uncertainty (log):   	         ', evsum_err_est
+      WRITE(*,*) 'Evidence standard deviation (log):       	         ', evsum_err
 
       WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
       WRITE(*,*) 'Max likelihood (log):', live_like_max

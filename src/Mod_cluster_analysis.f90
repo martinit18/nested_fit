@@ -8,7 +8,7 @@ MODULE MOD_CLUSTER_ANALYSIS
   IMPLICIT NONE
   
   LOGICAL :: cluster_on = .false.
-  INTEGER(4) :: np=0, ndim=0, ncluster=0
+  INTEGER(4) :: np=0, ndim=0, ncluster=1
   INTEGER(4), PARAMETER :: ncluster_max=500
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: cluster_std, cluster_mean
   INTEGER(4), ALLOCATABLE, DIMENSION(:) :: p_cluster, cluster_np

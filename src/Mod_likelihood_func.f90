@@ -18,7 +18,7 @@ MODULE MOD_LIKELIHOOD
 #endif
 
   IMPLICIT NONE
-  INTEGER(8) :: ncall=0
+  INTEGER(8) :: ncall=0, ncall9=0
   REAL(8) :: a_norm=0.
 
 CONTAINS
@@ -49,10 +49,12 @@ CONTAINS
             searchid = 0
       ELSE IF(search_method.EQ.'UNIFORM') THEN
             searchid = 1
-      ELSE IF(search_method.EQ.'SLICE_SAMPLING') THEN
+      ELSE IF(search_method.EQ.'SLICE_SAMPLING_TRANSF') THEN
             searchid = 2
-      ELSE IF(search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
+      ELSE IF(search_method.EQ.'SLICE_SAMPLING') THEN
             searchid = 3
+      ELSE IF(search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
+            searchid = 4
       ELSE
             WRITE(*,*) 'Error of the search type name in Mod_search_new_point module'
             WRITE(*,*) 'Check the manual and the input file'
@@ -116,7 +118,11 @@ CONTAINS
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
 
     ncall = ncall + 1
-
+    IF(ncall == 1.E+9) THEN
+       ncall9=ncall9+1
+       ncall=0
+    END IF
+    
     ! Select the test function
     SELECT CASE (funcid)
     CASE (0)
@@ -413,7 +419,7 @@ CONTAINS
     REAL(8), DIMENSION(SIZE(par)-1) :: x     
     INTEGER(4) :: N, i, j
     REAL(8) :: rij, ener, r0, dx, dy, dz, box_x, box_y, box_z
-
+    
     r0=par(1)
     x = par(2:)
     N=INT(SIZE(x)/3)
@@ -437,7 +443,7 @@ CONTAINS
     
     !ener=ener+0.5*k*(SUM(x(1:npar:2))**2+SUM(x(2:npar:2))**2)!/npar
 
-    ENERGY_LJ_3D_PBC=-ener*1./N
+    ENERGY_LJ_3D_PBC=-ener!*1./N
   END FUNCTION ENERGY_LJ_3D_PBC
   
   !##################################################################################################################### 
