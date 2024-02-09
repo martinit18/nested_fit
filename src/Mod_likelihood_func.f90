@@ -16,6 +16,7 @@ MODULE MOD_LIKELIHOOD
 #ifdef OPENMPI_ON
   USE MPI
 #endif
+  !$ USE OMP_LIB
 
   IMPLICIT NONE
   INTEGER(8) :: ncall=0, ncall9=0
@@ -117,11 +118,13 @@ CONTAINS
 
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
 
+    !$OMP CRITICAL
     ncall = ncall + 1
     IF(ncall == 1.E+9) THEN
        ncall9=ncall9+1
        ncall=0
     END IF
+    !$OMP END CRITICAL
     
     ! Select the test function
     SELECT CASE (funcid)

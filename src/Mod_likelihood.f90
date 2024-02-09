@@ -9,6 +9,8 @@ MODULE MOD_LIKELIHOOD
    USE MPI
 #endif
 
+   !$ USE OMP_LIB
+
   IMPLICIT NONE
 
   ! Data variables
@@ -471,11 +473,13 @@ CONTAINS
 
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
 
+    !$OMP CRITICAL
     ncall=ncall+1
     IF(ncall == 1.E+9) THEN
        ncall9=ncall9+1
        ncall=0
     END IF
+    !$OMP END CRITICAL
     
     IF (BIT_CHECK_IF(DATA_IS_1D)) THEN
        LOGLIKELIHOOD = LOGLIKELIHOOD_1D(par)
@@ -497,11 +501,13 @@ CONTAINS
     INTEGER(4) :: i, j, k
     REAL(8) :: USERFCN, USERFCN_SET, USERFCN_2D, xx, yy
 
+    !$OMP CRITICAL
     ncall=ncall+1
     IF(ncall == 1.E+9) THEN
        ncall9=ncall9+1
        ncall=0
     END IF
+    !$OMP END CRITICAL
     
     IF (BIT_CHECK_IF(DATA_IS_C).AND.BIT_CHECK_IF(DATA_IS_1D)) THEN
        ! Check if the choosen function assumes zero or negative values
