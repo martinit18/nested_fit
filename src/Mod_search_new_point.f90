@@ -1102,7 +1102,6 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     ! Select a live point as starting point
     ntries = 0
 
-
 500 CALL RANDOM_NUMBER(rn)
     istart= FLOOR((nlive-1)*rn+1)
     start_jump_comp = live(istart,:)
@@ -1211,7 +1210,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
          ntries=1+ntries
          CALL PART_LIKE_SUB(dim_eff,new_jump_t,live_chol,part_like) !check if the new point verifies the condition
          CALL TEST_BND_SUB(dim_eff,new_jump_t,par_var,live_chol,test_bnd) !check if the new point is inside the sampled space
-         DO WHILE(part_like.LT.min_live_like .OR. .NOT. test_bnd)
+         DO WHILE((.NOT.(part_like.GT.min_live_like)) .OR. .NOT. test_bnd)
            ntries=ntries+1
            IF(ntries .GT. maxtries) THEN
              n_ntries=n_ntries+1
@@ -1255,7 +1254,6 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
         new_jump_comp(l)=par_in(l)
       END IF
     END DO
-
     ! Final check of the last point for gaussian priors
     DO l=1,npar
        IF(par_fix(l).NE.1) THEN
@@ -1269,14 +1267,13 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     END DO
 
     ! Last(maybe useless) check
-    loglike = LOGLIKELIHOOD(new_jump)
+    loglike = LOGLIKELIHOOD(new_jump_comp)
     IF(loglike.LT.min_live_like) GOTO 700
 
     ! Take the last point after jumps as new livepoint
     live_new = new_jump_comp
     live_like_new = loglike
 400 ntries=ntries/dim_eff
-
 END SUBROUTINE SLICE_SAMPLING_ADAPT
 
 SUBROUTINE BASE_O_N(D,base) !generates an orthonormal basis
