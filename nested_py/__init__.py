@@ -6,7 +6,7 @@ __version__ = imp_version("nested_fit")
 
 sversion = f'# Current version: {__version__}'
 vstring = sversion + ' ' * (58 - len(sversion)) + '#'
-a=f"""
+a = f"""
 ###########################################################
 #                                                         #
 #         WELCOME TO NESTED_FIT RESULT ANALYSIS           #
@@ -41,4 +41,6 @@ a=f"""
 # For any problem write to trassinelli@insp.jussieu.fr    #
 ###########################################################
 """
-print(a)
+
+if is_env_notebook():
+    print(a)

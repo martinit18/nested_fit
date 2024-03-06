@@ -152,7 +152,7 @@ class Configurator():
     def set_params(self, **params):
         self._config['function']['params'] = params
 
-    def sample(self, path='.'):
+    def sample(self, path='.', disablebar=False):
         version = imp_version('nested_fit')
         end_color = 'green'  # Default no errors
 
@@ -168,20 +168,23 @@ class Configurator():
             cwd=pathlib.Path(path).resolve()
         )
 
-        # Create an expression from the latex code
-        nf_func = parse_latex(self._config['function']['expression'].split('=')[1])
-
         line_one = True
+        is_notebook = is_env_notebook()
 
         # Setup a plot
-        X = np.arange(0, 1024)
-        plt.ion()
-        fig, ax = plt.subplots(figsize=(6, 4))
-        plotline, = ax.plot(X, X)
-        raw_data = self._get_data()
+        if is_notebook:
+            # Create an expression from the latex code
+            nf_func = parse_latex(self._config['function']['expression'].split('=')[1])
+            X = np.linspace(self._config['data']['xmin'], self._config['data']['xmax'], 1000)
+            plt.ion()
+            fig, ax = plt.subplots(figsize=(6, 4))
+            plotline, = ax.plot(X, X)
+            raw_data = self._get_data()
 
-        outcapture = ipw.Output()
-        display(outcapture)
+            outcapture = ipw.Output()
+            display(outcapture)
+        else:
+            pbar = tqdm(total=self._config['search']['max_steps'], desc='Running nested_fit', disable=disablebar)
 
         # if path:
         #     os.chdir(cwd)
@@ -196,7 +199,7 @@ class Configurator():
             # Print errors
             if '<ERROR>' in line[0]:
                 print(line[0], end='')  # BUG: (César): This assumes the error logs don't have any '|' char
-                end_color = 'red'
+                # end_color = 'red'
 
             if 'LO' not in line[0]:
                 continue
@@ -221,6 +224,14 @@ class Configurator():
             par_eval_dict = dict(zip(par_names, par_max))
             par_eval_dict['pi'] = math.pi
 
+            if not is_notebook:
+                pbar.update(100)  # TODO: (César) : This assumes the output comes in mod 100
+
+                # Maybe use something like
+                # pbar.n = int(data[1])
+                # pbar.refresh()
+                continue
+
             # The userfunc evaluated for all params, except x
             xfunc = nf_func.evalf(subs=par_eval_dict)
             xfunc = lambdify(x, xfunc, 'numpy')
@@ -236,6 +247,9 @@ class Configurator():
         if not self._keep_yaml:
             pathlib.Path.unlink(f'{path}/nf_input.yaml', missing_ok=True)
 
+        if not is_notebook:
+            pbar.close()
+
         # nf_iter_bar.colour = end_color
         # nf_iter_bar.close()
 
@@ -247,7 +261,7 @@ class Configurator():
         # plt.scatter(raw_data[0], raw_data[1], color='red')
         plt.errorbar(raw_data[0], raw_data[1], yerr=np.sqrt(np.array(raw_data[1])), fmt='o', color='red', capsize=2)
         plt.plot(X, Y, color='blue', zorder=10)
-        plt.xlim([400, 600])
+        # plt.xlim([400, 600])
         plt.ylim([min(raw_data[1]), max(raw_data[1]) + 10])
         # line.set_ydata(Y)
         plt.show()
@@ -306,14 +320,14 @@ class Configurator():
 
 
 # ------------- Additional tools
-# def is_env_notebook() -> bool:
-#     try:
-#         shell = get_ipython().__class__.__name__
-#         if shell == 'ZMQInteractiveShell':
-#             return True   # Jupyter notebook or qtconsole
-#         elif shell == 'TerminalInteractiveShell':
-#             return False  # Terminal running IPython
-#         else:
-#             return False  # Other type (?)
-#     except NameError:
-#         return False      # Probably standard Python interpreter
+def is_env_notebook() -> bool:
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True   # Jupyter notebook or qtconsole
+        elif shell == 'TerminalInteractiveShell':
+            return False  # Terminal running IPython
+        else:
+            return False  # Other type (?)
+    except NameError:
+        return False      # Probably standard Python interpreter
