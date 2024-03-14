@@ -298,9 +298,9 @@ am__DIST_COMMON = $(srcdir)/Makefile.in \
 	$(top_srcdir)/build-aux/install-sh \
 	$(top_srcdir)/build-aux/missing \
 	$(top_srcdir)/src/Mod_metadata.f90.in \
-	$(top_srcdir)/src/funceval/latex_parser.cpp README.md \
-	build-aux/compile build-aux/depcomp build-aux/install-sh \
-	build-aux/missing
+	$(top_srcdir)/src/funceval/latex_parser.cpp AUTHORS COPYING \
+	ChangeLog NEWS README build-aux/compile build-aux/depcomp \
+	build-aux/install-sh build-aux/missing
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)

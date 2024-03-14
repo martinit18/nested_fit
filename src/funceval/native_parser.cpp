@@ -11,6 +11,7 @@
 #include <queue>
 #include <iostream>
 #include <map>
+#include <sstream>
 
 #ifdef PPROF
 #include <stperf.h>

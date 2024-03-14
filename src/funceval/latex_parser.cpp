@@ -19,6 +19,7 @@
 #include <map>
 #include <cassert>
 #include <fstream>
+#include <sstream>
 
 #ifdef PPROF
 #include <stperf.h>
