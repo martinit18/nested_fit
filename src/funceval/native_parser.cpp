@@ -98,7 +98,8 @@ static std::vector<std::string> FindFunctionParams(const std::string& lang, cons
     const size_t start_index = lang == "cpp" ? 0 : 1;
 
     // Check if there is illegal indexing
-    for(size_t i = 0; i < queue.size(); i++)
+    const size_t queue_size = queue.size();
+    for(size_t i = 0; i < queue_size; i++)
     {
         QueuePair p = queue.top();
         queue.pop();
