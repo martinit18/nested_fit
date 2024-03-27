@@ -475,7 +475,7 @@ static std::string ArrayifyFunctionCall(const std::string& argument_string)
     auto arguments = StringSplit(argument_string, ',');
     
     // Force the array elements to be real
-    std::string output = arguments[0] + "," + std::to_string(arguments.size() - 1) + ",[real::";
+    std::string output = arguments[0] + "," + std::to_string(arguments.size() - 1) + ",[real(8)::";
 
     for(size_t i = 1; i < arguments.size() - 1; i++)
     {
