@@ -750,7 +750,6 @@ CONTAINS
                 END DO
                 CALL LOG_ERROR_HEADER()
                 CALL HALT_EXECUTION()
-                STOP
              END IF
           END DO
        END DO

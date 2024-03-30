@@ -274,12 +274,13 @@ set(CFG_FILES
 )
 
 set(SRC_FILES_CXX
+    src/helper/console.cpp
     src/helper/disable_stdout.cpp
     src/funceval/native_parser.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/latex_parser.cpp
 )
 set(SRC_FILES_CXX_AC
-    "src/helper/disable_stdout.cpp src/funceval/latex_parser.cpp src/funceval/native_parser.cpp"
+    "src/helper/console.cpp src/helper/disable_stdout.cpp src/funceval/latex_parser.cpp src/funceval/native_parser.cpp"
 )
 
 add_executable(${nested_fit_target}

@@ -181,6 +181,13 @@ PROGRAM NESTED_FIT
       USE, INTRINSIC :: iso_c_binding
       IMPLICIT NONE
    END SUBROUTINE
+
+   SUBROUTINE GET_TERMINAL_SIZE(width, height) BIND(c, name='GetTerminalSize')
+      USE, INTRINSIC :: iso_c_binding
+      IMPLICIT NONE
+      INTEGER(c_int), INTENT(OUT) :: width
+      INTEGER(c_int), INTENT(OUT) :: height
+   END SUBROUTINE
   END INTERFACE
 
 #ifdef PPROF
@@ -1570,13 +1577,15 @@ PROGRAM NESTED_FIT
   SUBROUTINE B_LSTUSRFUNC(this, invalue)
    CLASS(argdef_t), INTENT(IN)    :: this
    CHARACTER(LEN=512), INTENT(IN) :: invalue
-   INTEGER                        :: i, n, max_dec_s, s
+   INTEGER                        :: i, n, dec_s, max_dec_s, s, tw, th
    TYPE(cache_entry_t)            :: cache_entry
    CHARACTER(LEN=16)              :: tmp
+   CHARACTER(LEN=3), DIMENSION(:), ALLOCATABLE :: full_dots
 
    PROFILED(B_LSTUSRFUNC)
 
    CALL GET_CACHE_SIZE(n)
+   ALLOCATE(full_dots(n))
 
    IF(n.EQ.0) THEN
       CALL LOG_ERROR_HEADER()
@@ -1586,14 +1595,25 @@ PROGRAM NESTED_FIT
       STOP
    ENDIF
 
+   CALL GET_TERMINAL_SIZE(tw, th)
+   tw = tw - 49
+
    ! Find out what is the largest declaration so we adjust the table accordingly
    ! TODO(César) : Linebreak in case of huge declarations
    max_dec_s = 21 ! This is the size of `Function Declaration` header
    DO i = 1, n
       cache_entry = GET_CACHE(i)
-      max_dec_s   = MAX(LEN_TRIM(cache_entry%dec), max_dec_s)
+      dec_s       = LEN_TRIM(cache_entry%dec)
+      max_dec_s   = MAX(dec_s, max_dec_s)
+      IF(dec_s.GE.tw) THEN
+        full_dots(i) = '...'
+      ELSE
+        full_dots(i) = '   '
+      ENDIF
    END DO
-   WRITE(tmp,'(I0)') max_dec_s
+
+   max_dec_s = MIN(max_dec_s, tw)
+   WRITE(tmp,'(I0)') max_dec_s - 3
 
    ! How many more table steps do we need
    s = MAX(max_dec_s - 21, 0)
@@ -1610,16 +1630,16 @@ PROGRAM NESTED_FIT
    WRITE(*, '(a)', advance='no') NEW_LINE('A')
    DO i = 1, n
       cache_entry = GET_CACHE(i)
-      WRITE(*,'(a2, a15, a1, I2, a6, a20, a2, a'//TRIM(tmp)//', a1)') '| ', &
+      WRITE(*,'(a2, a15, a1, I2, a6, a20, a2, a'//TRIM(tmp)//', a3, a1)') '| ', &
       cache_entry%name, '|', &
       cache_entry%argc, '    | ', &
       ADJUSTL(cache_entry%date_modified), '| ', &
-      ADJUSTL(cache_entry%dec), '|'
+      ADJUSTL(cache_entry%dec), ADJUSTL(full_dots(i)), '|'
    END DO
    WRITE(*,'(a)', advance='no')      ' --------------------------------------------------------------------'
    CALL WRITE_REPEAT_CHAR('-', s)
    WRITE(*, '(a)', advance='no') NEW_LINE('A')
-
+   DEALLOCATE(full_dots)
 
    STOP
   END SUBROUTINE
