@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstdio>
 
 extern "C" void DisableStdout()
 {

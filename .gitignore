@@ -40,6 +40,7 @@ dist/
 autom4te.cache/
 configure.ac
 Makefile.am
+aclocal.m4
 
 # Apparently autoconf generates a back configure (???)
 configure~

@@ -25,7 +25,7 @@ Users are also required to cite the Nested Fit papers here below in their public
 ### Authors
 Dr. Martino Trassinelli\
 CNRS, Institute of NanoSciences of Paris\
-email: trassinelli AT insp.jussieu.fr\
+email: martino.trassinelli AT cnrs.fr\
 email: m.trassinelli AT gmail.com
 
 Lune Maillard\
@@ -49,9 +49,13 @@ The simplest way to install nested_fit.
 
 **Instructions**:
 
-1. Just run pip:
+1. Just run pip from the server repository:
 ```sh
 pip install nested_fit
+```
+or locally 
+```sh
+pip install . -v
 ```
 
 ### From source (CMake)
@@ -69,7 +73,7 @@ Has more control on system specific optimizations.
 ```sh
 git clone git@github.com:martinit18/nested_fit.git
 ```
-2. Configure cmake:
+2. Configure cmake (with eventually some options, see below):
 ```sh
 cd nested_fit
 mkdir build && cd build
@@ -103,8 +107,10 @@ If Python is found an utility for running and analysing data using nested_fit is
 
 
 
-> You can pass in options on the cmake generation step via: `cmake -D<option_name>=<ON/OFF> ..`\
-> These will prevail any time you run your build tools commands.
+You can pass in options on the cmake generation step via: `cmake -D<option_name>=<ON/OFF> ..`\
+These will prevail any time you run your build tools commands.
+
+With the last option, you can also specify a defined directory with in addition the option `-DCMAKE_INSTALL_PREFIX=<your_dir>`
 
 ### From source (GNU autotools)
 :warning: This mode is only for compatibility and supports only a few features. The `CMake` method should be preferred if available.
@@ -134,6 +140,18 @@ You can check them with: `../configure --help` and take a look under `Optional F
 - For the moment, the options OPENMPI and OPENMP cannot be selected at the same time. If both are set to ON, OPENMP will be set to OFF.
 
 - The options NORNG and OPENMP cannot be selected at the same time. If both are set to ON, OPENMP will be set to OFF.
+
+### Comments for macOS users
+
+If you ar running `gfortran` installed with homebrew, you should avoid use `gcc` and `g++` from homebrew as well and not the macOS preinstalled one. For this use the option
+
+``-DCMAKE_Fortran_COMPILER=`which gfortran` -DCMAKE_C_COMPILER=`which gcc` -DCMAKE_CXX_COMPILER=`which g++``
+
+and make sure your `g++` is pointing the homebrew `g++-XX`. Eventually create the link:
+```sh
+cd  /opt/homebrew/bin
+ln -s g++-XX g++ 
+```
 
 ## File descriptions
 

@@ -135,7 +135,8 @@ am_nested_fit5_1_1_OBJECTS = src/SLATEC/dpsort.$(OBJEXT) \
 	src/helper/halt.$(OBJEXT) src/helper/strutil.$(OBJEXT) \
 	src/helper/int_stack.$(OBJEXT) src/Mod_likelihood.$(OBJEXT) \
 	src/USERFCN_2D.$(OBJEXT) src/USERFCN_SET.$(OBJEXT) \
-	src/USERFCN.$(OBJEXT) src/helper/disable_stdout.$(OBJEXT) \
+	src/USERFCN.$(OBJEXT) src/helper/console.$(OBJEXT) \
+	src/helper/disable_stdout.$(OBJEXT) \
 	src/funceval/latex_parser.$(OBJEXT) \
 	src/funceval/native_parser.$(OBJEXT)
 nested_fit5_1_1_OBJECTS = $(am_nested_fit5_1_1_OBJECTS)
@@ -186,6 +187,7 @@ am_nested_fit_func5_1_1_OBJECTS =  \
 	src/helper/nested_fit_func5_1_1-strutil.$(OBJEXT) \
 	src/helper/nested_fit_func5_1_1-int_stack.$(OBJEXT) \
 	src/nested_fit_func5_1_1-Mod_likelihood_func.$(OBJEXT) \
+	src/helper/nested_fit_func5_1_1-console.$(OBJEXT) \
 	src/helper/nested_fit_func5_1_1-disable_stdout.$(OBJEXT) \
 	src/funceval/nested_fit_func5_1_1-latex_parser.$(OBJEXT) \
 	src/funceval/nested_fit_func5_1_1-native_parser.$(OBJEXT)
@@ -210,7 +212,9 @@ am__depfiles_remade = src/funceval/$(DEPDIR)/latex_parser.Po \
 	src/funceval/$(DEPDIR)/native_parser.Po \
 	src/funceval/$(DEPDIR)/nested_fit_func5_1_1-latex_parser.Po \
 	src/funceval/$(DEPDIR)/nested_fit_func5_1_1-native_parser.Po \
+	src/helper/$(DEPDIR)/console.Po \
 	src/helper/$(DEPDIR)/disable_stdout.Po \
+	src/helper/$(DEPDIR)/nested_fit_func5_1_1-console.Po \
 	src/helper/$(DEPDIR)/nested_fit_func5_1_1-disable_stdout.Po
 am__mv = mv -f
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -298,9 +302,9 @@ am__DIST_COMMON = $(srcdir)/Makefile.in \
 	$(top_srcdir)/build-aux/install-sh \
 	$(top_srcdir)/build-aux/missing \
 	$(top_srcdir)/src/Mod_metadata.f90.in \
-	$(top_srcdir)/src/funceval/latex_parser.cpp AUTHORS COPYING \
-	ChangeLog NEWS README build-aux/compile build-aux/depcomp \
-	build-aux/install-sh build-aux/missing
+	$(top_srcdir)/src/funceval/latex_parser.cpp README.md \
+	build-aux/compile build-aux/depcomp build-aux/install-sh \
+	build-aux/missing
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -453,8 +457,8 @@ nested_fit5_1_1_SOURCES = src/SLATEC/dpsort.f src/SLATEC/fdump.f \
 	src/helper/halt.f90 src/helper/strutil.f90 \
 	src/helper/int_stack.f90 src/Mod_likelihood.f90 \
 	src/USERFCN_2D.f90 src/USERFCN_SET.f src/USERFCN.f \
-	src/helper/disable_stdout.cpp src/funceval/latex_parser.cpp \
-	src/funceval/native_parser.cpp
+	src/helper/console.cpp src/helper/disable_stdout.cpp \
+	src/funceval/latex_parser.cpp src/funceval/native_parser.cpp
 nested_fit_func5_1_1_SOURCES = src/SLATEC/dpsort.f src/SLATEC/fdump.f \
 	src/SLATEC/i1mach.f src/SLATEC/j4save.f src/SLATEC/xercnt.f \
 	src/SLATEC/xerhlt.f src/SLATEC/xermsg.f src/SLATEC/xerprn.f \
@@ -473,8 +477,8 @@ nested_fit_func5_1_1_SOURCES = src/SLATEC/dpsort.f src/SLATEC/fdump.f \
 	src/Mod_userfcn.f90 src/Mod_logger.f90 src/Mod_perfprof.f90 \
 	src/helper/halt.f90 src/helper/strutil.f90 \
 	src/helper/int_stack.f90 src/Mod_likelihood_func.f90 \
-	src/helper/disable_stdout.cpp src/funceval/latex_parser.cpp \
-	src/funceval/native_parser.cpp
+	src/helper/console.cpp src/helper/disable_stdout.cpp \
+	src/funceval/latex_parser.cpp src/funceval/native_parser.cpp
 nested_fit_func5_1_1_CPPFLAGS = -DFUNC_TARGET
 nested_fit_func5_1_1_FCFLAGS = -DFUNC_TARGET
 nested_fit_func5_1_1_FFLAGS = -DFUNC_TARGET
@@ -709,6 +713,8 @@ src/USERFCN_SET.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/USERFCN.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/helper/console.$(OBJEXT): src/helper/$(am__dirstamp) \
+	src/helper/$(DEPDIR)/$(am__dirstamp)
 src/helper/disable_stdout.$(OBJEXT): src/helper/$(am__dirstamp) \
 	src/helper/$(DEPDIR)/$(am__dirstamp)
 src/funceval/latex_parser.$(OBJEXT): src/funceval/$(am__dirstamp) \
@@ -836,6 +842,9 @@ src/helper/nested_fit_func5_1_1-int_stack.$(OBJEXT):  \
 	src/helper/$(DEPDIR)/$(am__dirstamp)
 src/nested_fit_func5_1_1-Mod_likelihood_func.$(OBJEXT):  \
 	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+src/helper/nested_fit_func5_1_1-console.$(OBJEXT):  \
+	src/helper/$(am__dirstamp) \
+	src/helper/$(DEPDIR)/$(am__dirstamp)
 src/helper/nested_fit_func5_1_1-disable_stdout.$(OBJEXT):  \
 	src/helper/$(am__dirstamp) \
 	src/helper/$(DEPDIR)/$(am__dirstamp)
@@ -867,7 +876,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/funceval/$(DEPDIR)/native_parser.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/funceval/$(DEPDIR)/nested_fit_func5_1_1-latex_parser.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/funceval/$(DEPDIR)/nested_fit_func5_1_1-native_parser.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/helper/$(DEPDIR)/console.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/helper/$(DEPDIR)/disable_stdout.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/helper/$(DEPDIR)/nested_fit_func5_1_1-console.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/helper/$(DEPDIR)/nested_fit_func5_1_1-disable_stdout.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
@@ -891,6 +902,20 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+
+src/helper/nested_fit_func5_1_1-console.o: src/helper/console.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(nested_fit_func5_1_1_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/helper/nested_fit_func5_1_1-console.o -MD -MP -MF src/helper/$(DEPDIR)/nested_fit_func5_1_1-console.Tpo -c -o src/helper/nested_fit_func5_1_1-console.o `test -f 'src/helper/console.cpp' || echo '$(srcdir)/'`src/helper/console.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/helper/$(DEPDIR)/nested_fit_func5_1_1-console.Tpo src/helper/$(DEPDIR)/nested_fit_func5_1_1-console.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/helper/console.cpp' object='src/helper/nested_fit_func5_1_1-console.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(nested_fit_func5_1_1_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/helper/nested_fit_func5_1_1-console.o `test -f 'src/helper/console.cpp' || echo '$(srcdir)/'`src/helper/console.cpp
+
+src/helper/nested_fit_func5_1_1-console.obj: src/helper/console.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(nested_fit_func5_1_1_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/helper/nested_fit_func5_1_1-console.obj -MD -MP -MF src/helper/$(DEPDIR)/nested_fit_func5_1_1-console.Tpo -c -o src/helper/nested_fit_func5_1_1-console.obj `if test -f 'src/helper/console.cpp'; then $(CYGPATH_W) 'src/helper/console.cpp'; else $(CYGPATH_W) '$(srcdir)/src/helper/console.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/helper/$(DEPDIR)/nested_fit_func5_1_1-console.Tpo src/helper/$(DEPDIR)/nested_fit_func5_1_1-console.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/helper/console.cpp' object='src/helper/nested_fit_func5_1_1-console.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(nested_fit_func5_1_1_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/helper/nested_fit_func5_1_1-console.obj `if test -f 'src/helper/console.cpp'; then $(CYGPATH_W) 'src/helper/console.cpp'; else $(CYGPATH_W) '$(srcdir)/src/helper/console.cpp'; fi`
 
 src/helper/nested_fit_func5_1_1-disable_stdout.o: src/helper/disable_stdout.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(nested_fit_func5_1_1_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/helper/nested_fit_func5_1_1-disable_stdout.o -MD -MP -MF src/helper/$(DEPDIR)/nested_fit_func5_1_1-disable_stdout.Tpo -c -o src/helper/nested_fit_func5_1_1-disable_stdout.o `test -f 'src/helper/disable_stdout.cpp' || echo '$(srcdir)/'`src/helper/disable_stdout.cpp
@@ -1507,7 +1532,9 @@ distclean: distclean-am
 	-rm -f src/funceval/$(DEPDIR)/native_parser.Po
 	-rm -f src/funceval/$(DEPDIR)/nested_fit_func5_1_1-latex_parser.Po
 	-rm -f src/funceval/$(DEPDIR)/nested_fit_func5_1_1-native_parser.Po
+	-rm -f src/helper/$(DEPDIR)/console.Po
 	-rm -f src/helper/$(DEPDIR)/disable_stdout.Po
+	-rm -f src/helper/$(DEPDIR)/nested_fit_func5_1_1-console.Po
 	-rm -f src/helper/$(DEPDIR)/nested_fit_func5_1_1-disable_stdout.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
@@ -1561,7 +1588,9 @@ maintainer-clean: maintainer-clean-am
 	-rm -f src/funceval/$(DEPDIR)/native_parser.Po
 	-rm -f src/funceval/$(DEPDIR)/nested_fit_func5_1_1-latex_parser.Po
 	-rm -f src/funceval/$(DEPDIR)/nested_fit_func5_1_1-native_parser.Po
+	-rm -f src/helper/$(DEPDIR)/console.Po
 	-rm -f src/helper/$(DEPDIR)/disable_stdout.Po
+	-rm -f src/helper/$(DEPDIR)/nested_fit_func5_1_1-console.Po
 	-rm -f src/helper/$(DEPDIR)/nested_fit_func5_1_1-disable_stdout.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
