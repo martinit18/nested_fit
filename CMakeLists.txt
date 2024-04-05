@@ -136,6 +136,7 @@ set(SRC_FILES_COMM
 
     src/helper/hash.f90
     src/Mod_input_parse.f90
+    src/Mod_jsonio.f90
 
     src/Mod_userfcn.f90
 
@@ -160,6 +161,7 @@ ac_dec_obj_dep("src/funceval/auto_func" "src/Mod_options")
 ac_dec_obj_dep("src/Mod_likelihood" "src/Mod_math")
 ac_dec_obj_dep("src/nested_fit" "src/Mod_input_parse")
 ac_dec_obj_dep("src/Mod_input_parse" "src/helper/int_stack")
+ac_dec_obj_dep("src/Mod_jsonio" "src/Mod_logger")
 ac_dec_obj_dep("src/nested_fit" "src/cli/argparse")
 
 set(SRC_EXTERNAL_FUNCS

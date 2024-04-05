@@ -97,6 +97,8 @@ PROGRAM NESTED_FIT
    USE MOD_USERFCN
    ! Module for input parsing (legacy and YAML)
    USE MOD_INPUTPARSE
+   ! Module for outputing json format
+   USE MOD_JSONIO 
    ! Module for CLI lib
    USE MOD_ARGPARSE
    ! Module for optional variables
@@ -917,6 +919,7 @@ PROGRAM NESTED_FIT
    WRITE(22,*) 'Number_of_used_cores:                       ', nth
    WRITE(22,*) 'Time_elapsed_(tot_and_real_in_s):           ', seconds, seconds_omp
    CLOSE(22)
+
 
    IF(opt_suppress_output) RETURN
 
