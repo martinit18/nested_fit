@@ -8,17 +8,16 @@ MODULE MOD_JSONIO
     USE MOD_LOGGER
     
     IMPLICIT NONE
-    ! PUBLIC :: JsonObj_t
-    ! PRIVATE
-    PUBLIC
+    PUBLIC :: JsonEntries_t
+    PRIVATE
     
     TYPE :: JsonKey_t
-        CHARACTER(1024)          :: key
-        CHARACTER(1024)          :: value ! The Data buffer containing whatever we want to write
+        CHARACTER(1024) :: key
+        CHARACTER(1024) :: value
     END TYPE JsonKey_t
 
     TYPE :: JsonEntries_t
-        ! PRIVATE
+        PRIVATE
         TYPE(JsonKey_t), ALLOCATABLE :: buffer(:)
         INTEGER                      :: length   = 0
 
@@ -81,6 +80,14 @@ MODULE MOD_JSONIO
         CLASS(JsonEntries_t), INTENT(INOUT) :: entries
         CHARACTER(*)        , INTENT(IN)    :: key
         CHARACTER(*)        , INTENT(IN)    :: value
+
+        CALL JSON_ENTRY_PUSH_STR_INTERNAL(entries, key, '\"'//value//'\"')
+    END SUBROUTINE
+
+    SUBROUTINE JSON_ENTRY_PUSH_STR_INTERNAL(entries, key, value)
+        CLASS(JsonEntries_t), INTENT(INOUT) :: entries
+        CHARACTER(*)        , INTENT(IN)    :: key
+        CHARACTER(*)        , INTENT(IN)    :: value
         TYPE(JsonKey_t), ALLOCATABLE        :: tmp(:)
 
         IF(entries%length.EQ.0) THEN
@@ -104,7 +111,7 @@ MODULE MOD_JSONIO
         CHARACTER(128) :: str
         
         WRITE(str, '(I128)') value
-        CALL JSON_ENTRY_PUSH_STR(entries, key, str)
+        CALL JSON_ENTRY_PUSH_STR_INTERNAL(entries, key, str)
     END SUBROUTINE
 
     SUBROUTINE JSON_ENTRY_PUSH_REAL(entries, key, value)
@@ -114,6 +121,6 @@ MODULE MOD_JSONIO
         CHARACTER(128) :: str
         
         WRITE(str, *) value
-        CALL JSON_ENTRY_PUSH_STR(entries, key, str)
+        CALL JSON_ENTRY_PUSH_STR_INTERNAL(entries, key, str)
     END SUBROUTINE
 END MODULE MOD_JSONIO
