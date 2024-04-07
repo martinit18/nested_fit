@@ -189,7 +189,11 @@ c################################### USERFCN DEFINITION ########################
       ELSE IF(funcname.EQ.'ELEVEN_GAUSS_WF_CORREL_BG') THEN
             SELECT_USERFCN = 90      
       ELSE IF(funcname.EQ.'ELEVEN_GAUSS_WF_POISSON_BG') THEN
-            SELECT_USERFCN = 91      
+            SELECT_USERFCN = 91 
+      ELSE IF(funcname.EQ.'DECAY') THEN
+            SELECT_USERFCN = 92      
+      ELSE IF(funcname.EQ.'DECAY_SIMP') THEN
+            SELECT_USERFCN = 93         
       ELSE
             WRITE(*,*) 'Error in the function name def. in USERFCN'
             WRITE(*,*) 'Check in the manual and in the input.dat file'
@@ -435,7 +439,11 @@ c     Choose your model (see below for definition)
       CASE (90)
             USERFCN = ELEVEN_GAUSS_WF_CORREL_BG(x, npar, val)   
       CASE (91)
-            USERFCN = ELEVEN_GAUSS_WF_POISSON_BG(x, npar, val)                    
+            USERFCN = ELEVEN_GAUSS_WF_POISSON_BG(x, npar, val)
+      CASE (92)
+            USERFCN = DECAY(x, npar, val)   
+      CASE (93)
+            USERFCN = DECAY_SIMP(x, npar, val)                        
       END SELECT
 
       RETURN
