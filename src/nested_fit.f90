@@ -1070,7 +1070,7 @@ PROGRAM NESTED_FIT
         CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'min'  , par_bnd1(i), MANDATORY=.TRUE. )
         CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'max'  , par_bnd2(i), MANDATORY=.TRUE. )
         CALL FIELD_FROM_INPUT_LOGICAL(input_config, TRIM(key)//'fixed', fix_logical, MANDATORY=.FALSE.) ! False by default
-        par_fix(i) = fix_logical ! Implicit conversion
+        par_fix(i) = MERGE(1, 0, fix_logical)
 
         IF (par_bnd1(i).GE.par_bnd2(i)) THEN
           CALL LOG_ERROR_HEADER()
@@ -1143,7 +1143,7 @@ PROGRAM NESTED_FIT
          CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'min'  , par_bnd1(par_num(i)), MANDATORY=.TRUE. )
          CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'max'  , par_bnd2(par_num(i)), MANDATORY=.TRUE. )
          CALL FIELD_FROM_INPUT_LOGICAL(input_config, TRIM(key)//'fixed', fix_logical         , MANDATORY=.FALSE.) ! False by default
-         par_fix(par_num(i)) = fix_logical ! Implicit conversion
+         par_fix(par_num(i)) = MERGE(1, 0, fix_logical)
 
          IF (par_bnd1(par_num(i)).GE.par_bnd2(par_num(i))) THEN
             CALL LOG_ERROR_HEADER()
