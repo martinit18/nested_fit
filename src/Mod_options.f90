@@ -12,6 +12,6 @@ MODULE MOD_OPTIONS
     ! TODO(César): Also add this to the nf cache to load on next runs.
     CHARACTER(LEN=512) :: opt_cpp_comp_cmd = 'g++ -c -shared -O3 -w -fPIC'
     CHARACTER(LEN=512) :: opt_f90_comp_cmd = 'gfortran -cpp -c -shared -O3 -w -fPIC -ffree-line-length-0'
-    CHARACTER(LEN=512) :: opt_lnk_cmd      = 'gcc -shared -fPIC'
+    CHARACTER(LEN=512) :: opt_lnk_cmd      = 'gcc -shared -fPIC -lgfortran'
     
 END MODULE MOD_OPTIONS

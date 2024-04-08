@@ -239,7 +239,7 @@ PROGRAM NESTED_FIT
 
   CALL ADD_ARGUMENT(argdef_t("cache-link", "cl", .TRUE.,&
     "Changes the link command for c++/Fortran when adding a raw function via the `function-add` command or the input file. &
-     Also gets triggered on `cache-recompile` commands. Defaults to the gcc compiler: 'gcc -shared -fPIC'.",&
+     Also gets triggered on `cache-recompile` commands. Defaults to the gcc compiler: 'gcc -shared -fPIC -lgfortran'.",&
     B_LNKCMD&
   ))
 
