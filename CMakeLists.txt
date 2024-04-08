@@ -163,6 +163,7 @@ ac_dec_obj_dep("src/nested_fit" "src/Mod_input_parse")
 ac_dec_obj_dep("src/Mod_input_parse" "src/helper/int_stack")
 ac_dec_obj_dep("src/Mod_jsonio" "src/Mod_logger")
 ac_dec_obj_dep("src/nested_fit" "src/cli/argparse")
+ac_dec_obj_dep("src/nested_fit" "src/Mod_jsonio")
 
 set(SRC_EXTERNAL_FUNCS
     src/helper/hash.f90
