@@ -971,9 +971,8 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
          ntries=1+ntries
          test_bnd=.TRUE.
          DO m=1,npar
-            IF(new_jump(m).LT.par_bnd1(m) .OR. new_jump(m).GT.par_bnd2(m)) THEN
+            IF(new_jump(m).LT.par_bnd1(m) .OR. new_jump(m).GT.par_bnd2(m) .AND. par_fix(m).NE.1) THEN
                test_bnd=.FALSE.
-               IF(par_fix(m)==1) WRITE(*,*) 'Parameter n° ', m, ' has a value outside its bounds'
                EXIT
             ENDIF
          END DO !check if the new point is inside the sampled space
