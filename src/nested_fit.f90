@@ -884,7 +884,41 @@ PROGRAM NESTED_FIT
   CONTAINS
 
   SUBROUTINE PRINT_OUTPUT_RESULT()
+   TYPE(JsonEntries_t) :: json
    PROFILED(PRINT_OUTPUT_RESULT)
+
+   ! Write to json
+   CALL json%push('trialcount', ntry)
+   CALL json%push('itercount', nall)
+   CALL json%push('livecount', nlive)
+   CALL json%push('evidence.value', evsum_final)
+   CALL json%push('evidence.uncertainty', evsum_err_est)
+   CALL json%push('evidence.stddev', evsum_err)
+   CALL json%push('likelihoodmax', live_like_max)
+
+   DO i = 1, npar
+      CALL json%push('params.'//TRIM(par_name(i))//'.max', live_max(i))
+      CALL json%push('params.'//TRIM(par_name(i))//'.mean', par_mean(i))
+      CALL json%push('params.'//TRIM(par_name(i))//'.std', par_sd(i))
+      CALL json%push('params.'//TRIM(par_name(i))//'.median', par_median_w(i))
+      CALL json%push('params.'//TRIM(par_name(i))//'.ci_l99', par_m99_w(i))
+      CALL json%push('params.'//TRIM(par_name(i))//'.ci_l95', par_m95_w(i))
+      CALL json%push('params.'//TRIM(par_name(i))//'.ci_l68', par_m68_w(i))
+      CALL json%push('params.'//TRIM(par_name(i))//'.ci_h68', par_p68_w(i))
+      CALL json%push('params.'//TRIM(par_name(i))//'.ci_h95', par_p95_w(i))
+      CALL json%push('params.'//TRIM(par_name(i))//'.ci_h99', par_p99_w(i))
+   END DO
+
+   CALL json%push('meta.information', info)
+   CALL json%push('meta.minimal_req_it', nexp)
+   CALL json%push('meta.bayes_complexity', comp)
+   CALL json%push('meta.ncores', nth)
+   CALL json%push('meta.timetotal', seconds)
+   CALL json%push('meta.timereal', seconds_omp)
+   CALL json%write('nf_output_res.json')
+   CALL json%free()
+
+   ! NOTE: (César): Keep legacy output for now
    OPEN(22,FILE='nf_output_res.dat',STATUS= 'UNKNOWN')
    WRITE(22,*) '#############_FINAL_RESULTS_#####################################################################################'
    WRITE(22,*) 'N._of_trials:                          ', ntry
