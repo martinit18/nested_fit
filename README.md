@@ -164,8 +164,9 @@ More info is available [here](#Usage).
 - `nf_output_res.dat`: main output with the results.
 It contains the details of the computation (n. of live points trials, n. of total iteration), the final evidence value and its uncertainty, the parameter values corresponding to the maximum of the likelihood function, the mean, the median, the standard deviation and the confidence intervals (credible intervals) (68%, 95% and 99%) of the posterior probability distribution of each parameter.
 The corresponding information gain and the Bayesian complexity are also provided.
+- `nf_output_res.json`: same as above but in JSON format.
 - `nf_output_data_*.dat`: original input data together with the model function values corresponding to the parameters with the highest likelihood function value ('max') to the mean value ('mean') or median ('median'), the residuals and the uncertainty associated to the data.
-- `nf_output_fit_*.dat`: Model function values with higher density sampling that the data (for plot purpose). In addition, different components of the model are given
+- `nf_output_fit_*.dat`: Model function values with higher density sampling that the data (for plot purpose). In addition, different components of the model are given.
 - `nf_output_tries.dat`: For each live points trial, it contains the final evidence, the number of iterations and the maximum value of the likelihood function.
 - `nf_output_points.txt`: contains all discarded and final live points values, their associated likelihood values and posterior probabilities. From them, the different parameter probability distributions can be built.
 For this purpose, the python module `nested_py` can be used also for compressed `nf_output_points.txt` files (using gzip with the name `nf_output_points.txt.gz`).
@@ -286,12 +287,14 @@ Additional information can be found in the reference articles.
 
 ## Present version and history of the past versions
 
-The present version is 5.1.0\
-New features:
-- Add feature for older systems not easily supporting cmake to configure via GNU autotools.
-- Add performance profiling tool boilerplate code enabling a detailed analysis without hindering performance.
+The present version is 5.2.0\
+New features:,
+- Add JSON output for easier manipulation of results.
+- New simple python interface to embed nested_fit on source code.
 
 Previous versions are:
+ - 5.1 Add feature for older systems not easily supporting cmake to configure via GNU autotools. \
+ Add performance profiling tool boilerplate code enabling a detailed analysis without hindering performance.
  - 5.0 New modified Jeffreys likelihood for data \
  Update README.md \
  Add CI support via github actions. Only available for linux and macOS. \
