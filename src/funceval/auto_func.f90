@@ -728,7 +728,7 @@ MODULE MOD_AUTOFUNC
             WRITE(77,'(a)') 'end function '//TRIM(funcname)
         CLOSE(77)
 
-        CALL EXECUTE_COMMAND_LINE(TRIM(opt_f90_comp_cmd)//' '//TRIM(filename)//' -o '//TRIM(nf_cache_folder)//TRIM(funcname)//'.o', EXITSTAT=status)
+        CALL EXECUTE_COMMAND_LINE(TRIM(opt_f90_comp_cmd)//' '//TRIM(filename)//' -o '//TRIM(nf_cache_folder)//'user/'//TRIM(funcname)//'.o', EXITSTAT=status)
         IF(status.NE.0) THEN
             CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Failed to compile the function provided.')
@@ -744,7 +744,7 @@ MODULE MOD_AUTOFUNC
     SUBROUTINE RECOMPILE_CACHE()
         INTEGER :: status
 
-        CALL EXECUTE_COMMAND_LINE(TRIM(opt_lnk_cmd)//' '//TRIM(nf_cache_folder)//'*.o -o '//TRIM(dll_name), EXITSTAT=status)
+        CALL EXECUTE_COMMAND_LINE(TRIM(opt_lnk_cmd)//' '//TRIM(nf_cache_folder)//'*/*.o -o '//TRIM(dll_name), EXITSTAT=status)
         IF(status.NE.0) THEN
             CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Failed to link the function provided.')

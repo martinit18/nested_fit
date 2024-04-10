@@ -422,8 +422,16 @@ endif()
 
 # Create the cache folder at build time
 add_custom_command(TARGET ${nested_fit_target}
-    POST_BUILD
+    PRE_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory ${nested_fit_cache_folder}
+)
+add_custom_command(TARGET ${nested_fit_target}
+    PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${nested_fit_cache_folder}user/
+)
+add_custom_command(TARGET ${nested_fit_target}
+    PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${nested_fit_cache_folder}sys/
 )
 
 # Compile the object files of the internal functions the user will be able to natively use in their expressions
@@ -438,7 +446,7 @@ set_source_files_properties(${SRC_EXTERNAL_FUNCS} PROPERTIES COMPILE_FLAGS "${SR
 add_library(internal_functions OBJECT ${SRC_EXTERNAL_FUNCS} ${SRC_DIERCKX})
 add_custom_target(copy_internal_functions ALL
     DEPENDS internal_functions
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_OBJECTS:internal_functions> ${nested_fit_cache_folder}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_OBJECTS:internal_functions> ${nested_fit_cache_folder}sys/
     COMMAND_EXPAND_LISTS
 )
 

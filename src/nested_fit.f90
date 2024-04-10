@@ -1463,6 +1463,16 @@ PROGRAM NESTED_FIT
 #endif
   END SUBROUTINE
 
+  SUBROUTINE DEL_FILE(where)
+   CHARACTER(LEN=*), INTENT(IN) :: where
+
+#ifdef _WIN32
+   CALL EXECUTE_COMMAND_LINE('del /q '//TRIM(where)) ! TODO(César): Check for potential errors, and test it on windows
+#else
+   CALL EXECUTE_COMMAND_LINE('rm -f '//TRIM(where))  ! TODO(César): Check for potential errors
+#endif
+  END SUBROUTINE
+
   SUBROUTINE B_DELCACHE(this, invalue)
    CLASS(argdef_t), INTENT(IN) :: this
    CHARACTER(LEN=512), INTENT(IN) :: invalue
@@ -1481,7 +1491,8 @@ PROGRAM NESTED_FIT
       CALL LOG_MESSAGE_HEADER()
       CALL LOG_MESSAGE('Cache deleted.')
       CALL LOG_MESSAGE_HEADER()
-      CALL DEL_FOLDER_RECURSIVE(nf_cache_folder)
+      CALL DEL_FOLDER_RECURSIVE(nf_cache_folder//'user/')
+      CALL DEL_FILE(nf_cache_folder//'func_names.dat')
    ELSE
       CALL LOG_MESSAGE_HEADER()
       CALL LOG_MESSAGE('Operation aborted by the user.')
