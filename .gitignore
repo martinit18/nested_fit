@@ -36,6 +36,9 @@ dist/
 # Logfiles
 *.log
 
+# Perfprof dotfiles
+*.dot
+
 # Ignore autoconf/automake stuff
 autom4te.cache/
 configure.ac
