@@ -253,10 +253,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,weight,
       !$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) FIRSTPRIVATE(ntries) PRIVATE(p_cluster) &
         !$OMP SHARED(n,itry,min_live_like,live_like,live,nth,live_like_new,live_new,icluster,too_many_tries) LASTPRIVATE(ntries)  
       DO it=1,nth
-         !write(*,*) 'before', n, it,live_like_new(1), live_like(nlive) ! OMP_GET_THREAD_NUM(),  ???
+         ! write(*,*) 'before', n, it,live_like_new(1), live_like(nlive) ! OMP_GET_THREAD_NUM(),  ???
          CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
            live_like_new(it),live_new(it,:),icluster(it),ntries,too_many_tries(it))
-         !write(*,*) 'after',  n, it,live_like_new(1), live_like(nlive) ! OMP_GET_THREAD_NUM(),  ???
+         ! write(*,*) 'after',  n, it,live_like_new(1), live_like(nlive) ! OMP_GET_THREAD_NUM(),  ???
       END DO
       !$OMP END PARALLEL DO
       

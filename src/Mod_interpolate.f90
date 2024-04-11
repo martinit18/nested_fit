@@ -12,8 +12,8 @@ MODULE MOD_INTERPOLATE
     PRIVATE
     
     TYPE :: SplineData_t
-        REAL(8), DIMENSION(:), POINTER     :: t ! Knots x val
-        REAL(8), DIMENSION(:), POINTER     :: c ! Coeficients
+        REAL(8), DIMENSION(:), ALLOCATABLE :: t ! Knots x val
+        REAL(8), DIMENSION(:), ALLOCATABLE :: c ! Coeficients
         INTEGER                            :: n ! Dim of c and t
         INTEGER                            :: k ! Spline dimension
         INTEGER                            :: e ! Out of bounds evaluation strategy
@@ -48,7 +48,7 @@ MODULE MOD_INTERPOLATE
         REAL(8)           , INTENT(IN)  :: x
         REAL(8)           , INTENT(OUT) :: y
         INTEGER                         :: ierr
-
+        
         CALL SPLEV(spline_data%t, spline_data%n, spline_data%c, spline_data%k, x, y, 1, spline_data%e, ierr)
         IF(ierr.GT.0) THEN
             CALL LOG_ERROR_HEADER()
@@ -72,7 +72,7 @@ MODULE MOD_INTERPOLATE
 
         ! Input/Output variables
         REAL(8), ALLOCATABLE         :: x(:), y(:), w(:)
-        REAL(8), ALLOCATABLE, TARGET :: t(:), c(:)
+        ! REAL(8), ALLOCATABLE, TARGET :: t(:), c(:)
         REAL(8), ALLOCATABLE         :: wrk(:)
         INTEGER, ALLOCATABLE         :: iwrk(:)
         INTEGER                      :: m, i, n
@@ -121,10 +121,7 @@ MODULE MOD_INTERPOLATE
         CALL LOG_TRACE('Interpolator working sizes: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(nest)))//' '//TRIM(ADJUSTL(INT_TO_STR_INLINE(lwrk)))//' '//TRIM(ADJUSTL(INT_TO_STR_INLINE(n))))
         ALLOCATE(wrk(lwrk), iwrk(nest))
         ALLOCATE(x(m), y(m), w(m))
-        ALLOCATE(t(nest), c(nest))
-
-        t = 0.
-        c = 0.
+        ALLOCATE(output%t(nest), output%c(nest))
 
         OPEN(1, file=TRIM(interpolator_file), status='old')
         DO i=1, m
@@ -150,7 +147,7 @@ MODULE MOD_INTERPOLATE
             ENDIF
         ENDDO
         
-        CALL CURFIT(iopt, m, x, y, w, x(1), x(m), k, s, nest, n, t, c, r, wrk, lwrk, iwrk, ierr)
+        CALL CURFIT(iopt, m, x, y, w, x(1), x(m), k, s, nest, n, output%t, output%c, r, wrk, lwrk, iwrk, ierr)
 
         IF(ierr.GT.0) THEN
             CALL LOG_ERROR_HEADER()
@@ -165,7 +162,9 @@ MODULE MOD_INTERPOLATE
             STOP
         ENDIF
 
-        output = SplineData_t(t, c, n, k, 1)
+        output%n = n
+        output%k = k
+        output%e = 1
 
         DEALLOCATE(wrk, iwrk)
         DEALLOCATE(x, y, w)
@@ -212,8 +211,11 @@ MODULE MOD_INTERPOLATE
                 IF(ASSOCIATED(map%pairs(i)%next)) THEN
                     CALL CLEAR_LL(map%pairs(i)%next)
                 ENDIF
+                
+                ! Cleanup after ourselves
+                IF(ALLOCATED(map%pairs(i)%value%t)) DEALLOCATE(map%pairs(i)%value%t)
+                IF(ALLOCATED(map%pairs(i)%value%c)) DEALLOCATE(map%pairs(i)%value%c)
             END DO
-
             DEALLOCATE(map%pairs)
         ENDIF
     END SUBROUTINE
@@ -249,7 +251,7 @@ MODULE MOD_INTERPOLATE
                 error = .TRUE.
                 RETURN
             ENDIF
-            pair = pair%next
+            pair => pair%next
         END DO
     END SUBROUTINE
 
@@ -286,7 +288,7 @@ MODULE MOD_INTERPOLATE
                 RETURN
             ENDIF
 
-            pair = pair%next
+            pair => pair%next
         END DO
     END SUBROUTINE
 

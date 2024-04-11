@@ -370,13 +370,13 @@ CONTAINS
    REAL(8), PARAMETER                       :: pi = 3.141592653589793d0
 
    ! Which data types are present in the input file
-   LOGICAL :: img_present
-   LOGICAL :: x_present
-   LOGICAL :: y_present
-   LOGICAL :: c_present
-   LOGICAL :: ce_present
-   LOGICAL :: t_present
-   LOGICAL :: i_present
+   LOGICAL :: img_present = .FALSE.
+   LOGICAL :: x_present = .FALSE.
+   LOGICAL :: y_present = .FALSE.
+   LOGICAL :: c_present = .FALSE.
+   LOGICAL :: ce_present = .FALSE.
+   LOGICAL :: t_present = .FALSE.
+   LOGICAL :: i_present = .FALSE.
 
    ! Initialize
    x_tmp  = 0.
