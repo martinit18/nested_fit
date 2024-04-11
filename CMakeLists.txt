@@ -437,10 +437,18 @@ add_custom_command(TARGET ${nested_fit_target}
 # Compile the object files of the internal functions the user will be able to natively use in their expressions
 #TODO(César): Use generator expression for compile flags here too
 #TODO(César): Optimize fPIC with https://www.macieira.org/blog/2012/01/sorry-state-of-dynamic-libraries-on-linux/
-set(SRC_DIERCKX_OBJ_FLAGS "-fPIC -fno-semantic-interposition -static -O2 -ffree-line-length-0")
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(SRC_DIERCKX_OBJ_FLAGS "-fPIC -fno-semantic-interposition -static -O3 -ffree-line-length-0")
+else()
+    set(SRC_DIERCKX_OBJ_FLAGS "-fPIC -fno-semantic-interposition -static -g -O0 -ffree-line-length-0")
+endif()
 set_source_files_properties(${SRC_DIERCKX} PROPERTIES COMPILE_FLAGS "${SRC_DIERCKX_OBJ_FLAGS}")
 
-set(SRC_EXTERNAL_FUNCS_OBJ_FLAGS "-fPIC -fno-semantic-interposition -static -O2 -Wall -ffree-line-length-0")
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(SRC_EXTERNAL_FUNCS_OBJ_FLAGS "-fPIC -fno-semantic-interposition -static -O2 -Wall -ffree-line-length-0")
+else()
+    set(SRC_EXTERNAL_FUNCS_OBJ_FLAGS "-fPIC -fno-semantic-interposition -static -O0 -g -Wall -ffree-line-length-0")
+endif()
 set_source_files_properties(${SRC_EXTERNAL_FUNCS} PROPERTIES COMPILE_FLAGS "${SRC_EXTERNAL_FUNCS_OBJ_FLAGS}")
 
 add_library(internal_functions OBJECT ${SRC_EXTERNAL_FUNCS} ${SRC_DIERCKX})
