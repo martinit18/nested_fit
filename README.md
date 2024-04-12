@@ -143,7 +143,7 @@ You can check them with: `../configure --help` and take a look under `Optional F
 
 ### Comments for macOS users
 
-If you ar running `gfortran` installed with homebrew, you should avoid use `gcc` and `g++` from homebrew as well and not the macOS preinstalled one. For this use the option
+If you are running `gfortran` installed with homebrew, you should avoid use `gcc` and `g++` from homebrew as well and not the macOS preinstalled one. For this use the option
 
 ``-DCMAKE_Fortran_COMPILER=`which gfortran` -DCMAKE_C_COMPILER=`which gcc` -DCMAKE_CXX_COMPILER=`which g++``
 
@@ -181,7 +181,7 @@ A complete selection of input files example is given in the folder `examples` wh
 It follows a complete description of `nf_input.yaml` file.
 
 ```yaml
-version: 5.0                             # Program version
+version: 5.2                             # Program version
 datafiles: file1.csv [, file2.csv, ...]  # Name of the data file(s)
 specstr: x,c,ce                          # Datafile layout
 likelihood: GAUSSIAN                     # The likelihood function
@@ -202,10 +202,9 @@ Likelihood functions available (for data with error bars, Poisson statistics is 
 
 ```yaml
 function:
-    expression: f(x, a, b) = ax + b # Use LaTeX
-    expression: my_func.cpp         # Or use C++
-    expression: my_func.f90         # Or use Fortran
-    expression: GAUSS_BG            # Or use a nested_fit legacy function (deprecated)
+    expression: f(x, a, b) = ax + b                   # Use LaTeX
+    expression: f(x, a, b) = \texttt{linear}(x, a, b) # Or use C++/Fortran
+    expression: GAUSS_BG                              # Or use a nested_fit legacy function (deprecated)
 
     # Or for multiple files use the following nomenclature (one expressian for each file)
     expression_1: ...
@@ -214,22 +213,24 @@ function:
 
 ```
 - LaTeX specification [here](#LaTeX-Specification).
-- C/Fortran API specification [here](#C/Fortran-Specification).
+- C++/Fortran API specification [here](#C++/Fortran-Specification).
 
 
 ```yaml
 search:
     livepoints: 200     # Number of live points
     method: RANDOM_WALK # Search method
-    param1: 0.2
-    param2: 20
-    max_tries: 1000
-    tries_mult: 100
-    num_tries: 1
-    max_steps: 100000
+    param1: 0.2         # Param 1 of chosen method (see below)
+    param2: 20          # Param 2 of chosen method (see below)
+    max_tries: 1000     # Maximum tries before stop (max_tries * tries_mult)
+    tries_mult: 100     # Max tries multiplier
+    num_tries: 1        # Number of runs
+    max_steps: 100000   # Max number of steps before stop
 
-LIKE_ACC            # Method used for convergence 
-1.E-05    0.01      # Evidence final accuracy and additional convergence parameter
+convergence:
+    method:    LIKE_ACC  # Method used for convergence 
+    accuracy:  1.E-05    # Evidence final accuracy (in this case)
+    parameter: 0.01      # Additional convergence parameter
 ```
 
 For the moment, there are three convergence methods:
@@ -240,18 +241,19 @@ For the moment, there are three convergence methods:
 After convergence is reached, all remaining live points are assigned: 
 - the logarithm of the likelihoods averaged over the live points (`LIKE_ACC` case),
 - the opposite of the energies averaged over the live points (`ENERGY_ACC` and `ENERGY_MAX` cases).
-```
-RANDOM_WALK         # Type of search of live points
-0.1  20   100  10   # Param. search algo.(2), max n. tries, max of max tries
-```
+
 For the moment, a random walk (`RANDOM_WALK`), a uniform search around each live point (`UNIFORM`), slice sampling (`SLICE_SAMPLING`) and slice sampling with an adaptable step (`SLICE_SAMPLING_ADAPT`) are implemented. The first two parameters of the above line are specific to the search algorithm:
 - `RANDOM_WALK` par. 1: fraction of standard deviation for each jump, par. 2: number of jumps. Suggested values: 0.1-0.2, 10-40.
 - `SLICE_SAMPLING` and `SLICE_SAMPLING_ADAPT` par. 1: fraction of standard deviation for segment exploration, par. 2: number of jumps. Suggested values: ~1, 3-5.
 - `UNIFORM` par. 1: fraction of standard deviation for the box size, par. 2: number of jumps. Suggested values: 0.1-1, 1.
 
 
-```
-y	f	0.5	0.2     # cluster analysis or not (y/n), method (f/g/d/s/k), param. cluster algo. (2)
+```yaml
+clustering:
+    enabled:   true # False by default (if ommited)
+    method:    f    # Clustering method (see below)
+    distance:  0.5  # Clustering parameters
+    bandwidth: 0.2  # Clustering parameters
 ```
 
 For the moment four clustering algorithms are implemented. The two parameters are specific to the method
@@ -262,32 +264,80 @@ For the second option:
 - `s`: agglomerative clustering with single linkage (par. 1: distance limit (in percentage of the maximum distance))
 - `k`: k nearest neighbours (no parameters)
 
-```
-1    100000         # Number of runs and maximum of steps
-GAUSS_BG            # Name of the function
-```
+```yaml
+function:
+    params:
+    # Compact 
+    a: { value: 0, step: -1, min: 0, max: 10 } # `fixed` is false by default
+    b: { value: 0, step: -1, min: 0, max: 10 } # `fixed` is false by default
+    
+    # Extended
+    e_a:
+      value: 0
+      step: -1
+      min: 0
+      max: 10
+      fixed: false
 
+data: { xmin: 1, xmax: 100, ymin: 0, ymax: 0 }
 ```
-L                   # Additional data: left/right (l/r)
-500     20          # Additional data:  npoint, nwidth for convolution
-1   1024  1 1024    # xmin, xmax, ymin, ymax
-4                   # number of parameters
-# npar  name    value   step    min     max     fixed
-1	'bg'	0.11	-1	0.	0.5	0
-2	'x0'	454.6	-1	400	600	0
-3	'amp'	296	-1	20	1000	0
-4	'sigma'	20.0	-1	0	100	0
-```
+These entries of the file define how the function given parameters should vary. Their `min`/`max` span,
+their `MCMC` step and either if they are variable or fixed. Both an extended and a compact version of declaring the parameters are available.
+
+The `data` field allows to control the input file's X and Y span of which the `nested_fit` will run from. Allowing to crop data if necessary.
+As of version 5.2, `ymin` and `ymax` can be both zero, meaning automatica span. However, `xmin`/`xmax` should always contain a valid range.
 
 ### LaTeX Specification
+LaTeX is the preferred mode to write input functions whenever possible. It is also the main mode of calling native functions from the input file.
+LaTeX functions need to follow the syntax:
+```
+<my_func_name>(x, a_0, a_1, ..., a_n) = <definition>
+```
+where the user defined arguments `a_i` must be of one of the following forms: `<letter>_<char>` or `<letter>`, where `<char>` is any alphanumeric character and `<letter>` any lower or uppercase letter of the english alphabet.
+Examples: `I_0`, `A`, `x_2`. Any other form is invalid. For 1D functions (currently the only one supported with this mode), `x` must be strictly named, and the first parameter.
 
-### C/Fortran Specification
+Now for the function `<definition>`. Here one can:
 
-Additional information can be found in the reference articles.
+- Use basic math. Examples `ax + b` (with `a` and `b` arguments), `a*x + b` ('programing' form also allowed). [Available operators: `*`, `+`, `-`, `/`]
+- Use math embedded basic functions. Examples `a\sqrt{x} + b` or `a\exp{x-b}`. [Available functions: `sqrt`, `exp`, `log`, `sin`, `cos`, `tan`, `arcsin`, `arccos`, `arctan`, `Gamma`, `abs`, `erf`, `sign`]
+- Use some LaTeX constructs. Examples `\frac{x}{a + b}` or `a\exp{\frac{x}{b}}`. [Available constructs: `frac`]
+- Use mathematical constants: `a\pi + bx`. [Available constants: `pi`]
+- Call other user defined functions via syntax: `\texttt{<other_func_name>}(x, a_0, a_1, ..., a_n)`, where the passed parameters should be some currently available arguments. Alternatively one can also use `mathrm` isntead of `texttt`.
+- Call system defined functions via the same syntax as above. [Available system functions: `WofzRe` (real part of the Fadeeva function), `Interpolate` (cubic spline interpolation from a given file)]
+
+|Function|Declaration|Description|
+|:-:|:-:|:-:|
+|`WofzRe`| `WofzRe(zr, zi)` | `zr`/`zi`: the real and imaginary part of the<br/> given input, respectively.
+|`Interpolate`| `Interpolate(filename, x, smooth)` | `filename`: the name of the file where the xy data<br/> is availabe (`.csv` format).<br/><br/>`x`: where to evaluate the spline.<br/><br/>`smooth`: The spline smoothing factor. Around the same order of magnitude as the number of points.
+
+One can use this declaration mode directly on the input file:
+```yaml
+function:
+    expression: test_func(x, a, b) = \frac{x}{\exp{2b\pi}} + \sin{b}
+```
+Or it is also possible to add the function via the command line:
+```sh
+nested_fit5.2.0 -fa 'test_func(x, a, b) = \frac{x}{\exp{2b\pi}} + \sin{b}'
+```
+
+This function would then be available and could be used in the following fashion (which is functionally equivalent to using the function directly):
+```yaml
+function:
+    expression: f(x, a, b) = \texttt{test_func}(x, a, b)
+```
+
+> :warning: All functions ran in nested_fit either via normal execution on using the `-fa` command. Get stored under a cache and are reusable whenever necessary. If a function name is repeated, the old declaration is **overwritten without warning**. This is also valid for C++/Fortran native user functions.
+
+### C++/Fortran Specification
+
+This is the second mode to declare functions. Althouth giving a bit more work, it allows for a much finer control of what is going on.
+
+
+**Additional information can be found in the reference articles.*
 
 ## Present version and history of the past versions
 
-The present version is 5.2.0\
+The present version is 5.2.1\
 New features:,
 - Add JSON output for easier manipulation of results.
 - New simple python interface to embed nested_fit on source code.
