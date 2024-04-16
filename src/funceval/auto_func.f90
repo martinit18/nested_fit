@@ -141,7 +141,13 @@ MODULE MOD_AUTOFUNC
         INTEGER            :: argc
     END TYPE cache_entry_t
 
+#ifdef _WIN32
+    CHARACTER(LEN=*), PARAMETER      :: dll_name    = TRIM(nf_cache_folder)//'dynamic_calls.dll'
+    CHARACTER(LEN=*), PARAMETER      :: obj_ext     = '.obj'
+#else
     CHARACTER(LEN=*), PARAMETER      :: dll_name    = TRIM(nf_cache_folder)//'dynamic_calls.so'
+    CHARACTER(LEN=*), PARAMETER      :: obj_ext     = '.o'
+#endif
     CHARACTER(LEN=*), PARAMETER      :: fname_cache = TRIM(nf_cache_folder)//'func_names.dat'
     TYPE(cache_entry_t), ALLOCATABLE :: entries(:)
     INTEGER                          :: nentries=0
@@ -728,7 +734,7 @@ MODULE MOD_AUTOFUNC
             WRITE(77,'(a)') 'end function '//TRIM(funcname)
         CLOSE(77)
 
-        CALL EXECUTE_COMMAND_LINE(TRIM(opt_f90_comp_cmd)//' '//TRIM(filename)//' -o '//TRIM(nf_cache_folder)//'user/'//TRIM(funcname)//'.o', EXITSTAT=status)
+        CALL EXECUTE_COMMAND_LINE(TRIM(opt_f90_comp_cmd)//' '//TRIM(filename)//' -o '//TRIM(nf_cache_folder)//'user/'//TRIM(funcname)//TRIM(obj_ext), EXITSTAT=status)
         IF(status.NE.0) THEN
             CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Failed to compile the function provided.')
@@ -744,7 +750,7 @@ MODULE MOD_AUTOFUNC
     SUBROUTINE RECOMPILE_CACHE()
         INTEGER :: status
 
-        CALL EXECUTE_COMMAND_LINE(TRIM(opt_lnk_cmd)//' '//TRIM(nf_cache_folder)//'*/*.o -o '//TRIM(dll_name), EXITSTAT=status)
+        CALL EXECUTE_COMMAND_LINE(TRIM(opt_lnk_cmd)//' '//TRIM(nf_cache_folder)//'*/*'//TRIM(obj_ext)//' -o '//TRIM(dll_name), EXITSTAT=status)
         IF(status.NE.0) THEN
             CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Failed to link the function provided.')
