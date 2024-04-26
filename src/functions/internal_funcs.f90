@@ -53,6 +53,7 @@ FUNCTION Interpolate(interpolator_file, x, s)
         CALL LOG_ERROR('Aborting Execution...')
         CALL LOG_ERROR_HEADER()
 
-        CALL HALT_EXECUTION()
+        !CALL HALT_EXECUTION() ! Not working on Mac in this function only
+        STOP
     ENDIF
 END FUNCTION
