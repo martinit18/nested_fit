@@ -116,7 +116,6 @@ CONTAINS
        END DO
 
        ! Don't forget the last value
-       ! FIX: (César) : This is not right
        CALL SPLIT_FIND_MIN(chars, ninput, i)
        output(count) = TRIM(ninput(i+1:))
     END SUBROUTINE
