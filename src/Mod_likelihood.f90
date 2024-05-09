@@ -416,10 +416,10 @@ CONTAINS
 
       ! Format the line according to the specifiers (CSV)
       IF(TRIM(fileformat).EQ.'.csv') THEN
-         CALL SPLIT_INPUT_ON(',', line, cvars, ncols, specstrmaxcol)
+         CALL SPLIT_INPUT_ON(',', TRIM(ADJUSTL(line)), cvars, ncols, specstrmaxcol)
          ! write(*,*) TRIM(line), cvars, ncols
       ELSE IF(TRIM(fileformat).EQ.'.tsv') THEN
-         CALL SPLIT_INPUT_ON_V(CHAR(9)//' ', line, cvars, ncols, specstrmaxcol, repeat=.TRUE.)
+         CALL SPLIT_INPUT_ON_V(CHAR(9)//' ', TRIM(ADJUSTL(line)), cvars, ncols, specstrmaxcol, repeat=.TRUE.)
       ENDIF
 
       IF(opt_file_has_header.AND.i.EQ.1) THEN
