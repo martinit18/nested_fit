@@ -55,7 +55,7 @@ MODULE MOD_INPUTPARSE
         count = 0
 
         DO i = 1, LEN_TRIM(input)
-            IF((input(i:i).NE.' ').AND.(string(i:i).NE.CHAR(9))) THEN
+            IF((input(i:i).NE.' ').AND.(input(i:i).NE.CHAR(9))) THEN
                 RETURN
             ENDIF
             count = count + 1
