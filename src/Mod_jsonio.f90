@@ -9,6 +9,9 @@ MODULE MOD_JSONIO
 
     ! Perfporf module
     USE MOD_PERFPROF
+
+    ! String manipulation module
+    USE MOD_STRUTIL
     
     IMPLICIT NONE
     PUBLIC :: JsonEntries_t

@@ -14,6 +14,7 @@ MODULE MOD_AUTOFUNC
     USE MOD_LOGGER
     USE MOD_METADATA
     USE MOD_OPTIONS
+    USE MOD_STRUTIL
     USE iso_c_binding
     IMPLICIT NONE
     
@@ -232,7 +233,7 @@ MODULE MOD_AUTOFUNC
 
     CONTAINS
 
-    SUBROUTINE F_C_STRING_ALLOC(f_string, c_string)
+    SUBROUTINE F_C_STRING_ALLOC_I(f_string, c_string)
         USE iso_c_binding
         CHARACTER(c_char), DIMENSION(:), POINTER, INTENT(OUT) :: c_string
         CHARACTER(LEN=*), INTENT(IN)                          :: f_string
@@ -245,14 +246,14 @@ MODULE MOD_AUTOFUNC
         c_string(len + 1) = c_null_char
     END SUBROUTINE
 
-    SUBROUTINE F_C_STRING_DEALLOC(c_string)
+    SUBROUTINE F_C_STRING_DEALLOC_I(c_string)
         USE iso_c_binding
         CHARACTER(c_char), DIMENSION(:), POINTER, INTENT(INOUT) :: c_string
 
         DEALLOCATE(c_string)
     END SUBROUTINE
 
-    SUBROUTINE C_F_STRING(c_string, f_string)
+    SUBROUTINE C_F_STRING_I(c_string, f_string)
         USE iso_c_binding
         TYPE(c_ptr), INTENT(IN)                              :: c_string
         CHARACTER(LEN=*), INTENT(OUT)                        :: f_string
@@ -271,7 +272,7 @@ MODULE MOD_AUTOFUNC
         CALL C_F_POINTER(c_intarray, f_intarray, [f_size])
     END SUBROUTINE
 
-    SUBROUTINE STRING_SPLIT(input, output, size)
+    SUBROUTINE STRING_SPLIT_I(input, output, size)
         IMPLICIT NONE
         CHARACTER(LEN=*), INTENT(IN)  :: input
         CHARACTER(LEN=*), INTENT(OUT) :: output(size)
@@ -293,12 +294,12 @@ MODULE MOD_AUTOFUNC
         f_type%valid = .TRUE.
 
         ! Function name
-        CALL C_F_STRING(c_type%function_name, f_type%function_name)
+        CALL C_F_STRING_I(c_type%function_name, f_type%function_name)
 
         ! Parameter names
-        CALL C_F_STRING(c_type%parameter_names, tmp_string)
+        CALL C_F_STRING_I(c_type%parameter_names, tmp_string)
         ALLOCATE(f_type%parameter_names(f_type%num_params))
-        CALL STRING_SPLIT(tmp_string, f_type%parameter_names, f_type%num_params)
+        CALL STRING_SPLIT_I(tmp_string, f_type%parameter_names, f_type%num_params)
     END SUBROUTINE
 
     FUNCTION PARSE_NATIVE(lang, filename) RESULT(parsed_data_f)
@@ -309,11 +310,11 @@ MODULE MOD_AUTOFUNC
         CHARACTER(c_char), DIMENSION(:)  , POINTER :: c_lang, c_filename
         CHARACTER(128)                             :: error_msg
 
-        CALL F_C_STRING_ALLOC(lang, c_lang)
-        CALL F_C_STRING_ALLOC(filename, c_filename)
+        CALL F_C_STRING_ALLOC_I(lang, c_lang)
+        CALL F_C_STRING_ALLOC_I(filename, c_filename)
         parsed_data = ParseNativeFunc(c_lang(1), c_filename(1)) ! Do the heavy lifting
-        CALL F_C_STRING_DEALLOC(c_lang)
-        CALL F_C_STRING_DEALLOC(c_filename)
+        CALL F_C_STRING_DEALLOC_I(c_lang)
+        CALL F_C_STRING_DEALLOC_I(c_filename)
         
         IF(parsed_data%error.NE.0) THEN
             CALL GetNativeErrorMsg(parsed_data, error_msg)
@@ -356,33 +357,33 @@ MODULE MOD_AUTOFUNC
         f_type%valid       = .TRUE.
 
         ! Function name
-        CALL C_F_STRING(c_type%function_name, f_type%function_name)
+        CALL C_F_STRING_I(c_type%function_name, f_type%function_name)
 
         ! Infix code string
-        CALL C_F_STRING(c_type%infixcode_f90, f_type%infixcode_f90)
+        CALL C_F_STRING_I(c_type%infixcode_f90, f_type%infixcode_f90)
 
         ! Number of function arguments
         CALL C_F_INTEGER_ARRAY(c_type%func_argc, f_type%func_argc, f_type%num_funcs)
 
         ! Parameter names
-        CALL C_F_STRING(c_type%parameter_names, tmp_string)
+        CALL C_F_STRING_I(c_type%parameter_names, tmp_string)
         ALLOCATE(f_type%parameter_names(f_type%num_params))
-        CALL STRING_SPLIT(tmp_string, f_type%parameter_names, f_type%num_params)
+        CALL STRING_SPLIT_I(tmp_string, f_type%parameter_names, f_type%num_params)
 
         ! Parameter identifiers
-        CALL C_F_STRING(c_type%parameter_identifiers, tmp_string)
+        CALL C_F_STRING_I(c_type%parameter_identifiers, tmp_string)
         ALLOCATE(f_type%parameter_identifiers(f_type%num_params))
-        CALL STRING_SPLIT(tmp_string, f_type%parameter_identifiers, f_type%num_params)
+        CALL STRING_SPLIT_I(tmp_string, f_type%parameter_identifiers, f_type%num_params)
 
         ! Function names
-        CALL C_F_STRING(c_type%functions, tmp_string)
+        CALL C_F_STRING_I(c_type%functions, tmp_string)
         ALLOCATE(f_type%functions(f_type%num_funcs))
-        CALL STRING_SPLIT(tmp_string, f_type%functions, f_type%num_funcs)
+        CALL STRING_SPLIT_I(tmp_string, f_type%functions, f_type%num_funcs)
 
         ! Builtin names
-        CALL C_F_STRING(c_type%builtin_custom, tmp_string)
+        CALL C_F_STRING_I(c_type%builtin_custom, tmp_string)
         ALLOCATE(f_type%builtin_custom(f_type%num_builtin))
-        CALL STRING_SPLIT(tmp_string, f_type%builtin_custom, f_type%num_builtin)
+        CALL STRING_SPLIT_I(tmp_string, f_type%builtin_custom, f_type%num_builtin)
     END SUBROUTINE
 
     FUNCTION PARSE_LATEX(expression) RESULT(parsed_data_f)
@@ -393,14 +394,14 @@ MODULE MOD_AUTOFUNC
         CHARACTER(128)                             :: error_msg
 
         ! Parse the expression
-        CALL F_C_STRING_ALLOC(expression, c_expression)
+        CALL F_C_STRING_ALLOC_I(expression, c_expression)
         parsed_data = ParseLatexToF90(c_expression(1)) ! Do the heavy lifting
-        CALL F_C_STRING_DEALLOC(c_expression)
+        CALL F_C_STRING_DEALLOC_I(c_expression)
 
         IF(parsed_data%error.EQ.0) THEN
-            CALL F_C_STRING_ALLOC(fname_cache, c_expression)
+            CALL F_C_STRING_ALLOC_I(fname_cache, c_expression)
             CALL CheckParseValidity(parsed_data, c_expression(1))
-            CALL F_C_STRING_DEALLOC(c_expression)
+            CALL F_C_STRING_DEALLOC_I(c_expression)
         ENDIF
 
         IF(parsed_data%error.NE.0) THEN

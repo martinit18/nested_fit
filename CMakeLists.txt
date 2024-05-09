@@ -498,5 +498,5 @@ if(CREATE_AUTOCONF)
     # file(REMOVE ${CMAKE_SOURCE_DIR}/configure.ac)
     # file(REMOVE ${CMAKE_SOURCE_DIR}/Makefile.am)
 endif()
-# enable_testing() Don't use CTest
+enable_testing()
 add_subdirectory(tests)

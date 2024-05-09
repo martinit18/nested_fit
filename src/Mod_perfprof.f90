@@ -5,6 +5,7 @@
 MODULE MOD_PERFPROF
     USE MOD_LOGGER
     USE MOD_AUTOFUNC ! TODO: (César) Using this for the F -> C subroutines but they should really move out of there
+    USE MOD_STRUTIL
     USE, INTRINSIC :: iso_c_binding
     IMPLICIT NONE
 

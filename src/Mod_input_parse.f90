@@ -9,6 +9,8 @@ MODULE MOD_INPUTPARSE
     USE MOD_LOGGER
     ! Integer stack module
     USE MOD_INTSTACK
+    ! String manipulation module
+    USE MOD_STRUTIL
 
     IMPLICIT NONE
     PUBLIC :: InputDataMap_t, InputDataGenericValue_t, PARSE_INPUT

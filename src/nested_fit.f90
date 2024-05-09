@@ -101,6 +101,8 @@ PROGRAM NESTED_FIT
    USE MOD_JSONIO 
    ! Module for CLI lib
    USE MOD_ARGPARSE
+   ! Module for string manipulation
+   USE MOD_STRUTIL
    ! Module for optional variables
    USE MOD_OPTIONS
    ! Module for the input parameter definition

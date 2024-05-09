@@ -76,6 +76,10 @@ generate_test_subfolders("data")
 generate_test_subfolders("func")
 
 
+# Add unit Testing
+add_subdirectory(unit)
+
+
 # Copy the test suite file
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/test_suite.py DESTINATION ${CMAKE_BINARY_DIR}/tests/)
 
