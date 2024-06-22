@@ -221,7 +221,7 @@ Additional information can be found in the reference articles.
 
 ## Present version and history of the past versions
 
-The present version is 4.6.0
+The present version is 4.6.1
 New features:
 - New search method
 - Covariance matrix and its Cholesky decomposition calculated when 5% of the points have changed
