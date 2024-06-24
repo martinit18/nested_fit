@@ -113,7 +113,7 @@ class Configurator():
         self.manual_extents = False
         if self.multiexp:
             for i, exp in enumerate(expressions):
-                self._config[f'data_{i}'] = {'xmin': 0, 'xmax': 0, 'ymin': 0, 'ymax': 0}
+                self._config[f'data_{i + 1}'] = {'xmin': 0, 'xmax': 0, 'ymin': 0, 'ymax': 0}
         else:
             self._config['data'] = {'xmin': 0, 'xmax': 0, 'ymin': 0, 'ymax': 0}
             ext = pathlib.Path(self._config['datafiles'][0]).suffixes[-1]
@@ -172,19 +172,19 @@ class Configurator():
         is_notebook = is_env_notebook()
 
         # Setup a plot
-        if is_notebook:
-            # Create an expression from the latex code
-            nf_func = parse_latex(self._config['function']['expression'].split('=')[1])
-            X = np.linspace(self._config['data']['xmin'], self._config['data']['xmax'], 1000)
-            plt.ion()
-            fig, ax = plt.subplots(figsize=(6, 4))
-            plotline, = ax.plot(X, X)
-            raw_data = self._get_data()
-
-            outcapture = ipw.Output()
-            display(outcapture)
-        else:
-            pbar = tqdm(total=self._config['search']['max_steps'], desc='Running nested_fit', disable=disablebar)
+        # if is_notebook:
+        #     # Create an expression from the latex code
+        #     nf_func = parse_latex(self._config['function']['expression'].split('=')[1])
+        #     X = np.linspace(self._config['data']['xmin'], self._config['data']['xmax'], 1000)
+        #     plt.ion()
+        #     fig, ax = plt.subplots(figsize=(6, 4))
+        #     plotline, = ax.plot(X, X)
+        #     raw_data = self._get_data()
+        #
+        #     outcapture = ipw.Output()
+        #     display(outcapture)
+        # else:
+        pbar = tqdm(total=self._config['search']['max_steps'], desc='Running nested_fit', disable=disablebar)
 
         # if path:
         #     os.chdir(cwd)
@@ -224,22 +224,22 @@ class Configurator():
             par_eval_dict = dict(zip(par_names, par_max))
             par_eval_dict['pi'] = math.pi
 
-            if not is_notebook:
-                pbar.update(100)  # TODO: (César) : This assumes the output comes in mod 100
+            # if not is_notebook:
+            pbar.update(100)  # TODO: (César) : This assumes the output comes in mod 100
 
-                # Maybe use something like
-                # pbar.n = int(data[1])
-                # pbar.refresh()
-                continue
+            # Maybe use something like
+            # pbar.n = int(data[1])
+            # pbar.refresh()
+            continue
 
             # The userfunc evaluated for all params, except x
-            xfunc = nf_func.evalf(subs=par_eval_dict)
-            xfunc = lambdify(x, xfunc, 'numpy')
-
-            # print(npar, par_names, par_max, xfunc(np.array([512, 612])))
-
-            with outcapture:
-                self._display_liveplot(X, xfunc(X), plotline, fig, raw_data, i)
+            # xfunc = nf_func.evalf(subs=par_eval_dict)
+            # xfunc = lambdify(x, xfunc, 'numpy')
+            #
+            # # print(npar, par_names, par_max, xfunc(np.array([512, 612])))
+            #
+            # with outcapture:
+            #     self._display_liveplot(X, xfunc(X), plotline, fig, raw_data, i)
 
             # nf_iter_bar.n = int(data[1])
             # nf_iter_bar.refresh()
@@ -247,8 +247,8 @@ class Configurator():
         if not self._keep_yaml:
             pathlib.Path.unlink(f'{path}/nf_input.yaml', missing_ok=True)
 
-        if not is_notebook:
-            pbar.close()
+        # if not is_notebook:
+        pbar.close()
 
         # nf_iter_bar.colour = end_color
         # nf_iter_bar.close()
@@ -275,7 +275,7 @@ class Configurator():
         self._config['datafiles'] = ', '.join(datafiles)
 
         with open(f'{path}/nf_input.yaml', 'w') as f:
-            data = yaml.dump(self._config)
+            data = yaml.dump(self._config, width=10000)
             f.write(data)
 
         self._config['datafiles'] = datafiles
@@ -313,10 +313,16 @@ class Configurator():
             return
 
         # Read the datafiles and set the extents
-        for file in self._config['datafiles']:
-            xmin, xmax = self._calculate_data_extents(file)
-            self._config['data']['xmin'] = xmin
-            self._config['data']['xmax'] = xmax
+        if not self.multiexp:
+            for file in self._config['datafiles']:
+                xmin, xmax = self._calculate_data_extents(file)
+                self._config['data']['xmin'] = xmin
+                self._config['data']['xmax'] = xmax
+        else:
+            for i, file in enumerate(self._config['datafiles']):
+                xmin, xmax = self._calculate_data_extents(file)
+                self._config[f'data_{i + 1}']['xmin'] = xmin
+                self._config[f'data_{i + 1}']['xmax'] = xmax
 
 
 # ------------- Additional tools
