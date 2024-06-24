@@ -394,10 +394,10 @@ PROGRAM NESTED_FIT
       ! TODO(César): Make this not mandatory and get bounds from data file
       IF(is_set) THEN
          DO i = 1, nset
-            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.xmin', xmin(1), MANDATORY=.TRUE. )
-            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.xmax', xmax(1), MANDATORY=.TRUE. )
-            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.ymin', ymin(1), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
-            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.ymax', ymax(1), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
+            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.xmin', xmin(i), MANDATORY=.TRUE. )
+            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.xmax', xmax(i), MANDATORY=.TRUE. )
+            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.ymin', ymin(i), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
+            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.ymax', ymax(i), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
          END DO
       ELSE
          CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.xmin', xmin(1), MANDATORY=.TRUE. )

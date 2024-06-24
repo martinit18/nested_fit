@@ -267,6 +267,7 @@ CONTAINS
     const_ll = 0.
 
     DO k=1, nset
+      CALL LOG_TRACE('Reading file: '//TRIM(filename(k)))
       CALL READ_FILE_GENERIC(filename(k), xmin(k), xmax(k), ymin(k), ymax(k), ndata_set(k), x_tmp(:,k),&
          y_tmp(:,k), xe_tmp(:,k), ye_tmp(:,k), c_tmp(:,k), ce_tmp(:,k))
     END DO
@@ -498,6 +499,7 @@ CONTAINS
       const_ll = const_ll - nd*DLOG(2*pi)/2
    ENDIF
    datan = nd
+   CALL LOG_TRACE('File has '//TRIM(ADJUSTL(INT_TO_STR_INLINE(nd)))//' points.')
   END SUBROUTINE
 
   SUBROUTINE READ_FILE_COUNTS_2D(namefile,minx,maxx,miny,maxy,datan)
