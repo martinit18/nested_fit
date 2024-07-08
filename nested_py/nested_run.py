@@ -25,7 +25,7 @@ class Configurator():
                  params={},
 
                  livepoints=200,
-                 search_method='RANDOM_WALK',
+                 search_method='SLICE_SAMPLING',
                  search_params=(0.5, 3),
                  search_maxtries=1000,
                  search_multries=100,
