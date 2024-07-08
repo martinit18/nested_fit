@@ -1,33 +1,20 @@
 #!/usr/bin/env python
-# System imports
-import sys
-import subprocess
 
 # Tqdm for progress bars
 from tqdm.autonotebook import tqdm
 
-# Internal imports
-# from .ipw_renderer import *
-
 # Other imports
 import pandas as pd
 from importlib.metadata import version as imp_version
+import subprocess
 import pathlib
 import logging
 import yaml
-from sympy.parsing.latex import parse_latex
-from sympy.utilities.lambdify import lambdify
-from sympy.abc import x
-import math
-import numpy as np
-import matplotlib.pyplot as plt
-import ipywidgets as ipw
-from IPython.display import display, clear_output
+import json
 
 
 class Configurator():
     '''Writes the nf_input.yaml file for automatic runs and creates a python settings interface.
-
     '''
 
     def __init__(self,
@@ -152,13 +139,8 @@ class Configurator():
     def set_params(self, **params):
         self._config['function']['params'] = params
 
-    def sample(self, path='.', disablebar=False):
+    def sample(self, path='.', disablebar=False, disable_output=False):
         version = imp_version('nested_fit')
-        end_color = 'green'  # Default no errors
-
-        # if path:
-        #     cwd = os.getcwd()
-        #     os.chdir(path)
 
         self._write_yaml_file(path)
 
@@ -168,29 +150,7 @@ class Configurator():
             cwd=pathlib.Path(path).resolve()
         )
 
-        line_one = True
-        is_notebook = is_env_notebook()
-
-        # Setup a plot
-        # if is_notebook:
-        #     # Create an expression from the latex code
-        #     nf_func = parse_latex(self._config['function']['expression'].split('=')[1])
-        #     X = np.linspace(self._config['data']['xmin'], self._config['data']['xmax'], 1000)
-        #     plt.ion()
-        #     fig, ax = plt.subplots(figsize=(6, 4))
-        #     plotline, = ax.plot(X, X)
-        #     raw_data = self._get_data()
-        #
-        #     outcapture = ipw.Output()
-        #     display(outcapture)
-        # else:
         pbar = tqdm(total=self._config['search']['max_steps'], desc='Running nested_fit', disable=disablebar)
-
-        # if path:
-        #     os.chdir(cwd)
-
-        # nf_iter_bar = tqdm(total=self._config['search']['max_steps'], bar_format='Iteration: {bar} {n}/{total} | {elapsed}')
-        # nf_mll_bar  = tqdm(total=self._config['search']['max_steps'], bar_format='Iteration: {bar} {n}/{total}')
 
         # TODO: (César): Make this a thread and send data via socket
         while self._nf_process.poll() is None:
@@ -204,72 +164,22 @@ class Configurator():
             if 'LO' not in line[0]:
                 continue
 
-            data = line[1].split()
-
-            # From fortran
-            # WRITE(*,*) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries, npar, par_name, live(nlive, :)
-            if line_one:
-                npar = int(data[7])
-                par_names = data[8:8 + npar]
-
-                for i, par in enumerate(par_names):
-                    if '_' in par:
-                        par_split = par.split('_')
-                        par_names[i] = par_split[0] + '_{' + par_split[1] + '}'
-
-                line_one = False
-
-            par_max = data[8 + npar:8 + npar * 2]
-            par_max = [float(x) for x in par_max]
-            par_eval_dict = dict(zip(par_names, par_max))
-            par_eval_dict['pi'] = math.pi
-
-            # if not is_notebook:
             pbar.update(100)  # TODO: (César) : This assumes the output comes in mod 100
-
-            # Maybe use something like
-            # pbar.n = int(data[1])
-            # pbar.refresh()
-            continue
-
-            # The userfunc evaluated for all params, except x
-            # xfunc = nf_func.evalf(subs=par_eval_dict)
-            # xfunc = lambdify(x, xfunc, 'numpy')
-            #
-            # # print(npar, par_names, par_max, xfunc(np.array([512, 612])))
-            #
-            # with outcapture:
-            #     self._display_liveplot(X, xfunc(X), plotline, fig, raw_data, i)
-
-            # nf_iter_bar.n = int(data[1])
-            # nf_iter_bar.refresh()
 
         if not self._keep_yaml:
             pathlib.Path.unlink(f'{path}/nf_input.yaml', missing_ok=True)
 
-        # if not is_notebook:
         pbar.close()
 
-        # nf_iter_bar.colour = end_color
-        # nf_iter_bar.close()
+        if not disable_output:
+            with open(f'{path}/output_res.json', 'r') as f:
+                return json.load(f)
+        return None
 
     def dashboard(self):
         pass
 
-    def _display_liveplot(self, X, Y, line, fig, raw_data, i):
-        clear_output(wait=True)
-        # plt.scatter(raw_data[0], raw_data[1], color='red')
-        plt.errorbar(raw_data[0], raw_data[1], yerr=np.sqrt(np.array(raw_data[1])), fmt='o', color='red', capsize=2)
-        plt.plot(X, Y, color='blue', zorder=10)
-        # plt.xlim([400, 600])
-        plt.ylim([min(raw_data[1]), max(raw_data[1]) + 10])
-        # line.set_ydata(Y)
-        plt.show()
-        # fig.canvas.draw()
-        # fig.canvas.flush_events()
-
     def _write_yaml_file(self, path):
-
         # We want the datafiles as a string
         datafiles = self._config['datafiles']
         self._config['datafiles'] = ', '.join(datafiles)
