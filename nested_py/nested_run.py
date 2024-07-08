@@ -172,7 +172,7 @@ class Configurator():
         pbar.close()
 
         if not disable_output:
-            with open(f'{path}/output_res.json', 'r') as f:
+            with open(f'{path}/nf_output_res.json', 'r') as f:
                 return json.load(f)
         return None
 
