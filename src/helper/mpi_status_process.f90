@@ -1,11 +1,13 @@
 PROGRAM MPI_STATUS_PROCESS
     USE MPI
     USE MOD_MPI
+    USE MOD_LOGGER
     IMPLICIT NONE
 
     INTEGER(4) :: mpi_rank, mpi_cluster_size, mpi_ierror, mpi_istatus(MPI_STATUS_SIZE)
     INTEGER(4) :: parent_nodes, parent_comm
     LOGICAL    :: compact_output
+    LOGICAL    :: suppress_output
     CHARACTER  :: info_string*256, lines*32
     INTEGER(4) :: last_info_node = 0
     INTEGER(4) :: line_diff = 0
@@ -23,19 +25,19 @@ PROGRAM MPI_STATUS_PROCESS
     CALL MPI_Comm_get_parent(parent_comm, mpi_ierror)
 
     IF((mpi_cluster_size.NE.1).AND.(mpi_rank.EQ.0)) THEN
-        WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-        WRITE(*,*) '       ATTENTION:           MPI_STATUS_PROCESS spawned with size != 1.'
-        WRITE(*,*) '       ATTENTION:           If you are seeing this warning, there is a bug somewhere. Oops!'
-        WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+        CALL LOG_WARNING_HEADER()
+        CALL LOG_WARNING('MPI_STATUS_PROCESS spawned with size != 1.')
+        CALL LOG_WARNING('If you are seeing this warning, there is a bug somewhere. Oops!')
+        CALL LOG_WARNING_HEADER()
     ENDIF
 
     IF(parent_comm.EQ.MPI_COMM_NULL) THEN
         IF(mpi_rank.EQ.0) THEN
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-            WRITE(*,*) '       ATTENTION:           MPI_STATUS_PROCESS not spawned indirectly.'
-            WRITE(*,*) '       ATTENTION:           This process cannot be manually executed.'
-            WRITE(*,*) '       ATTENTION:           Aborting execution...'
-            WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+            CALL LOG_WARNING_HEADER()
+            CALL LOG_WARNING('MPI_STATUS_PROCESS not spawned indirectly.')
+            CALL LOG_WARNING('This process cannot be manually executed.')
+            CALL LOG_WARNING('Aborting execution...')
+            CALL LOG_WARNING_HEADER()
         ENDIF
         CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
         STOP
@@ -43,6 +45,7 @@ PROGRAM MPI_STATUS_PROCESS
 
     CALL MPI_RECV(parent_nodes, 1, MPI_INT, 0, MPI_ANY_TAG, parent_comm, MPI_STATUS_IGNORE, mpi_ierror)
     CALL MPI_RECV(compact_output, 1, MPI_LOGICAL, 0, MPI_ANY_TAG, parent_comm, MPI_STATUS_IGNORE, mpi_ierror)
+    CALL MPI_RECV(suppress_output, 1, MPI_LOGICAL, 0, MPI_ANY_TAG, parent_comm, MPI_STATUS_IGNORE, mpi_ierror)
 
     ! Move parent_nodes lines up
 
@@ -57,6 +60,8 @@ PROGRAM MPI_STATUS_PROCESS
     i = 0
     DO WHILE (work_done.NE.parent_nodes)
         CALL MPI_RECV(info_string, 256, MPI_CHARACTER, MPI_ANY_SOURCE, MPI_ANY_TAG, parent_comm, mpi_istatus, mpi_ierror)
+
+        IF(suppress_output) CYCLE
 
         ! We can use terminal escape codes, since newer windows (>=Win10 I think) support this
         line_diff = last_info_node - mpi_istatus(MPI_SOURCE)
@@ -118,12 +123,11 @@ PROGRAM MPI_STATUS_PROCESS
 
     IF(.NOT.acc_reached) THEN
         WRITE(*, fmt="(a)", advance='no') ACHAR(27)//"[31m"
-        WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-        WRITE(*,*) '       ERROR:               ACCURACY NOT REACHED for tries presented in red.'
-        WRITE(*,*) '       ERROR:               Change your parameters (maxstep, nlive, accuracy,...)'
-        WRITE(*,*) ''
-        WRITE(*,*) '       ERROR:               ABORTING EXECUTION'
-        WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+        CALL LOG_ERROR_HEADER()
+        CALL LOG_ERROR('ACCURACY NOT REACHED for tries presented in red.')
+        CALL LOG_ERROR('Change your parameters (max_step, livepoints, accuracy,...).')
+        CALL LOG_ERROR('Aborting execution...')
+        CALL LOG_ERROR_HEADER()
     ENDIF
 
     CALL MPI_FINALIZE(mpi_ierror)

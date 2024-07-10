@@ -3,8 +3,10 @@ import sys
 import re
 
 """
-This file contains the testing suit library to check files against some conditions.
+This file contains the testing suit library to
+check files against some conditions.
 """
+
 
 # https://svn.blender.org/svnroot/bf-blender/trunk/blender/build_files/scons/tools/bcolors.py
 class bcolors:
@@ -17,6 +19,7 @@ class bcolors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
+
 
 class CheckIfFile():
     def __init__(self, filename: str, verbose_on_passed: bool = False) -> None:
@@ -33,19 +36,21 @@ class CheckIfFile():
         self.verbose_on_passed = verbose_on_passed
         try:
             self.file = open(filename, 'r')
-            self.file_contents = [l.rstrip().lstrip() for l in self.file.readlines()]
+            self.file_contents = [x.rstrip().lstrip()
+                                  for x in self.file.readlines()]
             self.file.close()
         except IOError as e:
             print('IO error: ', e)
             sys.exit(1)
-        except e:
+        except Exception as e:
             print('Unexpected error: ', e)
             sys.exit(1)
 
         print(f'Testing file {bcolors.HEADER}{self.filename}{bcolors.ENDC}')
 
     def __del__(self) -> None:
-        print(f'Test summary: {self.passed_tests}/{self.match_test_index} tests passed.', end='\n\n')
+        print(f'Test summary: {self.passed_tests}/{self.match_test_index}'
+              'tests passed.', end='\n\n')
 
     def _match_function(func):
         def wrapper(self, *args, **kwargs):
@@ -67,7 +72,7 @@ class CheckIfFile():
         self.current_token = self.file_contents[self.current_line]
         self.token_is_index = False
         return self
-    
+
     def at(self, index: int) -> CheckIfFile:
         if not self.split:
             raise RuntimeError('at function called, but no split token specified.')
@@ -78,7 +83,7 @@ class CheckIfFile():
         self.token_is_index = True
         self.current_index = index
         return self
-    
+
     def _match_passed(self) -> None:
         self.passed_tests += 1
         print(f'Match {self.match_test_index} - {bcolors.OKGREEN}Passed{bcolors.ENDC}')
@@ -86,12 +91,12 @@ class CheckIfFile():
             if not self.token_is_index:
                 cline = self.file_contents[self.current_line]
                 print(f'{self.current_line + 1:04d} | {cline}')
-                print(' '*5 + '| ', end='')
-                print(bcolors.OKGREEN+'~'*(len(cline) // 2)+'^'+'~'*(len(cline) // 2)+bcolors.ENDC)
+                print(' ' * 5 + '| ', end='')
+                print(bcolors.OKGREEN + '~' * (len(cline) // 2) + '^' + '~' * (len(cline) // 2) + bcolors.ENDC)
             else:
                 print(f'{self.current_line + 1:04d} | ' + ' '.join(self.tokens))
-                print(' '*5 + '| ', end='')
-                print(' '*sum((len(tok)+1 for tok in self.tokens[:self.current_index])), end='')
+                print(' ' * 5 + '| ', end='')
+                print(' ' * sum((len(tok) + 1 for tok in self.tokens[:self.current_index])), end='')
                 print(f'{bcolors.OKGREEN}^{bcolors.ENDC}')
 
     def _match_failed(self, reason: str = '') -> None:
@@ -99,38 +104,38 @@ class CheckIfFile():
         print(f'Match {self.match_test_index} - {bcolors.FAIL}Failed{bcolors.ENDC}')
         if reason != '':
             print(f'{self.filename}:{self.current_line+1} - {bcolors.WARNING}{reason}{bcolors.ENDC}')
-        
+
         if not self.token_is_index:
             cline = self.file_contents[self.current_line]
             print(f'{self.current_line + 1:04d} | {cline}')
-            print(' '*5 + '| ', end='')
-            print(bcolors.FAIL+('~'*(len(cline) // 2)+'^'+'~'*(len(cline) // 2))[:len(cline)]+bcolors.ENDC)
+            print(' ' * 5 + '| ', end='')
+            print(bcolors.FAIL + ('~' * (len(cline) // 2) + '^' + '~' * (len(cline) // 2))[:len(cline)] + bcolors.ENDC)
         else:
             print(f'{self.current_line + 1:04d} | ' + ' '.join(self.tokens))
-            print(' '*5 + '| ', end='')
-            print(' '*sum((len(tok)+1 for tok in self.tokens[:self.current_index])), end='')
+            print(' ' * 5 + '| ', end='')
+            print(' ' * sum((len(tok) + 1 for tok in self.tokens[:self.current_index])), end='')
             print(f'{bcolors.FAIL}^{bcolors.ENDC}')
-        
+
         print('')
 
     @_match_function
     def match(self, value: any, verbatim: bool = True) -> CheckIfFile:
-        if type(value) != type(self.current_token):
+        if value is type(self.current_token):
             raise TypeError(f'match called with value as type {type(value)} but {type(self.current_token)} was casted.')
         if not self.current_token:
-            raise RuntimeError(f'match called but no token specified.')
-        
+            raise RuntimeError('match called but no token specified.')
+
         success = False
         if verbatim:
             success = (self.current_token == value)
         else:
-            if type(self.current_token) != str:
+            if not isinstance(self.current_token, str):
                 raise RuntimeError(f'match in non verbatim mode only works on strings, but casted value with type {type(value)} is being used.')
-            if type(value) != str:
+            if not isinstance(value, str):
                 raise RuntimeError(f'match in non verbatim mode only works on strings, but pattern value with type {type(value)} is being used.')
             if re.search(value, self.current_token):
                 success = True
-        
+
         if success:
             self._match_passed()
         else:
@@ -143,9 +148,9 @@ class CheckIfFile():
 
     @_match_function
     def match_range(self, lobound: float, hibound: float, inclusive: bool = True) -> CheckIfFile:
-        if type(self.current_token) != float and type(self.current_token) != int:
+        if not isinstance(self.current_token, float) and not isinstance(self.current_token, int):
             raise TypeError(f'match_range can only be called on {float} or {int} types but current token as {type(self.current_token)} type.')
-        
+
         if inclusive:
             if self.current_token >= lobound and self.current_token <= hibound:
                 self._match_passed()
@@ -161,6 +166,6 @@ class CheckIfFile():
 
     def cast(self, t: type) -> CheckIfFile:
         if not self.current_token:
-            raise RuntimeError(f'cast called but no token specified.')
+            raise RuntimeError('cast called but no token specified.')
         self.current_token = t(self.current_token)
         return self

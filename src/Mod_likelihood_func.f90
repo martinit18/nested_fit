@@ -16,28 +16,32 @@ MODULE MOD_LIKELIHOOD
 #ifdef OPENMPI_ON
   USE MPI
 #endif
-  !$ USE OMP_LIB
+
+  ! Module for logging
+  USE MOD_LOGGER
 
   IMPLICIT NONE
+  PUBLIC :: SELECT_LIKELIHOODFCN
+
   INTEGER(8) :: ncall=0, ncall9=0
-  REAL(8) :: a_norm=0.
+  REAL(8)    :: a_norm=0.
 
 CONTAINS
 
 
   SUBROUTINE INIT_LIKELIHOOD()
     ! Initialize the normal likelihood with data files and special function
-
+    
     ! Initialize the search method params
     CALL INIT_SEARCH_METHOD()
     
-    WRITE(*,*) 'Initialization of func likelihood'
+    CALL LOG_TRACE('Initialization of func likelihood.')
 
     !IF (funcname.eq.'TEST_ROSENBROCK') THEN
     !   CALL INIT_ROSENBROCK()
     !END IF
     
-    funcid = SELECT_LIKELIHOODFCN(funcname)
+    funcid = SELECT_LIKELIHOODFCN(funcname(1))
 
   END SUBROUTINE INIT_LIKELIHOOD
 
@@ -47,7 +51,7 @@ CONTAINS
 #endif
 
       IF (search_method.eq.'RANDOM_WALK') THEN
-            searchid = 0
+          searchid = 0
       ELSE IF(search_method.EQ.'UNIFORM') THEN
             searchid = 1
       ELSE IF(search_method.EQ.'SLICE_SAMPLING_TRANSF') THEN
@@ -57,12 +61,11 @@ CONTAINS
       ELSE IF(search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
             searchid = 4
       ELSE
-            WRITE(*,*) 'Error of the search type name in Mod_search_new_point module'
-            WRITE(*,*) 'Check the manual and the input file'
-#ifdef OPENMPI_ON
-            CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-            STOP
+          CALL LOG_ERROR_HEADER()
+          CALL LOG_ERROR('Error of the search type name in Mod_search_new_point module.')
+          CALL LOG_ERROR('Check the manual and the input file.')
+          CALL LOG_ERROR_HEADER()
+          CALL HALT_EXECUTION()
       END IF
   END SUBROUTINE INIT_SEARCH_METHOD
 
@@ -80,7 +83,7 @@ CONTAINS
   END FUNCTION LOGLIKELIHOOD_WITH_TEST
 
   !------------------------------------------------------------------------------------------------------------------------
-  ! TODO(Cesar): In reality this should be in another file, but I am following the previous "rules"...
+  ! TODO(César): In reality this should be in another file, but I am following the previous "rules"...
   FUNCTION SELECT_LIKELIHOODFCN(funcname)
     IMPLICIT NONE
     INTEGER*4 SELECT_LIKELIHOODFCN
@@ -105,9 +108,7 @@ CONTAINS
     ELSE IF(funcname.eq.'ENERGY_LJ_3D_PBC') THEN
       SELECT_LIKELIHOODFCN = 8
     ELSE
-       WRITE(*,*) 'Error of the function name in Mod_likelihood_test module'
-       WRITE(*,*) 'Check the manual and the input file'
-       STOP
+      SELECT_LIKELIHOODFCN = -1
     END IF
 
     RETURN
@@ -158,6 +159,14 @@ CONTAINS
     ! Final action for the likelihood function
 
     REAL(8), DIMENSION(npar), INTENT(IN) :: live_max, par_mean, par_median_w
+
+    CALL LOG_MESSAGE_HEADER()
+    CALL LOG_MESSAGE('End of likelihood test.')
+    CALL LOG_MESSAGE('Number of calls : '//TRIM(ADJUSTL(INT8_TO_STR_INLINE(ncall))))
+    CALL LOG_MESSAGE_HEADER()
+    OPEN(11,FILE='nf_output_n_likelihood_calls.txt',STATUS= 'UNKNOWN')
+    WRITE(11,*) ncall
+    CLOSE(11)
 
   END SUBROUTINE FINAL_LIKELIHOOD
 

@@ -13,7 +13,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   ! Parameter module
   USE MOD_PARAMETERS, ONLY:  npar, nlive, conv_method, evaccuracy, conv_par, &
         search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, &
-        cluster_yn, nth, maxtries, maxntries, searchid
+        make_cluster, nth, maxtries, maxntries, searchid
   ! Module for likelihood
   USE MOD_LIKELIHOOD
   ! Module for searching new live points
@@ -26,6 +26,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   USE MOD_METADATA
   ! Module for optionals
   USE MOD_OPTIONS
+  ! Module for logging
+  USE MOD_LOGGER
+  ! Module for proffiling
+  USE MOD_PERFPROF
 
   !
   IMPLICIT NONE
@@ -85,13 +89,15 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
 #ifdef OPENMPI_ON
   character(LEN=MPI_MAX_PROCESSOR_NAME) :: processor_name
 #endif
-  CHARACTER :: info_string*256
+  CHARACTER :: info_string*4096
+  CHARACTER :: fparname_fmt*32
+  CHARACTER :: fparval_fmt*32
 
-  LOGICAL :: make_cluster, need_cluster
+  LOGICAL :: make_cluster_internal, need_cluster
   INTEGER(4) :: n_call_cluster, n_call_cluster_it, n_mat_cov
   INTEGER(4), PARAMETER :: n_call_cluster_it_max=3, n_call_cluster_max=10
-  
-  EXTERNAL :: SORTN
+
+  PROFILED(NESTED_SAMPLING)
 
   ! Initialize variables (with different seeds for different processors)
   gval = 0.
@@ -120,11 +126,17 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   live_like_new = 0.
   icluster = 0
   too_many_tries = .false.
-  make_cluster=.false.
+  make_cluster_internal=.false.
   need_cluster=.false.
 
+  ! If using lo output set the fmt for params and param names
+  IF(opt_lib_output) THEN
+    WRITE(fparval_fmt, '(I8, "(F23.8)")') npar
+    WRITE(fparname_fmt, '(I8, "(A16)")') npar
+  ENDIF
+
   ! ---------- Inintial live points sorting ------------------------------------------------
-  WRITE(*,*) 'Sorting live points. N. of points = ', nlive
+  CALL LOG_TRACE('Sorting live points. N. of points = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(nlive))))
   DO j=1, nlive
      ! Sort point considering priors
      ! Generate random prior if not fixe
@@ -172,20 +184,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   ! --------- Set-up stuff before main loop ------------------------------------------------
   ! Calculate the intervarls (logarithmic) for the integration
   ! This is equivalent to the "crude" approximation from Skilling
-!   IF (maxstep/nlive.GT.700.AND.mpi_rank.EQ.0) THEN
-!      WRITE(*,*) '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-!      WRITE(*,*) '!!! Attention, too few nlive points for too many maxstep !!!'
-!      WRITE(*,*) '!!! Step volumes cannot be calculated correctly          !!!'
-!      WRITE(*,*) '!!! Change your input file                               !!!'
-!      WRITE(*,*) '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-! #ifdef OPENMPI_ON
-!      CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-! #endif
-!      STOP
-!   END IF
-!   DO l=1, maxstep
-!      tstep(l) = DEXP(-DFLOAT(l)/DFLOAT(nlive))
-!   ENDDO
 
   ! Calculate the first differential prior mass and the remaining prior mass
   !tlnmass(1) = DLOG(-(tstep(1)-1))
@@ -222,7 +220,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
     evstep(1) = 1./conv_par*live_like_old(1) + lntmass
     evsum = evstep(1)
   ELSE
-    WRITE(*,*) 'Not a convergence method. Change the name'
+    CALL LOG_ERROR_HEADER()
+    CALL LOG_ERROR('Invalid convergence method.')
+    CALL LOG_ERROR('Available options: [LIKE_ACC, ENERGY_ACC, ENERGY_MAX].')
+    CALL LOG_ERROR_HEADER()
   END IF
 
 
@@ -232,6 +233,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
    IF(mpi_rank.EQ.0) THEN
          CALL MPI_SEND(mpi_cluster_size, 1, MPI_INT, 0, 0, mpi_child_writter_comm, mpi_ierror)
          CALL MPI_SEND(opt_compact_output, 1, MPI_LOGICAL, 0, 0, mpi_child_writter_comm, mpi_ierror)
+         CALL MPI_SEND(opt_suppress_output, 1, MPI_LOGICAL, 0, 0, mpi_child_writter_comm, mpi_ierror)
    ENDIF
    CALL MPI_Get_processor_name(processor_name, processor_name_size, mpi_ierror)
    processor_name = TRIM(ADJUSTL(processor_name))
@@ -252,15 +254,14 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   CALL ALLOCATE_PAR_VAR()
   CALL CREATE_MAT_COV(live(:,par_var))
   DO WHILE (n.LE.nstep)
-
      ! ##########################################################################
      ! Find a new live point
       
-901   IF(make_cluster) THEN
-         WRITE(*,*) 'Performing cluster analysis. Number of step = ', n
+901   IF(make_cluster_internal) THEN
+         CALL LOG_TRACE('Performing cluster analysis. Number of step = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(n))))
          CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
          cluster_on = .true.
-         make_cluster=.false.
+         make_cluster_internal=.false.
          IF(need_cluster) THEN
             n_call_cluster_it=n_call_cluster_it+1
             n_call_cluster=n_call_cluster+1
@@ -292,56 +293,72 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
      !   nstep_final = n - 1
      !   GOTO 601
      !END IF
-     IF(ANY(too_many_tries)) THEN ! TODO Redo it to work with MPI
-     !If at least one search failed to find a new point, a cluster analysis will be performed after adding the points from the successful searches if clustering is used. Otherwise, the run will end.
-#ifdef OPENMPI_ON
-      ! Signal final data MAXED_OUT
-      CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_DONE_MANY_TRIES, mpi_child_writter_comm, mpi_ierror)
-#endif
-        IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
-           IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
-              WRITE(*,*) 'Too many cluster analysis for an iteration'
-              WRITE(*,*) 'Change cluster recognition parameters'
-              STOP
-           END IF
-           IF(n_call_cluster>=n_call_cluster_max) THEN
-              WRITE(*,*) 'Too many cluster analysis'
-              WRITE(*,*) 'Change cluster recognition parameters'
-              STOP
-           END IF
-           make_cluster=.true.
-           need_cluster=.true.
-        ELSE
-           WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries*maxntries
-           WRITE(*,*) 'We take the data as they are :-~'
-           nstep_final = n - 1
-           GOTO 601
-        END IF
-     ELSE IF(ALL(too_many_tries)) THEN
+
+     IF(ALL(too_many_tries)) THEN
      !If all searches failed to find a new point, a cluster analysis will be performed immediately if clustering is used. Otherwise, the run will end.
 #ifdef OPENMPI_ON
-      ! Signal final data MAXED_OUT
-      CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_DONE_MANY_TRIES, mpi_child_writter_comm, mpi_ierror)
+        ! Signal final data MAXED_OUT
+        CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_DONE_MANY_TRIES, mpi_child_writter_comm, mpi_ierror)
 #endif
-        IF (cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+        IF (make_cluster) THEN
            IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
-              WRITE(*,*) 'Too many cluster analysis for an iteration'
-              WRITE(*,*) 'Change cluster recognition parameters'
-              STOP
+              CALL LOG_ERROR_HEADER()
+              CALL LOG_ERROR('Too many cluster analysis for an iteration.')
+              CALL LOG_ERROR('Change cluster recognition parameters.')
+              CALL LOG_ERROR_HEADER()
+              CALL HALT_EXECUTION()
            END IF
            IF(n_call_cluster>=n_call_cluster_max) THEN
-              WRITE(*,*) 'Too many cluster analysis'
-              WRITE(*,*) 'Change cluster recognition parameters'
-              STOP
+              CALL LOG_ERROR_HEADER()
+              CALL LOG_ERROR('Too many cluster analysis.')
+              CALL LOG_ERROR('Change cluster recognition parameters.')
+              CALL LOG_ERROR_HEADER()
+              CALL HALT_EXECUTION()
            END IF
-           make_cluster=.true.
+           make_cluster_internal=.true.
            need_cluster=.true.
            GOTO 901
         ELSE
-           WRITE(*,*) 'Too many tries to find new live points for try n.', itry, '!!!! More than ', maxtries
+           CALL LOG_WARNING_HEADER()
+           CALL LOG_WARNING('Too many tries to find new live points for try n.: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(itry))))
+           CALL LOG_WARNING('More than '//TRIM(ADJUSTL(INT_TO_STR_INLINE(maxtries))))
+           CALL LOG_WARNING('We take the data as they are :-~')
+           CALL LOG_WARNING_HEADER()
            nstep_final = n - 1
            GOTO 601
         END IF
+   ELSE IF(ANY(too_many_tries)) THEN ! TODO Redo it to work with MPI
+         !If at least one search failed to find a new point, a cluster analysis will be performed after adding the points from the successful searches if clustering is used. Otherwise, the run will end.
+    #ifdef OPENMPI_ON
+            ! Signal final data MAXED_OUT
+            CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_DONE_MANY_TRIES, mpi_child_writter_comm, mpi_ierror)
+    #endif
+            IF (make_cluster) THEN
+               IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
+                  CALL LOG_ERROR_HEADER()
+                  CALL LOG_ERROR('Too many cluster analysis for an iteration.')
+                  CALL LOG_ERROR('Change cluster recognition parameters.')
+                  CALL LOG_ERROR_HEADER()
+                  CALL HALT_EXECUTION()
+               END IF
+               IF(n_call_cluster>=n_call_cluster_max) THEN
+                  CALL LOG_ERROR_HEADER()
+                  CALL LOG_ERROR('Too many cluster analysis.')
+                  CALL LOG_ERROR('Change cluster recognition parameters.')
+                  CALL LOG_ERROR_HEADER()
+                  CALL HALT_EXECUTION()
+               END IF
+               make_cluster_internal=.true.
+               need_cluster=.true.
+            ELSE
+               CALL LOG_WARNING_HEADER()
+               CALL LOG_WARNING('Too many tries to find new live points for try n.: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(itry))))
+               CALL LOG_WARNING('More than '//TRIM(ADJUSTL(INT_TO_STR_INLINE(maxtries*maxntries))))
+               CALL LOG_WARNING('We take the data as they are :-~')
+               CALL LOG_WARNING_HEADER()
+               nstep_final = n - 1
+               GOTO 601
+            END IF
      END IF
      ! -------------------------------------!
      !     Subloop for threads starts       !
@@ -396,10 +413,12 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
 
         ! Insert the new one
         IF (jlim.LT.1.OR.jlim.GT.nlive) THEN
-           WRITE(*,*) 'Problem in the search method, or in the calculations'
-           WRITE(*,*) 'No improvement in the likelihood value after finding the new point at iteration', n
-           WRITE(*,*) 'j = ', jlim, 'old min like = ', min_live_like, 'new min like = ', live_like_new(it)
-           STOP
+           CALL LOG_ERROR_HEADER()
+           CALL LOG_ERROR('Problem in the search method, or in the calculations...')
+           CALL LOG_ERROR('No improvement in the likelihood value after finding the new point...')
+           CALL LOG_ERROR('j = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(jlim)))//'old min like = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(min_live_like)))//'new min like = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(live_like_new(it)))))
+           CALL LOG_ERROR_HEADER()
+           CALL HALT_EXECUTION()
         ELSE IF (jlim.EQ.1) THEN
            live_like(1) = live_like_new(it)
            live(1,:) = live_new(it,:)
@@ -425,9 +444,9 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
 
         SELECT CASE (searchid)
         CASE (2,3,4)
-           IF(cluster_yn.EQ.'y'.OR.cluster_yn.EQ.'Y') THEN
+           IF(make_cluster) THEN
               IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
-                 make_cluster=.true.
+                 make_cluster_internal=.true.
               END IF
            END IF
         END SELECT
@@ -475,7 +494,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
            ! Check if the estimate accuracy is reached
            evtotest = evstep(n)
         ELSE
-           WRITE(*,*) 'Not a convergence method. Change the name'
+           CALL LOG_ERROR_HEADER()
+           CALL LOG_ERROR('Invalid convergence method.')
+           CALL LOG_ERROR('Available options: [LIKE_ACC, ENERGY_ACC, ENERGY_MAX].')
+           CALL LOG_ERROR_HEADER()
         END IF
         
         ! Write status
@@ -501,12 +523,15 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
                 ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES14.7, ' | Avg eff.: ', F6.4, ' |')
            CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_STATUS, mpi_child_writter_comm, mpi_ierror)
 #else
+           IF(opt_suppress_output) CYCLE
            IF(opt_compact_output) THEN
               WRITE(info_string,22) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
 22            FORMAT('| N: ', I2, ' | S: ', I8, ' | MLL: ', F20.12, ' | E: ', F20.12, &
                    ' | Es: ', F20.12, ' | Ea: ', ES14.7, ' | Te: ', F6.4, ' |')
               WRITE(*,24) info_string
 24            FORMAT(A150)
+           ELSE IF(opt_lib_output) THEN
+              WRITE(*,*) 'LO | ', itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries, npar, par_name, live(nlive, :)
            ELSE
               WRITE(info_string,23) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
 23            FORMAT('| N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
@@ -548,10 +573,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
 #endif
 
   IF(((evtotest-evsum).GE.evaccuracy).AND.(n.GE.nstep)) THEN
-#ifdef OPENMPI_ON
-      CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-#endif
-      STOP
+   CALL HALT_EXECUTION()
   ENDIF
 
   ! Store the last live points
@@ -565,7 +587,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   ELSE IF(conv_method .EQ. 'ENERGY_MAX') THEN
     WRITE(99,*) '# Evidence accuracy =',  1./conv_par*live_like(nlive) + lntmass - evsum
   ELSE
-    WRITE(*,*) 'Not a convergence method. Change the name'
+   CALL LOG_ERROR_HEADER()
+   CALL LOG_ERROR('Invalid convergence method.')
+   CALL LOG_ERROR('Available options: [LIKE_ACC, ENERGY_ACC, ENERGY_MAX].')
+   CALL LOG_ERROR_HEADER()
   END IF
   WRITE(99,*) '# n     lnlikelihood     parameters    birth_lnlike   rank'
   DO j=1,nlive
@@ -620,7 +645,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
     evrest_last = 1./conv_par*live_like_last + lntrest
     evsum_final = MAX(evsum,evrest_last)
   ELSE
-    WRITE(*,*) 'Not a convergence method. Change the name'
+   CALL LOG_ERROR_HEADER()
+   CALL LOG_ERROR('Invalid convergence method.')
+   CALL LOG_ERROR('Available options: [LIKE_ACC, ENERGY_ACC, ENERGY_MAX].')
+   CALL LOG_ERROR_HEADER()
   END IF
   
   ! Insert the last live points in the ensemble

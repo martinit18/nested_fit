@@ -8,6 +8,10 @@ MODULE MOD_SEARCH_NEW_POINT
   USE MOD_LIKELIHOOD
   ! Module for cluster analysis
   USE MOD_CLUSTER_ANALYSIS
+  ! Module for math
+  USE MOD_MATH
+  ! Module for perfprof
+  USE MOD_PERFPROF
   ! Module for covariance matrix
   USE MOD_COVARIANCE_MATRIX
   
@@ -104,6 +108,7 @@ CONTAINS
     INTEGER(4), INTENT(OUT) :: icluster, ntries
     LOGICAL, INTENT(OUT) :: too_many_tries
 
+    PROFILED(SEARCH_NEW_POINT)
 
     ! Select the search method
     SELECT CASE (searchid)
@@ -155,6 +160,9 @@ CONTAINS
     REAL(8) :: sdfraction
     INTEGER(4) :: njump
     REAL(8) :: loglike
+
+
+    PROFILED(RANDOM_WALK)
 
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
@@ -380,6 +388,9 @@ CONTAINS
     INTEGER(4) :: n_call_cluster_itj
     INTEGER(4) :: nb_cube, njump
     REAL(8) :: loglike
+
+    PROFILED(UNIFORM)
+
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
     new_jump = par_in
@@ -613,6 +624,9 @@ SUBROUTINE SLICE_SAMPLING_TRANSF(n,itry,min_live_like,live_like,live, &
     REAL(8) :: part_like, size_jump, size_jump_save, loglike
     LOGICAL :: test_bnd
     INTEGER(4) :: init_fail, njump
+
+    PROFILED(SLICE_SAMPLING)
+        
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
     live_new = 0.
@@ -1077,6 +1091,9 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     REAL(8) :: part_like, size_jump, size_jump_save, loglike
     LOGICAL :: test_bnd
     INTEGER(4) :: init_fail, njump
+
+    PROFILED(SLICE_SAMPLING_ADAPT)
+
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
     live_new = 0.
@@ -1281,6 +1298,8 @@ SUBROUTINE BASE_O_N(D,base) !generates an orthonormal basis
   REAL(8), DIMENSION(D,D), INTENT(INOUT) :: base
   INTEGER(4) :: i,j
 
+  PROFILED(BASE_O_N)
+
   DO i=1,D
     DO j=1,D
       CALL random_number(base(i,j))
@@ -1300,6 +1319,9 @@ SUBROUTINE TRIANG_INV(D,mat,mat_inv) !calculates the inverse of the cholesky dec
    REAL(8), DIMENSION(D,D), INTENT(IN) :: mat
    REAL(8), DIMENSION(D,D), INTENT(OUT) :: mat_inv
    INTEGER(4) :: i,j,k
+
+   PROFILED(TRIANG_INV)
+
    mat_inv=0
    !!$OMP SIMD
    DO i=1,D
@@ -1328,6 +1350,9 @@ SUBROUTINE PART_LIKE_SUB(D,pt,chol,part_like) !calculates the likelihood for a p
   REAL(8), DIMENSION(D) :: pt_t
   REAL(8), DIMENSION(npar) :: pt_comp
   INTEGER(4) :: l, j
+
+  PROFILED(PART_LIKE_SUB)
+
   pt_t=matmul(chol,pt)
   j=1
   DO l=1,npar
@@ -1351,6 +1376,9 @@ SUBROUTINE TEST_BND_SUB(D,pt,par_var,chol,test_bnd) !checks if a point in the ne
   REAL(8), DIMENSION(D) :: pt_t
   REAL(8), DIMENSION(D) :: bnd1, bnd2
   INTEGER(4) :: l
+
+  PROFILED(TEST_BND_SUB)
+
   bnd1=par_bnd1(par_var)
   bnd2=par_bnd2(par_var)
   pt_t=matmul(chol,pt)

@@ -1,9 +1,12 @@
 # NESTED FIT
 
-Nested_fit is a data program analysis based on the Bayesian statistics for the computation of, for a given set of data and chosen model, the complete probability distribution for each parameter and the Bayesian evidence.
-The evidence calculation is based on the nested algorithm from Skilling 2004 [1,2] with the implementation of specific random walk for the search of new live points.
-It is written in Fortran with some Python complementary routines for visualizing the output results and for doing automatic analyses of series of data.
+Nested_fit is a data analysis program based on the Bayesian statistics for the computation of, for a given set of data and chosen model, the complete probability distribution for each parameter and the Bayesian evidence.
+The evidence calculation is based on the nested algorithm from Skilling 2004 [1,2] with the implementation of specific traversall for the search of new live points.
+It is written in Fortran/C++/Python and includes complementary routines for visualizing the output results and for doing automatic analysis of series of data.
 More information on the program can be found in Refs. [A,B,C] here above.
+
+- :hammer: Jump to [installation](#Installation-instructions).
+- :page_with_curl: Jump to [usage](#Usage).
 
 ### License
 
@@ -22,7 +25,7 @@ Users are also required to cite the Nested Fit papers here below in their public
 ### Authors
 Dr. Martino Trassinelli\
 CNRS, Institute of NanoSciences of Paris\
-email: trassinelli AT insp.jussieu.fr\
+email: martino.trassinelli AT cnrs.fr\
 email: m.trassinelli AT gmail.com
 
 Lune Maillard\
@@ -36,43 +39,99 @@ email: c.godinho AT campus.fct.unl.pt
 ## Installation instructions ##
 
 If you have to install everything from scratch, please refer to the file *STEPBYSTEP_INSTALL.md*
-### With CMake
-**Prerequisite**:
+### From PyPI
+
+The simplest way to install nested_fit.
+
+**Prerequisites**:
 - CMake
-- Fortran compiler (gfortran by default)
+- Fortran build toolchain (`gcc`, `g++` and `gfortran` or `ifort` or `ifx`)
 - Python 3 with numpy, scipy, matplotlib, pandas, getdist, anesthetic
 
-**Instruction**:
-1. Download the latest version or clone the repository
-2. Run the commands:
+**Instructions**:
+
+1. Just run pip from the server repository:
+```sh
+pip install nested_fit
 ```
+or locally 
+```sh
+pip install . -v
+```
+
+### From source (CMake)
+
+Has more control on system specific optimizations.
+
+**Prerequisite**:
+- CMake
+- Fortran build toolchain (`gcc`, `g++` and `gfortran` or `ifort` or `ifx`)
+- Python 3 with numpy, scipy, matplotlib, padas, getdist (optional)
+
+**Instruction**:
+
+1. Get nested_fit:
+```sh
+git clone git@github.com:martinit18/nested_fit.git
+```
+2. Configure cmake (with eventually some options, see below):
+```sh
 cd nested_fit
 mkdir build && cd build
 cmake ..
-make
 ```
+
+3. Install nested_fit:
+```sh
+cmake --build . --config Release --target install
+```
+
 These command will build two different executables in the bin directory: 
 - `nested_fitXXX` for likelihood function maximisation for data analysis,
-- `nested_fit_funcXXX` for functions maximisation not using data. 
+- `nested_fit_funcXXX` for functions maximisation not using data.
 
-> :warning: For Windows you can compile by replacing the second line of the above commands with `cmake -G"MinGW Makefiles" ..`, for simplicity.
+If Python is found an utility for running and analysing data using nested_fit is also installed: the nested_py package.
 
 **CMake options**
 
-| Option   | Description                                                     | Default |
-|:---------|:----------------------------------------------------------------|:-------:|
-|DEBUG     | Enable debug mode.                                              | OFF     |
-|NORNG     | Set the nested_fit to use a set seed. Internal test use mainly. | OFF     |
-|OPENMP    | Enable/Disable OpenMP support.                                  | OFF     |
-|OPENMPI   | Enable/Disable OpenMPI support.                                 | OFF     |
-|AUTOTESTS | Automatically run tests after compiling.                        | OFF     |
-|LAPACK    | Use LAPACK library functions instead of the internal ones       | OFF     |
-|:---------|:----------------------------------------------------------------|:-------:|
+| Option             | Description                                                          | Default |
+|:-------------------|:---------------------------------------------------------------------|:-------:|
+|DEBUG               | Enable debug mode.                                                   | OFF     |
+|NORNG               | Set the nested_fit to use a set seed. Internal test use mainly.      | OFF     |
+|OPENMP              | Enable/Disable OpenMP support.                                       | OFF     |
+|OPENMPI             | Enable/Disable OpenMPI support.                                      | OFF     |
+|AUTOTESTS           | Automatically run tests after compiling.                             | OFF     |
+|LAPACK              | Use LAPACK library functions instead of the internal ones.           | OFF     |
+|LTRACE              | Enable trace logging output. Will hinder performance.                | OFF     |
+|PPROF               | Enable performance counter profilling.                               | OFF     |
+|INSTALL_SYSTEM_WIDE | Install for all users (differs for each OS). Requires elevated user. | OFF     |
 
 
 
-> You can pass in options on the cmake step via: `cmake -D<option_name>=<ON/OFF> ..`\
-> These will prevail any time you run the `make` command.
+You can pass in options on the cmake generation step via: `cmake -D<option_name>=<ON/OFF> ..`\
+These will prevail any time you run your build tools commands.
+
+With the last option, you can also specify a defined directory with in addition the option `-DCMAKE_INSTALL_PREFIX=<your_dir>`
+
+### From source (GNU autotools)
+:warning: This mode is only for compatibility and supports only a few features. The `CMake` method should be preferred if available.
+1. Get nested_fit:
+```sh
+git clone git@github.com:martinit18/nested_fit.git
+```
+2. Configure:
+```sh
+cd nested_fit
+mkdir build && cd build
+../configure
+```
+3. Install nested_fit:
+```sh
+make install
+```
+
+The outcome of these commands is similar to the `CMake` source build step. Only a few option are available.
+You can check them with: `../configure --help` and take a look under `Optional Features`.
 
 NOTE for getdist function in the python library:\
 To make it work, change the file  xxx/pythonxx/site-packages/getdist/plots.py
@@ -113,64 +172,95 @@ The other options for the Makefile are the same as the ones for the CMake. For a
 
 - The options NORNG and OPENMP cannot be selected at the same time. If both are set to ON, OPENMP will be set to OFF.
 
+### Comments for macOS users
+
+If you are running `gfortran` installed with homebrew, you should avoid use `gcc` and `g++` from homebrew as well and not the macOS preinstalled one. For this use the option
+
+``-DCMAKE_Fortran_COMPILER=`which gfortran` -DCMAKE_C_COMPILER=`which gcc` -DCMAKE_CXX_COMPILER=`which g++``
+
+and make sure your `g++` is pointing the homebrew `g++-XX`. Eventually create the link:
+```sh
+cd  /opt/homebrew/bin
+ln -s g++-XX g++ 
+```
+
 ## File descriptions
 
 **Input files**:
-- `nf_input.dat`: Main input file of the program with all user parameter definition.
-About the model parameter, use the same order than that one you can find in `USERFCN.f` or `USERFCN_SET.f` files.
-- `datafile` to analyze indicated in 'nf_input.dat'.
-
-If set of data files are analyzed, also
-- `nf_input_set.dat`: additional input relative to the other datafiles (name and fit limits).
-- additional `datafiles` to analyze.
+- `nf_input.yaml`: Main input file of the program with all user parameter definitions and run configurations.
+More info is available [here](#Usage).
+- `datafile` to analyze indicated in `nf_input.yaml`.
 
 **Main output files**:
 - `nf_output_res.dat`: main output with the results.
 It contains the details of the computation (n. of live points trials, n. of total iteration), the final evidence value and its uncertainty, the parameter values corresponding to the maximum of the likelihood function, the mean, the median, the standard deviation and the confidence intervals (credible intervals) (68%, 95% and 99%) of the posterior probability distribution of each parameter.
 The corresponding information gain and the Bayesian complexity are also provided.
-- `nf_output_data_ .dat`: original input data together with the model function values corresponding to the parameters with the highest likelihood function value ('max') to the mean value ('mean') or median ('median'), the residuals and the uncertainty associated to the data.
-- `nf_output_fit_ .dat`: Model function values with higher density sampling that the data (for plot purpose). In addition, different components of the model are given
+- `nf_output_res.json`: same as above but in JSON format.
+- `nf_output_data_*.dat`: original input data together with the model function values corresponding to the parameters with the highest likelihood function value ('max') to the mean value ('mean') or median ('median'), the residuals and the uncertainty associated to the data.
+- `nf_output_fit_*.dat`: Model function values with higher density sampling that the data (for plot purpose). In addition, different components of the model are given.
 - `nf_output_tries.dat`: For each live points trial, it contains the final evidence, the number of iterations and the maximum value of the likelihood function.
 - `nf_output_points.txt`: contains all discarded and final live points values, their associated likelihood values and posterior probabilities. From them, the different parameter probability distributions can be built.
 - `nf_output_diag.dat`: contains likelihood values corresponding to the birth of the discarded and final live points, and the rank of the new live point once inserted in the enemble. These values are used for statistics of the evidence (with the help of Anesthetic library) and for diagnostics.
-For this purpose, the python function in `nested_res_ .py` can be used also for compressed `nf_output_points.txt` files (using gzip with the name `nf_output_points.txt.gz`).
+For this purpose, the python module `nested_py` can be used also for compressed `nf_output_points.txt` files (using gzip with the name `nf_output_points.txt.gz`).
 Together with this file, also the files `nf_output_points.paramnames` and `nf_output_points.ranges` are created for the use of GetDist and Anesthetic python libraries.
 
 **Details of the input file line by line**
 
-A complete selection of input files example is given in the folder `examples` where the implementation of the function of the python library are given.
+A complete selection of input files example is given in the folder `examples` where use cases of the python library are given.
 
+It follows a complete description of `nf_input.yaml` file.
 
-It follows a complete description of `nf_input.dat` file.
-
+```yaml
+version: 5.2                             # Program version
+datafiles: file1.csv [, file2.csv, ...]  # Name of the data file(s)
+specstr: x,c,ce                          # Datafile layout
+likelihood: GAUSSIAN                     # The likelihood function
 ```
-4.5                 # Program version
-he-histo.dat        # Name of the (first) data file
-n                   # Set of files (y/n)
-1c                  # Type of data: error bars or not and dimensions (1c,1e,2c,2s,2e)
-GAUSSIAN            # The likelihood function
-```
-Type of data:
-- `1c`: one dimensional spectrum with counts. \
-Input: (x, n. counts)
-- `1e`: one dimensional spectrum with error bars. \
-Input:  (x, y, error y)
-- `2c`: two dimensional spectrum with counts. \
-Input: xy matrix with number of counts
-- `2s`: two dimensional spectrum with counts. \
-Input: (x, y, n. counts) TO BE IMPLEMENTED
-- `2e`: two dimensional spectrum with error bars. \
-Input: (x, y, z, error z) TO BE IMPLEMENTED
+
+The `specstr` field tells nested_fit what data the datafile columns have.
+
+`specsct` specification:
+- `x`: This is the x data column (required).
+- `c`: This is the counts data column (required).
+- `ce`: This is the error data column (optional).
+- `i`: This column will be ignored by nested_fit (optional).
 
 
 Likelihood functions available (for data with error bars, Poisson statistics is assumed for counts):
 - `GAUSSIAN`: Default normal distribution assuming data likelihood.
 - `MOD_JEFFREYS`: Robust likelihood that does not assume a majorated error distribution (see Ref. [2]).
 
+```yaml
+function:
+    expression: f(x, a, b) = ax + b                   # Use LaTeX
+    expression: f(x, a, b) = \texttt{linear}(x, a, b) # Or use C++/Fortran
+    expression: GAUSS_BG                              # Or use a nested_fit legacy function (deprecated)
+
+    # Or for multiple files use the following nomenclature (one expressian for each file)
+    expression_1: ...
+    expression_2: ...
+    expression_<n>: ...
+
 ```
-200                 # Number of live points
-LIKE_ACC            # Method used for convergence 
-1.E-05    0.01      # Evidence final accuracy and additional convergence parameter
+- LaTeX specification [here](#LaTeX-Specification).
+- C++/Fortran API specification [here](#C++/Fortran-Specification).
+
+
+```yaml
+search:
+    livepoints: 200     # Number of live points
+    method: RANDOM_WALK # Search method
+    param1: 0.2         # Param 1 of chosen method (see below)
+    param2: 20          # Param 2 of chosen method (see below)
+    max_tries: 1000     # Maximum tries before stop (max_tries * tries_mult)
+    tries_mult: 100     # Max tries multiplier
+    num_tries: 1        # Number of runs
+    max_steps: 100000   # Max number of steps before stop
+
+convergence:
+    method:    LIKE_ACC  # Method used for convergence 
+    accuracy:  1.E-05    # Evidence final accuracy (in this case)
+    parameter: 0.01      # Additional convergence parameter
 ```
 
 For the moment, there are three convergence methods:
@@ -191,8 +281,12 @@ For the moment, a random walk (`RANDOM_WALK`), a uniform search around each live
 - `UNIFORM` par. 1: fraction of standard deviation for the box size, par. 2: number of jumps. Suggested values: 0.1-1, 1.
 
 
-```
-y	f	0.5	0.2     # cluster analysis or not (y/n), method (f/g/d/s/k), param. cluster algo. (2)
+```yaml
+clustering:
+    enabled:   true # False by default (if ommited)
+    method:    f    # Clustering method (see below)
+    distance:  0.5  # Clustering parameters
+    bandwidth: 0.2  # Clustering parameters
 ```
 
 For the moment four clustering algorithms are implemented. The two parameters are specific to the method
@@ -203,31 +297,99 @@ For the second option:
 - `s`: agglomerative clustering with single linkage (par. 1: distance limit (in percentage of the maximum distance))
 - `k`: k nearest neighbours (no parameters)
 
+```yaml
+function:
+    params:
+    # Compact 
+    a: { value: 0, step: -1, min: 0, max: 10 } # `fixed` is false by default
+    b: { value: 0, step: -1, min: 0, max: 10 } # `fixed` is false by default
+    
+    # Extended
+    e_a:
+      value: 0
+      step: -1
+      min: 0
+      max: 10
+      fixed: false
+
+data: { xmin: 1, xmax: 100, ymin: 0, ymax: 0 }
 ```
-1    100000         # Number of runs and maximum of steps
-GAUSS_BG            # Name of the function
-L                   # Additional data: left/right (l/r)
-500     20          # Additional data:  npoint, nwidth for convolution
-1   1024  1 1024    # xmin, xmax, ymin, ymax
-4                   # number of parameters
-# npar  name    value   step    min     max     fixed
-1	'bg'	0.11	-1	0.	0.5	0
-2	'x0'	454.6	-1	400	600	0
-3	'amp'	296	-1	20	1000	0
-4	'sigma'	20.0	-1	0	100	0
+These entries of the file define how the function given parameters should vary. Their `min`/`max` span,
+their `MCMC` step and either if they are variable or fixed. Both an extended and a compact version of declaring the parameters are available.
+
+The `data` field allows to control the input file's X and Y span of which the `nested_fit` will run from. Allowing to crop data if necessary.
+As of version 5.2, `ymin` and `ymax` can be both zero, meaning automatica span. However, `xmin`/`xmax` should always contain a valid range.
+
+### LaTeX Specification
+LaTeX is the preferred mode to write input functions whenever possible. It is also the main mode of calling native functions from the input file.
+LaTeX functions need to follow the syntax:
+```
+<my_func_name>(x, a_0, a_1, ..., a_n) = <definition>
+```
+where the user defined arguments `a_i` must be of one of the following forms: `<letter>_<char>` or `<letter>`, where `<char>` is any alphanumeric character and `<letter>` any lower or uppercase letter of the english alphabet.
+Examples: `I_0`, `A`, `x_2`. Any other form is invalid. For 1D functions (currently the only one supported with this mode), `x` must be strictly named, and the first parameter.
+
+Now for the function `<definition>`. Here one can:
+
+- Use basic math. Examples `ax + b` (with `a` and `b` arguments), `a*x + b` ('programing' form also allowed). [Available operators: `*`, `+`, `-`, `/`]
+- Use math embedded basic functions. Examples `a\sqrt{x} + b` or `a\exp{x-b}`. [Available functions: `sqrt`, `exp`, `log`, `sin`, `cos`, `tan`, `arcsin`, `arccos`, `arctan`, `Gamma`, `abs`, `erf`, `sign`]
+- Use some LaTeX constructs. Examples `\frac{x}{a + b}` or `a\exp{\frac{x}{b}}`. [Available constructs: `frac`]
+- Use mathematical constants: `a\pi + bx`. [Available constants: `pi`]
+- Call other user defined functions via syntax: `\texttt{<other_func_name>}(x, a_0, a_1, ..., a_n)`, where the passed parameters should be some currently available arguments. Alternatively one can also use `mathrm` isntead of `texttt`.
+- Call system defined functions via the same syntax as above. [Available system functions: `WofzRe` (real part of the Fadeeva function), `Interpolate` (cubic spline interpolation from a given file)]
+
+|Function|Declaration|Description|
+|:-:|:-:|:-:|
+|`WofzRe`| `WofzRe(zr, zi)` | `zr`/`zi`: the real and imaginary part of the<br/> given input, respectively.
+|`Interpolate`| `Interpolate(filename, x, smooth)` | `filename`: the name of the file where the xy data<br/> is availabe (`.csv` format).<br/><br/>`x`: where to evaluate the spline.<br/><br/>`smooth`: The spline smoothing factor. Around the same order of magnitude as the number of points.
+
+One can use this declaration mode directly on the input file:
+```yaml
+function:
+    expression: test_func(x, a, b) = \frac{x}{\exp{2b\pi}} + \sin{b}
+```
+Or it is also possible to add the function via the command line:
+```sh
+nested_fit5.2.0 -fa 'test_func(x, a, b) = \frac{x}{\exp{2b\pi}} + \sin{b}'
 ```
 
-Additional information can be found in the reference articles.
+This function would then be available and could be used in the following fashion (which is functionally equivalent to using the function directly):
+```yaml
+function:
+    expression: f(x, a, b) = \texttt{test_func}(x, a, b)
+```
+
+> :warning: All functions ran in nested_fit either via normal execution on using the `-fa` command. Get stored under a cache and are reusable whenever necessary. If a function name is repeated, the old declaration is **overwritten without warning**. This is also valid for C++/Fortran native user functions.
+
+### C++/Fortran Specification
+
+This is the second mode to declare functions. Althouth giving a bit more work, it allows for a much finer control of what is going on.
+
+
+**Additional information can be found in the reference articles.*
 
 ## Present version and history of the past versions
 
-The present version is 4.6.1
-New features:
-- New search method
-- Covariance matrix and its Cholesky decomposition calculated when 5% of the points have changed
-- Number of calls recorded in two variables
+The present version is 5.2.1\
+New features:,
+- Add JSON output for easier manipulation of results.
+- New simple python interface to embed nested_fit on source code.
 
 Previous versions are:
+ - 5.1 Add feature for older systems not easily supporting cmake to configure via GNU autotools. \
+ Add performance profiling tool boilerplate code enabling a detailed analysis without hindering performance.
+ - 5.0 New modified Jeffreys likelihood for data \
+ Update README.md \
+ Add CI support via github actions. Only available for linux and macOS. \
+ Add support to fully install via pip. \
+ Add python package install support (not published). \
+ Support custom data file column ordering/separation. Support .csv, .tsv \
+ New native function parser that reads users Fortran or C/C++ files with functions. \
+ New LaTeX function parser that reads user inline functions. \
+ Complete overhaul of input file and function user function definition.
+ - 4.6.1 New search method \
+Covariance matrix and its Cholesky decomposition calculated when 5% of the points have changed \
+Number of calls recorded in two variables \
  - 4.5 New functions \
  New exercices \
  New modified Jeffreys likelihood for data \
@@ -312,7 +474,8 @@ Previous versions are:
 
 ### Additional included sources
 
-In addition to the original files from the main authors, nesed_fit includes
+In addition to the original files from the main authors, nesed_fit includes:
+- *sterf* package, to profile the code (MIT license). Written by C. A. Godinho.
 - *FITPACK (DIERCKX)* package, to fit and interpolating data with splines (no license)
   - Ref: Paul Dierckx, Curve and Surface Fitting with Splines, Oxford University Press, 1993
  Developer,

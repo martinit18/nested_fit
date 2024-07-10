@@ -11,6 +11,12 @@ bin/
 # vscode settings
 .vscode/
 
+# ccls cache
+.ccls-cache/
+
+# clangd cache
+.cache/
+
 # vscode line counter
 .VSCodeCounter/
 
@@ -20,3 +26,24 @@ tests/*/nf_input.dat
 
 # Python cache files
 __pycache__/
+
+# Python build metadata
+*.egg-info/
+
+# Python dist build
+dist/
+
+# Logfiles
+*.log
+
+# Perfprof dotfiles
+*.dot
+
+# Ignore autoconf/automake stuff
+autom4te.cache/
+configure.ac
+Makefile.am
+aclocal.m4
+
+# Apparently autoconf generates a back configure (???)
+configure~

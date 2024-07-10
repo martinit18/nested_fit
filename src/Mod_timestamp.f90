@@ -1,4 +1,4 @@
-module Mod_timestamp
+module MOD_TIMESTAMP
 
 contains
   function timestamp() result(str)
@@ -13,5 +13,5 @@ contains
     str = dt//'_'//tm(1:6)  ! tm(7:10) are milliseconds and decimal point
 
   end function timestamp
-end module Mod_timestamp
+end module MOD_TIMESTAMP
 

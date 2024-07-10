@@ -1,0 +1,53 @@
+version:    5.0
+datafiles:  quadratic.dat
+specstr:    x,c,ce
+# specstr: x,c
+likelihood: GAUSSIAN
+
+function:
+  expression: f(x, a, b) = ax + b
+  # expression_1: f(x, a, b, c, d) = \texttt{Quadratic}(x, a, b, c, d)
+  # expression_2: g(x, a, b, c) = \texttt{Quadratic}(x, a, b, c, 1.0)
+  # expression_3: h(x, a, b, e_a) = \texttt{Quadratic}(x, a, b, 1.0, e_a)
+  params:
+    a: { value: 0, step: -1, min: 0, max: 10 }
+    b: { value: 0, step: -1, min: 0, max: 10 }
+    c: { value: 0, step: -1, min: 0, max: 10 }
+    d: { value: 0, step: -1, min: 0, max: 10 }
+    e_a:
+      value: 0
+      step: -1
+      min: 0
+      max: 10
+      fixed: false
+
+data: { xmin: 1, xmax: 100, ymin: 0, ymax: 0 }
+# data_1: { xmin: 1, xmax: 99, ymin: 0, ymax: 0 }
+# data_2: { xmin: 1, xmax: 99, ymin: 0, ymax: 0 }
+# data_3: { xmin: 1, xmax: 99, ymix: 0, ymax: 0 }
+
+search:
+  livepoints: 200
+  method:     RANDOM_WALK
+  param1:     0.2
+  param2:     20
+  max_tries:  1000
+  tries_mult: 100
+  num_tries:  1
+  max_steps:  100000
+
+convergence:
+  method:    LIKE_ACC
+  accuracy:  1.E-05
+  parameter: 0.01
+
+clustering:
+  enabled:   false
+  # method:    f
+  # distance:  0.5
+  # bandwidth: 0.2
+
+# Legacy stuff
+lr: L
+npoint: 500
+nwidth: 20

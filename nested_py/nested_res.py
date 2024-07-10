@@ -8,49 +8,8 @@ import matplotlib
 # matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
-current_version=4.5 # and beyond
-
 linestyle = {"markeredgewidth":2, "elinewidth":2, "capsize":4,"markersize":3}
 linestyle2 = {"markeredgewidth":0, "elinewidth":2, "capsize":0,"markersize":0}
-
-
-a="""
-###########################################################
-#                                                         #
-#         WELCOME TO NESTED_FIT RESULT ANALYSIS           #
-#                                                         #
-#                                                         #
-# Start with                                              #
-# 'an=nested_res_V4p5.Analysis()'                         #
-# By default the current path is considered.              #
-#                                                         #
-# If you want analyze another path:                       #
-# 'an=nested_res_V4p5.Analysis(path="path")'              #
-#                                                         #
-# If you do not want to specify any path:                 #
-# 'an=nested_res.Analysis(path=None)'                     #
-#                                                         #
-# To reload the data in the present directory:            #
-# 'an.load_data()'                                        #
-# otherwise specific the path                             #
-# 'an.load_data(path="your path")'                        #
-#                                                         #
-# Uses the different functions                            #
-# 'an.function()', (ex: 'an.plot()')                      #
-#                                                         #
-# To see the available function tape                      #
-# 'an.' and then the 'tab' button                         #
-#                                                         #
-# To see the description of the different functions tape: #
-# 'an.function?'                                          #
-#                                                         #
-# For any problem write to trassinelli@insp.jussieu.fr    #
-###########################################################
-"""
-print(a)
-
-print('Present version '+str(current_version) + '\n')
-
 
 class Analysis(object):
 
@@ -100,7 +59,7 @@ class Analysis(object):
         if path[-1]!='/' and path != None:  path = path+'/'
         #
         self.path = path
-        self.number_of_values = self.input_data['npar']
+        self.number_of_values = len(self.input_data['function']['params'])
         # Check first if is there
         if not os.path.isfile(path+'nf_output_points.txt'):
             if os.path.isfile(path+'nf_output_points.txt.gz'):
@@ -124,12 +83,16 @@ class Analysis(object):
         self.df.head()
         self.data = self.df.values
 
+    # Program version TODO: (César) Allow backward compatibility here
+    def check_version(self, version_float):
+        from importlib.metadata import version as imp_version
+        return version_float == float('.'.join(imp_version('nested_fit').split('.')[:2]))
 
 
 ########################################################################################
     def read_input(self,path=currentpath):
         '''
-        Read the parameter file nf_input.dat
+        Read the parameter file nf_input.yaml
         Output are two dictionaries with values and comments:
         input_data, input_comment
         '''
@@ -138,164 +101,35 @@ class Analysis(object):
         #
         # Parametersof the dictionaries: values and comments
         # Initialization
-        input_data = {}
+        input_data    = {}
         input_comment = {}
-        # Adjust path variable if needed
-        # Read the file and the different parameters
-        input_file = open(path+'nf_input.dat')
-        lines = input_file.readlines()
-        input_file.close()
+
+        import yaml
+        from yaml.loader import SafeLoader
+
+        with open(path+'nf_input.yaml') as f:
+            input_data = yaml.load(f, Loader=SafeLoader)
+        
         # The parameters are read with their comment and/or definition
-        # Program version
-        input_data['version']= float(lines[0].split()[0])
-        input_comment['version'] = lines[0][lines[0].find('#'):]
-        if input_data['version'] < int(current_version):
+        # Quick parse on the version strings
+        if(not self.check_version(input_data['version'])):
             sys.exit('Wrong input file version. Please check.')
-        # Filename with the data to fit
-        input_data['filename'] = lines[1].split()[0]
-        input_comment['filename'] = lines[1][lines[1].find('#'):]
-        # Set of files or not
-        input_data['set_yn'] = lines[2].split()[0]
-        input_comment['set_yn'] = lines[2][lines[2].find('#'):]
-        # Errorbars present or not
-        input_data['data_type'] = lines[3].split()[0]
-        input_comment['data_type'] = lines[3][lines[3].find('#'):]
-        # Likelihood function
-        input_data['likelihood_func'] = lines[4].split()[0]
-        input_comment['likelihood_func'] = lines[4][lines[4].find('#'):]
-        # Number of live points
-        input_data['nlive'] = int(lines[5].split()[0])
-        input_comment['nlive'] = lines[5][lines[5].find('#'):]
-        # Convergence method
-        input_data['conv_method'] = lines[6].split()[0]
-        input_comment['conv_method'] = lines[6][lines[6].find('#'):]
-        # Evidence final accuracy
-        input_data['evaccuracy'] = float(lines[7].split()[0])
-        input_data['conv_par'] = lines[7].split()[1]
-        input_comment['convergence'] = lines[7][lines[7].find('#'):]
-        # Search method
-        input_data['search_method'] = lines[8].split()[0]
-        input_comment['search_method'] = lines[8][lines[8].find('#'):]
-        # Fraction of parameter standard deviation and n of jumps, max iterations and groups of iterations
-        input_data['search_par1'] = float(lines[9].split()[0])
-        input_data['search_par2'] = float(lines[9].split()[1])
-        input_data['maxtries'] = int(lines[9].split()[2])
-        input_data['maxntries'] = int(lines[9].split()[3])
-        input_comment['search_algorithm'] = lines[9][lines[9].find('#'):]
-        # Cluster analysis: if it is active and its parameters
-        input_data['cluster_yn'] = lines[10].split()[0]
-        input_data['cluster_method'] = lines[10].split()[1]
-        input_data['distance_limit'] = float(lines[10].split()[2])
-        input_data['bandwidth'] = float(lines[10].split()[3])
-        input_comment['cluster_algorithm'] = lines[10][lines[10].find('#'):]
-        # Number of tries and maximuma number of steps per tries
-        input_data['ntry'] = int(lines[11].split()[0])
-        input_data['maxstep_try'] = int(lines[11].split()[1])
-        input_comment['ntry_maxstep'] = lines[11][lines[11].find('#'):]
-        # Name of the function choosen for the fit
-        input_data['function_name'] = lines[12].split()[0]
-        input_comment['function_name'] = lines[12][lines[12].find('#'):]
-        # Left-Right asymmetry parameter
-        input_data['lr'] = lines[13][:1].split()[0]
-        input_comment['lr'] = lines[13][lines[13].find('#'):]
-        # Additional data for convolution
-        input_data['npoint'] = int(int(lines[14].split()[0]))
-        input_data['nwidth'] = int(int(lines[14].split()[1]))
-        input_comment['additional data'] = lines[14][lines[14].find('#'):]
-        # Limit of the spectra used for the fit
-        input_data['xmin'] = float(lines[15].split()[0])
-        input_data['xmax'] = float(lines[15].split()[1])
-        input_data['ymin'] = float(lines[15].split()[2])
-        input_data['ymax'] = float(lines[15].split()[3])
-        input_comment['min_max'] = lines[15][lines[15].find('#'):]
-        # Number of parameter used for the fit
-        npar = int(lines[16].split()[0])
-        input_data['npar'] = npar
-        input_comment['npar'] = lines[16][lines[16].find('#'):]
-        # Parameter of the fit, names, limits and "fix" flag
-        input_comment['parameters'] = lines[17]
+
         parameters = []
-        for index in range(npar):
-            parameters.append([int(lines[18+index].split()[0]),
-                lines[18+index].split()[1],
-                float(lines[18+index].split()[2]),
-                float(lines[18+index].split()[3]),
-                float(lines[18+index].split()[4]),
-                float(lines[18+index].split()[5]),
-                int(lines[18+index].split()[6])])
+        i = 1
+        
+        for k, v in input_data['function']['params'].items():
+            parameters.append([i,
+                k,
+                v['value'],
+                v['step'],
+                v['min'],
+                v['max'],
+                int(v['fixed']) if 'fixed' in v else 0])
+            i += 1
         input_data['parameters'] = parameters
 
-
         return input_data, input_comment
-    
-    ########################################################################################
-    def write_input(self,input_data,input_comment,path=currentpath):
-        '''
-        Write the input file input.dat to be used by minuit_fit.exe
-        '''# Adjust the path first
-        if path[-1]!='/' and path != None:  path = path+'/'
-        # Open the file
-        input_file = open(path+'nf_input.dat','w')
-        # Bug to fix
-        #input_comment['parameters'] ='# Par n. name value step min max flag\n'
-        
-        # Write the parameters
-        input_file.writelines([str(input_data['version']),
-                                   '\t', input_comment['version']])
-        input_file.writelines([input_data['filename'],
-                                   '\t', input_comment['filename']])
-        input_file.writelines([input_data['set_yn'],
-                                   '\t', input_comment['set_yn']])
-        input_file.writelines([input_data['data_type'],
-                                   '\t', input_comment['data_type']])
-        input_file.writelines([input_data['likelihood_func'],
-                                   '\t', input_comment['likelihood_func']])
-        input_file.writelines([str(input_data['nlive']),
-                                   '\t', input_comment['nlive']])
-        input_file.writelines([input_data['conv_method'],
-                                   '\t', input_comment['conv_method']])
-        input_file.writelines([str(input_data['evaccuracy']), 
-                                   '\t',str(input_data['conv_par']),
-                                   '\t', input_comment['convergence']])
-        input_file.writelines([input_data['search_method'],
-                                   '\t', input_comment['search_method']])
-        input_file.writelines([str(input_data['search_par1']), 
-                                   '\t',str(input_data['search_par2']),
-                                   '\t',str(input_data['maxtries']), 
-                                   '\t',str(input_data['maxntries']),
-                                   '\t', input_comment['search_algorithm']])
-        input_file.writelines([input_data['cluster_yn'], 
-                                   '\t',input_data['cluster_method'],
-                                   '\t',str(input_data['distance_limit']), 
-                                   '\t',str(input_data['bandwidth']),
-                                   '\t', input_comment['cluster_algorithm']])
-        input_file.writelines([str(input_data['ntry']), 
-                                   '\t',str(input_data['maxstep_try']),
-                                   '\t', input_comment['ntry_maxstep']])
-        input_file.writelines([input_data['function_name'],
-                                   '\t', input_comment['function_name']])
-        input_file.writelines([input_data['lr'],
-                                   '\t', input_comment['lr']])
-        input_file.writelines([str(input_data['npoint']),
-                                   '\t', str(input_data['nwidth']),
-                                   '\t', input_comment['additional data']])
-        input_file.writelines([str(input_data['xmin']), 
-                                   '\t',str(input_data['xmax']),
-                                   '\t',str(input_data['ymin']), 
-                                   '\t',str(input_data['ymax']),
-                                   '\t', input_comment['min_max']])
-        input_file.writelines([str(input_data['npar']),
-                                   '\t', input_comment['npar']])
-        input_file.writelines(input_comment['parameters'])
-        npar = input_data['npar']
-        for index in range(npar):
-            input_file.writelines([str(input_data['parameters'][index][0]),
-                                       '\t', input_data['parameters'][index][1],
-                                       '\t', str(input_data['parameters'][index][2]),
-                                       '\t', str(input_data['parameters'][index][3]),
-                                       '\t', str(input_data['parameters'][index][4]),
-                                       '\t', str(input_data['parameters'][index][5]),
-                                       '\t', str(input_data['parameters'][index][6]),'\n'])
 
 ########################################################################################
     def read_output(self,path=currentpath):
@@ -312,7 +146,7 @@ class Analysis(object):
 
         # Read parameters from input file
         input_data, input_comment = self.read_input(path=path)
-        npar = input_data['npar']
+        npar = len(input_data['function']['params'])
 
         # Initialization
         output_data = {}
@@ -328,65 +162,61 @@ class Analysis(object):
 
         # Read number of tries
         output_data['ntry'] = int(lines[1].split()[1])
-        if input_data['ntry'] != output_data['ntry'] :
-            print('input ntry', input_data['ntry'], 'output ntry', output_data['ntry'])
+        if input_data['search']['num_tries'] != output_data['ntry'] :
+            print('input ntry', input_data['search']['num_tries'], 'output ntry', output_data['ntry'])
             sys.exit('Check your input/output files')
 
         # Number of iteration
         output_data['niter'] = int(lines[2].split()[1])
 
-        # Number of likelihood function calls
-        output_data['ncall9'] = int(lines[3].split()[1])
-        output_data['ncall'] = int(lines[3].split()[2])
-
         # Number of live points
-        output_data['nlive_out'] = int(lines[4].split()[1])
-        if input_data['nlive'] != output_data['nlive_out'] :
-            print('input nlive', input_data['nlive'], 'output nlive', output_data['nlive_out'])
+        output_data['nlive_out'] = int(lines[3].split()[1])
+        if input_data['search']['livepoints'] != output_data['nlive_out'] :
+            print('input nlive', input_data['search']['livepoints'], 'output nlive', output_data['nlive'])
             sys.exit('Check your input/output files')
 
         # Final evidence
-        output_data['evidence'] = float(lines[5].split()[1])
+        output_data['evidence'] = float(lines[4].split()[1])
 
         # Evidence estimated error
-        output_data['evidence_err_est'] = float(lines[6].split()[1])
+        output_data['evidence_err_est'] = float(lines[5].split()[1])
 
         # Evidence evaluated errors
-        output_data['evidence_err'] = float(lines[7].split()[1])
+        output_data['evidence_err'] = float(lines[6].split()[1])
 
         # Max likelihood
-        output_data['like_max'] = float(lines[9].split()[1])
+        output_data['like_max'] = float(lines[8].split()[1])
 
         # Max parameter set
-        output_data['max'] = [float(lines[11+index].split()[1]) for index in range(npar)]
+        output_data['max'] = [float(lines[10+index].split()[1]) for index in range(npar)]
 
         # Average and standard deviation of parameters
         #output_data['mean']= [[float(lines[10+npar+index].split()[1]),float(lines[10+npar+index].split()[3])] for index in range(npar)]
-        output_data['mean'] = [float(lines[13+npar+index].split()[1]) for index in range(npar)]
-        output_data['sd']   = [float(lines[13+npar+index].split()[3]) for index in range(npar)]
+        output_data['mean'] = [float(lines[12+npar+index].split()[1]) for index in range(npar)]
+        output_data['sd']   = [float(lines[12+npar+index].split()[3]) for index in range(npar)]
 
         # Confidence levels of parameters
         #output_data['conf_level'] = [[float(lines[12+2*npar+index].split()[1]),float(lines[12+2*npar+index].split()[2]),float(lines[12+2*npar+index].split()[3]),float(lines[12+2*npar+index].split()[5]),float(lines[12+2*npar+index].split()[6]),float(lines[12+2*npar+index].split()[7])] for index in range(npar)]
-        output_data['conf_level_m99'] = [float(lines[15+2*npar+index].split()[1]) for index in range(npar)]
-        output_data['conf_level_m95'] = [float(lines[15+2*npar+index].split()[2]) for index in range(npar)]
-        output_data['conf_level_m68'] = [float(lines[15+2*npar+index].split()[3]) for index in range(npar)]
-        output_data['conf_level_p68'] = [float(lines[15+2*npar+index].split()[5]) for index in range(npar)]
-        output_data['conf_level_p95'] = [float(lines[15+2*npar+index].split()[6]) for index in range(npar)]
-        output_data['conf_level_p99'] = [float(lines[15+2*npar+index].split()[7]) for index in range(npar)]
+        output_data['conf_level_m99'] = [float(lines[14+2*npar+index].split()[1]) for index in range(npar)]
+        output_data['conf_level_m95'] = [float(lines[14+2*npar+index].split()[2]) for index in range(npar)]
+        output_data['conf_level_m68'] = [float(lines[14+2*npar+index].split()[3]) for index in range(npar)]
+        output_data['conf_level_p68'] = [float(lines[14+2*npar+index].split()[5]) for index in range(npar)]
+        output_data['conf_level_p95'] = [float(lines[14+2*npar+index].split()[6]) for index in range(npar)]
+        output_data['conf_level_p99'] = [float(lines[14+2*npar+index].split()[7]) for index in range(npar)]
 
         # Median of parameters
-        output_data['median'] = [float(lines[15+2*npar+index].split()[4]) for index in range(npar)]
+        output_data['median'] = [float(lines[14+2*npar+index].split()[4]) for index in range(npar)]
 
         # Information
-        output_data['information'] =  float(lines[17+3*npar].split()[1])
+        output_data['information'] =  float(lines[16+3*npar].split()[1])
 
         # Complexity
-        output_data['complexity'] =  float(lines[19+3*npar].split()[1])
+        output_data['complexity'] =  float(lines[18+3*npar].split()[1])
 
         # Calculation information
-        output_data['n_cores'] =  int(lines[21+3*npar].split()[1])
-        output_data['cpu_computation_time'] =  float(lines[22+3*npar].split()[1])
-        output_data['real_computation_time'] =  float(lines[22+3*npar].split()[2])
+        output_data['n_cores'] =  int(lines[20+3*npar].split()[1])
+        output_data['cpu_computation_time'] =  float(lines[21+3*npar].split()[1])
+        output_data['real_computation_time'] =  float(lines[21+3*npar].split()[2])
 
         return output_data
 
@@ -622,10 +452,10 @@ class Analysis(object):
 
         # Read parameters from input file
         input_data, input_comment = self.read_input(path=path)
-        xmin = input_data['xmin']
-        xmax = input_data['xmax']
-        ymin = input_data['ymin']
-        ymax = input_data['ymax']
+        xmin = input_data['data']['xmin']
+        xmax = input_data['data']['xmax']
+        ymin = input_data['data']['ymin']
+        ymax = input_data['data']['ymax']
 
 
         print(nset, typeof)
@@ -768,10 +598,10 @@ class Analysis(object):
 
         # Read parameters from input file
         input_data, input_comment = self.read_input(path=path)
-        minx = input_data['xmin']
-        maxx = input_data['xmax']
-        miny = input_data['ymin']
-        maxy = input_data['ymax']
+        minx = input_data['data']['xmin']
+        maxx = input_data['data']['xmax']
+        miny = input_data['data']['ymin']
+        maxy = input_data['data']['ymax']
         # Read parameters from output file
         output_data = self.read_output(path=path)
 
@@ -1546,7 +1376,7 @@ class Analysis(object):
 
         #---------------------------------------------------------------------------------------------------------------------
 
-    def triangle_plot_gd(self,path=currentpath):
+    def triangle_plot(self,path=currentpath):
         '''
         Triangle plot of all probability distributions using GetDist package
         '''
@@ -1561,49 +1391,7 @@ class Analysis(object):
 
         plt.show()
 
-        #---------------------------------------------------------------------------------------------------------------------
 
-    def triangle_plot(self,params,path=currentpath):
-        '''
-        Triangle plot of all probability distributions using Anesthetic package.
-        params: list of parameter names you want to plot
-        e.g. an.triangle_plot(['amp','sigma'],path = 'v4p5p4')
-        '''
-        from anesthetic import read_chains, make_2d_axes
-
-        self.path = path
-
-        
-        nested_samples = read_chains(path)
-        fig, axes = make_2d_axes(params)
-        nested_samples.plot_2d(axes)
-
-        plt.show()
-
-        #---------------------------------------------------------------------------------------------------------------------
-
-    def stats(self,nsamples=100,path=currentpath):
-        '''
-        Statistics from likelihood birth and dead values using Anesthetic package.
-        nsamples: number of samples for live points boot strap calculations.
-        Quantities of interst:
-        - logarithm of evidence
-        - Kullback–Leibler divergence
-        - log of likelihood average with respect to the priors
-        - (Gaussian) Bayesian model dimensionality (i.e. Bayesian complexity)
-        '''
-        from anesthetic import read_chains
-
-        self.path = path
-
-        # List of quantities of interest:
-        params = ['logZ', 'D_KL', 'logL_P', 'd_G']
-
-        
-        nested_samples = read_chains(path)
-        bayesian_stats = nested_samples.stats(nsamples)
-        for par in params:
-            print("{0} \t = {1:f} \t± {2:f}". format(par,bayesian_stats[par].mean(),bayesian_stats[par].std()))
 
         #---------------------------------------------------------------------------------------------------------------------
     def get_cov(self,path=currentpath):

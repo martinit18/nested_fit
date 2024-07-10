@@ -3,6 +3,7 @@ c################################### USERFCN DEFINITION ########################
 
 
       FUNCTION SELECT_USERFCN_SET(funcname)
+      USE MOD_LOGGER
       IMPLICIT NONE
       CHARACTER*64 funcname
       INTEGER*4 SELECT_USERFCN_SET
@@ -46,9 +47,11 @@ c     Choose your model (see below for definition)
       ELSE IF(funcname.EQ.'ROCKING_CURVE_SET') THEN
             SELECT_USERFCN_SET = 17
       ELSE
-         WRITE(*,*) 'Selected function:', funcname
-         WRITE(*,*) 'Error in the function name def. in USERFCN_SET'
-         WRITE(*,*) 'Check in the manual and in the input.dat file'
+         CALL LOG_ERROR_HEADER()
+         CALL LOG_ERROR('Legacy function `'//TRIM(funcname)//'` does not exist.')
+         CALL LOG_ERROR('Check in the manual for legacy function names.')
+         CALL LOG_ERROR('Aborting Execution...')
+         CALL LOG_ERROR_HEADER()
          STOP
       END IF
 

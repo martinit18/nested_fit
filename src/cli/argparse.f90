@@ -2,7 +2,10 @@
 ! Author : César Godinho
 ! Date   : 06/06/2023
 
-module argparse
+module MOD_ARGPARSE
+
+    ! Module for logging
+    USE MOD_LOGGER
 
     IMPLICIT NONE
     PUBLIC :: parse_arguments, add_argument, argdef_t
@@ -10,7 +13,7 @@ module argparse
     
     TYPE argdef_t
         CHARACTER(LEN=64)        :: long_name
-        CHARACTER                :: short_name
+        CHARACTER(LEN=2)         :: short_name
         LOGICAL                  :: supports_attr
         CHARACTER(LEN=512)       :: description
         PROCEDURE(func), POINTER :: exec => null()
@@ -18,7 +21,7 @@ module argparse
 
     TYPE argval_t
         TYPE(argdef_t) :: arg
-        CHARACTER(LEN=128) :: value
+        CHARACTER(LEN=512) :: value
         LOGICAL :: valid
     END TYPE argval_t
 
@@ -26,7 +29,7 @@ module argparse
         SUBROUTINE func(self, value)
             IMPORT :: argdef_t, argval_t
             CLASS(argdef_t), INTENT(IN) :: self
-            CHARACTER(LEN=128), INTENT(IN) :: value
+            CHARACTER(LEN=512), INTENT(IN) :: value
         END SUBROUTINE
     END INTERFACE
 
@@ -38,8 +41,8 @@ module argparse
 
     TYPE(argval_t) FUNCTION get_next_arg(argdefs)
         TYPE(argdef_t), INTENT(IN) :: argdefs(:)
-        CHARACTER(LEN=256) :: raw_arg
-        CHARACTER(LEN=128) :: raw_value
+        CHARACTER(LEN=512) :: raw_arg
+        CHARACTER(LEN=512) :: raw_value
 
         INTEGER :: i
         LOGICAL :: valid_value
@@ -70,10 +73,10 @@ module argparse
                     ENDIF
                 END IF
             ELSEIF(raw_arg(1:1) == '-') THEN ! Using short_name
-                IF(TRIM(raw_arg(2:2)) == argdefs(i)%short_name) THEN
-                    IF(LEN(TRIM(raw_arg(2:LEN_TRIM(raw_arg)))) > 1) THEN
+                IF(TRIM(raw_arg(2:LEN_TRIM(raw_arg))) == argdefs(i)%short_name) THEN
+                    IF(LEN(TRIM(raw_arg(2:LEN_TRIM(raw_arg)))) > 2) THEN
                         get_next_arg = argval_t(argdefs(i), CHAR(0), .FALSE.)
-                        WRITE(*, *) "Short argument notation '-", raw_arg(2:LEN_TRIM(raw_arg)),"' needs to have only one character."
+                        WRITE(*, *) "Short argument notation '-", raw_arg(2:LEN_TRIM(raw_arg)),"' needs to have only one or two character(s)."
                         RETURN
                     END IF
                     valid_value = TRY_PEAK_NEXT(nextargidx, raw_value)
@@ -105,7 +108,7 @@ module argparse
 
     LOGICAL FUNCTION try_peak_next(idx, val)
         INTEGER, INTENT(IN) :: idx
-        CHARACTER(LEN=128), INTENT(OUT) :: val
+        CHARACTER(LEN=512), INTENT(OUT) :: val
 
         IF(idx > COMMAND_ARGUMENT_COUNT()) THEN
             try_peak_next = .FALSE.
@@ -136,9 +139,14 @@ module argparse
         
         ! Write option naming
         WRITE(write_tmp(1),*) '--', argdef%long_name
-        WRITE(write_tmp(2),*) '-', argdef%short_name
-        WRITE(*,*) '|', TRIM(write_tmp(1)), ', ', TRIM(write_tmp(2)), wspace(1:(header_sz - LEN_TRIM(write_tmp(1)) - LEN_TRIM(write_tmp(2)) - 2)), '|'
 
+        IF(argdef%short_name == "") THEN
+            WRITE(*,*) '|', TRIM(write_tmp(1)), wspace(1:(header_sz - LEN_TRIM(write_tmp(1)))), '|'
+        ELSE
+            WRITE(write_tmp(2),*) '-', argdef%short_name
+            WRITE(*,*) '|', TRIM(write_tmp(1)), ', ', TRIM(write_tmp(2)), wspace(1:(header_sz - LEN_TRIM(write_tmp(1)) - LEN_TRIM(write_tmp(2)) - 2)), '|'
+        ENDIF
+        
         ! Write description
         ! How many lines do we need ?
         desc_blocks = LEN_TRIM(argdef%description) / (header_sz - 2)
@@ -219,10 +227,10 @@ module argparse
             ELSE
                 IF(argval%value.NE.CHAR(255)) THEN
                     WRITE(*,*) 'Use -h for help.'
-                    WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
-                    WRITE(*,*) '       ERROR:           Nested_fit argument parsing failed!'
-                    WRITE(*,*) '       ERROR:           Aborting execution.'
-                    WRITE(*,*) '------------------------------------------------------------------------------------------------------------------'
+                    CALL LOG_ERROR_HEADER()
+                    CALL LOG_ERROR('Nested_fit argument parsing failed!')
+                    CALL LOG_ERROR('Aborting Execution...')
+                    CALL LOG_ERROR_HEADER()
                     STOP ! Error parsing cli inputs
                 ENDIF
                 EXIT
@@ -230,4 +238,4 @@ module argparse
         END DO
     END SUBROUTINE
 
-end module argparse
+end module MOD_ARGPARSE

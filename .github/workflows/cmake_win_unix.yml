@@ -1,0 +1,55 @@
+name: Continuous Integration
+
+on:
+    push:
+        branches: [ "experimental" ]  # This will eventually change to master
+    pull_request:
+        branches: [ "experimental" ]
+
+jobs:
+    build:
+        runs-on: ${{ matrix.os }}
+
+        strategy:
+            fail-fast: false
+
+            matrix:
+                # Windows is currently no supported
+                # But it is a scheduled feature as most (or all) of the code is cross platform
+                os: [ubuntu-latest, macos-latest] #, windows-latest]
+                build_type: [Release]
+                toolchain:
+                    - {compiler: gcc, version: 13}
+                    - {compiler: gcc, version: 9}
+                    # ifort is not supported on the experimental branch as of November 2023
+                    # - {compiler: intel-classic, version: '2021.10'}
+                exclude:
+                    - os: macos-latest
+                      toolchain: {compiler: gcc, version: 9} # gcc > 9 on macos
+        steps:
+        - uses: actions/checkout@v3
+
+        - name: Set reusable strings
+          id: strings
+          shell: bash
+          run: |
+              echo "build-output-dir=${{github.workspace}}/build" >> "$GITHUB_OUTPUT"
+
+        - name: Setup GNU Fortran
+          uses: fortran-lang/setup-fortran@v1
+          id: setup-fortran
+          with:
+              compiler: ${{matrix.toolchain.compiler}}
+              version: ${{matrix.toolchain.version}}
+ 
+        - name: Configure CMake
+          run: >
+              cmake -B ${{steps.strings.outputs.build-output-dir}}
+              -DCMAKE_CXX_COMPILER=${{env.CXX}}
+              -DCMAKE_Fortran_COMPILER=${{env.FC}}
+              -DCMAKE_BUILD_TYPE=${{matrix.build_type}}
+              -S ${{github.workspace}}
+
+        - name: Build
+          run: cmake --build ${{steps.strings.outputs.build-output-dir}} --config ${{matrix.build_type}}
+

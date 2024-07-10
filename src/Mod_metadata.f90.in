@@ -1,20 +1,22 @@
 MODULE MOD_METADATA
   ! Module for program runtime metadata
-
   IMPLICIT NONE
-  CHARACTER(LEN=@nested_fit_version_full_str_len@), PARAMETER :: version_full = '@nested_fit_version_full_str@'
-  CHARACTER(LEN=@nested_fit_version_str_len@), PARAMETER :: version = '@nested_fit_version_str@'
-  CHARACTER(LEN=@nested_fit_mpi_child_comm_proc_name_len@), PARAMETER :: nf_child_proc_name = '@nested_fit_mpi_child_comm_proc_name@'
 
+  ! Version static flags
+  CHARACTER(LEN=*), PARAMETER :: version_full = '@nested_fit_version_full_str@'
+  CHARACTER(LEN=*), PARAMETER :: version = '@nested_fit_version_str@'
+  CHARACTER(LEN=*), PARAMETER :: nf_child_proc_name = '@nested_fit_mpi_child_comm_proc_name@'
+
+  ! System / Install specific flags
+  CHARACTER(LEN=*), PARAMETER :: nf_cache_folder = '@nested_fit_cache_folder@'
   LOGICAL, PARAMETER :: parallel_on = @nested_fit_parallel_on@
   LOGICAL, PARAMETER :: parallel_mpi_on = @nested_fit_parallel_mpi_on@
   LOGICAL, PARAMETER :: static_seed = @nested_fit_static_seed@
 
 #ifdef FUNC_TARGET
-  CHARACTER(LEN=@nested_fit_target_func_len@), PARAMETER :: exec_target_name = '@nested_fit_target_func@'
+  CHARACTER(LEN=*), PARAMETER :: exec_target_name = '@nested_fit_target_func@'
 #else
-  CHARACTER(LEN=@nested_fit_target_len@), PARAMETER :: exec_target_name = '@nested_fit_target@'
+  CHARACTER(LEN=*), PARAMETER :: exec_target_name = '@nested_fit_target@'
 #endif
-
 
 END MODULE MOD_METADATA
