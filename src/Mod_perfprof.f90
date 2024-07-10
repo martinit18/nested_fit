@@ -1,6 +1,6 @@
 ! Brief  : This module contains the performance profiler module. It checks for timings wherever needed.
 ! Author : César Godinho
-! Date   : 08/01/2024
+! Date   : 09/07/2024
 
 MODULE MOD_PERFPROF
     USE MOD_LOGGER
@@ -9,119 +9,46 @@ MODULE MOD_PERFPROF
     USE, INTRINSIC :: iso_c_binding
     IMPLICIT NONE
 
-    PUBLIC :: SHUTDOWN_PERF_PROF, ScopedPerfTimer
+    PUBLIC :: ScopedPerfTimer
     PRIVATE
 
-    ! NOTE: Using same naming scheme as in stperf (see https://github.com/lPrimemaster/stperf/blob/master/stperf.h)
-    !       Without the underscore, since fortran does not allow it (at least gfortran does not)
-    TYPE, BIND(c) :: stperf_PerfNodeThreadList_t
-        TYPE(c_ptr)        :: elements
-        INTEGER(c_int64_t) :: size
-    END TYPE stperf_PerfNodeThreadList_t
-
-    TYPE, BIND(c) :: stperf_PerfNodeList_t
-        TYPE(c_ptr)        :: elements
-        INTEGER(c_int64_t) :: size
-        INTEGER(c_int64_t) :: thread_id
-    END TYPE stperf_PerfNodeList_t
-
-    TYPE, BIND(c) :: stperf_PerfNode_t
-        INTEGER(c_int)                    :: granularity
-        REAL(c_float)                     :: value
-        REAL(c_float)                     :: pct
-        INTEGER(c_int64_t)                :: nanos
-        CHARACTER(c_char), DIMENSION(128) :: name
-        INTEGER(c_int)                    :: indent
-        INTEGER(c_int64_t)                :: hits
-        TYPE(stperf_PerfNodeList_t)       :: children
-    END TYPE stperf_PerfNode_t
-
-#ifdef PPROF
-    INTERFACE
-        FUNCTION stperf_StartProf(name, line, suffix) RESULT(handle) BIND(c, name='stperf_StartProf')
-            USE, INTRINSIC :: iso_c_binding
-            IMPLICIT NONE
-            CHARACTER(c_char), INTENT(IN), DIMENSION(*) :: name
-            INTEGER(c_int), INTENT(IN), VALUE           :: line
-            CHARACTER(c_char), INTENT(IN), DIMENSION(*) :: suffix
-            INTEGER(c_int64_t)                          :: handle
-        END FUNCTION
-
-        SUBROUTINE stperf_StopProf(handle) BIND(c, name='stperf_StopProf')
-            USE, INTRINSIC :: iso_c_binding
-            IMPLICIT NONE
-            INTEGER(c_int64_t), INTENT(IN), VALUE :: handle
-        END SUBROUTINE
-
-        SUBROUTINE stperf_StopCounters() BIND(c, name='stperf_StopCounters')
-            USE, INTRINSIC :: iso_c_binding
-            IMPLICIT NONE
-        END SUBROUTINE
-        
-        FUNCTION stperf_GetCallTree() RESULT(output) BIND(c, name='stperf_GetCallTree')
-            USE, INTRINSIC :: iso_c_binding
-            IMPORT stperf_PerfNodeThreadList_t
-            IMPLICIT NONE
-            TYPE(stperf_PerfNodeThreadList_t) :: output
-        END FUNCTION
-
-        FUNCTION stperf_GetCallTreeDot() RESULT(output) BIND(c, name='stperf_GetCallTreeDot')
-            USE, INTRINSIC :: iso_c_binding
-            IMPLICIT NONE
-            TYPE(c_ptr) :: output
-        END FUNCTION
-
-        FUNCTION stperf_GetThreadRoot(tree, tid) RESULT(output) BIND(c, name='stperf_GetThreadRoot')
-            USE, INTRINSIC :: iso_c_binding
-            IMPORT stperf_PerfNodeThreadList_t
-            IMPLICIT NONE
-            TYPE(stperf_PerfNodeThreadList_t), INTENT(IN) :: tree ! NOTE: (César) Fortran pass by ref - so this works
-            INTEGER(c_int64_t), INTENT(IN), VALUE         :: tid
-            TYPE(c_ptr)                                   :: output
-        END FUNCTION
-
-        FUNCTION stperf_GetCallTreeString(tree) RESULT(output) BIND(c, name='stperf_GetCallTreeString')
-            USE, INTRINSIC :: iso_c_binding
-            IMPORT stperf_PerfNodeThreadList_t
-            IMPLICIT NONE
-            TYPE(stperf_PerfNodeThreadList_t), INTENT(IN), VALUE :: tree
-            TYPE(c_ptr)                                          :: output
-        END FUNCTION
-
-        SUBROUTINE stperf_FreeCallTreeString(string) BIND(c, name='stperf_FreeCallTreeString')
-            USE, INTRINSIC :: iso_c_binding
-            IMPLICIT NONE
-            TYPE(c_ptr), INTENT(IN), VALUE :: string
-        END SUBROUTINE
-
-        SUBROUTINE stperf_FreeCallTree(tree) BIND(c, name='stperf_FreeCallTree')
-            USE, INTRINSIC :: iso_c_binding
-            IMPORT stperf_PerfNodeThreadList_t
-            IMPLICIT NONE
-            TYPE(stperf_PerfNodeThreadList_t), INTENT(IN), VALUE :: tree
-        END SUBROUTINE
-
-        SUBROUTINE stperf_ResetCounters() BIND(c, name='stperf_ResetCounters')
-            USE, INTRINSIC :: iso_c_binding
-            IMPLICIT NONE
-        END SUBROUTINE
-
-        FUNCTION stperf_GetCurrentThreadId() RESULT(output) BIND(c, name='stperf_GetCurrentThreadId')
-            USE, INTRINSIC :: iso_c_binding
-            IMPLICIT NONE
-            INTEGER(c_int64_t) :: output
-        END FUNCTION
-    END INTERFACE
-#endif
-
+    TYPE, BIND(C) :: TracyCtxF ! Equivalent to `TracyCZoneCtx`
+        INTEGER(c_int64_t) :: id
+        INTEGER(c_int)     :: active
+    END TYPE
+    
     TYPE :: ScopedPerfTimer
         PRIVATE
-        INTEGER(c_int64_t) :: handle
+        TYPE(TracyCtxF) :: handle
         
         CONTAINS
         PROCEDURE, PUBLIC :: init => constructor
         FINAL :: destroy
     END TYPE
+
+    INTERFACE
+        FUNCTION TRACY_ALLOC_SRCLOC(line, source, sourceSz, function, functionSz) BIND(C, NAME='___tracy_alloc_srcloc')
+            IMPORT :: c_int32_t, c_int64_t, c_ptr, c_long, c_char
+            INTEGER(c_int32_t), VALUE :: line
+            CHARACTER(c_char), INTENT(IN), DIMENSION(*) :: source
+            CHARACTER(c_char), INTENT(IN), DIMENSION(*) :: function
+            INTEGER(c_long)   , VALUE :: sourceSz
+            INTEGER(c_long)   , VALUE :: functionSz
+            INTEGER(c_int64_t)        :: TRACEZONE_SRCLOC
+        END FUNCTION
+
+        FUNCTION TRACY_EMIT_ZONE_BEGIN_ALLOC(srcloc, active) BIND(C, NAME='___tracy_emit_zone_begin_alloc')
+            IMPORT :: c_int64_t, c_int, TracyCtxF
+            INTEGER(c_int64_t), VALUE :: srcloc
+            INTEGER(c_int)    , VALUE :: active
+            TYPE(TracyCtxF)           :: TRACY_EMIT_ZONE_BEGIN_ALLOC
+        END FUNCTION
+
+        SUBROUTINE TRACY_EMIT_ZONE_END(ctx) bind(C, NAME='___tracy_emit_zone_end')
+            IMPORT :: TracyCtxF
+            TYPE(TracyCtxF), VALUE :: ctx
+        END SUBROUTINE
+    END INTERFACE
             
     CONTAINS
 
@@ -145,62 +72,30 @@ MODULE MOD_PERFPROF
         DEALLOCATE(c_string)
     END SUBROUTINE
 
-    SUBROUTINE constructor(this, name, line)
+    SUBROUTINE constructor(this, name, line, file)
         USE, INTRINSIC :: iso_c_binding
         CHARACTER(LEN=*), INTENT(IN) :: name
-        INTEGER, INTENT(IN)          :: line
+        CHARACTER(LEN=*), INTENT(IN) :: file
+        INTEGER(4)      , INTENT(IN) :: line
         CLASS(ScopedPerfTimer)       :: this
 
-        CHARACTER(c_char), DIMENSION(:), POINTER :: c_name
-        INTEGER(c_int64_t)                       :: handle
-#ifdef PPROF 
-        ! NOTE: (César) Not very efficient memory-wise
-        CALL F_C_STRING_ALLOC(name, c_name)
-        this%handle = stperf_StartProf(c_name(1), line, c_null_char)
-        CALL F_C_STRING_DEALLOC(c_name)
-#endif
+        ! CHARACTER(c_char), DIMENSION(:), POINTER :: c_name
+
+        TYPE(TracyCtxF)    :: ctx
+        INTEGER(c_int64_t) :: loc
+        INTEGER(c_long)    :: funcsz
+        INTEGER(c_long)    :: sourcesz
+
+        funcsz = LEN(name)
+        sourcesz = LEN(file)
+
+        loc = TRACY_ALLOC_SRCLOC(line, file//CHAR(0), sourcesz, name//CHAR(0), funcsz)
+        this%handle = TRACY_EMIT_ZONE_BEGIN_ALLOC(loc, 1)
     END SUBROUTINE
 
     SUBROUTINE destroy(this)
         TYPE(ScopedPerfTimer), INTENT(INOUT) :: this
-#ifdef PPROF
-        CALL stperf_StopProf(this%handle)
-#endif
-    END SUBROUTINE
 
-    SUBROUTINE SHUTDOWN_PERF_PROF()
-        TYPE(stperf_PerfNodeThreadList_t) :: nodes
-        TYPE(c_ptr) :: c_report, c_dotfile
-        INTEGER(c_size_t) :: c_report_size, c_dotfile_size
-        CHARACTER(LEN=:), ALLOCATABLE :: f_report, f_dotfile
-
-#ifdef PPROF
-        CALL LOG_TRACE('Finalizing performance profiling.')
-        CALL stperf_StopCounters()
-        nodes = stperf_GetCallTree()
-        c_report = stperf_GetCallTreeString(nodes)
-        c_dotfile = stperf_GetCallTreeDot()
-
-        CALL C_STRING_SIZE(c_report, c_report_size)
-        CALL C_STRING_SIZE(c_dotfile, c_dotfile_size)
-
-        ALLOCATE(CHARACTER(LEN=c_report_size)  :: f_report)
-        ALLOCATE(CHARACTER(LEN=c_dotfile_size) :: f_dotfile)
-        
-        CALL C_F_STRING(c_report, f_report)
-        CALL C_F_STRING(c_dotfile, f_dotfile)
-
-        CALL LOG_TRACE('PPROF dump:'//NEW_LINE('N')//TRIM(f_report))
-
-        CALL LOG_MESSAGE('Writing nf_pprof.dot...')
-        OPEN(7, FILE='nf_pprof.dot', STATUS='unknown')
-        WRITE(7,'(a)') f_dotfile
-        CLOSE(7)
-
-        DEALLOCATE(f_report, f_dotfile)
-
-        CALL stperf_FreeCallTreeString(c_report)
-        CALL stperf_FreeCallTree(nodes)
-#endif
+        CALL TRACY_EMIT_ZONE_END(this%handle)
     END SUBROUTINE
 END MODULE MOD_PERFPROF

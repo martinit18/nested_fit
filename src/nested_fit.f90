@@ -194,10 +194,8 @@ PROGRAM NESTED_FIT
    END SUBROUTINE
   END INTERFACE
 
-#ifdef PPROF
   ! Start the top tree profiling (keep this as the first subroutine call)
   PROFILED(Nested_fit)
-#endif
 
   ! Init the logger file
   CALL START_LOG()
@@ -879,9 +877,6 @@ PROGRAM NESTED_FIT
 
   ! Close the logger file
   CALL CLOSE_LOG()
-
-  ! Shutdown the performance profiling
-  CALL SHUTDOWN_PERF_PROF()
 
   CONTAINS
 

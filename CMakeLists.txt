@@ -65,27 +65,35 @@ set(CMAKE_CXX_STANDARD 14)
 #    find_package(LAPACK REQUIRED)
 #endif()
 
-if(PPROF)
-    add_definitions(-DPPROF)
-    include(FetchContent)
-    FetchContent_Declare(
-        stperf
-        GIT_REPOSITORY https://github.com/lPrimemaster/stperf.git
-    )
-    FetchContent_MakeAvailable(stperf)
+# Performance profiling
+add_definitions(-DPPROF)
+include(FetchContent)
+FetchContent_Declare(
+    tracy
+    GIT_REPOSITORY https://github.com/wolfpld/tracy.git
+    GIT_TAG v0.10
+    GIT_SHALLOW TRUE
+    GIT_PROGRESS TRUE
+)
 
-    # BUG: (César) This is probably a GNU only way of defining macros from the CLI
-    add_definitions("-D'PASTE(x)'='x' -D'CAT(x,y)'='PASTE(x)y'")
-    add_definitions("-D'PROFILED(x)'='TYPE(ScopedPerfTimer) :: CAT(x,__LINE__); CALL CAT(x,__LINE__)%init(\"x\",__LINE__);'")
-else()
-    # Make so that C++ does not complaint
-    add_definitions(-DST_PROF)
-    add_definitions("-D'ST_PROF_NAMED(name)'")
-    set(CXX_SUPPRESS_STPROF -Wno-unused-value)
-
-    # Make so that Fortran does not complaint
-    add_definitions("-D'PROFILED(x)'=''")
+# NOTE: (César) : MakeAvailable only supports EXCLUDE_FROM_ALL after
+#                 cmake 3.28, so we add this workaround for 3.10 compat
+#                 FetchContent_MakeAvailable(tracy)
+FetchContent_GetProperties(tracy)
+if(NOT tracy_POPULATED)
+  FetchContent_Populate(tracy)
+  add_subdirectory(${tracy_SOURCE_DIR} ${tracy_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
+
+if(PPROF)
+    add_definitions(-DTRACY_ENABLE -DTRACY_NO_EXIT)
+endif()
+
+# BUG: (César) This is probably a GNU only way of defining macros from the CLI
+add_definitions("-D'PASTE(x)'='x' -D'CAT(x,y)'='PASTE(x)y'")
+# add_definitions("-D'PROFILED(x)'='TYPE(ScopedPerfTimer) :: CAT(x,__LINE__); CALL CAT(x,__LINE__)%init(\"x\",__LINE__,__FILE__);'")
+
+add_definitions("-D'PROFILED(x)'=''")
 
 if(NOT INSTALL_SYSTEM_WIDE)
     if(WIN32)
@@ -379,13 +387,11 @@ endif()
 target_link_libraries(${nested_fit_target}      PUBLIC dl)
 target_link_libraries(${nested_fit_target_func} PUBLIC dl)
 
-if(PPROF)
-    target_include_directories(${nested_fit_target}      PRIVATE ${stperf_SOURCE_DIR})
-    target_include_directories(${nested_fit_target_func} PRIVATE ${stperf_SOURCE_DIR})
+target_include_directories(${nested_fit_target}      PRIVATE ${tracy_SOURCE_DIR})
+target_include_directories(${nested_fit_target_func} PRIVATE ${tracy_SOURCE_DIR})
 
-    target_link_libraries(${nested_fit_target}      PRIVATE stperf)
-    target_link_libraries(${nested_fit_target_func} PRIVATE stperf)
-endif()
+target_link_libraries(${nested_fit_target}      PRIVATE TracyClient)
+target_link_libraries(${nested_fit_target_func} PRIVATE TracyClient)
 
 if(OPENMP)
     target_link_options(${nested_fit_target}      PRIVATE "-fopenmp")

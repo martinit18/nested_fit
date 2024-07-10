@@ -13,9 +13,7 @@
 #include <map>
 #include <sstream>
 
-#ifdef PPROF
-#include <stperf.h>
-#endif
+#include <public/tracy/Tracy.hpp>
 
 extern "C" struct NativeOutput
 {
@@ -46,7 +44,7 @@ static const std::map<int, std::string> error_map = {
 
 static std::string OpenFile(const char* filename, int* error)
 {
-    ST_PROF;
+    ZoneScoped;
     std::ifstream file(filename);
     if(!file.is_open())
     {
@@ -61,7 +59,7 @@ static std::string OpenFile(const char* filename, int* error)
 
 static void StripCommentsAndDefines(const std::string& lang, std::string& fileData)
 {
-    ST_PROF;
+    ZoneScoped;
     if(lang == "cpp")
     {
         // Only strip starting comments
@@ -77,7 +75,7 @@ static void StripCommentsAndDefines(const std::string& lang, std::string& fileDa
 
 static std::vector<std::string> FindFunctionParams(const std::string& lang, const std::string& func, int* error)
 {
-    ST_PROF;
+    ZoneScoped;
     const std::string param_dcl_macro = "DCL_VAR"; // TODO(César): This could come from CMake config
     std::string mutable_func = func;
 
@@ -116,7 +114,7 @@ static std::vector<std::string> FindFunctionParams(const std::string& lang, cons
 
 static std::string FindExportFunction(const std::string& lang, const std::string& filedata, int* error)
 {
-    ST_PROF;
+    ZoneScoped;
     std::smatch match;
     const std::string func_dcl_macro = "NF_FUNC_EXPORT"; // TODO(César): This could come from CMake config
     std::regex func_regex(func_dcl_macro + (lang == "cpp" ? " +([\\s\\S]*})" : " +([\\s\\S]*(END FUNCTION|end function))"));
@@ -148,7 +146,7 @@ static std::string FindExportFunction(const std::string& lang, const std::string
 
 static std::string FindFunctionName(const std::string& lang, const std::string& func, int* error)
 {
-    ST_PROF;
+    ZoneScoped;
     std::smatch match;
     if(lang == "cpp")
     {
@@ -253,7 +251,7 @@ static std::string FindFunctionName(const std::string& lang, const std::string& 
 
 extern "C" NativeOutput ParseNativeFunc(const char* lang, const char* filename)
 {
-    ST_PROF;
+    ZoneScoped;
     NativeOutput output;
 
     output.error = NTP_ERR_NOERR;
@@ -292,7 +290,7 @@ extern "C" NativeOutput ParseNativeFunc(const char* lang, const char* filename)
 
 extern "C" void FreeNativeOutput(NativeOutput* output)
 {
-    ST_PROF;
+    ZoneScoped;
     if(output != nullptr)
     {
         if(output->function_name)   free(output->function_name);
@@ -302,7 +300,7 @@ extern "C" void FreeNativeOutput(NativeOutput* output)
 
 extern "C" void GetNativeErrorMsg(NativeOutput* output, char* buffer)
 {
-    ST_PROF;
+    ZoneScoped;
     if(output->error)
     {
         strcpy(buffer, error_map.at(output->error).c_str());
