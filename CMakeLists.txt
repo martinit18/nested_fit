@@ -166,6 +166,7 @@ ac_dec_obj_dep("src/Mod_search_new_point" "src/Mod_perfprof") # Performance prof
 ac_dec_obj_dep("src/Mod_likelihood" "src/Mod_userfcn")
 ac_dec_obj_dep("src/Mod_userfcn" "src/funceval/auto_func")
 ac_dec_obj_dep("src/funceval/auto_func" "src/Mod_metadata")
+ac_dec_obj_dep("src/funceval/auto_func" "src/helper/strutil")
 ac_dec_obj_dep("src/funceval/auto_func" "src/Mod_options")
 ac_dec_obj_dep("src/Mod_likelihood" "src/Mod_math")
 ac_dec_obj_dep("src/nested_fit" "src/Mod_input_parse")

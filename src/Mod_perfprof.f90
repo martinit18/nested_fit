@@ -20,12 +20,14 @@ MODULE MOD_PERFPROF
     TYPE :: ScopedPerfTimer
         PRIVATE
         TYPE(TracyCtxF) :: handle
-        
+#ifdef PPROF
         CONTAINS
         PROCEDURE, PUBLIC :: init => constructor
         FINAL :: destroy
+#endif
     END TYPE
 
+#ifdef PPROF
     INTERFACE
         FUNCTION TRACY_ALLOC_SRCLOC(line, source, sourceSz, function, functionSz) BIND(C, NAME='___tracy_alloc_srcloc')
             IMPORT :: c_int32_t, c_int64_t, c_ptr, c_long, c_char
@@ -49,7 +51,7 @@ MODULE MOD_PERFPROF
             TYPE(TracyCtxF), VALUE :: ctx
         END SUBROUTINE
     END INTERFACE
-            
+
     CONTAINS
 
     SUBROUTINE F_C_STRING_ALLOC(f_string, c_string)
@@ -98,4 +100,5 @@ MODULE MOD_PERFPROF
 
         CALL TRACY_EMIT_ZONE_END(this%handle)
     END SUBROUTINE
+#endif
 END MODULE MOD_PERFPROF

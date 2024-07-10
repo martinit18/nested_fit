@@ -65,6 +65,9 @@ AC_SUBST(nested_fit_target, [@nested_fit_target@])
 AC_SUBST(nested_fit_target_func, [@nested_fit_target_func@])
 AC_MSG_NOTICE([Setting version -- $nested_fit_target])
 
+# Tracy is disabled on configure
+AC_DEFINE([ZoneScoped])
+
 # envsubst < Mod_metadata.f90.in > Mod_metadata.f90
 AC_CONFIG_FILES([src/Mod_metadata.f90])
 AC_MSG_NOTICE([Writing metadata file.])
