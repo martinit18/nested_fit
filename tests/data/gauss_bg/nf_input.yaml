@@ -12,7 +12,8 @@ data:
   xmin: 0
   ymax: 0
   ymin: 0
-datafiles: he-histo.csv
+datafiles: he-histo.dat
+filefmt: .tsv
 function:
   expression: gauss(x, A_0, A_1, A_2, u_0, u_1, u_2, s, b) = \frac{A_0}{s\sqrt{2\pi}}
     \exp{-\frac{(x-u_0)^2}{2s^2}} + \frac{A_1}{s\sqrt{2\pi}} \exp{-\frac{(x-u_1)^2}{2s^2}}
@@ -69,4 +70,4 @@ search:
   param2: 3
   tries_mult: 100
 specstr: x,c
-version: 5.1
+version: 5.2

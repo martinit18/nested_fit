@@ -895,7 +895,7 @@ PROGRAM NESTED_FIT
        par_m68_w,par_p68_w,par_m95_w,par_p95_w,par_m99_w,par_p99_w)
   ! Dellocate parallel stuff
   IF(mpi_rank.EQ.0) THEN
-      DEALLOCATE(live_like_final_try,live_birth_final,live_rank_final,weight_try,live_final_try,live_max_try, &
+      DEALLOCATE(live_like_final_try,live_birth_final_try,live_rank_final_try,weight_try,live_final_try,live_max_try, &
             nall_try,evsum_final_try,live_like_max_try)
   ENDIF
 

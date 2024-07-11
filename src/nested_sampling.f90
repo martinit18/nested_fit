@@ -327,12 +327,12 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
            nstep_final = n - 1
            GOTO 601
         END IF
-   ELSE IF(ANY(too_many_tries)) THEN ! TODO Redo it to work with MPI
+    ELSE IF(ANY(too_many_tries)) THEN ! TODO Redo it to work with MPI
          !If at least one search failed to find a new point, a cluster analysis will be performed after adding the points from the successful searches if clustering is used. Otherwise, the run will end.
-    #ifdef OPENMPI_ON
+#ifdef OPENMPI_ON
             ! Signal final data MAXED_OUT
             CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_DONE_MANY_TRIES, mpi_child_writter_comm, mpi_ierror)
-    #endif
+#endif
             IF (make_cluster) THEN
                IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
                   CALL LOG_ERROR_HEADER()

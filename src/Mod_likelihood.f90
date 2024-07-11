@@ -938,7 +938,7 @@ CONTAINS
 
     CALL LOG_MESSAGE_HEADER()
     CALL LOG_MESSAGE('End of likelihood test.')
-    CALL LOG_MESSAGE('Number of calls : '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ncall))))
+    CALL LOG_MESSAGE('Number of calls : '//TRIM(ADJUSTL(INT8_TO_STR_INLINE(ncall))))
     CALL LOG_MESSAGE_HEADER()
     OPEN(11,FILE='nf_output_n_likelihood_calls.txt',STATUS= 'UNKNOWN')
     WRITE(11,*) ncall
