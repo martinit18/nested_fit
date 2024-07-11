@@ -5532,6 +5532,10 @@ nested_fit_target_func=nested_fit_func5.2.5
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Setting version -- $nested_fit_target" >&5
 printf "%s\n" "$as_me: Setting version -- $nested_fit_target" >&6;}
 
+# Tracy is disabled on configure
+printf "%s\n" "#define ZoneScoped 1" >>confdefs.h
+
+
 # envsubst < Mod_metadata.f90.in > Mod_metadata.f90
 ac_config_files="$ac_config_files src/Mod_metadata.f90"
 

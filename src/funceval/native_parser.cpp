@@ -13,7 +13,9 @@
 #include <map>
 #include <sstream>
 
+#ifdef PPROF
 #include <public/tracy/Tracy.hpp>
+#endif
 
 extern "C" struct NativeOutput
 {

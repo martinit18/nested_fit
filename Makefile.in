@@ -167,7 +167,10 @@ am_nested_fit_func5_2_5_OBJECTS =  \
 	src/DIERCKX/nested_fit_func5_2_5-splev.$(OBJEXT) \
 	src/nested_fit_func5_2_5-Mod_cluster_analysis.$(OBJEXT) \
 	src/nested_fit_func5_2_5-Mod_parameters.$(OBJEXT) \
+<<<<<<< HEAD
 	src/nested_fit_func5_2_5-Mod_covariance_matrix.$(OBJEXT) \
+=======
+>>>>>>> experimental
 	src/nested_fit_func5_2_5-Mod_search_new_point.$(OBJEXT) \
 	src/nested_fit_func5_2_5-Mod_timestamp.$(OBJEXT) \
 	src/nested_fit_func5_2_5-Mod_mpi.$(OBJEXT) \
@@ -450,6 +453,7 @@ nested_fit5_2_5_SOURCES = src/SLATEC/dpsort.f src/SLATEC/fdump.f \
 	src/DIERCKX/fpcurf.f src/DIERCKX/fpdisc.f src/DIERCKX/fpgivs.f \
 	src/DIERCKX/fpknot.f src/DIERCKX/fprati.f src/DIERCKX/fprota.f \
 	src/DIERCKX/splev.f src/Mod_cluster_analysis.f90 \
+<<<<<<< HEAD
 	src/Mod_parameters.f90 src/Mod_covariance_matrix.f90 \
 	src/Mod_search_new_point.f90 src/Mod_timestamp.f90 \
 	src/Mod_mpi.f90 src/Mod_math.f90 src/init_interpolation.f \
@@ -464,6 +468,21 @@ nested_fit5_2_5_SOURCES = src/SLATEC/dpsort.f src/SLATEC/fdump.f \
 	src/USERFCN.f src/helper/console.cpp \
 	src/helper/disable_stdout.cpp src/funceval/latex_parser.cpp \
 	src/funceval/native_parser.cpp
+=======
+	src/Mod_parameters.f90 src/Mod_search_new_point.f90 \
+	src/Mod_timestamp.f90 src/Mod_mpi.f90 src/Mod_math.f90 \
+	src/init_interpolation.f src/nested_fit.f90 \
+	src/nested_sampling.f90 src/rinteg.f src/shirley_fitpack.f90 \
+	src/cli/argparse.f90 src/Mod_options.f90 \
+	src/funceval/auto_func.f90 src/functions/WOFZ.f \
+	src/helper/hash.f90 src/Mod_input_parse.f90 src/Mod_jsonio.f90 \
+	src/Mod_userfcn.f90 src/Mod_logger.f90 src/Mod_perfprof.f90 \
+	src/helper/halt.f90 src/helper/strutil.f90 \
+	src/helper/int_stack.f90 src/Mod_likelihood.f90 \
+	src/USERFCN_2D.f90 src/USERFCN_SET.f src/USERFCN.f \
+	src/helper/console.cpp src/helper/disable_stdout.cpp \
+	src/funceval/latex_parser.cpp src/funceval/native_parser.cpp
+>>>>>>> experimental
 nested_fit_func5_2_5_SOURCES = src/SLATEC/dpsort.f src/SLATEC/fdump.f \
 	src/SLATEC/i1mach.f src/SLATEC/j4save.f src/SLATEC/xercnt.f \
 	src/SLATEC/xerhlt.f src/SLATEC/xermsg.f src/SLATEC/xerprn.f \
@@ -472,6 +491,7 @@ nested_fit_func5_2_5_SOURCES = src/SLATEC/dpsort.f src/SLATEC/fdump.f \
 	src/DIERCKX/fpcurf.f src/DIERCKX/fpdisc.f src/DIERCKX/fpgivs.f \
 	src/DIERCKX/fpknot.f src/DIERCKX/fprati.f src/DIERCKX/fprota.f \
 	src/DIERCKX/splev.f src/Mod_cluster_analysis.f90 \
+<<<<<<< HEAD
 	src/Mod_parameters.f90 src/Mod_covariance_matrix.f90 \
 	src/Mod_search_new_point.f90 src/Mod_timestamp.f90 \
 	src/Mod_mpi.f90 src/Mod_math.f90 src/init_interpolation.f \
@@ -485,6 +505,20 @@ nested_fit_func5_2_5_SOURCES = src/SLATEC/dpsort.f src/SLATEC/fdump.f \
 	src/Mod_likelihood_func.f90 src/helper/console.cpp \
 	src/helper/disable_stdout.cpp src/funceval/latex_parser.cpp \
 	src/funceval/native_parser.cpp
+=======
+	src/Mod_parameters.f90 src/Mod_search_new_point.f90 \
+	src/Mod_timestamp.f90 src/Mod_mpi.f90 src/Mod_math.f90 \
+	src/init_interpolation.f src/nested_fit.f90 \
+	src/nested_sampling.f90 src/rinteg.f src/shirley_fitpack.f90 \
+	src/cli/argparse.f90 src/Mod_options.f90 \
+	src/funceval/auto_func.f90 src/functions/WOFZ.f \
+	src/helper/hash.f90 src/Mod_input_parse.f90 src/Mod_jsonio.f90 \
+	src/Mod_userfcn.f90 src/Mod_logger.f90 src/Mod_perfprof.f90 \
+	src/helper/halt.f90 src/helper/strutil.f90 \
+	src/helper/int_stack.f90 src/Mod_likelihood_func.f90 \
+	src/helper/console.cpp src/helper/disable_stdout.cpp \
+	src/funceval/latex_parser.cpp src/funceval/native_parser.cpp
+>>>>>>> experimental
 nested_fit_func5_2_5_CPPFLAGS = -DFUNC_TARGET
 nested_fit_func5_2_5_FCFLAGS = -DFUNC_TARGET
 nested_fit_func5_2_5_FFLAGS = -DFUNC_TARGET
@@ -802,10 +836,15 @@ src/nested_fit_func5_2_5-Mod_cluster_analysis.$(OBJEXT):  \
 	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/nested_fit_func5_2_5-Mod_parameters.$(OBJEXT):  \
 	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+<<<<<<< HEAD
 src/nested_fit_func5_2_5-Mod_covariance_matrix.$(OBJEXT):  \
 	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/nested_fit_func5_2_5-Mod_search_new_point.$(OBJEXT):  \
 	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+=======
+src/nested_fit_func5_2_5-Mod_search_new_point.$(OBJEXT):  \
+	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+>>>>>>> experimental
 src/nested_fit_func5_2_5-Mod_timestamp.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/nested_fit_func5_2_5-Mod_mpi.$(OBJEXT): src/$(am__dirstamp) \
@@ -1141,6 +1180,7 @@ src/nested_fit_func5_2_5-Mod_parameters.o: src/Mod_parameters.f90
 src/nested_fit_func5_2_5-Mod_parameters.obj: src/Mod_parameters.f90
 	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-Mod_parameters.obj `if test -f 'src/Mod_parameters.f90'; then $(CYGPATH_W) 'src/Mod_parameters.f90'; else $(CYGPATH_W) '$(srcdir)/src/Mod_parameters.f90'; fi`
 
+<<<<<<< HEAD
 src/nested_fit_func5_2_5-Mod_covariance_matrix.o: src/Mod_covariance_matrix.f90
 	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-Mod_covariance_matrix.o `test -f 'src/Mod_covariance_matrix.f90' || echo '$(srcdir)/'`src/Mod_covariance_matrix.f90
 
@@ -1258,6 +1298,119 @@ src/helper/nested_fit_func5_2_5-strutil.obj: src/helper/strutil.f90
 src/helper/nested_fit_func5_2_5-int_stack.o: src/helper/int_stack.f90
 	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/helper/nested_fit_func5_2_5-int_stack.o `test -f 'src/helper/int_stack.f90' || echo '$(srcdir)/'`src/helper/int_stack.f90
 
+=======
+src/nested_fit_func5_2_5-Mod_search_new_point.o: src/Mod_search_new_point.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-Mod_search_new_point.o `test -f 'src/Mod_search_new_point.f90' || echo '$(srcdir)/'`src/Mod_search_new_point.f90
+
+src/nested_fit_func5_2_5-Mod_search_new_point.obj: src/Mod_search_new_point.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-Mod_search_new_point.obj `if test -f 'src/Mod_search_new_point.f90'; then $(CYGPATH_W) 'src/Mod_search_new_point.f90'; else $(CYGPATH_W) '$(srcdir)/src/Mod_search_new_point.f90'; fi`
+
+src/nested_fit_func5_2_5-Mod_timestamp.o: src/Mod_timestamp.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-Mod_timestamp.o `test -f 'src/Mod_timestamp.f90' || echo '$(srcdir)/'`src/Mod_timestamp.f90
+
+src/nested_fit_func5_2_5-Mod_timestamp.obj: src/Mod_timestamp.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-Mod_timestamp.obj `if test -f 'src/Mod_timestamp.f90'; then $(CYGPATH_W) 'src/Mod_timestamp.f90'; else $(CYGPATH_W) '$(srcdir)/src/Mod_timestamp.f90'; fi`
+
+src/nested_fit_func5_2_5-Mod_mpi.o: src/Mod_mpi.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-Mod_mpi.o `test -f 'src/Mod_mpi.f90' || echo '$(srcdir)/'`src/Mod_mpi.f90
+
+src/nested_fit_func5_2_5-Mod_mpi.obj: src/Mod_mpi.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-Mod_mpi.obj `if test -f 'src/Mod_mpi.f90'; then $(CYGPATH_W) 'src/Mod_mpi.f90'; else $(CYGPATH_W) '$(srcdir)/src/Mod_mpi.f90'; fi`
+
+src/nested_fit_func5_2_5-Mod_math.o: src/Mod_math.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-Mod_math.o `test -f 'src/Mod_math.f90' || echo '$(srcdir)/'`src/Mod_math.f90
+
+src/nested_fit_func5_2_5-Mod_math.obj: src/Mod_math.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-Mod_math.obj `if test -f 'src/Mod_math.f90'; then $(CYGPATH_W) 'src/Mod_math.f90'; else $(CYGPATH_W) '$(srcdir)/src/Mod_math.f90'; fi`
+
+src/nested_fit_func5_2_5-nested_fit.o: src/nested_fit.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-nested_fit.o `test -f 'src/nested_fit.f90' || echo '$(srcdir)/'`src/nested_fit.f90
+
+src/nested_fit_func5_2_5-nested_fit.obj: src/nested_fit.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-nested_fit.obj `if test -f 'src/nested_fit.f90'; then $(CYGPATH_W) 'src/nested_fit.f90'; else $(CYGPATH_W) '$(srcdir)/src/nested_fit.f90'; fi`
+
+src/nested_fit_func5_2_5-nested_sampling.o: src/nested_sampling.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-nested_sampling.o `test -f 'src/nested_sampling.f90' || echo '$(srcdir)/'`src/nested_sampling.f90
+
+src/nested_fit_func5_2_5-nested_sampling.obj: src/nested_sampling.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-nested_sampling.obj `if test -f 'src/nested_sampling.f90'; then $(CYGPATH_W) 'src/nested_sampling.f90'; else $(CYGPATH_W) '$(srcdir)/src/nested_sampling.f90'; fi`
+
+src/nested_fit_func5_2_5-shirley_fitpack.o: src/shirley_fitpack.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-shirley_fitpack.o `test -f 'src/shirley_fitpack.f90' || echo '$(srcdir)/'`src/shirley_fitpack.f90
+
+src/nested_fit_func5_2_5-shirley_fitpack.obj: src/shirley_fitpack.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-shirley_fitpack.obj `if test -f 'src/shirley_fitpack.f90'; then $(CYGPATH_W) 'src/shirley_fitpack.f90'; else $(CYGPATH_W) '$(srcdir)/src/shirley_fitpack.f90'; fi`
+
+src/cli/nested_fit_func5_2_5-argparse.o: src/cli/argparse.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/cli/nested_fit_func5_2_5-argparse.o `test -f 'src/cli/argparse.f90' || echo '$(srcdir)/'`src/cli/argparse.f90
+
+src/cli/nested_fit_func5_2_5-argparse.obj: src/cli/argparse.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/cli/nested_fit_func5_2_5-argparse.obj `if test -f 'src/cli/argparse.f90'; then $(CYGPATH_W) 'src/cli/argparse.f90'; else $(CYGPATH_W) '$(srcdir)/src/cli/argparse.f90'; fi`
+
+src/nested_fit_func5_2_5-Mod_options.o: src/Mod_options.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-Mod_options.o `test -f 'src/Mod_options.f90' || echo '$(srcdir)/'`src/Mod_options.f90
+
+src/nested_fit_func5_2_5-Mod_options.obj: src/Mod_options.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-Mod_options.obj `if test -f 'src/Mod_options.f90'; then $(CYGPATH_W) 'src/Mod_options.f90'; else $(CYGPATH_W) '$(srcdir)/src/Mod_options.f90'; fi`
+
+src/funceval/nested_fit_func5_2_5-auto_func.o: src/funceval/auto_func.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/funceval/nested_fit_func5_2_5-auto_func.o `test -f 'src/funceval/auto_func.f90' || echo '$(srcdir)/'`src/funceval/auto_func.f90
+
+src/funceval/nested_fit_func5_2_5-auto_func.obj: src/funceval/auto_func.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/funceval/nested_fit_func5_2_5-auto_func.obj `if test -f 'src/funceval/auto_func.f90'; then $(CYGPATH_W) 'src/funceval/auto_func.f90'; else $(CYGPATH_W) '$(srcdir)/src/funceval/auto_func.f90'; fi`
+
+src/helper/nested_fit_func5_2_5-hash.o: src/helper/hash.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/helper/nested_fit_func5_2_5-hash.o `test -f 'src/helper/hash.f90' || echo '$(srcdir)/'`src/helper/hash.f90
+
+src/helper/nested_fit_func5_2_5-hash.obj: src/helper/hash.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/helper/nested_fit_func5_2_5-hash.obj `if test -f 'src/helper/hash.f90'; then $(CYGPATH_W) 'src/helper/hash.f90'; else $(CYGPATH_W) '$(srcdir)/src/helper/hash.f90'; fi`
+
+src/nested_fit_func5_2_5-Mod_input_parse.o: src/Mod_input_parse.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-Mod_input_parse.o `test -f 'src/Mod_input_parse.f90' || echo '$(srcdir)/'`src/Mod_input_parse.f90
+
+src/nested_fit_func5_2_5-Mod_input_parse.obj: src/Mod_input_parse.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-Mod_input_parse.obj `if test -f 'src/Mod_input_parse.f90'; then $(CYGPATH_W) 'src/Mod_input_parse.f90'; else $(CYGPATH_W) '$(srcdir)/src/Mod_input_parse.f90'; fi`
+
+src/nested_fit_func5_2_5-Mod_jsonio.o: src/Mod_jsonio.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-Mod_jsonio.o `test -f 'src/Mod_jsonio.f90' || echo '$(srcdir)/'`src/Mod_jsonio.f90
+
+src/nested_fit_func5_2_5-Mod_jsonio.obj: src/Mod_jsonio.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-Mod_jsonio.obj `if test -f 'src/Mod_jsonio.f90'; then $(CYGPATH_W) 'src/Mod_jsonio.f90'; else $(CYGPATH_W) '$(srcdir)/src/Mod_jsonio.f90'; fi`
+
+src/nested_fit_func5_2_5-Mod_userfcn.o: src/Mod_userfcn.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-Mod_userfcn.o `test -f 'src/Mod_userfcn.f90' || echo '$(srcdir)/'`src/Mod_userfcn.f90
+
+src/nested_fit_func5_2_5-Mod_userfcn.obj: src/Mod_userfcn.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-Mod_userfcn.obj `if test -f 'src/Mod_userfcn.f90'; then $(CYGPATH_W) 'src/Mod_userfcn.f90'; else $(CYGPATH_W) '$(srcdir)/src/Mod_userfcn.f90'; fi`
+
+src/nested_fit_func5_2_5-Mod_logger.o: src/Mod_logger.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-Mod_logger.o `test -f 'src/Mod_logger.f90' || echo '$(srcdir)/'`src/Mod_logger.f90
+
+src/nested_fit_func5_2_5-Mod_logger.obj: src/Mod_logger.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-Mod_logger.obj `if test -f 'src/Mod_logger.f90'; then $(CYGPATH_W) 'src/Mod_logger.f90'; else $(CYGPATH_W) '$(srcdir)/src/Mod_logger.f90'; fi`
+
+src/nested_fit_func5_2_5-Mod_perfprof.o: src/Mod_perfprof.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-Mod_perfprof.o `test -f 'src/Mod_perfprof.f90' || echo '$(srcdir)/'`src/Mod_perfprof.f90
+
+src/nested_fit_func5_2_5-Mod_perfprof.obj: src/Mod_perfprof.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/nested_fit_func5_2_5-Mod_perfprof.obj `if test -f 'src/Mod_perfprof.f90'; then $(CYGPATH_W) 'src/Mod_perfprof.f90'; else $(CYGPATH_W) '$(srcdir)/src/Mod_perfprof.f90'; fi`
+
+src/helper/nested_fit_func5_2_5-halt.o: src/helper/halt.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/helper/nested_fit_func5_2_5-halt.o `test -f 'src/helper/halt.f90' || echo '$(srcdir)/'`src/helper/halt.f90
+
+src/helper/nested_fit_func5_2_5-halt.obj: src/helper/halt.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/helper/nested_fit_func5_2_5-halt.obj `if test -f 'src/helper/halt.f90'; then $(CYGPATH_W) 'src/helper/halt.f90'; else $(CYGPATH_W) '$(srcdir)/src/helper/halt.f90'; fi`
+
+src/helper/nested_fit_func5_2_5-strutil.o: src/helper/strutil.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/helper/nested_fit_func5_2_5-strutil.o `test -f 'src/helper/strutil.f90' || echo '$(srcdir)/'`src/helper/strutil.f90
+
+src/helper/nested_fit_func5_2_5-strutil.obj: src/helper/strutil.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/helper/nested_fit_func5_2_5-strutil.obj `if test -f 'src/helper/strutil.f90'; then $(CYGPATH_W) 'src/helper/strutil.f90'; else $(CYGPATH_W) '$(srcdir)/src/helper/strutil.f90'; fi`
+
+src/helper/nested_fit_func5_2_5-int_stack.o: src/helper/int_stack.f90
+	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/helper/nested_fit_func5_2_5-int_stack.o `test -f 'src/helper/int_stack.f90' || echo '$(srcdir)/'`src/helper/int_stack.f90
+
+>>>>>>> experimental
 src/helper/nested_fit_func5_2_5-int_stack.obj: src/helper/int_stack.f90
 	$(AM_V_FC)$(FC) $(nested_fit_func5_2_5_FCFLAGS) $(FCFLAGS) -c -o src/helper/nested_fit_func5_2_5-int_stack.obj `if test -f 'src/helper/int_stack.f90'; then $(CYGPATH_W) 'src/helper/int_stack.f90'; else $(CYGPATH_W) '$(srcdir)/src/helper/int_stack.f90'; fi`
 
@@ -1665,6 +1818,7 @@ src/Mod_search_new_point.o: src/Mod_perfprof.o
 src/Mod_likelihood.o: src/Mod_userfcn.o
 src/Mod_userfcn.o: src/funceval/auto_func.o
 src/funceval/auto_func.o: src/Mod_metadata.o
+src/funceval/auto_func.o: src/helper/strutil.o
 src/funceval/auto_func.o: src/Mod_options.o
 src/Mod_likelihood.o: src/Mod_math.o
 src/nested_fit.o: src/Mod_input_parse.o
