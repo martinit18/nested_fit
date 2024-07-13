@@ -82,9 +82,27 @@ cmake ..
 ```
 
 3. Install nested_fit:
+
+```
+make
+```
+
+and then
+```
+make install
+```
+
+Alternatively, you can compile and install at once via
+
 ```sh
 cmake --build . --config Release --target install
 ```
+In this case the binary file will be installed in `$HOME/.local/bin`.
+To install in another directory run
+```sh
+cmake -DINSTALL_SYSTEM_WIDE=ON -DCMAKE_INSTALL_PREFIX=<your_dir> ..
+```
+instead of `cmake ..`, where `<your_dir>/bin`. See below for more details about cmake options.
 
 These command will build two different executables in the bin directory: 
 - `nested_fitXXX` for likelihood function maximisation for data analysis,
@@ -112,6 +130,13 @@ You can pass in options on the cmake generation step via: `cmake -D<option_name>
 These will prevail any time you run your build tools commands.
 
 With the last option, you can also specify a defined directory with in addition the option `-DCMAKE_INSTALL_PREFIX=<your_dir>`
+
+An useful example of configuration and compilation:
+```sh
+cmake -DOMPENMP=ON -DINSTALL_SYSTEM_WIDE=ON -DCMAKE_INSTALL_PREFIX=$HOME ..
+
+cmake --build . --config Release --target install 
+```
 
 ### From source (GNU autotools)
 :warning: This mode is only for compatibility and supports only a few features. The `CMake` method should be preferred if available.
