@@ -48,5 +48,5 @@ setup(
     cmdclass={'build_ext': NFBuildExt},
     ext_modules=[CMakeExt('nested_fit')],
     packages=find_packages(exclude=['src/']),
-    package_data={'': ['nested_py/*.py']}
+    package_data={'': ['nested_fit_py/*.py']}
 )

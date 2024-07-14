@@ -1376,7 +1376,7 @@ class Analysis(object):
 
         #---------------------------------------------------------------------------------------------------------------------
 
-    def triangle_plot(self,path=currentpath):
+    def triangle_plot_gd(self,path=currentpath):
         '''
         Triangle plot of all probability distributions using GetDist package
         '''
@@ -1391,6 +1391,49 @@ class Analysis(object):
 
         plt.show()
 
+        #---------------------------------------------------------------------------------------------------------------------
+
+    def triangle_plot(self,params,path=currentpath):
+        '''
+        Triangle plot of all probability distributions using Anesthetic package.
+        params: list of parameter names you want to plot
+        e.g. an.triangle_plot(['amp','sigma'],path = 'v4p5p4')
+        '''
+        from anesthetic import read_chains, make_2d_axes
+
+        self.path = path
+
+        
+        nested_samples = read_chains(path)
+        fig, axes = make_2d_axes(params)
+        nested_samples.plot_2d(axes)
+
+        plt.show()
+
+        #---------------------------------------------------------------------------------------------------------------------
+
+    def stats(self,nsamples=100,path=currentpath):
+        '''
+        Statistics from likelihood birth and dead values using Anesthetic package.
+        nsamples: number of samples for live points boot strap calculations.
+        Quantities of interst:
+        - logarithm of evidence
+        - Kullback–Leibler divergence
+        - log of likelihood average with respect to the priors
+        - (Gaussian) Bayesian model dimensionality (i.e. Bayesian complexity)
+        '''
+        from anesthetic import read_chains
+
+        self.path = path
+
+        # List of quantities of interest:
+        params = ['logZ', 'D_KL', 'logL_P', 'd_G']
+
+        
+        nested_samples = read_chains(path)
+        bayesian_stats = nested_samples.stats(nsamples)
+        for par in params:
+            print("{0} \t = {1:f} \t± {2:f}". format(par,bayesian_stats[par].mean(),bayesian_stats[par].std()))
 
 
         #---------------------------------------------------------------------------------------------------------------------

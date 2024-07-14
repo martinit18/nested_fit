@@ -29,6 +29,7 @@ dependencies = [
     "getdist",
     "tqdm",
     "plotly"
+    "anesthetic"
 ]
 
 [project.urls]

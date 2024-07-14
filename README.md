@@ -131,9 +131,9 @@ These will prevail any time you run your build tools commands.
 
 With the last option, you can also specify a defined directory with in addition the option `-DCMAKE_INSTALL_PREFIX=<your_dir>`
 
-An useful example of configuration and compilation:
+An useful example of configuration and compilation with parallelization and verbosity:
 ```sh
-cmake -DOMPENMP=ON -DINSTALL_SYSTEM_WIDE=ON -DCMAKE_INSTALL_PREFIX=$HOME ..
+cmake -DOPENMP=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DINSTALL_SYSTEM_WIDE=ON -DCMAKE_INSTALL_PREFIX=$HOME ..
 
 cmake --build . --config Release --target install 
 ```
