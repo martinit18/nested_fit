@@ -26,7 +26,17 @@ class CMakeExt(Extension):
 
 
 class NFBuildExt(build_ext):
+    def __init__(self, *args, **kwargs):
+
+        # Invoke build ext init
+        super().__init__(*args, **kwargs)
+
     def run(self):
+        # Support for editable mode
+        if self.editable_mode:
+            print('WARNING: Editable mode will not install nested_fit!')
+            return
+
         for ext in self.extensions:
             self.build_nf(ext)
         super().run()
