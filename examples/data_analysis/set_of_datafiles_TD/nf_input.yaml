@@ -5,12 +5,12 @@ specstr:    x,c
 likelihood: GAUSSIAN
 
 function:
-  expression: gauss_bg(x, A, x_0, s, b_g) = A / (s \sqrt{2\pi}) \exp{-(x-x_0)^2/(2s^2)} + b_g # like GAUSS_BG legacy function
+  expression: GAUSS_BG #legacy function
   params:
-    b_g:  { value: 0.11,    step: -1, min: 0,      max: 0.5}
-    x_0:  { value: 450,     step: -1, min: 400,    max: 600}
-    A:    { value: 300,     step: -1, min: 20,     max: 1000}
-    s:    { value: 20.0,    step: -1, min: 0,      max: 100}
+    b_g:  { value: 0.11,    step: -1, min: 0,      max: 0.5,  npar: 1 }
+    x_0:  { value: 450,     step: -1, min: 400,    max: 600,  npar: 2 }
+    A:    { value: 300,     step: -1, min: 20,     max: 1000, npar: 3 }
+    s:    { value: 20.0,    step: -1, min: 0,      max: 100,  npar: 4 }
 
 data: { xmin: 1, xmax: 1024, ymin: 0, ymax: 0 }
 # data_1: { xmin: 1, xmax: 99, ymin: 0, ymax: 0 }
