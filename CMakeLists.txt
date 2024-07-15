@@ -31,7 +31,6 @@ set(project_version ${CMAKE_MATCH_1})
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Global options
-option(DEBUG "Enable debug mode." OFF)
 option(NORNG "Uses the same set seed. Useful for testing." OFF)
 option(OPENMP "Enable/Disable OpenMP." OFF)
 option(OPENMPI "Enable/Disable OpenMPI." OFF)
@@ -64,6 +63,9 @@ set(CMAKE_CXX_STANDARD 14)
 #    find_package(BLAS REQUIRED)
 #    find_package(LAPACK REQUIRED)
 #endif()
+
+# Manifest writing tool
+include(cmake/write_manifest.cmake)
 
 # Performance profiling
 add_definitions(-DPPROF)
@@ -230,6 +232,15 @@ file(GLOB SRC_SLATEC  RELATIVE ${CMAKE_SOURCE_DIR} src/SLATEC/*.f)
 string(REPLACE ";" " " SRC_SLATEC_AC "${SRC_SLATEC}")
 
 #file(GLOB SRC_LAPACK  ${CMAKE_SOURCE_DIR}/src/LAPACK/*.f ${CMAKE_SOURCE_DIR}/src/LAPACK/*.F)
+
+if(OPENMP)
+    find_package(OpenMP)
+    if(NOT OpenMP_FOUND)
+        message(WARNING "OpenMP not supported but specified.")
+        message(WARNING "Disabling OpenMP.")
+        set(OPENMP OFF CACHE BOOL "" FORCE)
+    endif()
+endif()
 
 if(OPENMP AND OPENMPI)
     message(ERROR " Compiling against OpenMP and OpenMPI at the same time is currently not supported.")
@@ -473,6 +484,17 @@ add_custom_target(copy_internal_functions ALL
 
 install(TARGETS ${nested_fit_target}      DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
 install(TARGETS ${nested_fit_target_func} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
+
+# Write a manifest file into the cache
+# This makes things easier on the python side
+# For now all the generated data can be generated
+# on configure time
+write_manifest()
+
+add_custom_target(manifest_install ALL
+    DEPENDS copy_internal_functions
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/manifest.txt ${nested_fit_cache_folder}
+)
 
 if(OPENMPI)
     # Do the same for the child process in case it was compiled
