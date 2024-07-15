@@ -27,8 +27,8 @@ dependencies = [
     "matplotlib",
     "scipy",
     "getdist",
-    "tqdm",
-    "plotly"
+    "rich",
+    "plotly",
     "anesthetic"
 ]
 
