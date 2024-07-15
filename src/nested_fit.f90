@@ -399,8 +399,8 @@ PROGRAM NESTED_FIT
       ! Clustering configuration
       CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'clustering.enabled'  , make_cluster  , MANDATORY=.FALSE.) ! False by default
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'clustering.method'   , cluster_method, MANDATORY=.FALSE.) !     f by default
-      CALL FIELD_FROM_INPUT_REAL     (input_config, 'clustering.distance' , cluster_par1  , MANDATORY=.FALSE.) !   0.4 by default
-      CALL FIELD_FROM_INPUT_REAL     (input_config, 'clustering.bandwidth', cluster_par2  , MANDATORY=.FALSE.) !   0.1 by default
+      CALL FIELD_FROM_INPUT_REAL     (input_config, 'clustering.parameter1' , cluster_par1  , MANDATORY=.FALSE.) !   0.4 by default
+      CALL FIELD_FROM_INPUT_REAL     (input_config, 'clustering.parameter2', cluster_par2  , MANDATORY=.FALSE.) !   0.1 by default
 
       ! Data configuration
       ! TODO(César): Make this not mandatory and get bounds from data file
