@@ -262,6 +262,11 @@ PROGRAM NESTED_FIT
     B_RECUSRFUNC&
   ))
 
+  CALL ADD_ARGUMENT(argdef_t("cache-location", "", .FALSE.,&
+    "Returns the current cache directory location in the filesystem.",&
+    B_GETCACHELOC&
+  ))
+
   CALL ADD_ARGUMENT(argdef_t("function-add", "fa", .TRUE.,&
     "Adds a new function with name <name>(x, ...)=<expression> to the cache. &
      For example: -fa 'gauss1D(x, u, s) = \frac{1}{s\sqrt{2\pi}}\exp(-\frac{(x-u)^2}{2s^2})'. &
@@ -1541,6 +1546,16 @@ PROGRAM NESTED_FIT
    STOP
   END SUBROUTINE
 
+  SUBROUTINE B_GETCACHELOC(this, invalue)
+   CLASS(argdef_t), INTENT(IN)    :: this
+   CHARACTER(LEN=512), INTENT(IN) :: invalue
+
+   PROFILED(B_GETCACHELOC)
+
+   ! We don't want this to be overriden by verbosity
+   WRITE(*, *) nf_cache_folder
+   CALL HALT_EXECUTION()
+  END SUBROUTINE
   
   SUBROUTINE B_ADDUSRFUNC(this, invalue)
    CLASS(argdef_t), INTENT(IN)    :: this

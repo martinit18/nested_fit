@@ -17,12 +17,11 @@ class CMakeExt(Extension):
 
         # Set cmake default options for the python release
         self.cmake_options = [
+            '-DCMAKE_BUILD_TYPE=Release',
             '-DOPENMP=ON',
             '-DLTRACE=OFF',
             '-DPPROF=OFF'
         ]
-
-        # TODO: (César): Build options depending on os
 
 
 class NFBuildExt(build_ext):
@@ -58,5 +57,5 @@ setup(
     cmdclass={'build_ext': NFBuildExt},
     ext_modules=[CMakeExt('nested_fit')],
     packages=find_packages(exclude=['src/']),
-    package_data={'': ['nested_fit_py/*.py']}
+    # package_data={'': ['/*.py']}
 )

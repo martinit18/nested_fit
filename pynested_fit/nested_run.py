@@ -1,7 +1,21 @@
 #!/usr/bin/env python
 
-# Tqdm for progress bars
-from tqdm.autonotebook import tqdm
+# The new version uses rich to print out
+from rich.live import Live as RLive
+from rich.layout import Layout as RLayout
+from rich.panel import Panel as RPanel
+from rich.table import Table as RTable
+# from rich.progress import Progress as RProgress
+# from rich.progress import BarColumn as RBarColumn
+# from rich.progress import TextColumn as RTextColumn
+# from rich.columns import Columns as RColumns
+
+# Custom rich widgets import
+from .widgets import bar as cbar
+from .widgets import timer as ctimer
+
+# Rich debugging
+# from rich import print as rprint
 
 # Other imports
 import pandas as pd
@@ -11,6 +25,58 @@ import pathlib
 import logging
 import yaml
 import json
+import time
+import psutil
+
+
+class NFDashboardHeader():
+    def __init__(self):
+        # Timer starts on header __init__
+        # This is not of much importance. We only want a course way
+        # to time the dashboard running time
+        self._timer = ctimer.NFDashboardTimer()
+
+        self._layout = RLayout()
+        self._layout.split_row(RLayout(name='left'), RLayout(name='right'))
+
+        # Make the Top left
+        grid = RTable.grid(expand=False)
+        grid.add_column(justify='left')
+        grid.add_column(justify='left')
+        self._cpu_load_disp = cbar.HRollingBarDisplay(15, callback=psutil.cpu_percent)
+        self._mem_load_disp = cbar.HRollingBarDisplay(15, callback=lambda: psutil.virtual_memory()[2])
+        top_left = RLayout()
+        top_left.split_row(RLayout(name='left'), RLayout(name='right'))
+
+        version_time_grid = RTable.grid(expand=False)
+        version_time_grid.add_column(justify='right')
+        version_time_grid.add_column(justify='left')
+        version_time_grid.add_row('[b]Version[/b]', ' ' + imp_version('nested_fit'))
+        version_time_grid.add_row('[b]Elapsed[/b]', self._timer)
+        top_left['left'].update(version_time_grid)
+
+        cpu_mem_grid = RTable.grid(expand=False)
+        cpu_mem_grid.add_column(justify='right')
+        cpu_mem_grid.add_column(justify='right')
+        cpu_mem_grid.add_row('[b]CPU[/b] ', self._cpu_load_disp)
+        cpu_mem_grid.add_row('[b]MEM[/b] ', self._mem_load_disp)
+        top_left['right'].update(cpu_mem_grid)
+        grid.add_row(top_left)
+
+        switches = RTable.grid(expand=False)
+        switches.add_column(justify='right')
+        switches.add_column(justify='left')
+        switches.add_row('[b]OpenMP Support[/b]', '[green]YES')
+
+        self._layout['left'].update(grid)
+
+    def __rich__(self):
+        return self._layout
+
+    def update(self):
+        self._timer.update()
+        self._cpu_load_disp.update()
+        self._mem_load_disp.update()
 
 
 class Configurator():
@@ -43,11 +109,11 @@ class Configurator():
                  keep_yaml=True
                  ):
 
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger("rich")
 
         if not datafiles:
             self.logger.error('Configurator needs at least one datafile.')
-            return
+            return None
 
         # Set some defaults
         self._config = {}
@@ -111,6 +177,7 @@ class Configurator():
             else:
                 self.logger.error('Input file invalid format/extension.')
                 self.logger.error('Valid formats: `.csv` and `.tsv`.')
+                return None
             self._df = pd.read_csv(self._config['datafiles'][0], delimiter=delimiter, header=None)
 
         self._reconfigure_data_extents()
@@ -139,7 +206,7 @@ class Configurator():
     def set_params(self, **params):
         self._config['function']['params'] = params
 
-    def sample(self, path='.', disablebar=False, disable_output=False):
+    def sample(self, path='.', silent_output=False):
         version = imp_version('nested_fit')
 
         self._write_yaml_file(path)
@@ -150,33 +217,75 @@ class Configurator():
             cwd=pathlib.Path(path).resolve()
         )
 
-        pbar = tqdm(total=self._config['search']['max_steps'], desc='Running nested_fit', disable=disablebar)
+        if not silent_output:
+            self._live_dash = self._generate_live_dashboard()
+
+        # pbar = tqdm(total=self._config['search']['max_steps'], desc='Running nested_fit', disable=disablebar)
 
         # TODO: (César): Make this a thread and send data via socket
         while self._nf_process.poll() is None:
-            line = self._nf_process.stdout.readline().decode("utf-8").split('|')
+            live_data = self._parse_nf_stdout()
 
-            # Print errors
-            if '<ERROR>' in line[0]:
-                print(line[0], end='')  # BUG: (César): This assumes the error logs don't have any '|' char
-                # end_color = 'red'
-
-            if 'LO' not in line[0]:
+            if not live_data:
                 continue
-
-            pbar.update(100)  # TODO: (César) : This assumes the output comes in mod 100
+            if not silent_output:
+                self._draw_live_table(live_data)
 
         if not self._keep_yaml:
             pathlib.Path.unlink(f'{path}/nf_input.yaml', missing_ok=True)
 
-        pbar.close()
-
-        if not disable_output:
+        try:
             with open(f'{path}/nf_output_res.json', 'r') as f:
                 return json.load(f)
-        return None
+        except IOError as e:
+            self.logger.error('Could not load nested_fit\'s output result.')
+            self.logger.error(f'I/O exception {e}')
+            return None
 
     def dashboard(self):
+        pass
+
+    def _parse_stdout_error(self, line):
+        # Handle errors
+        if '<ERROR>' in line[0]:
+            print(''.join(line), end='')
+            return True
+        if 'LO' not in line[0]:
+            return True
+        return False
+
+    def _parse_nf_stdout(self):
+        line = self._nf_process.stdout.readline().decode("utf-8").split('|')
+
+        if self._parse_stdout_error(line):
+            return None
+
+    def _generate_live_dashboard(self):
+        # Display some input options so we know
+        self._live_dash = RLayout()
+
+        self._live_dash.split_column(
+            RLayout(name='header', size=4),
+            RLayout(name='body')
+        )
+
+        self._live_dash['body'].split_row(
+            RLayout(name='input_info'),
+            RLayout(name='output_info')
+        )
+
+        header = NFDashboardHeader()
+        panel = RPanel(header, title='Nested Fit Dashboard')
+        self._live_dash['header'].update(panel)
+        # rprint(self._live_dash)
+        with RLive(self._live_dash, refresh_per_second=1 / 1.5):
+            for _ in range(100):
+                header.update()
+                time.sleep(1.5)
+
+        # self._live_dash = RPanel(, title=RText('Nested Fit Live Dashboard'))
+
+    def _draw_live_table(self, data):
         pass
 
     def _write_yaml_file(self, path):
@@ -190,22 +299,10 @@ class Configurator():
 
         self._config['datafiles'] = datafiles
 
-    def _calculate_data_extents(self, file):
-        ext = pathlib.Path(self._config['datafiles'][0]).suffixes[-1]
-        if ext == '.csv':
-            delimiter = ','
-        elif ext == '.tsv':
-            delimiter = '\t'
-        else:
-            self.logger.error('Input file invalid format/extension.')
-            self.logger.error('Valid formats: `.csv` and `.tsv`.')
-
-        df = pd.read_csv(file, delimiter=delimiter, header=None)
-
+    def _calculate_data_extents(self):
         # Get where the x's are column-wise
         x_col = self._config['specstr'].split(',').index('x')
-
-        return (df[x_col].min().item(), df[x_col].max().item())
+        return (self._df[x_col].min().item(), self._df[x_col].max().item())
 
     def _get_data(self):
         if self.multiexp:
@@ -225,7 +322,7 @@ class Configurator():
         # Read the datafiles and set the extents
         if not self.multiexp:
             for file in self._config['datafiles']:
-                xmin, xmax = self._calculate_data_extents(file)
+                xmin, xmax = self._calculate_data_extents()
                 self._config['data']['xmin'] = xmin
                 self._config['data']['xmax'] = xmax
         else:
@@ -235,15 +332,4 @@ class Configurator():
                 self._config[f'data_{i + 1}']['xmax'] = xmax
 
 
-# ------------- Additional tools
-def is_env_notebook() -> bool:
-    try:
-        shell = get_ipython().__class__.__name__
-        if shell == 'ZMQInteractiveShell':
-            return True   # Jupyter notebook or qtconsole
-        elif shell == 'TerminalInteractiveShell':
-            return False  # Terminal running IPython
-        else:
-            return False  # Other type (?)
-    except NameError:
-        return False      # Probably standard Python interpreter
+
