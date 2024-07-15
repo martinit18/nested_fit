@@ -46,16 +46,20 @@ if __features__ != 'Unknown':
 
     warn_grid = RTable.grid(expand=False)
     warn_grid.add_column()
+    warns = False
     if __features__['BUILDTYPE'] == 'Debug':
         warn_grid.add_row(' [yellow]:warning: Debug build[/yellow]')
+        warns = True
 
     if __features__['PPROF'] == 'ON':
         warn_grid.add_row(' [yellow]:warning: Profiling build[/yellow]')
+        warns = True
 
     if __features__['LTRACE'] == 'ON':
         warn_grid.add_row(' [yellow]:warning: Trace logging ON[/yellow]')
+        warns = True
 
-    if warn_grid.columns:
+    if warns:
         ipython_header_grid.add_row('[b]Warnings[/b]', warn_grid)
 else:
     ipython_header_grid.add_row('[b]Warnings[/b]', ' [red]:exclamation: Could not find feature list[/red]')
