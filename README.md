@@ -238,8 +238,14 @@ It follows a complete description of `nf_input.yaml` file.
 ```yaml
 version: 5.2                             # Program version
 datafiles: file1.csv [, file2.csv, ...]  # Name of the data file(s)
+```
+If you have space- or tab-separated files, select the `.tsv` format adding the line
+```yaml
+filefmt: .tsv
+```
+
+```yaml
 specstr: x,c,ce                          # Datafile layout
-likelihood: GAUSSIAN                     # The likelihood function
 ```
 
 The `specstr` field tells nested_fit what data the datafile columns have.
@@ -250,23 +256,27 @@ The `specstr` field tells nested_fit what data the datafile columns have.
 - `ce`: This is the error data column (optional).
 - `i`: This column will be ignored by nested_fit (optional).
 
+```yaml
+likelihood: GAUSSIAN                     # The likelihood function
+```
 
 Likelihood functions available (for data with error bars, Poisson statistics is assumed for counts):
 - `GAUSSIAN`: Default normal distribution assuming data likelihood.
 - `MOD_JEFFREYS`: Robust likelihood that does not assume a majorated error distribution (see Ref. [2]).
 
 ```yaml
-function:
-    expression: f(x, a, b) = ax + b                   # Use LaTeX
-    expression: f(x, a, b) = \texttt{linear}(x, a, b) # Or use C++/Fortran
-    expression: GAUSS_BG                              # Or use a nested_fit legacy function (deprecated)
+function:                                               #  Choose among the following expressions
+    expression: f(x, a, b) = ax + b                     # Use LaTeX
+    # expression: f(x, a, b) = \texttt{linear}(x, a, b) # Or use C++/Fortran
+    # expression: GAUSS_BG                              # Or use a nested_fit legacy function (deprecated)
 
     # Or for multiple files use the following nomenclature (one expressian for each file)
-    expression_1: ...
-    expression_2: ...
-    expression_<n>: ...
+    # expression_1: ...
+    # expression_2: ...
+    # expression_<n>: ...
 
 ```
+More details on the function definitions are presented below [here](#Function-Specification), and in particular
 - LaTeX specification [here](#LaTeX-Specification).
 - C++/Fortran API specification [here](#C++/Fortran-Specification).
 
@@ -321,6 +331,9 @@ For the second option:
 - `d`: dbscan (par. 1: distance, par. 2 : minimum number of neighbours)
 - `s`: agglomerative clustering with single linkage (par. 1: distance limit (in percentage of the maximum distance))
 - `k`: k nearest neighbours (no parameters)
+
+
+## Function definition
 
 ```yaml
 function:
