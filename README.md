@@ -78,7 +78,7 @@ git clone git@github.com:martinit18/nested_fit.git
 ```sh
 cd nested_fit
 mkdir build && cd build
-cmake ..
+cmake -DCMAKE_BUILD_TYPE=Release ..
 ```
 
 3. Install nested_fit:
@@ -118,7 +118,6 @@ If Python is found an utility for running and analysing data using nested_fit is
 |NORNG               | Set the nested_fit to use a set seed. Internal test use mainly.      | OFF     |
 |OPENMP              | Enable/Disable OpenMP support.                                       | OFF     |
 |OPENMPI             | Enable/Disable OpenMPI support.                                      | OFF     |
-|AUTOTESTS           | Automatically run tests after compiling.                             | OFF     |
 |LAPACK              | Use LAPACK library functions instead of the internal ones.           | OFF     |
 |LTRACE              | Enable trace logging output. Will hinder performance.                | OFF     |
 |PPROF               | Enable performance counter profilling.                               | OFF     |
@@ -133,7 +132,7 @@ With the last option, you can also specify a defined directory with in addition 
 
 An useful example of configuration and compilation with parallelization and verbosity:
 ```sh
-cmake -DOPENMP=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DINSTALL_SYSTEM_WIDE=ON -DCMAKE_INSTALL_PREFIX=$HOME ..
+cmake -DOPENMP=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DINSTALL_SYSTEM_WIDE=ON -DCMAKE_INSTALL_PREFIX=$HOME -DCMAKE_BUILD_TYPE=Release ..
 
 cmake --build . --config Release --target install 
 ```
