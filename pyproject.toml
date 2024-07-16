@@ -29,6 +29,7 @@ dependencies = [
     "getdist",
     "rich",
     "plotly",
+    "psutil",
     "anesthetic"
 ]
 
