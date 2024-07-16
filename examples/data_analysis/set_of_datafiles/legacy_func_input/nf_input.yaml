@@ -6,7 +6,8 @@ specstr:    x,c
 likelihood: GAUSSIAN
 
 function:
-  expression: GAUSS_BG_SET #legacy function
+  expression_1: GAUSS_BG_SET #legacy function
+  expression_2: GAUSS_BG_SET #legacy function
   params:
     b_1:  { value: 0.4,     step: -1, min: 0,      max: 0.5,   npar: 1 }
     x_1:  { value: 250,     step: -1, min: 200,    max: 400,   npar: 2 }
