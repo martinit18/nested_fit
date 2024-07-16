@@ -67,15 +67,15 @@ else:
 
 ipython_header = r'''
 [b]Quick start[/b]
-To access to the data in the same directory, run \n
-> import pynested_fit as pnf \n
-> an = pnf.Analysis() \n
-> an.<function> \n
+To access to the data in the same directory, run 
+> import pynested_fit as pnf 
+> an = pnf.Analysis() 
+> an.<function> 
 
 [b]Help[/b]
 Examples on how to use pynested_fit
-are available under the
-examples folder at [link=https://github.com/martinit18/nested_fit/][blue]the repository[/blue][/link].
+are available under the examples folder 
+at [link=https://github.com/martinit18/nested_fit/][blue]the repository[/blue][/link].
 
 [b]Authors[/b]
 Martino Trassinelli
