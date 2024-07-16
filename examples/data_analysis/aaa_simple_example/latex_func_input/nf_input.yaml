@@ -2,7 +2,7 @@ version:    5.2              # Program version
 datafiles:  he-histo.dat     # Name of the data file
 specstr:    x,c              # Datafile layout
 # filefmt: .tsv              # (optional) for data separated by spaces or tabs
-likelihood: GAUSSIAN         # Name of the likelihood function (for data with error bars only)
+# likelihood: GAUSSIAN       # (for data with error bars only) Name of the likelihood function
 
 function:
   expression: gauss_bg(x, A, x_0, s, b_g) = A / (s \sqrt{2\pi}) \exp{-(x-x_0)^2/(2s^2)} + b_g # function expression in latex form

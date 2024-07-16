@@ -339,7 +339,6 @@ PROGRAM NESTED_FIT
       ! Initialize values --------------------------------------------------------------------------------------------------------------
       filename = ' '
       funcname = ' '
-      likelihood_funcname = ' '
 
       ! Read parameter file ------------------------------------------------------------------------------------------------------------
       INQUIRE(FILE=TRIM(opt_input_file), EXIST=file_exists)
