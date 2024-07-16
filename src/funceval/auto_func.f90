@@ -682,15 +682,21 @@ MODULE MOD_AUTOFUNC
         CALL PARSE_NATIVE_DEALLOC(parsed_data)
     END SUBROUTINE
 
-    SUBROUTINE COMPILE_CACHE_FUNC(parse_data, original_data)
+    SUBROUTINE COMPILE_CACHE_FUNC(parse_data, original_data, write_metadata)
         TYPE(ParseLatex_t), INTENT(IN) :: parse_data
         CHARACTER(LEN=512), INTENT(IN) :: original_data
+        LOGICAL, OPTIONAL , INTENT(IN) :: write_metadata
         CHARACTER(LEN=128)             :: filename
         INTEGER                        :: status
         CHARACTER(128)                 :: funcname, funcname_lowercase
         INTEGER                        :: argc
         CHARACTER(512)                 :: expression
         INTEGER                        :: i
+        LOGICAL                        :: write_meta_ = .TRUE.
+
+        IF(PRESENT(write_metadata)) THEN
+            write_meta_ = write_metadata
+        ENDIF
 
         funcname   = parse_data%function_name
         argc       = parse_data%num_params + 1
@@ -744,8 +750,10 @@ MODULE MOD_AUTOFUNC
             CALL HALT_EXECUTION()
         ENDIF
         CALL RECOMPILE_CACHE()
-        CALL UPDATE_CACHE(TRIM(funcname), argc, original_data)
-        CALL WRITE_CACHE()
+        IF(write_meta_) THEN
+            CALL UPDATE_CACHE(TRIM(funcname), argc, original_data)
+            CALL WRITE_CACHE()
+        ENDIF
     END SUBROUTINE
 
     SUBROUTINE RECOMPILE_CACHE()
