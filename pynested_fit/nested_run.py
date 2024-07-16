@@ -14,6 +14,9 @@ from rich.table import Table as RTable
 from .widgets import bar as cbar
 from .widgets import timer as ctimer
 
+# Metadata
+from .metadata import __features__
+
 # Rich debugging
 # from rich import print as rprint
 
@@ -40,9 +43,6 @@ class NFDashboardHeader():
         self._layout.split_row(RLayout(name='left'), RLayout(name='right'))
 
         # Make the Top left
-        grid = RTable.grid(expand=False)
-        grid.add_column(justify='left')
-        grid.add_column(justify='left')
         self._cpu_load_disp = cbar.HRollingBarDisplay(15, callback=psutil.cpu_percent)
         self._mem_load_disp = cbar.HRollingBarDisplay(15, callback=lambda: psutil.virtual_memory()[2])
         top_left = RLayout()
@@ -61,14 +61,50 @@ class NFDashboardHeader():
         cpu_mem_grid.add_row('[b]CPU[/b] ', self._cpu_load_disp)
         cpu_mem_grid.add_row('[b]MEM[/b] ', self._mem_load_disp)
         top_left['right'].update(cpu_mem_grid)
-        grid.add_row(top_left)
 
+        self._layout['left'].update(top_left)
+
+        # Make the top right
+        top_right = RLayout()
+        top_right.split_row(RLayout(name='left'), RLayout(name='center'), RLayout(name='right'))
         switches = RTable.grid(expand=False)
         switches.add_column(justify='right')
         switches.add_column(justify='left')
-        switches.add_row('[b]OpenMP Support[/b]', '[green]YES')
+        switches.add_row(
+            '[b]OpenMP[/b]',
+            ' [green]YES[/green]' if __features__['OpenMP'] == 'ON' else ' [red]NO[/red]'
+        )
+        switches.add_row(
+            '[b]OpenMPI[/b]',
+            ' [green]YES[/green]' if __features__['OpenMPI'] == 'ON' else ' [red]NO[/red]'
+        )
 
-        self._layout['left'].update(grid)
+        top_right['left'].update(switches)
+
+        debug_grid = RTable.grid(expand=False)
+        debug_grid.add_column(justify='right')
+        debug_grid.add_column(justify='left')
+
+        if __features__['LTRACE'] == 'ON':
+            debug_grid.add_row('', ' [b][yellow]:warning: Tracing on![/yellow][/b]')
+        if __features__['BUILDTYPE'] == 'Debug':
+            debug_grid.add_row('', ' [b][yellow]:warning: Debug build![/yellow][/b]')
+
+        top_right['center'].update(debug_grid)
+
+        debug_grid2 = RTable.grid(expand=False)
+        debug_grid2.add_column(justify='right')
+        debug_grid2.add_column(justify='left')
+
+        if __features__['PPROF'] == 'ON':
+            debug_grid2.add_row('[b][yellow]:warning: Profiling on![/yellow][/b]', '')
+        else:
+            debug_grid2.add_row('', '')
+        debug_grid2.add_row('[green]✓ ALL OK[/green]', '')
+
+        top_right['right'].update(debug_grid2)
+
+        self._layout['right'].update(top_right)
 
     def __rich__(self):
         return self._layout
@@ -77,6 +113,19 @@ class NFDashboardHeader():
         self._timer.update()
         self._cpu_load_disp.update()
         self._mem_load_disp.update()
+
+
+class NFDashboardInput():
+    def __init__(self):
+        self._layout = RLayout()
+
+        self._layout.update('Test Layout directly')
+
+    def __rich__(self):
+        return self._layout
+
+    def update(self):
+        pass
 
 
 class Configurator():
@@ -275,15 +324,17 @@ class Configurator():
         )
 
         header = NFDashboardHeader()
-        panel = RPanel(header, title='Nested Fit Dashboard')
-        self._live_dash['header'].update(panel)
-        # rprint(self._live_dash)
+        header_panel = RPanel(header, title='Nested Fit Dashboard')
+        input_info = NFDashboardInput()
+        input_panel = RPanel(input_info, title='Input Info')
+        self._live_dash['header'].update(header_panel)
+        self._live_dash['body']['input_info'].update(input_panel)
+
         with RLive(self._live_dash, refresh_per_second=1 / 1.5):
             for _ in range(100):
                 header.update()
+                input_info.update()
                 time.sleep(1.5)
-
-        # self._live_dash = RPanel(, title=RText('Nested Fit Live Dashboard'))
 
     def _draw_live_table(self, data):
         pass
@@ -330,6 +381,3 @@ class Configurator():
                 xmin, xmax = self._calculate_data_extents(file)
                 self._config[f'data_{i + 1}']['xmin'] = xmin
                 self._config[f'data_{i + 1}']['xmax'] = xmax
-
-
-
