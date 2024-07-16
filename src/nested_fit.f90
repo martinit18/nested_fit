@@ -1103,6 +1103,11 @@ PROGRAM NESTED_FIT
         
         ! All fine, so just compile the function
         CALL COMPILE_CACHE_FUNC(parse_result(i), definition)
+
+        ! Also compile an ABI compatible version
+        ! in case we want to reference within other function
+        parse_result(i)%function_name = TRIM(parse_result(i)%function_name)//'_'
+        CALL COMPILE_CACHE_FUNC(parse_result(i), definition, write_metadata=.FALSE.)
       END DO
       
       ! Now figure out the required parameters (relatively complex for a set)
@@ -1592,6 +1597,10 @@ PROGRAM NESTED_FIT
       IF(parse_result%error.EQ.0) THEN
          definition = TRIM(invalue(INDEX(invalue, '=')+1:LEN_TRIM(invalue)))
          CALL COMPILE_CACHE_FUNC(parse_result, definition)
+
+         ! Call the second time to compile with appended '_' for the ABI calls
+         parse_result%function_name = TRIM(parse_result%function_name)//'_'
+         CALL COMPILE_CACHE_FUNC(parse_result, definition, write_metadata=.FALSE.)
       ENDIF
 
       CALL PARSE_LATEX_DEALLOC(parse_result)

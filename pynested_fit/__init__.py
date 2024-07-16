@@ -18,7 +18,7 @@ from .metadata import __cache__
 
 # Finally, install rich traceback handler
 from rich.traceback import install as rich_traceback
-rich_traceback(show_locals=True)
+rich_traceback(show_locals=False)
 
 # Setup the logger
 logging.basicConfig(

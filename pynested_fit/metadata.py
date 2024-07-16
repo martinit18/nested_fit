@@ -13,7 +13,7 @@ def parse_features():
         nf_cache_folder = check_output([f'nested_fit{__version__}', '--cache-location'])
     except Exception:
         return ('Unknown', 'Unknown')
-    nf_cache_folder = nf_cache_folder.decode(sys.stdout.encoding).strip()
+    nf_cache_folder = nf_cache_folder.decode('utf-8').strip()
     config = ConfigParser()
     config.read(f'{nf_cache_folder}/manifest.txt')
 
