@@ -276,7 +276,7 @@ function:                                               #  Choose among the foll
     # expression_<n>: ...
 
 ```
-More details on the function definitions are presented below [here](#Function-Specification), and in particular
+More details on the function definitions are presented below [here](#Function-Definition), and in particular
 - LaTeX specification [here](#LaTeX-Specification).
 - C++/Fortran API specification [here](#C++/Fortran-Specification).
 
