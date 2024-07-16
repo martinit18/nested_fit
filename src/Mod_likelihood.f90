@@ -221,7 +221,7 @@ CONTAINS
        searchid = 4
     ELSE
       CALL LOG_ERROR_HEADER()
-      CALL LOG_ERROR('Error of the search type name in Mod_search_new_point module.')
+      CALL LOG_ERROR('Error of the search type name in Mod_likelihood module.')
       CALL LOG_ERROR('Check the manual and the input file.')
       CALL LOG_ERROR('Available options: [RANDOM_WALK, UNIFORM, SLICE_SAMPLING, SLICE_SAMPLING_ADAPT]')
       CALL LOG_ERROR_HEADER()
@@ -240,7 +240,7 @@ CONTAINS
          loglikefuncid = 1
       ELSE
          CALL LOG_ERROR_HEADER()
-         CALL LOG_ERROR('Error of the likelihood function type name in Mod_search_new_point module.')
+         CALL LOG_ERROR('Error of the likelihood function type name in Mod_likelihood module.')
          CALL LOG_ERROR('Check the manual and the input file.')
          CALL LOG_ERROR('Available options: [GAUSSIAN, MOD_JEFFREYS]')
          CALL LOG_ERROR_HEADER()

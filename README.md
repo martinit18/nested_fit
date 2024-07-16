@@ -264,7 +264,7 @@ Likelihood functions available (for data with error bars, Poisson statistics is 
 - `MOD_JEFFREYS`: Robust likelihood that does not assume a majorated error distribution (see Ref. [2]).
 
 ```yaml
-function:                                               #  Choose among the following expressions
+function:                                               # Choose among the following expressions
     expression: f(x, a, b) = ax + b                     # Use LaTeX
     # expression: f(x, a, b) = \texttt{linear}(x, a, b) # Or use C++/Fortran
     # expression: GAUSS_BG                              # Or use a nested_fit legacy function (deprecated)
@@ -274,6 +274,9 @@ function:                                               #  Choose among the foll
     # expression_2: ...
     # expression_<n>: ...
 
+    params:                                             # Parameters boundaries and co.
+      a:  { value: 0.11,    step: -1, min: 0,      max: 0.5}
+      b:  { value: 450,     step: -1, min: 400,    max: 600}
 ```
 More details on the function definitions are presented below [here](#Function-Definition), and in particular
 - LaTeX specification [here](#LaTeX-Specification).
