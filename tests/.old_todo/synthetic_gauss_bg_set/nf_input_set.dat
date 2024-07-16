@@ -1,3 +1,0 @@
-2		# Number of spectra in the set. 
-0	600 	# xmin, xmax  spectrum 2, List of filenames following
-gauss_bg-x0_310-sigma_20-A_150-p_to_bg_10-bin_1.dat
