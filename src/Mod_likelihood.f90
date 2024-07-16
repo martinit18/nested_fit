@@ -234,9 +234,9 @@ CONTAINS
       INTEGER(4) :: mpi_ierror
 #endif
 
-      IF(likelihood_funcname.eq.'GAUSSIAN') THEN
+      IF(TRIM(likelihood_funcname).eq.'GAUSSIAN') THEN
          loglikefuncid = 0
-      ELSE IF(likelihood_funcname.eq.'MOD_JEFFREYS') THEN
+      ELSE IF(TRIM(likelihood_funcname).eq.'MOD_JEFFREYS') THEN
          loglikefuncid = 1
       ELSE
          CALL LOG_ERROR_HEADER()
