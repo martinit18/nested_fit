@@ -3,7 +3,7 @@
 ## For Mac OS
 1) If you do not have a fortran compiler installed, install homebrew from [https://brew.sh/](https://brew.sh/)\
 Then in a terminal install with homebrew the required components:\
- `brew install gcc make cmake`
+ `brew install gcc g++ gfortran make cmake`
 
 2) If you do not have python installed (the native python with Mac OS is generally outdated), install with\
  `brew install python`
@@ -19,7 +19,7 @@ Installation of the main code and python package dependencies can be found at th
 3) Follow the linux installation instruction here below
 
 
-## For Linux
+## For Linux 
 
 1)  If you do not have a fortran compiler installed, install it with\
 `sudo apt install gfortran make cmake`\
@@ -35,7 +35,8 @@ This installation assumes that you have bash as shell.
 3) Expand the zip file [here](https://github.com/martinit18/nested_fit/tags) or clone the program with git with\
 `git clone https://github.com/martinit18/nested_fit`
 4) create the directory `bin` (`mkdir bin`) in your home (normally the place where you are when you open a new terminal)
-5) go to the decompressed directory and create the directory `build`:\
+5) **obsolete, see main README file for this part** \
+go to the decompressed directory and create the directory `build`:\
 `cd nested_fit-xxx` (where `xxx` is the present version number)\
 `mkdir build`\
 `cd build`
