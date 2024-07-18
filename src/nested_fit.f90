@@ -1218,9 +1218,9 @@ PROGRAM NESTED_FIT
       DO i=1, npar
          CALL SPLIT_INPUT_ON('.', legacy_param_keys(i), splitarr, splitarr_count, 16)
          key         = TRIM(legacy_param_keys(i))//'.'
-         par_name(i) = TRIM(splitarr(splitarr_count))
          CALL LOG_TRACE('Reading key: '//key)
          CALL FIELD_FROM_INPUT_INTEGER(input_config, TRIM(key)//'npar' , par_num(i)          , MANDATORY=.TRUE. )
+         par_name(par_num(i)) = TRIM(splitarr(splitarr_count))
          CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'value', par_in(par_num(i))  , MANDATORY=.TRUE. )
          CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'step' , par_step(par_num(i)), MANDATORY=.FALSE.) !    -1 by default
          CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'min'  , par_bnd1(par_num(i)), MANDATORY=.TRUE. )
