@@ -246,6 +246,7 @@ filefmt: .tsv
 ```yaml
 specstr: x,c,ce                          # Datafile layout
 ```
+A typical example could be `ce, i, i, x, c`, where the first column indicate the error bars, the second and the third are ignored, the fourt indicates the x-coordinate and the last the values.
 
 The `specstr` field tells nested_fit what data the datafile columns have.
 
