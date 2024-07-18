@@ -202,7 +202,7 @@ If you are running `gfortran` installed with homebrew, you should avoid use `gcc
 
 ``-DCMAKE_Fortran_COMPILER=`which gfortran` -DCMAKE_C_COMPILER=`which gcc` -DCMAKE_CXX_COMPILER=`which g++``
 
-and make sure your `g++` is pointing the homebrew `g++-XX`. Eventually create the link:
+and 1) make sure that homebrew/bin has a priority on the other bin directories (for put something like `export PATH=/opt/homebrew/bin:<other stuff of you>:$PATH` in your .bashrc) and make sure your `g++` is pointing the homebrew `g++-XX`. Eventually create the link:
 ```sh
 cd  /opt/homebrew/bin
 ln -s g++-XX g++ 

@@ -17,16 +17,14 @@ function:
     d:    { value: 0.2,     step: -1, min: -10,    max: 30,    npar: 6 }
     A_2:  { value: 500,     step: -1, min: 0,      max: 10000, npar: 7 }
 
-#data: { xmin: 1, xmax: 1024, ymin: 0, ymax: 0 }
 data_1: { xmin: 0, xmax: 600, ymin: 0, ymax: 0 }
 data_2: { xmin: 0, xmax: 600, ymin: 0, ymax: 0 }
-# data_3: { xmin: 1, xmax: 99, ymix: 0, ymax: 0 }
 
 search:
-  livepoints: 200
+  livepoints: 1000
   method:     SLICE_SAMPLING
   param1:     1
-  param2:     2
+  param2:     3
   max_tries:  1000
   tries_mult: 100
   num_tries:  1
