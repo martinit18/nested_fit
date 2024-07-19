@@ -397,9 +397,11 @@ PROGRAM NESTED_FIT
 
       ! Clustering configuration
       CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'clustering.enabled'  , make_cluster  , MANDATORY=.FALSE.) ! False by default
-      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'clustering.method'   , cluster_method, MANDATORY=.FALSE.) !     f by default
-      CALL FIELD_FROM_INPUT_REAL     (input_config, 'clustering.parameter1' , cluster_par1  , MANDATORY=.FALSE.) !   0.4 by default
-      CALL FIELD_FROM_INPUT_REAL     (input_config, 'clustering.parameter2', cluster_par2  , MANDATORY=.FALSE.) !   0.1 by default
+      IF(make_cluster) THEN
+         CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'clustering.method'   , cluster_method, MANDATORY=.TRUE.)
+         CALL FIELD_FROM_INPUT_REAL     (input_config, 'clustering.parameter1' , cluster_par1  , MANDATORY=.TRUE.)
+         CALL FIELD_FROM_INPUT_REAL     (input_config, 'clustering.parameter2', cluster_par2  , MANDATORY=.TRUE.)
+      END IF
 
       ! Data configuration
       ! TODO(César): Make this not mandatory and get bounds from data file
@@ -954,6 +956,7 @@ PROGRAM NESTED_FIT
       CALL json%push('params.'//TRIM(par_name(i))//'.ci_h99', par_p99_w(i))
    END DO
 
+   ! Metadata
    CALL json%push('meta.information', info)
    CALL json%push('meta.minimal_req_it', nexp)
    CALL json%push('meta.bayes_complexity', comp)
@@ -962,6 +965,41 @@ PROGRAM NESTED_FIT
    CALL json%push('meta.timereal', seconds_omp)
    CALL json%write('nf_output_res.json')
    CALL json%free()
+
+   ! Input info
+   CALL json%push('input.datafiles', filename)
+   CALL json%push('input.specstr', spec_str)
+   CALL json%push('input.likelihood', likelihood_funcname)
+   CALL json%push('input.function.expressions', funcname)
+   DO i = 1, npar
+      CALL json%push('input.function.params.'//TRIM(par_name(i))//'.value', par_in(i))
+      CALL json%push('input.function.params.'//TRIM(par_name(i))//'.step', par_step(i))
+      CALL json%push('input.function.params.'//TRIM(par_name(i))//'.min', par_bnd1(i))
+      CALL json%push('input.function.params.'//TRIM(par_name(i))//'.max', par_bnd2(i))
+      CALL json%push('input.function.params.'//TRIM(par_name(i))//'.fixed', (par_fix(i).EQ.1))
+   END DO
+   CALL json%push('input.data.xmin', xmin)
+   CALL json%push('input.data.xmax', xmax)
+   CALL json%push('input.data.ymin', ymin)
+   CALL json%push('input.data.ymax', ymax)
+   CALL json%push('input.search.livepoints', nlive)
+   CALL json%push('input.search.method', search_method)
+   CALL json%push('input.search.param1', search_par1)
+   CALL json%push('input.search.param2', search_par2)
+   CALL json%push('input.search.max_tries', maxtries)
+   CALL json%push('input.search.tries_mult', maxntries)
+   CALL json%push('input.search.num_tries', ntry)
+   CALL json%push('input.search.max_steps', maxstep_try)
+   CALL json%push('input.convergence.method', conv_method)
+   CALL json%push('input.convergence.accuracy', evaccuracy)
+   CALL json%push('input.convergence.parameter', conv_par)
+   CALL json%push('input.clustering.enabled', make_cluster)
+   IF(make_cluster) THEN
+      CALL json%push('input.clustering.method', cluster_method)
+      CALL json%push('input.clustering.parameter1',cluster_par1)
+      CALL json%push('input.clustering.parameter2',cluster_par2)
+   END IF 
+   
 
    ! NOTE: (César): Keep legacy output for now
    OPEN(22,FILE='nf_output_res.dat',STATUS= 'UNKNOWN')
