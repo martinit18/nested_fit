@@ -963,14 +963,12 @@ PROGRAM NESTED_FIT
    CALL json%push('meta.ncores', nth)
    CALL json%push('meta.timetotal', seconds)
    CALL json%push('meta.timereal', seconds_omp)
-   CALL json%write('nf_output_res.json')
-   CALL json%free()
 
    ! Input info
-   CALL json%push('input.datafiles', filename)
-   CALL json%push('input.specstr', spec_str)
-   CALL json%push('input.likelihood', likelihood_funcname)
-   CALL json%push('input.function.expressions', funcname)
+   CALL json%push('input.datafiles', filename(1:nset))
+   CALL json%push('input.specstr', TRIM(spec_str))
+   CALL json%push('input.likelihood', TRIM(likelihood_funcname))
+   CALL json%push('input.function.expressions', funcname(1:nset))
    DO i = 1, npar
       CALL json%push('input.function.params.'//TRIM(par_name(i))//'.value', par_in(i))
       CALL json%push('input.function.params.'//TRIM(par_name(i))//'.step', par_step(i))
@@ -978,19 +976,19 @@ PROGRAM NESTED_FIT
       CALL json%push('input.function.params.'//TRIM(par_name(i))//'.max', par_bnd2(i))
       CALL json%push('input.function.params.'//TRIM(par_name(i))//'.fixed', (par_fix(i).EQ.1))
    END DO
-   CALL json%push('input.data.xmin', xmin)
-   CALL json%push('input.data.xmax', xmax)
-   CALL json%push('input.data.ymin', ymin)
-   CALL json%push('input.data.ymax', ymax)
+   CALL json%push('input.data.xmin', xmin(1:nset))
+   CALL json%push('input.data.xmax', xmax(1:nset))
+   CALL json%push('input.data.ymin', ymin(1:nset))
+   CALL json%push('input.data.ymax', ymax(1:nset))
    CALL json%push('input.search.livepoints', nlive)
-   CALL json%push('input.search.method', search_method)
+   CALL json%push('input.search.method', TRIM(search_method))
    CALL json%push('input.search.param1', search_par1)
    CALL json%push('input.search.param2', search_par2)
    CALL json%push('input.search.max_tries', maxtries)
    CALL json%push('input.search.tries_mult', maxntries)
    CALL json%push('input.search.num_tries', ntry)
    CALL json%push('input.search.max_steps', maxstep_try)
-   CALL json%push('input.convergence.method', conv_method)
+   CALL json%push('input.convergence.method', TRIM(conv_method))
    CALL json%push('input.convergence.accuracy', evaccuracy)
    CALL json%push('input.convergence.parameter', conv_par)
    CALL json%push('input.clustering.enabled', make_cluster)
@@ -999,7 +997,8 @@ PROGRAM NESTED_FIT
       CALL json%push('input.clustering.parameter1',cluster_par1)
       CALL json%push('input.clustering.parameter2',cluster_par2)
    END IF 
-   
+   CALL json%write('nf_output_res.json')
+   CALL json%free()
 
    ! NOTE: (César): Keep legacy output for now
    OPEN(22,FILE='nf_output_res.dat',STATUS= 'UNKNOWN')

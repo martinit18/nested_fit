@@ -257,10 +257,8 @@ MODULE MOD_JSONIO
         str = '['
         DO i = 1, SIZE(arr)
             WRITE(tmp, *) arr(i)
-            IF(i.NE.1) str = TRIM(str)//','
-            ! NOTE: (César): Using null char as an empty string here on merge...
-            !                Idk if this is well defined on fortran specification
-            str = TRIM(str)//MERGE(' ', CHAR(0), i.NE.1)//TRIM(ADJUSTL(tmp))
+            IF(i.NE.1) str = TRIM(str)//', '
+            str = TRIM(str)//TRIM(ADJUSTL(tmp))
         END DO
         str = TRIM(str)//']'
         CALL JSON_ENTRY_PUSH_STR_INTERNAL(entries, key, str)
@@ -276,10 +274,8 @@ MODULE MOD_JSONIO
         str = '['
         DO i = 1, SIZE(arr)
             WRITE(tmp, *) arr(i)
-            IF(i.NE.1) str = TRIM(str)//','
-            ! NOTE: (César): Using null char as an empty string here on merge...
-            !                Idk if this is well defined on fortran specification
-            str = TRIM(str)//MERGE(' ', CHAR(0), i.NE.1)//TRIM(ADJUSTL(tmp))
+            IF(i.NE.1) str = TRIM(str)//', '
+            str = TRIM(str)//TRIM(ADJUSTL(tmp))
         END DO
         str = TRIM(str)//']'
         CALL JSON_ENTRY_PUSH_STR_INTERNAL(entries, key, str)
@@ -294,10 +290,8 @@ MODULE MOD_JSONIO
 
         str = '['
         DO i = 1, SIZE(arr)
-            IF(i.NE.1) str = TRIM(str)//','
-            ! NOTE: (César): Using null char as an empty string here on merge...
-            !                Idk if this is well defined on fortran specification
-            str = TRIM(str)//MERGE(' ', CHAR(0), i.NE.1)//TRIM(ADJUSTL(arr(i)))
+            IF(i.NE.1) str = TRIM(str)//', '
+            str = TRIM(str)//'"'//TRIM(ADJUSTL(arr(i)))//'"'
         END DO
         str = TRIM(str)//']'
         CALL JSON_ENTRY_PUSH_STR_INTERNAL(entries, key, str)
