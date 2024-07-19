@@ -9,7 +9,7 @@ MODULE MOD_PARAMETERS
   CHARACTER(16)         :: fileformat = '.csv'
 
   ! Input variables
-  CHARACTER(128), DIMENSION(nsetmax) :: filename
+  CHARACTER(512), DIMENSION(nsetmax) :: filename
   LOGICAL                            :: is_set=.FALSE.
   CHARACTER(3)                       :: data_type='1c'
   CHARACTER(64)                      :: likelihood_funcname = 'GAUSSIAN'

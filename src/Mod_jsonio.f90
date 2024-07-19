@@ -31,13 +31,13 @@ MODULE MOD_JSONIO
         CONTAINS
         PROCEDURE, PRIVATE :: JSON_ENTRY_PUSH_STR_INTERNAL, JSON_ENTRY_PUSH_STR, JSON_ENTRY_PUSH_INT, JSON_ENTRY_PUSH_REAL,&
                               JSON_ENTRY_PUSH_REAL_ARR, JSON_ENTRY_PUSH_LOGICAL, JSON_ENTRY_PUSH_REAL8, JSON_ENTRY_PUSH_INT8,&
-                              JSON_ENTRY_PUSH_STR_ARR
+                              JSON_ENTRY_PUSH_STR_ARR, JSON_ENTRY_PUSH_REAL8_ARR
         PROCEDURE, PUBLIC  :: free  => JSON_ENTRY_FREE
         PROCEDURE, PUBLIC  :: sort  => JSON_ENTRY_SORT
         PROCEDURE, PUBLIC  :: write => JSON_ENTRY_WRITE
         GENERIC  , PUBLIC  :: push  => JSON_ENTRY_PUSH_STR, JSON_ENTRY_PUSH_INT, JSON_ENTRY_PUSH_REAL, JSON_ENTRY_PUSH_REAL_ARR,&
                                        JSON_ENTRY_PUSH_LOGICAL, JSON_ENTRY_PUSH_REAL8, JSON_ENTRY_PUSH_INT8,&
-                                       JSON_ENTRY_PUSH_STR_ARR
+                                       JSON_ENTRY_PUSH_STR_ARR, JSON_ENTRY_PUSH_REAL8_ARR
     END TYPE JsonEntries_t
 
     CONTAINS
@@ -265,12 +265,31 @@ MODULE MOD_JSONIO
         str = TRIM(str)//']'
         CALL JSON_ENTRY_PUSH_STR_INTERNAL(entries, key, str)
     END SUBROUTINE
+    
+    SUBROUTINE JSON_ENTRY_PUSH_REAL8_ARR(entries, key, arr)
+        CLASS(JsonEntries_t), INTENT(INOUT) :: entries
+        CHARACTER(*)        , INTENT(IN)    :: key
+        REAL(8)             , INTENT(IN)    :: arr(:)
+        INTEGER         :: i
+        CHARACTER(2048) :: tmp, str
+        
+        str = '['
+        DO i = 1, SIZE(arr)
+            WRITE(tmp, *) arr(i)
+            IF(i.NE.1) str = TRIM(str)//','
+            ! NOTE: (César): Using null char as an empty string here on merge...
+            !                Idk if this is well defined on fortran specification
+            str = TRIM(str)//MERGE(' ', CHAR(0), i.NE.1)//TRIM(ADJUSTL(tmp))
+        END DO
+        str = TRIM(str)//']'
+        CALL JSON_ENTRY_PUSH_STR_INTERNAL(entries, key, str)
+    END SUBROUTINE
 
     SUBROUTINE JSON_ENTRY_PUSH_STR_ARR(entries, key, arr)
         CLASS(JsonEntries_t), INTENT(INOUT) :: entries
         CHARACTER(*)        , INTENT(IN)    :: key
-        CHARACTER(128)      , INTENT(IN)    :: arr(:)
-        INTEGER        :: i
+        CHARACTER(512)      , INTENT(IN)    :: arr(:)
+        INTEGER         :: i
         CHARACTER(2048) :: str
 
         str = '['
