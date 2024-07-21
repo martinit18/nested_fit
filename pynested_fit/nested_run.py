@@ -5,10 +5,12 @@ from rich.live import Live as RLive
 from rich.layout import Layout as RLayout
 from rich.panel import Panel as RPanel
 from rich.table import Table as RTable
+# from rich.console import Group as RGroup
+# from rich.text import Text as RText
 # from rich.progress import Progress as RProgress
 # from rich.progress import BarColumn as RBarColumn
 # from rich.progress import TextColumn as RTextColumn
-# from rich.columns import Columns as RColumns
+from rich.columns import Columns as RColumns
 
 # Custom rich widgets import
 from .widgets import bar as cbar
@@ -116,10 +118,57 @@ class NFDashboardHeader():
 
 
 class NFDashboardInput():
-    def __init__(self):
+    def __init__(self, config):
         self._layout = RLayout()
+        self._layout.split_column(RLayout(name='top'), RLayout(name='bot'))
 
-        self._layout.update('Test Layout directly')
+        self._layout['bot'].split_row(RLayout(name='left'), RLayout(name='right'))
+
+        self._layout['bot']['left'].update('Test Layout directly')
+
+        top_sets = []
+        for i, df in enumerate(config._config['datafiles']):
+            in_large = RTable.grid(expand=False)
+            in_large.add_column(justify='right')
+            in_large.add_column(justify='left')
+            datafiles_grid = RTable.grid(expand=False)
+            datafiles_grid.add_column(justify='left', no_wrap=True)
+            datafiles_grid.add_row(f' {df}')
+            in_large.add_row('[b]Datafile:[/b]', datafiles_grid)
+            ext_str = ','.join([str(ext) for _, ext in config.get_extents()[i].items()])
+            in_large.add_row('[b]Extents:[/b]', f' {ext_str}')
+
+            functions_grid = RTable.grid(expand=False)
+            functions_grid.add_column(justify='left', no_wrap=True)
+            functions_grid.add_row(f' {config.get_functions_expr()[i].split("=")[-1].strip()}')
+            in_large.add_row('[b]Function:[/b]', functions_grid)
+
+            frame = RPanel(in_large, title=f'Set #{i}')
+            top_sets.append(frame)
+
+        if len(top_sets) > 1:
+            top_grid = RTable.grid(expand=False)
+            top_grid.add_column()
+            top_grid.add_column()
+        else:
+            top_grid = RTable.grid(expand=True)
+            top_grid.add_column()
+
+        if len(top_sets) == 1:
+            top_grid.add_row(top_sets[0])
+        elif len(top_sets) % 2 == 0:
+            i = iter(top_sets)
+            for s in zip(i, i):
+                top_grid.add_row(s[0], s[1])
+        else:
+            i = iter(top_sets[:-1])
+            for s in zip(i, i):
+                top_grid.add_row(s[0], s[1])
+            top_grid.add_row(top_sets[-1], '')
+        self._layout['bot'].size = None
+        self._layout['bot'].ratio = 100
+        self._layout['top'].minimum_size = 5 * ((len(top_sets) + 1) // 2)
+        self._layout['top'].update(top_grid)
 
     def __rich__(self):
         return self._layout
@@ -201,6 +250,8 @@ class Configurator():
 
         self._config['function'] = {}
 
+        self._df = []
+
         self.multiexp = len(expressions) > 1
         if expressions:
             if self.multiexp:
@@ -216,22 +267,24 @@ class Configurator():
         if self.multiexp:
             for i, exp in enumerate(expressions):
                 self._config[f'data_{i + 1}'] = {'xmin': 0, 'xmax': 0, 'ymin': 0, 'ymax': 0}
+                delimiter = self._get_data_file_delimiter(slot=i)
+                self._df.append(pd.read_csv(self._config['datafiles'][i], delimiter=delimiter, header=None))
         else:
+            delimiter = self._get_data_file_delimiter(slot=0)
             self._config['data'] = {'xmin': 0, 'xmax': 0, 'ymin': 0, 'ymax': 0}
-            ext = pathlib.Path(self._config['datafiles'][0]).suffixes[-1]
-            if ext == '.csv':
-                delimiter = ','
-            elif ext == '.tsv':
-                delimiter = '\t'
-            else:
-                self.logger.error('Input file invalid format/extension.')
-                self.logger.error('Valid formats: `.csv` and `.tsv`.')
-                return None
-            self._df = pd.read_csv(self._config['datafiles'][0], delimiter=delimiter, header=None)
+            self._df.append(pd.read_csv(self._config['datafiles'][0], delimiter=delimiter, header=None))
 
         self._reconfigure_data_extents()
 
         self._keep_yaml = keep_yaml
+
+    def get_functions_expr(self):
+        return [f for k, f in self._config['function'].items() if f]
+
+    def get_extents(self):
+        if self.multiexp:
+            return [self._config[f'data_{i + 1}'] for i, _ in enumerate(self._config['datafiles'])]
+        return [self._config['data']]
 
     def set_expression(self, expr, slot=0):
         if slot == 0:
@@ -294,6 +347,17 @@ class Configurator():
     def dashboard(self):
         pass
 
+    def _get_data_file_delimiter(self, slot=0):
+        ext = pathlib.Path(self._config['datafiles'][slot]).suffixes[-1]
+        if ext == '.csv':
+            return ','
+        elif ext == '.tsv':
+            return '\t'
+        else:
+            self.logger.error('Input file invalid format/extension.')
+            self.logger.error('Valid formats: `.csv` and `.tsv`.')
+            return None
+
     def _parse_stdout_error(self, line):
         # Handle errors
         if '<ERROR>' in line[0]:
@@ -325,7 +389,7 @@ class Configurator():
 
         header = NFDashboardHeader()
         header_panel = RPanel(header, title='Nested Fit Dashboard')
-        input_info = NFDashboardInput()
+        input_info = NFDashboardInput(self)
         input_panel = RPanel(input_info, title='Input Info')
         self._live_dash['header'].update(header_panel)
         self._live_dash['body']['input_info'].update(input_panel)
@@ -350,10 +414,10 @@ class Configurator():
 
         self._config['datafiles'] = datafiles
 
-    def _calculate_data_extents(self):
+    def _calculate_data_extents(self, slot=0):
         # Get where the x's are column-wise
         x_col = self._config['specstr'].split(',').index('x')
-        return (self._df[x_col].min().item(), self._df[x_col].max().item())
+        return (self._df[slot][x_col].min().item(), self._df[slot][x_col].max().item())
 
     def _get_data(self):
         if self.multiexp:
@@ -373,11 +437,11 @@ class Configurator():
         # Read the datafiles and set the extents
         if not self.multiexp:
             for file in self._config['datafiles']:
-                xmin, xmax = self._calculate_data_extents()
+                xmin, xmax = self._calculate_data_extents(slot=0)
                 self._config['data']['xmin'] = xmin
                 self._config['data']['xmax'] = xmax
         else:
             for i, file in enumerate(self._config['datafiles']):
-                xmin, xmax = self._calculate_data_extents(file)
+                xmin, xmax = self._calculate_data_extents(slot=i)
                 self._config[f'data_{i + 1}']['xmin'] = xmin
                 self._config[f'data_{i + 1}']['xmax'] = xmax
