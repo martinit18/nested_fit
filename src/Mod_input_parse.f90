@@ -420,11 +420,11 @@ MODULE MOD_INPUTPARSE
         END DO
     END SUBROUTINE
 
-    ! Max subkeys = 64
+    ! Max subkeys = 1024
     SUBROUTINE INPUTDATA_MAP_SUBKEYSOF(map, key, output, count)
         CLASS(InputDataMap_t)   , INTENT(INOUT), TARGET :: map
         CHARACTER(*)            , INTENT(IN)            :: key
-        CHARACTER(128)          , INTENT(OUT)           :: output(64)
+        CHARACTER(128)          , INTENT(OUT)           :: output(1024)
         INTEGER                 , INTENT(OUT)           :: count
         INTEGER                                         :: i
         TYPE(InputDataMapPair_t), POINTER               :: next

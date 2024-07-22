@@ -1117,8 +1117,8 @@ PROGRAM NESTED_FIT
    INTEGER                        :: numparams
    INTEGER                        :: i
    LOGICAL                        :: fix_logical = .FALSE.
-   CHARACTER(128)                 :: legacy_param_keys(64)
-   CHARACTER(128)                 :: legacy_param_names(64)
+   CHARACTER(128)                 :: legacy_param_keys(1024)
+   CHARACTER(128)                 :: legacy_param_names(1024)
    INTEGER                        :: legacy_param_count
    CHARACTER(128)                 :: splitarr(16)
    INTEGER                        :: splitarr_count
@@ -1262,6 +1262,9 @@ PROGRAM NESTED_FIT
          CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'step' , par_step(par_num(i)), MANDATORY=.FALSE.) !    -1 by default
          CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'min'  , par_bnd1(par_num(i)), MANDATORY=.TRUE. )
          CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'max'  , par_bnd2(par_num(i)), MANDATORY=.TRUE. )
+         ! Reset fix_logical to .FALSE., its default value
+         ! TODO: (César) Prefer a DEFAULT param in the FIELD_FROM_INPUT_* functions
+         fix_logical = .FALSE.
          CALL FIELD_FROM_INPUT_LOGICAL(input_config, TRIM(key)//'fixed', fix_logical         , MANDATORY=.FALSE.) ! False by default
          par_fix(par_num(i)) = MERGE(1, 0, fix_logical)
          !???? debugging here
