@@ -187,6 +187,23 @@ CONTAINS
         END DO
     END SUBROUTINE
 
+    SUBROUTINE STR_REPLACE_ALL(str, ch, with, output)
+        IMPLICIT NONE
+        CHARACTER(*), INTENT(IN)             :: str
+        CHARACTER(1), INTENT(IN)             :: ch
+        CHARACTER(1), INTENT(IN)             :: with
+        CHARACTER(LEN=LEN(str)), INTENT(OUT) :: output
+
+        INTEGER :: i
+
+        output = TRIM(str)
+        i = INDEX(output, ch)
+        DO WHILE(i.GT.0)
+            output(i:i) = with
+            i = INDEX(output, ch)
+        END DO
+    END SUBROUTINE
+
     ! BUG: (César) Not sure why the ALLOCATE causes issues with this function when used from another filename
     !              Maybe scope issues?? Or pass by value? Or by ref?? This is weird...
 

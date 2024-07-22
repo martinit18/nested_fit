@@ -285,13 +285,16 @@ MODULE MOD_JSONIO
         CLASS(JsonEntries_t), INTENT(INOUT) :: entries
         CHARACTER(*)        , INTENT(IN)    :: key
         CHARACTER(512)      , INTENT(IN)    :: arr(:)
+        CHARACTER(512)  :: tmp
         INTEGER         :: i
         CHARACTER(2048) :: str
 
         str = '['
         DO i = 1, SIZE(arr)
             IF(i.NE.1) str = TRIM(str)//', '
-            str = TRIM(str)//'"'//TRIM(ADJUSTL(arr(i)))//'"'
+            ! Need to replace " with ' for string output in json
+            CALL STR_REPLACE_ALL(arr(i), '"', "'", tmp)
+            str = TRIM(str)//'"'//TRIM(ADJUSTL(tmp))//'"'
         END DO
         str = TRIM(str)//']'
         CALL JSON_ENTRY_PUSH_STR_INTERNAL(entries, key, str)
