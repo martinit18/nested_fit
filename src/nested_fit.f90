@@ -1264,6 +1264,8 @@ PROGRAM NESTED_FIT
          CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'max'  , par_bnd2(par_num(i)), MANDATORY=.TRUE. )
          CALL FIELD_FROM_INPUT_LOGICAL(input_config, TRIM(key)//'fixed', fix_logical         , MANDATORY=.FALSE.) ! False by default
          par_fix(par_num(i)) = MERGE(1, 0, fix_logical)
+         !???? debugging here
+         write(*,*) 'par_fix', i, par_fix(par_num(i))
 
          IF (par_bnd1(par_num(i)).GE.par_bnd2(par_num(i))) THEN
             CALL LOG_ERROR_HEADER()
