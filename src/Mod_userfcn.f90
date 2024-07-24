@@ -262,7 +262,7 @@ MODULE MOD_USERFCN
         CHARACTER(128)             :: func_header
         LOGICAL                    :: loaded_ok
 
-        IF(.NOT.IS_LEGACY_USERFCN(funcname)) THEN
+        IF(.NOT.IS_LEGACY_USERFCN(TRIM(funcname))) THEN
             func_header = TRIM(funcname(1:INDEX(funcname, '(')-1))
             CALL LOG_TRACE('Setting user function pointer named => '//TRIM(func_header))
 
@@ -289,7 +289,7 @@ MODULE MOD_USERFCN
         LOGICAL                    :: loaded_ok
         INTEGER                    :: i
 
-        IF(.NOT.IS_LEGACY_USERFCN(funcname(1))) THEN
+        IF(.NOT.IS_LEGACY_USERFCN(TRIM(funcname(1)))) THEN
             ! Setup the user function for each available set
             DO i = 1, nset
                 func_header = TRIM(funcname(i)(1:INDEX(funcname(i), '(')-1))

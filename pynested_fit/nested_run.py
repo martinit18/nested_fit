@@ -201,6 +201,7 @@ class Configurator():
     def __init__(self,
                  datafiles=[],
                  specstr='x,c',
+                 filefmt='auto',
                  likelihood='GAUSSIAN',
                  expressions=[],
                  params={},
@@ -218,10 +219,11 @@ class Configurator():
 
                  cluster_enable=False,
                  cluster_method='f',
-                 cluster_distance=0.5,
-                 cluster_bandwidth=0.2,
+                 cluster_parameter1=0.5,
+                 cluster_parameter2=0.2,
 
-                 keep_yaml=True
+                 keep_yaml=True,
+                 **kwargs
                  ):
 
         self.logger = logging.getLogger("rich")
@@ -230,7 +232,8 @@ class Configurator():
             self.logger.error('Configurator needs at least one datafile.')
             return None
 
-        # Set some defaults
+        # Create the config file that will serve to write
+        # the nf_input.yaml file
         self._config = {}
 
         # major.minor only
@@ -239,6 +242,7 @@ class Configurator():
         # datafiles
         self._config['datafiles'] = datafiles
 
+        # search
         self._config['search'] = {}
         self._config['search']['livepoints'] = livepoints
         self._config['search']['method'] = search_method
@@ -249,49 +253,62 @@ class Configurator():
         self._config['search']['num_tries'] = 1
         self._config['search']['max_steps'] = search_maxsteps
 
+        # convergence
         self._config['convergence'] = {}
         self._config['convergence']['method'] = conv_method
         self._config['convergence']['accuracy'] = conv_accuracy
         self._config['convergence']['parameter'] = conv_parameter
 
+        # clustering
         self._config['clustering'] = {}
         self._config['clustering']['enabled'] = cluster_enable
         self._config['clustering']['method'] = cluster_method
-        self._config['clustering']['distance'] = cluster_distance
-        self._config['clustering']['bandwidth'] = cluster_bandwidth
+        self._config['clustering']['parameter1'] = cluster_parameter1
+        self._config['clustering']['parameter2'] = cluster_parameter2
 
-        # input file layout
+        # input file
         self._config['specstr'] = specstr
+        self._config['filefmt'] = self._compute_filefmt(filefmt) # handle filefmt = 'auto' (python only)
 
-        self._config['likelihood'] = 'GAUSSIAN'
+        # likelihood
+        self._config['likelihood'] = likelihood
 
+        # expressions and params
         self._config['function'] = {}
 
         self._df = []
 
-        self.multiexp = len(expressions) > 1
+        self.expcount = len(expressions)
+        self.multiexp = self.expcount > 1
         if expressions:
             if self.multiexp:
                 for i, expr in enumerate(expressions):
-                    self._config['function'][f'expression_{i + 1}'] = expr
+                    self.set_expression(expr, slot=(i + 1))
             else:
-                self._config['function']['expression'] = expressions[0]
+                self.set_expression(expressions[0])
 
         self._config['function']['params'] = params
 
-        # Get all data by default
-        self.manual_extents = False
+        # Check for kwargs
+        if not self._check_kwargs(kwargs):
+            return None
+        self._assign_kwargs(kwargs)
+
+        # TODO: (César) This workload of finding out xrange should be offloaded to
+        #               the nested_fit executable
+        input_delimiter = self._get_data_file_delimiter()
         if self.multiexp:
             for i, exp in enumerate(expressions):
-                self._config[f'data_{i + 1}'] = {'xmin': 0, 'xmax': 0, 'ymin': 0, 'ymax': 0}
-                delimiter = self._get_data_file_delimiter(slot=i)
-                self._df.append(pd.read_csv(self._config['datafiles'][i], delimiter=delimiter, header=None))
+                self._df.append(pd.read_csv(self._config['datafiles'][i], delimiter=input_delimiter, header=None))
+                if self._find_kwarg(f'data_{i + 1}') is None:
+                    self._config[f'data_{i + 1}'] = {'xmin': 0, 'xmax': 0, 'ymin': 0, 'ymax': 0}
+                    self._reconfigure_data_extents(slot=(i + 1))
         else:
-            delimiter = self._get_data_file_delimiter(slot=0)
-            self._config['data'] = {'xmin': 0, 'xmax': 0, 'ymin': 0, 'ymax': 0}
-            self._df.append(pd.read_csv(self._config['datafiles'][0], delimiter=delimiter, header=None))
-
-        self._reconfigure_data_extents()
+            self._df.append(pd.read_csv(self._config['datafiles'][0], delimiter=input_delimiter, header=None))
+            if self._find_kwarg('data') is None:
+                delimiter = self._get_data_file_delimiter()
+                self._config['data'] = {'xmin': 0, 'xmax': 0, 'ymin': 0, 'ymax': 0}
+                self._reconfigure_data_extents(slot=0)
 
         self._keep_yaml = keep_yaml
 
@@ -300,7 +317,7 @@ class Configurator():
 
     def get_extents(self):
         if self.multiexp:
-            return [self._config[f'data_{i + 1}'] for i, _ in enumerate(self._config['datafiles'])]
+            return [self._config[f'data_{i + 1}'] for i in range(self.expcount)]
         return [self._config['data']]
 
     def set_expression(self, expr, slot=0):
@@ -309,18 +326,26 @@ class Configurator():
         else:
             self._config['function'][f'expression_{slot}'] = expr
 
-    def set_extents(self, xmin, xmax, slot=0):
-        if xmin == 0 and xmax == 0:
-            self.manual_extents = False
-            self._reconfigure_data_extents()
+    def set_extents(self, xmin, xmax, ymin=0, ymax=0, slot=0):
+        if xmin == 0 and xmax == 0 and ymin == 0 and ymax == 0:
+            self._reconfigure_data_extents(slot=slot)
         else:
-            self.manual_extents = True
-            if slot == 0:
+            if slot == 0 and not self.multiexp:
                 self._config['data']['xmin'] = xmin
                 self._config['data']['xmax'] = xmax
+                self._config['data']['ymin'] = ymin
+                self._config['data']['ymax'] = ymax
+            elif slot == 0 and self.multiexp:
+                for i in range(self.expcount):
+                    self._config[f'data_{i + 1}']['xmin'] = xmin
+                    self._config[f'data_{i + 1}']['xmax'] = xmax
+                    self._config[f'data_{i + 1}']['ymin'] = ymin
+                    self._config[f'data_{i + 1}']['ymax'] = ymax
             else:
                 self._config[f'data_{slot}']['xmin'] = xmin
                 self._config[f'data_{slot}']['xmax'] = xmax
+                self._config[f'data_{slot}']['ymin'] = ymin
+                self._config[f'data_{slot}']['ymax'] = ymax
 
     def set_params(self, **params):
         self._config['function']['params'] = params
@@ -363,17 +388,57 @@ class Configurator():
 
     def dashboard(self):
         pass
+    
+    def _assign_kwargs(self, kwargs):
+        for kw, vw in kwargs.items():
+            self._config[kw] = vw
+        self._init_kwargs = kwargs
 
-    def _get_data_file_delimiter(self, slot=0):
-        ext = pathlib.Path(self._config['datafiles'][slot]).suffixes[-1]
+    def _find_kwarg(self, name):
+        if name in self._init_kwargs.keys():
+            return self._init_kwargs[name]
+        return None
+
+    def _check_kwargs(self, kwargs):
+        self._valid_kwargs_pat = []
+
+        # NOTE: (César) This is prob faster than regex
+        if self.multiexp:
+            for i in range(self.expcount):
+                self._valid_kwargs_pat.append(f'data_{i+1}')
+        else:
+            self._valid_kwargs_pat.append('data')
+        
+        # Some kwargs are invalid, figure out which ones
+        # e.g. data_0 fails, random_input fails, ...
+        #      data is ok, data_1 is ok, ...
+        in_pattern = [k in self._valid_kwargs_pat for k in kwargs]
+        if not all(in_pattern):
+            for i, kw in enumerate(kwargs):
+                if not in_pattern[i]:
+                    self.logger.error(f'The kwarg "{kw}" is not valid on the current context.')
+            return False
+        return True
+
+    def _auto_detect_data_file_delimiter(self, slot=0):
+        return pathlib.Path(self._config['datafiles'][slot]).suffixes[-1]
+
+    def _get_data_file_delimiter(self):
+        ext = self._config['filefmt']
         if ext == '.csv':
             return ','
         elif ext == '.tsv':
-            return '\t'
+            return r'\s+' # Allow for spaces in the 'tsv' format not only tabs
         else:
             self.logger.error('Input file invalid format/extension.')
             self.logger.error('Valid formats: `.csv` and `.tsv`.')
             return None
+
+    def _compute_filefmt(self, fmt):
+        if fmt == 'auto':
+            return self._auto_detect_data_file_delimiter(slot=0)
+        else:
+            return fmt
 
     def _parse_stdout_error(self, line):
         # Handle errors
@@ -432,9 +497,11 @@ class Configurator():
         self._config['datafiles'] = datafiles
 
     def _calculate_data_extents(self, slot=0):
+        if self.multiexp:
+            slot -= 1
         # Get where the x's are column-wise
         x_col = self._config['specstr'].split(',').index('x')
-        return (self._df[slot][x_col].min().item(), self._df[slot][x_col].max().item())
+        return (self._df[slot][x_col].astype(float).min().item(), self._df[slot][x_col].astype(float).max().item())
 
     def _get_data(self):
         if self.multiexp:
@@ -447,18 +514,13 @@ class Configurator():
 
         return (self._df[x_col].tolist(), self._df[y_col].tolist())
 
-    def _reconfigure_data_extents(self):
-        if self.manual_extents or not self._config['datafiles']:
-            return
-
+    def _reconfigure_data_extents(self, slot=0):
         # Read the datafiles and set the extents
         if not self.multiexp:
-            for file in self._config['datafiles']:
-                xmin, xmax = self._calculate_data_extents(slot=0)
-                self._config['data']['xmin'] = xmin
-                self._config['data']['xmax'] = xmax
+            xmin, xmax = self._calculate_data_extents(slot=0)
+            self._config['data']['xmin'] = xmin
+            self._config['data']['xmax'] = xmax
         else:
-            for i, file in enumerate(self._config['datafiles']):
-                xmin, xmax = self._calculate_data_extents(slot=i)
-                self._config[f'data_{i + 1}']['xmin'] = xmin
-                self._config[f'data_{i + 1}']['xmax'] = xmax
+            xmin, xmax = self._calculate_data_extents(slot=slot)
+            self._config[f'data_{slot}']['xmin'] = xmin
+            self._config[f'data_{slot}']['xmax'] = xmax
