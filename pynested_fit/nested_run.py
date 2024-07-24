@@ -165,6 +165,7 @@ class NFDashboardInput():
             frame = RPanel(in_large, title=f'Set #{i}')
             top_sets.append(frame)
 
+        # TODO: (César) Reordering / resizing items could be more sensible to screen width
         if len(top_sets) > 1:
             top_grid = RTable.grid(expand=False)
             top_grid.add_column()
