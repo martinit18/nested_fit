@@ -122,10 +122,29 @@ class NFDashboardInput():
         self._layout = RLayout()
         self._layout.split_column(RLayout(name='top'), RLayout(name='bot'))
 
-        self._layout['bot'].split_row(RLayout(name='left'), RLayout(name='right'))
+        top_grid, top_sets = self._generate_set_grid(config)
+        self._layout['bot'].size = None
+        self._layout['bot'].ratio = 100
+        self._layout['top'].minimum_size = 5 * ((len(top_sets) + 1) // 2)
+        self._layout['top'].update(top_grid)
 
-        self._layout['bot']['left'].update('Test Layout directly')
+        # TODO: (César) Add a dynamic way to detect ncols based on screen size
+        self._layout['bot'].update(self._generate_misc_params_in(config, 2))
 
+    def _generate_misc_params_in(self, config, ncols):
+        columns = RLayout()
+        columns.split_row(*[RLayout(name=str(i)) for i in range(ncols)])
+        grid = RTable.grid(expand=False)
+        grid.add_column()
+        grid.add_column()
+
+        fetch_dict = {
+            'N. livepoints': config._config['search']['livepoints'],
+            'Search Method': config._config['search']['method'],
+            'Search Params': (config._config['search']['param1'], config._config['search']['param1'])
+        }
+
+    def _generate_set_grid(self, config):
         top_sets = []
         for i, df in enumerate(config._config['datafiles']):
             in_large = RTable.grid(expand=False)
@@ -165,10 +184,7 @@ class NFDashboardInput():
             for s in zip(i, i):
                 top_grid.add_row(s[0], s[1])
             top_grid.add_row(top_sets[-1], '')
-        self._layout['bot'].size = None
-        self._layout['bot'].ratio = 100
-        self._layout['top'].minimum_size = 5 * ((len(top_sets) + 1) // 2)
-        self._layout['top'].update(top_grid)
+        return top_grid, top_sets
 
     def __rich__(self):
         return self._layout
