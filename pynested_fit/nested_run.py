@@ -120,29 +120,51 @@ class NFDashboardHeader():
 class NFDashboardInput():
     def __init__(self, config):
         self._layout = RLayout()
-        self._layout.split_column(RLayout(name='top'), RLayout(name='bot'))
+        self._layout.split_column(RLayout(name='top'), RLayout(name='mid'), RLayout(name='bot'))
 
         top_grid, top_sets = self._generate_set_grid(config)
-        self._layout['bot'].size = None
-        self._layout['bot'].ratio = 100
+        self._layout['mid'].size = None
+        self._layout['mid'].ratio = 100
+        self._layout['mid'].update(RTable.grid())
         self._layout['top'].minimum_size = 5 * ((len(top_sets) + 1) // 2)
         self._layout['top'].update(top_grid)
 
         # TODO: (César) Add a dynamic way to detect ncols based on screen size
-        self._layout['bot'].update(self._generate_misc_params_in(config, 2))
+        panel, psize = self._generate_misc_params_in(config, 2)
+        self._layout['bot'].minimum_size = psize
+        self._layout['bot'].update(panel)
 
     def _generate_misc_params_in(self, config, ncols):
         columns = RLayout()
         columns.split_row(*[RLayout(name=str(i)) for i in range(ncols)])
         grid = RTable.grid(expand=False)
-        grid.add_column()
-        grid.add_column()
+        grid.add_column(justify='right')
+        grid.add_column(justify='left')
 
         fetch_dict = {
-            'N. livepoints': config._config['search']['livepoints'],
-            'Search Method': config._config['search']['method'],
-            'Search Params': (config._config['search']['param1'], config._config['search']['param1'])
+            'N. Livepoints': str(config._config['search']['livepoints']),
+            'Search Method': (config._config['search']['method']),
+            'Search Params': '(' + ', '.join(map(str, (config._config['search']['param1'], config._config['search']['param1']))) + ')',
+            'Convergence Method': str(config._config['convergence']['method']),
+            'Convergence Acc.': str(config._config['convergence']['accuracy']),
+            'Convergence Param': str(config._config['convergence']['parameter'])
         }
+
+        if config._config['clustering']['enabled']:
+            fetch_dict['Clustering Method'] = str(config._config['clustering']['method'])
+            fetch_dict['Clustering Params'] = '(' + ', '.join(map(str, (config._config['clustering']['parameter1'], config._config['clustering']['parameter2']))) + ')'
+
+        fetch_dict['N. Params'] = str(len(
+            [x for x, y in config._config['function']['params'].items()
+                if 'fixed' not in y or not y['fixed']
+            ])) + ' (' + str(len(config._config['function']['params'].keys())) + ')'
+
+        # NOTE: (César) For now add rows at will
+        #               This could probably be changed for a better layout disposition
+        for k, v in fetch_dict.items():
+            grid.add_row(f'[b]{k}:[/b]', f' {v}')
+
+        return RPanel(grid, title='Input File'), 2 + len(fetch_dict.keys())
 
     def _generate_set_grid(self, config):
         top_sets = []
@@ -186,6 +208,17 @@ class NFDashboardInput():
                 top_grid.add_row(s[0], s[1])
             top_grid.add_row(top_sets[-1], '')
         return top_grid, top_sets
+
+    def __rich__(self):
+        return self._layout
+
+    def update(self):
+        pass
+
+
+class NFDashboardOutput():
+    def __init__(self):
+        self._layout = RLayout()
 
     def __rich__(self):
         return self._layout
@@ -473,13 +506,17 @@ class Configurator():
         header_panel = RPanel(header, title='Nested Fit Dashboard')
         input_info = NFDashboardInput(self)
         input_panel = RPanel(input_info, title='Input Info')
+        output_info = NFDashboardOutput()
+        output_panel = RPanel(output_info, title='Output Info')
         self._live_dash['header'].update(header_panel)
         self._live_dash['body']['input_info'].update(input_panel)
+        self._live_dash['body']['output_info'].update(output_panel)
 
         with RLive(self._live_dash, refresh_per_second=1 / 1.5):
             for _ in range(100):
                 header.update()
                 input_info.update()
+                output_info.update()
                 time.sleep(1.5)
 
     def _draw_live_table(self, data):
@@ -501,7 +538,7 @@ class Configurator():
             slot -= 1
         # Get where the x's are column-wise
         x_col = self._config['specstr'].split(',').index('x')
-        return (self._df[slot][x_col].astype(float).min().item(), self._df[slot][x_col].astype(float).max().item())
+        return (self._df[slot][x_col].min().item(), self._df[slot][x_col].max().item())
 
     def _get_data(self):
         if self.multiexp:
