@@ -74,11 +74,11 @@ class NFDashboardHeader():
         switches.add_column(justify='left')
         switches.add_row(
             '[b]OpenMP[/b]',
-            ' [green]YES[/green]' if __features__['OpenMP'] == 'ON' else ' [red]NO[/red]'
+            ' [green]YES[/green]' if __features__['OpenMP'] == 'ON' else ' [red]NO[/red]' # type: ignore
         )
         switches.add_row(
             '[b]OpenMPI[/b]',
-            ' [green]YES[/green]' if __features__['OpenMPI'] == 'ON' else ' [red]NO[/red]'
+            ' [green]YES[/green]' if __features__['OpenMPI'] == 'ON' else ' [red]NO[/red]' # type: ignore
         )
 
         top_right['left'].update(switches)
@@ -87,9 +87,9 @@ class NFDashboardHeader():
         debug_grid.add_column(justify='right')
         debug_grid.add_column(justify='left')
 
-        if __features__['LTRACE'] == 'ON':
+        if __features__['LTRACE'] == 'ON': # type: ignore
             debug_grid.add_row('', ' [b][yellow]:warning: Tracing on![/yellow][/b]')
-        if __features__['BUILDTYPE'] == 'Debug':
+        if __features__['BUILDTYPE'] == 'Debug': # type: ignore
             debug_grid.add_row('', ' [b][yellow]:warning: Debug build![/yellow][/b]')
 
         top_right['center'].update(debug_grid)
@@ -98,7 +98,7 @@ class NFDashboardHeader():
         debug_grid2.add_column(justify='right')
         debug_grid2.add_column(justify='left')
 
-        if __features__['PPROF'] == 'ON':
+        if __features__['PPROF'] == 'ON': # type: ignore
             debug_grid2.add_row('[b][yellow]:warning: Profiling on![/yellow][/b]', '')
         else:
             debug_grid2.add_row('', '')
@@ -331,7 +331,7 @@ class Configurator():
         #               the nested_fit executable
         input_delimiter = self._get_data_file_delimiter()
         if self.multiexp:
-            for i, exp in enumerate(expressions):
+            for i, _ in enumerate(expressions):
                 self._df.append(pd.read_csv(self._config['datafiles'][i], delimiter=input_delimiter, header=None))
                 if self._find_kwarg(f'data_{i + 1}') is None:
                     self._config[f'data_{i + 1}'] = {'xmin': 0, 'xmax': 0, 'ymin': 0, 'ymax': 0}
@@ -339,14 +339,13 @@ class Configurator():
         else:
             self._df.append(pd.read_csv(self._config['datafiles'][0], delimiter=input_delimiter, header=None))
             if self._find_kwarg('data') is None:
-                delimiter = self._get_data_file_delimiter()
                 self._config['data'] = {'xmin': 0, 'xmax': 0, 'ymin': 0, 'ymax': 0}
                 self._reconfigure_data_extents(slot=0)
 
         self._keep_yaml = keep_yaml
 
     def get_functions_expr(self):
-        return [f for k, f in self._config['function'].items() if f]
+        return [f for _, f in self._config['function'].items() if f]
 
     def get_extents(self):
         if self.multiexp:
@@ -409,7 +408,7 @@ class Configurator():
                 self._draw_live_table(live_data)
 
         if not self._keep_yaml:
-            pathlib.Path.unlink(f'{path}/nf_input.yaml', missing_ok=True)
+            pathlib.Path(f'{path}/nf_input.yaml').unlink(missing_ok=True)
 
         try:
             with open(f'{path}/nf_output_res.json', 'r') as f:
@@ -483,7 +482,9 @@ class Configurator():
         return False
 
     def _parse_nf_stdout(self):
-        line = self._nf_process.stdout.readline().decode("utf-8").split('|')
+        line = self._nf_process.stdout
+        if line:
+            line.readline().decode("utf-8").split('|')
 
         if self._parse_stdout_error(line):
             return None
