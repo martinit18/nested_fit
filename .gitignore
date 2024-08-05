@@ -47,3 +47,6 @@ aclocal.m4
 
 # Apparently autoconf generates a back configure (???)
 configure~
+
+# FBuild config file
+.fbuild.lua
