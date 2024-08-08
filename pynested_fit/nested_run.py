@@ -5,7 +5,6 @@ from rich.live import Live as RLive
 from rich.layout import Layout as RLayout
 from rich.panel import Panel as RPanel
 from rich.table import Table as RTable
-# from rich.console import Group as RGroup
 # from rich.text import Text as RText
 # from rich.progress import Progress as RProgress
 # from rich.progress import BarColumn as RBarColumn
@@ -15,6 +14,8 @@ from rich.columns import Columns as RColumns
 # Custom rich widgets import
 from .widgets import bar as cbar
 from .widgets import timer as ctimer
+from .widgets import var as cvar
+from .widgets import hfinder as chfinder
 
 # Metadata
 from .metadata import __features__
@@ -32,6 +33,7 @@ import yaml
 import json
 import time
 import psutil
+from typing import List
 
 
 class NFDashboardHeader():
@@ -219,12 +221,69 @@ class NFDashboardInput():
 class NFDashboardOutput():
     def __init__(self):
         self._layout = RLayout()
+        self._vars: List[cvar.NFDashboardVariable] = []
+        self._grid = None
+        self._finder = None
 
     def __rich__(self):
         return self._layout
 
-    def update(self):
-        pass
+    def _load_live_data(self, live_data : str):
+        # This is the output from nested_fit after the pipe char (i.e. LO | <-)
+        NPAR_IDX = 7 # This is where the number of pars starts
+        # fortran output style: npar, names, values
+        loutput = live_data.split()
+
+        # We know the output from here on needs to be even
+        # So no need to read npar
+        live_vars = loutput[NPAR_IDX + 1:]
+        live_szh = len(live_vars)//2
+
+        # Returns (names, values)
+        return live_vars[:live_szh], live_vars[live_szh:]
+
+    def _chunkerize(self, lst: List, chunk_sz: int):
+        for i in range(0, len(lst), chunk_sz):
+            yield lst[i:i + chunk_sz]
+
+    def _construct_grid(self):
+        if not self._finder:
+            self._finder = chfinder.HFinder()
+        self._layout.update(self._finder)
+        dims = self._finder.get_available_dimensions()
+
+        if not dims:
+            return False
+
+        CHUNK = 20
+        self._chunk_sz = dims[0] // CHUNK
+        for _ in range(self._chunk_sz):
+            self._grid.add_column(width=CHUNK) # type: ignore
+
+        return True
+
+    def update(self, live_data : str):
+        live_names, live_values = self._load_live_data(live_data)
+        if not self._vars:
+            # Construct the layout
+            self._grid = RTable.grid(expand=False)
+            if not self._construct_grid():
+                return # Early out and wait for the size calculation
+
+            for name, value in zip(live_names, live_values):
+                self._vars.append(cvar.NFDashboardVariable(name, value))
+
+            for vars in self._chunkerize(self._vars, self._chunk_sz):
+                if len(vars) < self._chunk_sz:
+                    diff = self._chunk_sz - len(vars)
+                    nv = vars + [''] * diff
+                    self._grid.add_row(*nv)
+                else:
+                    self._grid.add_row(*vars)
+            self._layout.update(self._grid)
+        else:
+            for i, value in enumerate(live_values):
+                self._vars[i].update(value)
 
 
 class Configurator():
@@ -394,18 +453,16 @@ class Configurator():
         )
 
         if not silent_output:
-            self._live_dash = self._generate_live_dashboard()
+            self._generate_live_dashboard()
 
-        # pbar = tqdm(total=self._config['search']['max_steps'], desc='Running nested_fit', disable=disablebar)
-
-        # TODO: (César): Make this a thread and send data via socket
-        while self._nf_process.poll() is None:
-            live_data = self._parse_nf_stdout()
-
-            if not live_data:
-                continue
-            if not silent_output:
-                self._draw_live_table(live_data)
+            with RLive(self._live_dash, refresh_per_second=2):
+                while self._nf_process.poll() is None:
+                    live_data = self._parse_nf_stdout()
+                    self._draw_live_table(live_data)
+        else:
+            while self._nf_process.poll() is None:
+                # NOTE: (César) This `silent_output` hides errors for now (the user will need to check the log)
+                time.sleep(0.1) # Wait until nf stops regardless of result
 
         if not self._keep_yaml:
             pathlib.Path(f'{path}/nf_input.yaml').unlink(missing_ok=True)
@@ -418,9 +475,6 @@ class Configurator():
             self.logger.error(f'I/O exception {e}')
             return None
 
-    def dashboard(self):
-        pass
-    
     def _assign_kwargs(self, kwargs):
         for kw, vw in kwargs.items():
             self._config[kw] = vw
@@ -484,10 +538,14 @@ class Configurator():
     def _parse_nf_stdout(self):
         line = self._nf_process.stdout
         if line:
-            line.readline().decode("utf-8").split('|')
+            line = line.readline().decode("utf-8").split('|')
+        else:
+            return None
 
         if self._parse_stdout_error(line):
             return None
+
+        return line[-1].strip()
 
     def _generate_live_dashboard(self):
         # Display some input options so we know
@@ -503,25 +561,21 @@ class Configurator():
             RLayout(name='output_info')
         )
 
-        header = NFDashboardHeader()
-        header_panel = RPanel(header, title='Nested Fit Dashboard')
-        input_info = NFDashboardInput(self)
-        input_panel = RPanel(input_info, title='Input Info')
-        output_info = NFDashboardOutput()
-        output_panel = RPanel(output_info, title='Output Info')
+        self._header = NFDashboardHeader()
+        header_panel = RPanel(self._header, title='Nested Fit Dashboard')
+        self._input_info = NFDashboardInput(self)
+        input_panel = RPanel(self._input_info, title='Input Info')
+        self._output_info = NFDashboardOutput()
+        output_panel = RPanel(self._output_info, title='Output Info')
         self._live_dash['header'].update(header_panel)
         self._live_dash['body']['input_info'].update(input_panel)
         self._live_dash['body']['output_info'].update(output_panel)
 
-        with RLive(self._live_dash, refresh_per_second=1 / 1.5):
-            for _ in range(100):
-                header.update()
-                input_info.update()
-                output_info.update()
-                time.sleep(1.5)
-
     def _draw_live_table(self, data):
-        pass
+        self._header.update()
+        self._input_info.update()
+        if data:
+            self._output_info.update(data)
 
     def _write_yaml_file(self, path):
         # We want the datafiles as a string
