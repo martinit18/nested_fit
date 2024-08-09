@@ -30,7 +30,8 @@ dependencies = [
     "rich",
     "plotly",
     "psutil",
-    "anesthetic"
+    "anesthetic",
+	"plotext"
 ]
 
 [project.urls]

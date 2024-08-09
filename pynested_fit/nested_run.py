@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+# Brief  : File for running pynested_fit interactively.
+# Author : César Godinho
+# Date   : 09/08/2024
+
 # The new version uses rich to print out
 from rich.live import Live as RLive
 from rich.layout import Layout as RLayout
@@ -9,13 +13,18 @@ from rich.table import Table as RTable
 # from rich.progress import Progress as RProgress
 # from rich.progress import BarColumn as RBarColumn
 # from rich.progress import TextColumn as RTextColumn
-from rich.columns import Columns as RColumns
+# from rich.columns import Columns as RColumns
+import numpy as np
 
 # Custom rich widgets import
 from .widgets import bar as cbar
 from .widgets import timer as ctimer
 from .widgets import var as cvar
 from .widgets import hfinder as chfinder
+from .widgets import plot as cplot
+
+# Function evaluator
+from .evaluator import NFEvaluator
 
 # Metadata
 from .metadata import __features__
@@ -219,11 +228,35 @@ class NFDashboardInput():
 
 
 class NFDashboardOutput():
-    def __init__(self):
+    def __init__(self, config):
         self._layout = RLayout()
+        self._layout.split_column(RLayout(name='top'), RLayout(name='bot'))
+        self._layout['top'].split_row(RLayout(name='stats'), RLayout(name='params'))
+
+        self._plot = cplot.NFPlot()
+        self._layout['bot'].update(self._plot)
+
+        # NOTE: (César) If this is a set run, currently we just display the first (function, data) pair
+        self._evaluator = NFEvaluator(config.get_functions_expr()[0].split('=')[0].split('(')[0].strip())
+        self._local_extents = config.get_extents()[0]
+
+        # TODO: (César) Make this linspace create a dynamic ammount of points based on the available
+        #               terminal width.
+        self._X = np.linspace(self._local_extents['xmin'],self._local_extents['xmax'], 200)
+        
+        self._XD, self._YD = config.get_data(0)
+
+        self._logger = logging.getLogger("rich")
+
+        if not self._evaluator.is_valid():
+            self._logger.warn('The evaluator does not support legacy functions.')    
+            self._logger.warn('The graphical display will be disabled.')    
+            # TODO: (César) Add a flag for this and check
+
         self._vars: List[cvar.NFDashboardVariable] = []
         self._grid = None
         self._finder = None
+        self._stats: List[str] = []
 
     def __rich__(self):
         return self._layout
@@ -249,7 +282,7 @@ class NFDashboardOutput():
     def _construct_grid(self):
         if not self._finder:
             self._finder = chfinder.HFinder()
-        self._layout.update(self._finder)
+        self._layout['top']['params'].update(self._finder)
         dims = self._finder.get_available_dimensions()
 
         if not dims:
@@ -280,11 +313,14 @@ class NFDashboardOutput():
                     self._grid.add_row(*nv)
                 else:
                     self._grid.add_row(*vars)
-            self._layout.update(self._grid)
+            self._layout['top']['params'].update(self._grid)
         else:
             for i, value in enumerate(live_values):
                 self._vars[i].update(value)
 
+            Y = self._evaluator.atv(self._X, np.array([np.float64(p) for p in live_values]))
+            if Y is not None:
+                self._plot.update(self._X, Y)
 
 class Configurator():
     '''Writes the nf_input.yaml file for automatic runs and creates a python settings interface.
@@ -441,6 +477,17 @@ class Configurator():
     def set_params(self, **params):
         self._config['function']['params'] = params
 
+    def get_data(self, slot=0):
+        # if self.multiexp:
+        #     self.logger.error('_get_data does not support multiple datafiles.')
+        #     return None
+
+        x_col = self._config['specstr'].split(',').index('x')
+        y_col = self._config['specstr'].split(',').index('c')
+        # e_col = self._config['specstr'].split(',').index('ce')
+
+        return (self._df[slot][x_col].tolist(), self._df[slot][y_col].tolist())
+
     def sample(self, path='.', silent_output=False):
         version = imp_version('nested_fit')
 
@@ -565,7 +612,7 @@ class Configurator():
         header_panel = RPanel(self._header, title='Nested Fit Dashboard')
         self._input_info = NFDashboardInput(self)
         input_panel = RPanel(self._input_info, title='Input Info')
-        self._output_info = NFDashboardOutput()
+        self._output_info = NFDashboardOutput(self)
         output_panel = RPanel(self._output_info, title='Output Info')
         self._live_dash['header'].update(header_panel)
         self._live_dash['body']['input_info'].update(input_panel)
@@ -594,17 +641,6 @@ class Configurator():
         # Get where the x's are column-wise
         x_col = self._config['specstr'].split(',').index('x')
         return (self._df[slot][x_col].min().item(), self._df[slot][x_col].max().item())
-
-    def _get_data(self):
-        if self.multiexp:
-            self.logger.error('_get_data does not support multiple datafiles.')
-            return None
-
-        x_col = self._config['specstr'].split(',').index('x')
-        y_col = self._config['specstr'].split(',').index('c')
-        # e_col = self._config['specstr'].split(',').index('ce')
-
-        return (self._df[x_col].tolist(), self._df[y_col].tolist())
 
     def _reconfigure_data_extents(self, slot=0):
         # Read the datafiles and set the extents
