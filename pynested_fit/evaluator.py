@@ -11,6 +11,7 @@ import platform
 from .metadata import __cache__
 
 class NFEvaluator():
+    '''Fast evaluation of a nested_fit cache function.'''
     def __init__(self, func_name: str):
         self._fname = func_name
 
@@ -29,7 +30,7 @@ class NFEvaluator():
         self._f.restype  = c_double
         self._f.argtypes = [POINTER(c_double), POINTER(c_int), np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS')]
 
-    def is_valid(self):
+    def is_valid(self) -> bool:
         # Unless the user is accessing this freely,
         # this should basically be equivalent of checking
         # if the current functions is a legacy function or not.

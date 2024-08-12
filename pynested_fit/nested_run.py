@@ -9,12 +9,12 @@ from rich.live import Live as RLive
 from rich.layout import Layout as RLayout
 from rich.panel import Panel as RPanel
 from rich.table import Table as RTable
+from rich import box as rbox
 # from rich.text import Text as RText
 # from rich.progress import Progress as RProgress
 # from rich.progress import BarColumn as RBarColumn
 # from rich.progress import TextColumn as RTextColumn
 # from rich.columns import Columns as RColumns
-import numpy as np
 
 # Custom rich widgets import
 from .widgets import bar as cbar
@@ -22,6 +22,7 @@ from .widgets import timer as ctimer
 from .widgets import var as cvar
 from .widgets import hfinder as chfinder
 from .widgets import plot as cplot
+from .widgets import errorui as cerrorui
 
 # Function evaluator
 from .evaluator import NFEvaluator
@@ -34,6 +35,8 @@ from .metadata import __features__
 
 # Other imports
 import pandas as pd
+import numpy as np
+from . import utils
 from importlib.metadata import version as imp_version
 import subprocess
 import pathlib
@@ -42,7 +45,7 @@ import yaml
 import json
 import time
 import psutil
-from typing import List
+from typing import List, Optional, Tuple
 
 
 class NFDashboardHeader():
@@ -113,7 +116,9 @@ class NFDashboardHeader():
             debug_grid2.add_row('[b][yellow]:warning: Profiling on![/yellow][/b]', '')
         else:
             debug_grid2.add_row('', '')
-        debug_grid2.add_row('[green]✓ ALL OK[/green]', '')
+
+        self._error_msg_ui = cerrorui.RTRow('[green]✓ ALL OK[/green]')
+        debug_grid2.add_row(self._error_msg_ui, '')
 
         top_right['right'].update(debug_grid2)
 
@@ -122,10 +127,16 @@ class NFDashboardHeader():
     def __rich__(self):
         return self._layout
 
-    def update(self):
+    def update(self) -> None:
         self._timer.update()
         self._cpu_load_disp.update()
         self._mem_load_disp.update()
+
+    def set_error(self) -> None:
+        self._error_msg_ui.update('[red]⨯ ERROR[/red]')
+
+    def set_warning(self) -> None:
+        self._error_msg_ui.update('[yellow]:warning: WARNING[/yellow]')
 
 
 class NFDashboardInput():
@@ -223,7 +234,7 @@ class NFDashboardInput():
     def __rich__(self):
         return self._layout
 
-    def update(self):
+    def update(self) -> None:
         pass
 
 
@@ -257,6 +268,7 @@ class NFDashboardOutput():
         self._grid = None
         self._finder = None
         self._stats: List[str] = []
+        self._error_log = ''
 
     def __rich__(self):
         return self._layout
@@ -272,8 +284,8 @@ class NFDashboardOutput():
         live_vars = loutput[NPAR_IDX + 1:]
         live_szh = len(live_vars)//2
 
-        # Returns (names, values)
-        return live_vars[:live_szh], live_vars[live_szh:]
+        # Returns (stats, names, values)
+        return loutput[:NPAR_IDX], live_vars[:live_szh], live_vars[live_szh:]
 
     def _chunkerize(self, lst: List, chunk_sz: int):
         for i in range(0, len(lst), chunk_sz):
@@ -282,7 +294,7 @@ class NFDashboardOutput():
     def _construct_grid(self):
         if not self._finder:
             self._finder = chfinder.HFinder()
-        self._layout['top']['params'].update(self._finder)
+        self._layout['top']['params'].update(self._finder) # type: ignore (we don't care about the state of _layout here)
         dims = self._finder.get_available_dimensions()
 
         if not dims:
@@ -295,8 +307,13 @@ class NFDashboardOutput():
 
         return True
 
-    def update(self, live_data : str):
-        live_names, live_values = self._load_live_data(live_data)
+    def set_error_next_update(self, errormsg: str) -> None:
+        # Override the _layout and display the error message
+        self._error_log += utils.strip_ansi_codes(errormsg)
+        self._layout = RPanel(self._error_log, title='[red]Nested Fit Error[/red]', subtitle='[red]Check the log file for more info[/red]',
+                              border_style='red', style='red')
+
+    def _update_params(self, live_names: List[str], live_values: List[str]):
         if not self._vars:
             # Construct the layout
             self._grid = RTable.grid(expand=False)
@@ -313,14 +330,45 @@ class NFDashboardOutput():
                     self._grid.add_row(*nv)
                 else:
                     self._grid.add_row(*vars)
-            self._layout['top']['params'].update(self._grid)
+            self._layout['top']['params'].update(self._grid) # type: ignore (we don't care about the state of _layout here)
         else:
             for i, value in enumerate(live_values):
                 self._vars[i].update(value)
 
-            Y = self._evaluator.atv(self._X, np.array([np.float64(p) for p in live_values]))
-            if Y is not None:
-                self._plot.update(self._X, Y)
+    def _update_stats(self, live_stats: List[str]):
+        # live_stats order:
+        # ntry, step, mll, ev, ev step, ev pacc, typ. eff.
+
+        grid = RTable(expand=True, row_styles=['dim', ''], box=rbox.ROUNDED)
+        grid.add_column('Stat', justify='right')
+        grid.add_column('Value', justify='left')
+
+        add_row_stat = lambda x: grid.add_row(f'[b]{x[0]}[/b]', x[1])
+
+        add_row_stat(('Step', f' {live_stats[1]}'))
+        add_row_stat(('Min. Loglikelihood', f'{float(live_stats[2]): .3f}'))
+        add_row_stat(('Evidence', f'{float(live_stats[3]): .3f}'))
+        add_row_stat(('Evidence Step', f'{float(live_stats[4]): .3f}'))
+        add_row_stat(('Accuracy', f'{float(live_stats[5]): .2e}'))
+        add_row_stat(('Typical. Eff.', f'{float(live_stats[6]): .2f}'))
+
+
+        self._layout['top']['stats'].update(grid) # type: ignore (we don't care about the state of _layout here)
+
+
+    def _update_plot(self, live_values: List[str]):
+        Y = self._evaluator.atv(self._X, np.array([np.float64(p) for p in live_values]))
+        if Y is not None:
+            self._plot.update(self._X, Y)
+
+    def update(self, live_data: str):
+        live_stats, live_names, live_values = self._load_live_data(live_data)
+
+        self._update_params(live_names, live_values)
+
+        self._update_stats(live_stats)
+
+        self._update_plot(live_values)
 
 class Configurator():
     '''Writes the nf_input.yaml file for automatic runs and creates a python settings interface.
@@ -439,6 +487,9 @@ class Configurator():
 
         self._keep_yaml = keep_yaml
 
+        self._last_error = None
+        self._error_state = False
+
     def get_functions_expr(self):
         return [f for _, f in self._config['function'].items() if f]
 
@@ -502,9 +553,15 @@ class Configurator():
         if not silent_output:
             self._generate_live_dashboard()
 
-            with RLive(self._live_dash, refresh_per_second=2):
+            with RLive(self._live_dash, refresh_per_second=20):
                 while self._nf_process.poll() is None:
                     live_data = self._parse_nf_stdout()
+
+                    if not live_data:
+                        errormsg = self._get_last_error()
+                        if errormsg:
+                            self._set_error_next_frame(errormsg)
+
                     self._draw_live_table(live_data)
         else:
             while self._nf_process.poll() is None:
@@ -527,12 +584,12 @@ class Configurator():
             self._config[kw] = vw
         self._init_kwargs = kwargs
 
-    def _find_kwarg(self, name):
+    def _find_kwarg(self, name) -> Optional[str]:
         if name in self._init_kwargs.keys():
             return self._init_kwargs[name]
         return None
 
-    def _check_kwargs(self, kwargs):
+    def _check_kwargs(self, kwargs) -> bool:
         self._valid_kwargs_pat = []
 
         # NOTE: (César) This is prob faster than regex
@@ -553,10 +610,10 @@ class Configurator():
             return False
         return True
 
-    def _auto_detect_data_file_delimiter(self, slot=0):
+    def _auto_detect_data_file_delimiter(self, slot=0) -> str:
         return pathlib.Path(self._config['datafiles'][slot]).suffixes[-1]
 
-    def _get_data_file_delimiter(self):
+    def _get_data_file_delimiter(self) -> Optional[str]:
         ext = self._config['filefmt']
         if ext == '.csv':
             return ','
@@ -567,29 +624,36 @@ class Configurator():
             self.logger.error('Valid formats: `.csv` and `.tsv`.')
             return None
 
-    def _compute_filefmt(self, fmt):
+    def _compute_filefmt(self, fmt) -> str:
         if fmt == 'auto':
             return self._auto_detect_data_file_delimiter(slot=0)
         else:
             return fmt
 
-    def _parse_stdout_error(self, line):
+    def _parse_stdout_error(self, line) -> Tuple[bool, Optional[str]]:
         # Handle errors
         if '<ERROR>' in line[0]:
-            print(''.join(line), end='')
-            return True
+            # print(''.join(line), end='')
+            return True, ''.join(line)
         if 'LO' not in line[0]:
-            return True
-        return False
+            return True, None
+        return False, None
 
-    def _parse_nf_stdout(self):
+    def _get_last_error(self) -> Optional[str]:
+        return self._last_error
+
+    def _parse_nf_stdout(self) -> Optional[str]:
         line = self._nf_process.stdout
-        if line:
-            line = line.readline().decode("utf-8").split('|')
-        else:
+
+        if not line:
             return None
 
-        if self._parse_stdout_error(line):
+        line = line.readline().decode("utf-8").split('|')
+        error, errormsg = self._parse_stdout_error(line)
+
+        if error:
+            self._last_error = errormsg
+            self._error_state = True
             return None
 
         return line[-1].strip()
@@ -623,6 +687,11 @@ class Configurator():
         self._input_info.update()
         if data:
             self._output_info.update(data)
+
+    def _set_error_next_frame(self, msg: str) -> None:
+        # Set error on the header
+        self._header.set_error()
+        self._output_info.set_error_next_update(msg)
 
     def _write_yaml_file(self, path):
         # We want the datafiles as a string
