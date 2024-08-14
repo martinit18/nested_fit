@@ -166,7 +166,7 @@ class NFDashboardInput():
         fetch_dict = {
             'N. Livepoints': str(config._config['search']['livepoints']),
             'Search Method': (config._config['search']['method']),
-            'Search Params': '(' + ', '.join(map(str, (config._config['search']['param1'], config._config['search']['param1']))) + ')',
+            'Search Params': '(' + ', '.join(map(str, (config._config['search']['param1'], config._config['search']['param2']))) + ')',
             'Convergence Method': str(config._config['convergence']['method']),
             'Convergence Acc.': str(config._config['convergence']['accuracy']),
             'Convergence Param': str(config._config['convergence']['parameter'])
@@ -253,7 +253,7 @@ class NFDashboardOutput():
 
         # TODO: (César) Make this linspace create a dynamic ammount of points based on the available
         #               terminal width.
-        self._X = np.linspace(self._local_extents['xmin'],self._local_extents['xmax'], 200)
+        self._X = np.linspace(self._local_extents['xmin'], self._local_extents['xmax'], 200)
         
         self._XD, self._YD = config.get_data(0)
 
@@ -357,9 +357,16 @@ class NFDashboardOutput():
 
 
     def _update_plot(self, live_values: List[str]):
+        # Clear the plot
+        self._plot.clear()
+
+        # Plot Data Points
+        self._plot.draw(self._XD, self._YD, type='bar', label='Data')
+
+        # Plot Prediction values
         Y = self._evaluator.atv(self._X, np.array([np.float64(p) for p in live_values]))
         if Y is not None:
-            self._plot.update(self._X, Y)
+            self._plot.draw(self._X, Y, type='bar', label='Prediction')
 
     def update(self, live_data: str):
         live_stats, live_names, live_values = self._load_live_data(live_data)
@@ -537,7 +544,12 @@ class Configurator():
         y_col = self._config['specstr'].split(',').index('c')
         # e_col = self._config['specstr'].split(',').index('ce')
 
-        return (self._df[slot][x_col].tolist(), self._df[slot][y_col].tolist())
+        ext = self.get_extents()[slot]
+
+        df = self._df[slot]
+        df_view = df.loc[(df[x_col] >= ext['xmin']) & (df[x_col] <= ext['xmax'])]
+
+        return (df_view[x_col].tolist(), df_view[y_col].tolist())
 
     def sample(self, path='.', silent_output=False):
         version = imp_version('nested_fit')
