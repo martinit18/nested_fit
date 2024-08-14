@@ -204,6 +204,34 @@ CONTAINS
         END DO
     END SUBROUTINE
 
+    ! NOTE: (César) We cannot use `STR_REPLACE_ALL` for this since it is recursive on the replacement
+    !               and this might add the same character to escape (e.g. '\' -> '\\')
+    SUBROUTINE STR_ESCAPE_CHARS(str, ch, output)
+        IMPLICIT NONE
+        CHARACTER(*), INTENT(IN)             :: str
+        CHARACTER(1), INTENT(IN)             :: ch
+        CHARACTER(LEN=LEN(str)), INTENT(OUT) :: output
+
+        INTEGER :: i, j, k
+        k = 0
+        j = 0
+
+        i = INDEX(str, ch)
+        j = i
+        DO WHILE(i.GT.0)
+            output = TRIM(output)//str(k:j-1)
+            output = TRIM(output)//'\'//ch
+            k = i + 1
+            j = i
+            i = INDEX(str(j+1:), ch)
+            j = j + i
+        END DO
+
+        IF(k.LE.LEN_TRIM(str)) THEN
+            output = TRIM(output)//str(k:)
+        END IF
+    END SUBROUTINE
+
     ! BUG: (César) Not sure why the ALLOCATE causes issues with this function when used from another filename
     !              Maybe scope issues?? Or pass by value? Or by ref?? This is weird...
 

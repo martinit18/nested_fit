@@ -930,6 +930,7 @@ PROGRAM NESTED_FIT
 
   SUBROUTINE PRINT_OUTPUT_RESULT()
    TYPE(JsonEntries_t) :: json
+   CHARACTER(512), DIMENSION(nsetmax) :: funcname_escaped
    PROFILED(PRINT_OUTPUT_RESULT)
 
    ! Write to json
@@ -968,7 +969,14 @@ PROGRAM NESTED_FIT
    CALL json%push('input.datafiles', filename(1:nset))
    CALL json%push('input.specstr', TRIM(spec_str))
    CALL json%push('input.likelihood', TRIM(likelihood_funcname))
-   CALL json%push('input.function.expressions', funcname(1:nset))
+
+   ! Handle possible backslash escapes on the expressions
+   DO i = 1, nset
+      funcname_escaped = ' '
+      CALL STR_ESCAPE_CHARS(funcname(i), 'x', funcname_escaped(i))
+   END DO
+   CALL json%push('input.function.expressions', funcname_escaped(1:nset))
+
    DO i = 1, npar
       CALL json%push('input.function.params.'//TRIM(par_name(i))//'.value', par_in(i))
       CALL json%push('input.function.params.'//TRIM(par_name(i))//'.step', par_step(i))
