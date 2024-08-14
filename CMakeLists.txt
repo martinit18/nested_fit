@@ -528,5 +528,11 @@ if(CREATE_AUTOCONF)
     # file(REMOVE ${CMAKE_SOURCE_DIR}/configure.ac)
     # file(REMOVE ${CMAKE_SOURCE_DIR}/Makefile.am)
 endif()
+
+include(CTest)
+
+if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
+	add_subdirectory(test)
+endif()
+
 enable_testing()
-#add_subdirectory(tests)
