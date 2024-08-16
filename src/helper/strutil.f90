@@ -128,7 +128,7 @@ CONTAINS
        DO i = 1, LEN_TRIM(input)
           code = ICHAR(input(i:i))
           IF(code.GE.65.AND.code.LE.90) THEN
-             input(i:i) = CHAR(code + 32) ! NOTE(César): 'a' - 'A'
+             input(i:i) = CHAR(code + 32) ! NOTE: (César) 'a' - 'A'
           ENDIF
        END DO
     END SUBROUTINE
