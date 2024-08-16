@@ -1,4 +1,4 @@
-! Brief : This module contains string manipulation functions
+! Brief  : This module contains string manipulation functions
 ! Author : César Godinho
 ! Date   : 09/05/2024
 
