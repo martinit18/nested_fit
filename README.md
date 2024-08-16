@@ -411,12 +411,15 @@ This is the second mode to declare functions. Althouth giving a bit more work, i
 
 ## Present version and history of the past versions
 
-The present version is 5.2.1\
-New features:,
-- Add JSON output for easier manipulation of results.
-- New simple python interface to embed nested_fit on source code.
+The present version is 5.3.0\
+New features:
+- Live display when sampling from python. Works in console and jupyter notebooks.
+- Live display featured maximum likelihood prediction plot.
+- Add input info on JSON output file for parsing.
 
 Previous versions are:
+ - 5.2 Add JSON output for easier manipulation of results. \
+New simple python interface to embed nested_fit on source code.
  - 5.1 Add feature for older systems not easily supporting cmake to configure via GNU autotools. \
  Add performance profiling tool boilerplate code enabling a detailed analysis without hindering performance.
  - 5.0 New modified Jeffreys likelihood for data \
