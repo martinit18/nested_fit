@@ -13,6 +13,8 @@ PROGRAM STR_TEST
         CALL BEGIN_TEST('STR_ESCAPE')
 
         subs_test = 'escape\these\chars\\when\needed'
+        WRITE(*,*) subs_test
+
         out = ' '
         CALL STR_ESCAPE_CHARS(subs_test, '\', out)
         WRITE(*,*) out

@@ -208,27 +208,25 @@ CONTAINS
     !               and this might add the same character to escape (e.g. '\' -> '\\')
     SUBROUTINE STR_ESCAPE_CHARS(str, ch, output)
         IMPLICIT NONE
-        CHARACTER(*), INTENT(IN)             :: str
-        CHARACTER(1), INTENT(IN)             :: ch
-        CHARACTER(LEN=LEN(str)), INTENT(OUT) :: output
+        CHARACTER(*)  , INTENT(IN)  :: str
+        CHARACTER(1)  , INTENT(IN)  :: ch
+        CHARACTER(512), INTENT(OUT) :: output
 
-        INTEGER :: i, j, k
-        k = 0
-        j = 0
+        CHARACTER(512) :: internal_str
+        INTEGER :: i
+        output = ''
+        internal_str = TRIM(str)
 
-        i = INDEX(str, ch)
-        j = i
+        i = INDEX(internal_str, ch)
         DO WHILE(i.GT.0)
-            output = TRIM(output)//str(k:j-1)
+            output = TRIM(output)//internal_str(:i-1)
             output = TRIM(output)//'\'//ch
-            k = i + 1
-            j = i
-            i = INDEX(str(j+1:), ch)
-            j = j + i
+            internal_str = internal_str(i+1:)
+            i = INDEX(internal_str, ch)
         END DO
 
-        IF(k.LE.LEN_TRIM(str)) THEN
-            output = TRIM(output)//str(k:)
+        IF(LEN_TRIM(internal_str).GT.0) THEN
+            output = TRIM(output)//internal_str
         END IF
     END SUBROUTINE
 

@@ -973,7 +973,7 @@ PROGRAM NESTED_FIT
    ! Handle possible backslash escapes on the expressions
    DO i = 1, nset
       funcname_escaped = ' '
-      CALL STR_ESCAPE_CHARS(funcname(i), 'x', funcname_escaped(i))
+      CALL STR_ESCAPE_CHARS(funcname(i), '\', funcname_escaped(i))
    END DO
    CALL json%push('input.function.expressions', funcname_escaped(1:nset))
 
