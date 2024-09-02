@@ -321,10 +321,10 @@ For the moment, a random walk (`RANDOM_WALK`), a uniform search around each live
 
 ```yaml
 clustering:
-    enabled:   true # False by default (if ommited)
-    method:    f    # Clustering method (see below)
-    distance:  0.5  # Clustering parameters
-    bandwidth: 0.2  # Clustering parameters
+    enabled:     true # False by default (if ommited)
+    method:      f    # Clustering method (see below)
+    parameter1:  0.5  # Clustering parameter 1
+    parameter2:  0.2  # Clustering parameter 2
 ```
 
 For the moment four clustering algorithms are implemented. The two parameters are specific to the method
@@ -340,6 +340,7 @@ For the second option:
 
 ```yaml
 function:
+    expression:  f(x,a,b) = a + b * x # function expression in latex form
     params:
     # Compact 
     a: { value: 0, step: -1, min: 0, max: 10 } # `fixed` is false by default
@@ -405,6 +406,9 @@ function:
 ### C++/Fortran Specification
 
 This is the second mode to declare functions. Althouth giving a bit more work, it allows for a much finer control of what is going on.
+
+### Legacy function
+
 
 
 **Additional information can be found in the reference articles.*

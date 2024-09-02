@@ -1,4 +1,4 @@
-version:    5.2              # Program version
+version:    5.3              # Program version
 datafiles:  he-histo.dat     # Name of the data file
 specstr:    x,c              # Datafile layout
 # filefmt: .tsv              # (optional) for data separated by spaces or tabs

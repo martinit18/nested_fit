@@ -1,4 +1,4 @@
-version:    5.2              # Program version
+version:    5.3              # Program version
 datafiles:  he-histo.dat     # Name of the data file
 specstr:    x,c              # Datafile layout
 # filefmt: .tsv              # (optional) for data separated by spaces or tabs
@@ -27,3 +27,9 @@ search:
 convergence:
   method:    LIKE_ACC            # Method used for convergence 
   accuracy:  1.E-05              # Evidence final accuracy (in this case)
+
+clustering:
+  enabled:   true
+  method:    k
+  # parameter1:  0.5
+  # parameter2: 0.2

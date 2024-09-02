@@ -1,4 +1,4 @@
-version:    5.2
+version:    5.3
 datafiles:  eb_gauss_bg-x0_300-sigma_20-A_20000-p_to_bg_0.05-bin_1.dat
 #specstr:    x,c,ce
 specstr:    x,c,ce
