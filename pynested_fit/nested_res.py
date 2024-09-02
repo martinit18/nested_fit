@@ -113,11 +113,13 @@ class Analysis(object):
         if(not self.check_version(input_data['version'])):
             sys.exit('Wrong input file version. Please check.')
 
+        # Parameter list for build analysis dataframe
         parameters = []
         i = 1
         
         for k, v in input_data['function']['params'].items():
-            parameters.append([i,
+            parameters.append([
+                v['npar'],
                 k,
                 v['value'],
                 v['step'],
@@ -683,7 +685,21 @@ class Analysis(object):
 
 
         plt.show()
+#################################################################################################################
+    def get_parinfo(self,par_number):
+        '''Find good parameter index and title starting from index or name'''    
 
+        # Find the good number of parameter from its number or name
+        if type(par_number) == str:
+            par_index = list(self.df.columns).index(par_number)
+            title = par_number
+            print("Set par_number %s to %s" % (par_number, par_index))
+        else:
+            par_index = par_number + 1
+            print("Set par_number %s to %s" % (par_number, par_index))
+            title = self.input_data['parameters'][par_number-1][1]
+
+        return par_index, title
 
 #################################################################################################################
     def histo(self,par_number,path=currentpath,bins=50,plotmode='sigma',logbase=50.,xmin=None,xmax=None,savedata=False,alpha=1.,clear=True):
@@ -698,14 +714,7 @@ class Analysis(object):
 
 
         # Find the good number of parameter from its number or name
-        if type(par_number) == str:
-            par_index = list(self.df.columns).index(par_number)
-            title = par_number
-            print("Set par_number %s to %s" % (par_number, par_index))
-        else:
-            par_index = par_number + 1
-            print("Set par_number %s to %s" % (par_number, par_index))
-            title = self.input_data['parameters'][par_number-1][1]
+        par_index, title = self.get_parinfo(par_number)
 
         if bins<10:
             sys.exit('Attention! too fews bins')
@@ -811,15 +820,7 @@ class Analysis(object):
 
 
         # Determine if the par_number is a name or a number and convert consequently
-        if type(par_number) == str:
-            par_index = list(self.df.columns).index(par_number)
-            title = par_number
-            print("Set par_number %s to %s" % (par_number, par_index))
-        else:
-            par_index = par_number + 1
-            print("Set par_number %s to %s" % (par_number, par_index))
-            title = self.input_data['parameters'][par_number-1][1]
-            print("Selected parameter = ", title)
+        par_index, title = self.get_parinfo(par_number)
 
         # Read the data
         data = self.df.values
@@ -848,23 +849,8 @@ class Analysis(object):
         self.path = path
 
         # Find the good number of parameter from its number or name
-        if type(par_number1) == str:
-            par_index1 = list(self.df.columns).index(par_number1) - 1
-            title1 = par_number1
-            print("Set par_number %s to %s" % (par_number1, par_index1))
-        else:
-            par_index1 = par_number1
-            print("Set par_number %s to %s" % (par_number1, par_index1))
-            title1 = self.input_data['parameters'][par_number1-1][1]
-
-        if type(par_number2) == str:
-            par_index2 = list(self.df.columns).index(par_number2) - 1
-            title2 = par_number2
-            print("Set par_number %s to %s" % (par_number2, par_index2))
-        else:
-            par_index2 = par_number2
-            print("Set par_number %s to %s" % (par_number2, par_index2))
-            title2 = self.input_data['parameters'][par_number2-1][1]
+        par_index1, title1 = self.get_parinfo(par_number1)
+        par_index2, title2 = self.get_parinfo(par_number2)
 
 
         # Read the data
@@ -920,32 +906,9 @@ class Analysis(object):
         self.path = path
 
         # Find the good number of parameter from its number or name
-        if type(par_number1) == str:
-            par_index1 = list(self.df.columns).index(par_number1) - 1
-            title1 = par_number1
-            print("Set par_number %s to %s" % (par_number1, par_index1))
-        else:
-            par_index1 = par_number1
-            print("Set par_number %s to %s" % (par_number1, par_index1))
-            title1 = self.input_data['parameters'][par_number1-1][1]
-
-        if type(par_number2) == str:
-            par_index2 = list(self.df.columns).index(par_number2) - 1
-            title2 = par_number2
-            print("Set par_number %s to %s" % (par_number2, par_index2))
-        else:
-            par_index2 = par_number2
-            print("Set par_number %s to %s" % (par_number2, par_index2))
-            title2 = self.input_data['parameters'][par_number2-1][1]
-
-        if type(par_number3) == str:
-            par_index3 = list(self.df.columns).index(par_number3) - 1
-            title3 = par_number3
-            print("Set par_number %s to %s" % (par_number3, par_index3))
-        else:
-            par_index3 = par_number3
-            print("Set par_number %s to %s" % (par_number3, par_index3))
-            title3 = self.input_data['parameters'][par_number3-1][1]
+        par_index1, title1 = self.get_parinfo(par_number1)
+        par_index2, title2 = self.get_parinfo(par_number2)
+        par_index3, title3 = self.get_parinfo(par_number3)
 
 
         # Read the data
@@ -1001,23 +964,8 @@ class Analysis(object):
         self.path = path
 
         # Find the good number of parameter from its number or name
-        if type(par_number1) == str:
-            par_index1 = list(self.df.columns).index(par_number1)
-            title1 = par_number1
-            print("Set par_number %s to %s" % (par_number1, par_index1))
-        else:
-            par_index1 = par_number1 + 1
-            print("Set par_number %s to %s" % (par_number1, par_index1))
-            title1 = self.input_data['parameters'][par_number1-1][1]
-
-        if type(par_number2) == str:
-            par_index2 = list(self.df.columns).index(par_number2)
-            title2 = par_number2
-            print("Set par_number %s to %s" % (par_number2, par_index2))
-        else:
-            par_index2 = par_number2 + 1
-            print("Set par_number %s to %s" % (par_number2, par_index2))
-            title2 = self.input_data['parameters'][par_number2-1][1]
+        par_index1, title1 = self.get_parinfo(par_number1)
+        par_index2, title2 = self.get_parinfo(par_number2)
 
 
         # Read the data
@@ -1068,23 +1016,8 @@ class Analysis(object):
         import matplotlib.colors as mcolors
 
         # Find the good number of parameter from its number or name
-        if type(par_number1) == str:
-            par_index1 = list(self.df.columns).index(par_number1)
-            title1 = par_number1
-            print("Set par_number %s to %s" % (par_number1, par_index1))
-        else:
-            par_index1 = par_number1 + 1
-            print("Set par_number %s to %s" % (par_number1, par_index1))
-            title1 = self.input_data['parameters'][par_number1-1][1]
-
-        if type(par_number2) == str:
-            par_index2 = list(self.df.columns).index(par_number2)
-            title2 = par_number2
-            print("Set par_number %s to %s" % (par_number2, par_index2))
-        else:
-            par_index2 = par_number2 + 1
-            print("Set par_number %s to %s" % (par_number2, par_index2))
-            title2 = self.input_data['parameters'][par_number2-1][1]
+        par_index1, title1 = self.get_parinfo(par_number1)
+        par_index2, title2 = self.get_parinfo(par_number2)
 
         # Read the data
         data = self.df.values
@@ -1250,23 +1183,8 @@ class Analysis(object):
 
 
         # Find the good number of parameter from its number or name
-        if type(par_number1) == str:
-            par_index1 = list(self.df.columns).index(par_number1)
-            title1 = par_number1
-            print("Set par_number %s to %s" % (par_number1, par_index1))
-        else:
-            par_index1 = par_number1 + 1
-            print("Set par_number %s to %s" % (par_number1, par_index1))
-            title1 = self.input_data['parameters'][par_number1-1][1]
-
-        if type(par_number2) == str:
-            par_index2 = list(self.df.columns).index(par_number2)
-            title2 = par_number2
-            print("Set par_number %s to %s" % (par_number2, par_index2))
-        else:
-            par_index2 = par_number2 + 1
-            print("Set par_number %s to %s" % (par_number2, par_index2))
-            title2 = self.input_data['parameters'][par_number2-1][1]
+        par_index1, title1 = self.get_parinfo(par_number1)
+        par_index2, title2 = self.get_parinfo(par_number2)
 
         # Read the data
         data = self.df.values
