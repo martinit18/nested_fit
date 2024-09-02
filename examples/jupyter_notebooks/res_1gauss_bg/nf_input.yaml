@@ -1,0 +1,33 @@
+clustering:
+  enabled: false
+  method: f
+  parameter1: 0.5
+  parameter2: 0.2
+convergence:
+  accuracy: 1.0e-05
+  method: LIKE_ACC
+  parameter: 0.01
+data:
+  xmax: 650
+  xmin: 250
+datafiles: he-histo.dat
+filefmt: .tsv
+function:
+  expression: GAUSS_BG
+  params:
+    b_g: { max: 0.3, min: 0,   npar: 1, step: -1, value: 0.01 }
+    x_1: { max: 600, min: 300, npar: 2, step: -1, value: 454.6 }
+    A_1: { max: 500, min: 0,   npar: 3, step: -1, value: 300 } 
+    s:   { max: 30,  min: 10,  npar: 4, step: -1, value: 20 }
+likelihood: GAUSSIAN
+search:
+  livepoints: 1000
+  max_steps: 100000
+  max_tries: 1000
+  method: SLICE_SAMPLING
+  num_tries: 1
+  param1: 0.5
+  param2: 3
+  tries_mult: 100
+specstr: x,c
+version: 5.3

@@ -68,8 +68,8 @@ else:
 ipython_header = r'''
 [b]Quick start[/b]
 To access to the data in the same directory, run 
-> import pynested_fit as pnf 
-> an = pnf.Analysis() 
+> import pynested_fit as pynf 
+> an = pynf.Analysis() 
 > an.<function> 
 
 [b]Help[/b]
