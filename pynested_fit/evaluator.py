@@ -15,9 +15,12 @@ class NFEvaluator():
     def __init__(self, func_name: str):
         self._fname = func_name
 
-        if platform.system() == 'Linux' or platform.system() == 'Darwin':
+        if platform.system() == 'Linux':
             self._gfortran_lib = CDLL('libgfortran.so', mode = RTLD_GLOBAL)
             self._nf_func_lib = CDLL(f'{__cache__}/dynamic_calls.so', mode = RTLD_GLOBAL)
+        elif platform.system() == 'Darwin':
+            self._gfortran_lib = CDLL('libgfortran.dylib', mode = RTLD_GLOBAL)
+            # self._nf_func_lib = CDLL(f'{__cache__}/dynamic_calls.so', mode = RTLD_GLOBAL)
         elif platform.system() == 'Windows':
             self._nf_func_lib = CDLL(f'{__cache__}/dynamic_calls.dll') # HACK: (César) Not sure about this for Windows...
         else:
