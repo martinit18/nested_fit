@@ -45,6 +45,7 @@ import yaml
 import json
 import time
 import psutil
+import os
 from typing import List, Optional, Tuple
 
 
@@ -551,18 +552,26 @@ class Configurator():
 
         return (df_view[x_col].tolist(), df_view[y_col].tolist())
 
-    def sample(self, path='.', silent_output=False):
+    def sample(self, path='.', output_mode='live'):
+        '''
+        Command to run nested_fit
+        Output modes available:
+        - output_mode='none': no output on screen, only in the output files
+        - output_mode='live': live output on screen
+        - output_mode='full': full output with graphs (not working on mac yet)
+        '''
         version = imp_version('nested_fit')
 
         self._write_yaml_file(path)
 
-        self._nf_process = subprocess.Popen(
-            [f'nested_fit{version}', '-lo', '-v', 'error'],
-            stdout=subprocess.PIPE,
-            cwd=pathlib.Path(path).resolve()
-        )
+        if output_mode == 'full':
 
-        if not silent_output:
+            self._nf_process = subprocess.Popen(
+                [f'nested_fit{version}', '-lo', '-v', 'error'],
+                stdout=subprocess.PIPE,
+                cwd=pathlib.Path(path).resolve()
+            )
+
             self._generate_live_dashboard()
 
             with RLive(self._live_dash, refresh_per_second=20):
@@ -575,10 +584,26 @@ class Configurator():
                             self._set_error_next_frame(errormsg)
 
                     self._draw_live_table(live_data)
-        else:
+
+        elif output_mode == 'none':
+
+            self._nf_process = subprocess.Popen(
+                [f'nested_fit{version}'],
+                stdout=subprocess.PIPE,
+                cwd=pathlib.Path(path).resolve()
+            )
+
             while self._nf_process.poll() is None:
                 # NOTE: (César) This `silent_output` hides errors for now (the user will need to check the log)
+
+                # Added to avoit a strange error (the program start but never finish)
+                output, errors = self._nf_process.communicate() 
+                print('Errors: ', errors)
+
                 time.sleep(0.1) # Wait until nf stops regardless of result
+        else:
+
+            os.system(f'nested_fit{version}')
 
         if not self._keep_yaml:
             pathlib.Path(f'{path}/nf_input.yaml').unlink(missing_ok=True)
@@ -660,7 +685,9 @@ class Configurator():
         if not line:
             return None
 
-        line = line.readline().decode("utf-8").split('|')
+        line = line.readline().decode("utf-8").split('|') 
+        # Not working on mac decode command. Alternative to be used in future:
+        # line = line.readline().split('|')
         error, errormsg = self._parse_stdout_error(line)
 
         if error:
