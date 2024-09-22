@@ -12,14 +12,22 @@ linestyle = {"markeredgewidth":2, "elinewidth":2, "capsize":4,"markersize":3}
 linestyle2 = {"markeredgewidth":0, "elinewidth":2, "capsize":0,"markersize":0}
 
 class Analysis(object):
+    '''
+    Main pynested_fit class
 
-    currentpath = os.getcwd()
+    If you do not want analyse the data in the current directory, but scan the results 
+    in a series of directories, use the option 'loaddata = False' to avoid to load 
+    the data in the current directory.
+    '''
+
+    currentpath = '.'
     #print 'currentpath=', currentpath+'\n'
     initialize = False
 
-    def __init__(self,path=currentpath,**kwargs):
+    def __init__(self,path=currentpath,loaddata=True,**kwargs):
         self.path = path
-        self.load_data(path=path,**kwargs)
+        if loaddata:
+            self.load_data(path=path,**kwargs)
 
 
     def load_data(self, path=currentpath, do_load_input=True, do_load_output_results=False, do_load_output_data=True):
