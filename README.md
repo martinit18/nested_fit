@@ -415,8 +415,9 @@ This is the second mode to declare functions. Althouth giving a bit more work, i
 
 ## Present version and history of the past versions
 
-The present version is 5.3.0\
+The present version is 5.3.1\
 New features:
+- New innterpolation functions in python library
 - Live display when sampling from python. Works in console and jupyter notebooks.
 - Live display featured maximum likelihood prediction plot.
 - Add input info on JSON output file for parsing.
