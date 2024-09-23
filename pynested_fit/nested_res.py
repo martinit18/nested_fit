@@ -1267,7 +1267,7 @@ class Analysis(object):
 
         ################################# GetDist functions ################################################################ !!
 
-    def histo_interp(self,par_name,path=currentpath):
+    def histo_interp_gd(self,par_name,path=currentpath):
         '''
         Interpolated histogram plot using GetDist package
         '''
@@ -1284,7 +1284,7 @@ class Analysis(object):
 
         #---------------------------------------------------------------------------------------------------------------------
 
-    def histo2D_interp(self,par_name1,par_name2,path=currentpath):
+    def histo2D_interp_gd(self,par_name1,par_name2,path=currentpath):
         '''
         Interpolated histogram plot using GetDist package
         '''
@@ -1316,6 +1316,45 @@ class Analysis(object):
         g = plots.get_subplot_plotter()
         g.triangle_plot(self.path+'/nf_output_points',filled=True)
         plt.tight_layout()
+
+        plt.show()
+
+         ################################# Anesthetic functions ################################################################ !!
+    
+    def histo_interp(self,par_name,path=currentpath):
+        '''
+        Interpolated histogram plot using Anesthetic package
+        '''
+        from anesthetic import read_chains, make_1d_axes
+
+        self.path = path
+
+        if type(par_name) != str:
+            print('Use a parameter name and not a number')
+            return
+
+        nested_samples = read_chains(path)
+        fig, axes = make_1d_axes(par_name)
+        nested_samples.plot_1d(axes, label="kde_1d")
+        nested_samples.plot_1d(axes, color='C0', alpha=0.5, zorder=0, kind='hist_1d',label="histo")
+
+        #---------------------------------------------------------------------------------------------------------------------
+
+    def histo2D_interp(self,par_name1,par_name2,path=currentpath):
+        '''
+        Interpolated histogram plot using Anesthetic package
+        '''
+        from anesthetic import read_chains, make_2d_axes
+
+        self.path = path
+
+        if type(par_name1) != str or type(par_name2) != str:
+            print('Use a parameter name and not a number')
+            return
+
+        nested_samples = read_chains(path)
+        fig, axes = make_2d_axes([[par_name1],[par_name2]])
+        nested_samples.plot_2d(axes)
 
         plt.show()
 
