@@ -53,7 +53,7 @@ class Analysis(object):
         self.path = path
         self.load_input(path)
 
-        self.parameters = [p[1].replace("'", "") for p in self.input_data['parameters']]
+        self.parameters = [p[0].replace("'", "") for p in self.input_data['parameters']]
         self.output_results = self.read_output(path=path)
 
         return self.output_results
@@ -80,7 +80,7 @@ class Analysis(object):
         self.df = pd.read_csv(path+'nf_output_points.txt', delim_whitespace=True, header=0,
                 names=["weight","lnlikelihood"] + ["val_%s" % d for d in range(1, self.number_of_values+1)])
 
-        self.df = self.df.rename(columns={'val_%d' % p[0] : p[1].replace("'", "") for p in self.input_data['parameters']})
+        self.df = self.df.rename(columns={'val_%s' % p[0] : p[0].replace("'", "") for p in self.input_data['parameters']})
 
 #        for c in [p[1].replace("'", "") for p in self.input_data['parameters']]:
 #            if c in self.df.columns and c != "weight":
@@ -127,7 +127,6 @@ class Analysis(object):
         
         for k, v in input_data['function']['params'].items():
             parameters.append([
-                v['npar'],
                 k,
                 v['value'],
                 v['step'],
@@ -1453,7 +1452,7 @@ class Summary(object):
             output_types = list(an.load_output_results(dirname).keys())
             #
             input_par = an.load_input(dirname)
-            par_tmp = par_tmp + [p[1].replace("'", "") for p in input_par['parameters']]
+            par_tmp = par_tmp + [p[0].replace("'", "") for p in input_par['parameters']]
             #print par_tmp
         parameters = []
         [parameters.append(x) for x in par_tmp if x not in parameters]
@@ -1515,7 +1514,7 @@ class Summary(object):
                     for i in v:
                         dd,ll = shape(v)
                         for d in range(dd):
-                            p = v[d][1].replace("'", "")
+                            p = v[d][0].replace("'", "")
                             for l in range(ll-2):
                                 summary[inputs_par[l]+'_'+p] = v[d][l+2]
                                 #print inputs_par[l]+'_'+p,  v[d][l+2]
