@@ -595,15 +595,13 @@ class Configurator():
 
             while self._nf_process.poll() is None:
                 # NOTE: (César) This `silent_output` hides errors for now (the user will need to check the log)
-
                 # Added to avoit a strange error (the program start but never finish)
-                output, errors = self._nf_process.communicate() 
+                _, errors = self._nf_process.communicate() 
                 print('Errors: ', errors)
 
-                time.sleep(0.1) # Wait until nf stops regardless of result
+                # time.sleep(0.1) # Wait until nf stops regardless of result
         else:
-
-            os.system(f'nested_fit{version}')
+            os.system(f'nested_fit{version}') # NOTE: (César) We should really avoid os.system() when we can
 
         if not self._keep_yaml:
             pathlib.Path(f'{path}/nf_input.yaml').unlink(missing_ok=True)
