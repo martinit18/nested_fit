@@ -15,7 +15,7 @@ function:
 data: { xmin: 1, xmax: 1024, ymin: 0, ymax: 0 }    # Boundaries of data
 
 search:
-  livepoints: 1000                # Number of live points
+  livepoints: 1000               # Number of live points
   method:     SLICE_SAMPLING     # Search method
   param1:     1                  # Param 1 of chosen method (see below)
   param2:     3                  # Param 2 of chosen method (see below)
@@ -27,3 +27,9 @@ search:
 convergence:
   method:    LIKE_ACC            # Method used for convergence 
   accuracy:  1.E-05              # Evidence final accuracy (in this case)
+
+clustering:                     
+  enabled:   true                # clustering recognition on/off
+  method:    k                   # method used
+  # parameter1:  0.5             # method parameter 1 (if needed)
+  # parameter2: 0.2              # method parameter 2 (if needed)

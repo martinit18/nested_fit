@@ -77,14 +77,19 @@ class Analysis(object):
             else:
                 print('Result file nf_output_points.txt not present\n Nothing to load')
                 return None
+            
+        # self.par_names = [p[0] for p in self.input_data['parameters']]
+        
+        # Read parameters names
+        f = open('nf_output_points.paramnames','r')
+        self.par_names = [line.strip() for line in f.readlines()]
+        print(self.par_names)
+        f.close()
         self.df = pd.read_csv(path+'nf_output_points.txt', delim_whitespace=True, header=0,
-                names=["weight","lnlikelihood"] + ["val_%s" % d for d in range(1, self.number_of_values+1)])
+                #names=["weight","lnlikelihood"] + ["val_%s" % d for d in range(1, self.number_of_values+1)])
+                names=["weight","lnlikelihood"] + self.par_names)
 
-        self.df = self.df.rename(columns={'val_%s' % p[0] : p[0].replace("'", "") for p in self.input_data['parameters']})
-
-#        for c in [p[1].replace("'", "") for p in self.input_data['parameters']]:
-#            if c in self.df.columns and c != "weight":
-#                self.df["w" + c] = self.df["weight"] * self.df[c]
+        print(self.df.columns)
 
         print('Available parameters :', list(self.df.columns))
 
@@ -692,24 +697,9 @@ class Analysis(object):
 
 
         plt.show()
-#################################################################################################################
-    def get_parinfo(self,par_number):
-        '''Find good parameter index and title starting from index or name'''    
-
-        # Find the good number of parameter from its number or name
-        if type(par_number) == str:
-            par_index = list(self.df.columns).index(par_number)
-            title = par_number
-            print("Set par_number %s to %s" % (par_number, par_index))
-        else:
-            par_index = par_number + 1
-            print("Set par_number %s to %s" % (par_number, par_index))
-            title = self.input_data['parameters'][par_number-1][1]
-
-        return par_index, title
 
 #################################################################################################################
-    def histo(self,par_number,path=currentpath,bins=50,plotmode='sigma',logbase=50.,xmin=None,xmax=None,savedata=False,alpha=1.,clear=True):
+    def histo(self,par_name,path=currentpath,bins=50,plotmode='sigma',logbase=50.,xmin=None,xmax=None,savedata=False,alpha=1.,clear=True):
 
         '''Plot histogram relative to one parameter and calculate the different confidence levels.
         If plotmode = 'sigmalog', plot in logarithmic mode.
@@ -717,17 +707,14 @@ class Analysis(object):
 
         self.path = path
 
-        # Initialize
-
-
-        # Find the good number of parameter from its number or name
-        par_index, title = self.get_parinfo(par_number)
-
         if bins<10:
             sys.exit('Attention! too fews bins')
 
         # Read the data
-        data = self.data
+        data = self.df.values
+
+        # Find the good number of parameter from its name
+        par_index = self.df.columns.get_loc(par_name)
 
         # Select range
         if xmin == None: xmin = data[:,par_index].min()
@@ -785,7 +772,7 @@ class Analysis(object):
 
             # Histogram of one parameter
             if clear: plt.clf()
-            plt.xlabel('Value of parameter '+ title)
+            plt.xlabel('Value of parameter '+ par_name)
             # Plot everything
             if plotmode == 'sigma':
                 plt.ylabel('Probability')
@@ -816,7 +803,7 @@ class Analysis(object):
         plt.show()
 
 ############################################################################################
-    def plot_par(self,par_number,path=currentpath):
+    def plot_par(self,par_name,path=currentpath):
         '''Plot parameter evolution during the nested sampling as
         function of the corresponding value of likelihood (order, xaxis)
         and weight (color)'''
@@ -825,19 +812,18 @@ class Analysis(object):
 
         self.path = path
 
-
-        # Determine if the par_number is a name or a number and convert consequently
-        par_index, title = self.get_parinfo(par_number)
-
         # Read the data
         data = self.df.values
         ix = arange(shape(data)[0])
+
+        # Find the good number of parameter from its name
+        par_index = self.df.columns.get_loc(par_name)
 
         # Plot of one parameter
         plt.clf()
         plt.xlim(0,shape(data)[0]*1.1)
         plt.xlabel('Sort number')
-        plt.ylabel('Value of parameter ' + title)
+        plt.ylabel('Value of parameter ' + par_name)
         cmap=plt.cm.get_cmap('jet')
         plt.scatter(ix,data[:,par_index],c=data[:,0],linewidth=0.,cmap=cmap)
         cbar = plt.colorbar()
@@ -963,7 +949,7 @@ class Analysis(object):
         plt.show()
 
 ############################################################################################
-    def plot_live(self,par_number1,par_number2,path=currentpath,typeof='final'):
+    def plot_live(self,par_name1,par_name2,path=currentpath,typeof='final'):
         '''Plot the live points (final, intermediate or initial)'''
         from numpy import loadtxt, max, log, shape
         import matplotlib.pyplot as plt
@@ -971,25 +957,25 @@ class Analysis(object):
         self.path = path
 
         # Find the good number of parameter from its number or name
-        par_index1, title1 = self.get_parinfo(par_number1)
-        par_index2, title2 = self.get_parinfo(par_number2)
+        par_index1 = self.df.columns.get_loc(par_name1)
+        par_index2 = self.df.columns.get_loc(par_name2)
 
 
         # Read the data
         if typeof=='final':
             data = loadtxt('nf_output_last_live_points.dat')
         elif typeof=='initial':
-            data = loadtxt('nf_initial_live_points.dat')
+            data = loadtxt('nf_outout_initial_live_points.dat')
         elif typeof=='intermediate':
-            data = loadtxt('nf_intermediate_live_points.dat')
+            data = loadtxt('nf_output_intermediate_live_points.dat')
         else:
             print('Choose between final, initial or intermediate')
 
         # Plot of one parameter
         plt.clf()
         #plt.xlim(0,max(data[:,0])*1.1)
-        plt.xlabel(title1)
-        plt.ylabel(title2)
+        plt.xlabel(par_name1)
+        plt.ylabel(par_name2)
         #plt.ylabel('Value of parameter ' + title)
         #cmap=plt.cm.get_cmap('jet')
         plt.plot(data[:,par_index1],data[:,par_index2],'ob')
@@ -998,7 +984,7 @@ class Analysis(object):
         plt.show()
 
 #####################################################################################################################3
-    def histo2D(self,par_number1,par_number2,path=currentpath,bins=50,xmin=None,xmax=None,ymin=None,ymax=None,plotmode='sigma',cmap='normal',interp=False,grid_steps=4,s=1E-5):
+    def histo2D(self,par_name1,par_name2,path=currentpath,bins=50,xmin=None,xmax=None,ymin=None,ymax=None,plotmode='sigma',cmap='normal',interp=False,grid_steps=4,s=1E-5):
         '''Plot histogram relative to two parameter values.
         If plotmode='normal' or 'log', colors are proportional to the probability (or log(p)).
         In this case, different cmaps cand be choosen:
@@ -1022,12 +1008,12 @@ class Analysis(object):
         import matplotlib.pyplot as plt
         import matplotlib.colors as mcolors
 
-        # Find the good number of parameter from its number or name
-        par_index1, title1 = self.get_parinfo(par_number1)
-        par_index2, title2 = self.get_parinfo(par_number2)
-
         # Read the data
         data = self.df.values
+
+        # Find the good number of parameter from its name
+        par_index1 = self.df.columns.get_loc(par_name1)
+        par_index2 = self.df.columns.get_loc(par_name2)
 
         # Select the data
         if xmin == None: xmin = data[:,par_index1].min()
@@ -1062,8 +1048,8 @@ class Analysis(object):
 
         # Plot histogram
         plt.clf()
-        plt.xlabel('Value of parameter ' + title1)
-        plt.ylabel('Value of parameter ' + title2)
+        plt.xlabel('Value of parameter ' + par_name1)
+        plt.ylabel('Value of parameter ' + par_name2)
         #
         if plotmode == 'normal':
             # Plot the 2D histogram
@@ -1121,7 +1107,7 @@ class Analysis(object):
             plt.imshow(log(histo2D_data_rest[::-1,]),interpolation='nearest',extent=extent,aspect='auto',cmap=rvb_rest)
 
         # Plot the contourns
-        if interp: self.interp2D(par_number1,par_number2,bins=bins,xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax,grid_steps=grid_steps,s=s,cmap='k',levels=True,clear=False)
+        if interp: self.interp2D(par_name1,par_name2,bins=bins,xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax,grid_steps=grid_steps,s=s,cmap='k',levels=True,clear=False)
 
         plt.tight_layout()
 
@@ -1174,7 +1160,7 @@ class Analysis(object):
 
 ######################################################################################################## WORKING !!
 
-    def interp2D(self,par_number1,par_number2,path=currentpath,bins=50,xmin=None,xmax=None,ymin=None,ymax=None,grid_steps=4,s=1E-5,cmap='normal',levels=False,clear=True):
+    def interp2D(self,par_name1,par_name2,path=currentpath,bins=50,xmin=None,xmax=None,ymin=None,ymax=None,grid_steps=4,s=1E-5,cmap='normal',levels=False,clear=True):
         '''
         grid_steps: number of intermediate steps between bins
         s: smooth factor to play with
@@ -1188,13 +1174,12 @@ class Analysis(object):
 
         self.path = path
 
-
-        # Find the good number of parameter from its number or name
-        par_index1, title1 = self.get_parinfo(par_number1)
-        par_index2, title2 = self.get_parinfo(par_number2)
-
         # Read the data
         data = self.df.values
+
+        # Find the good number of parameter from its name
+        par_index1 = self.df.columns.get_loc(par_name1)
+        par_index2 = self.df.columns.get_loc(par_name2)
 
         # Select the data
         if xmin == None: xmin = data[:,par_index1].min()

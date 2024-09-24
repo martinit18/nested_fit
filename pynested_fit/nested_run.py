@@ -402,7 +402,7 @@ class Configurator():
                  conv_parameter=0.01,
 
                  cluster_enable=False,
-                 cluster_method='f',
+                 cluster_method='k',
                  cluster_parameter1=0.5,
                  cluster_parameter2=0.2,
 
