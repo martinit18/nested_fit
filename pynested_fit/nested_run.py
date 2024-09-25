@@ -46,6 +46,7 @@ import json
 import time
 import psutil
 import os
+import sys
 from typing import List, Optional, Tuple
 
 
@@ -600,6 +601,47 @@ class Configurator():
                 print('Errors: ', errors)
 
                 # time.sleep(0.1) # Wait until nf stops regardless of result
+
+        elif output_mode == 'live':
+
+            self._nf_process = subprocess.Popen(
+                [f'nested_fit{version}'],
+                text=True,
+                stdout=subprocess.PIPE,
+                cwd=pathlib.Path(path).resolve()
+            )
+
+            # # NOTE: (Martino) Not working: printing None everywhere
+            # while self._nf_process.poll() is None:
+            #     live_data = self._parse_nf_stdout()
+            #     # if live_data != None: print(live_data)
+            #     sys.stdout.write(str(live_data))
+            #     sys.stdout.flush()
+
+            #     if not live_data:
+            #         errormsg = self._get_last_error()
+            #         if errormsg:
+            #             self._set_error_next_frame(errormsg)
+            
+            # # NOTE: (Martino) Not working: AttributeError: 'Configurator' object has no attribute '_live_dash'
+            # with RLive(self._live_dash, refresh_per_second=20):
+            #     while self._nf_process.poll() is None:
+            #         live_data = self._parse_nf_stdout()
+
+            #         if not live_data:
+            #             errormsg = self._get_last_error()
+            #             if errormsg:
+            #                 self._set_error_next_frame(errormsg)
+
+            # # NOTE: (Martino) Working but slowing down the program execution, and very much at the screen
+            while True:
+                out = self._nf_process.stdout.read(1)
+                if out == '' and self._nf_process.poll() != None:
+                    break
+                if out != '':
+                    sys.stdout.write(out)
+                    sys.stdout.flush()
+
         else:
             os.system(f'nested_fit{version}') # NOTE: (César) We should really avoid os.system() when we can
 
@@ -683,9 +725,9 @@ class Configurator():
         if not line:
             return None
 
-        line = line.readline().decode("utf-8").split('|') 
+        #line = line.readline().decode("utf-8").split('|') 
         # Not working on mac decode command. Alternative to be used in future:
-        # line = line.readline().split('|')
+        line = line.readline().split('|')
         error, errormsg = self._parse_stdout_error(line)
 
         if error:
