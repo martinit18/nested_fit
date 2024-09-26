@@ -33,6 +33,20 @@ César Godinho\
 LIBPhys / NOVA University of Lisbon\
 email: c.godinho AT campus.fct.unl.pt
 
+
+### Examples
+> 🌈Simple Analysis: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/martinit18/nested_fit/blob/master/examples/jupyter_notebooks/simple_analysis_visu.ipynb)
+[![Open in AWS Studio](https://studiolab.sagemaker.aws/studiolab.svg)](https://studiolab.sagemaker.aws/import/github/martinit18/nested_fit/blob/master/examples/jupyter_notebooks/simple_analysis_visu.ipynb)
+[![Open In Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/martinit18/nested_fit/blob/master/examples/jupyter_notebooks/simple_analysis_visu.ipynb)
+[![Open in Visual Studio Code](https://img.shields.io/static/v1?logo=visualstudiocode&label=&message=Open%20in%20Visual%20Studio&labelColor=2c2c32&color=007acc&logoColor=007acc)](https://vscode.dev/github/martinit18/nested_fit/blob/master/examples/jupyter_notebooks/simple_analysis_visu.ipynb)
+
+> 🐼Extended Analysis: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/martinit18/nested_fit/blob/master/examples/jupyter_notebooks/pandas_extended_analysis.ipynb)
+[![Open in AWS Studio](https://studiolab.sagemaker.aws/studiolab.svg)](https://studiolab.sagemaker.aws/import/github/martinit18/nested_fit/blob/master/examples/jupyter_notebooks/pandas_extended_analysis.ipynb)
+[![Open In Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/martinit18/nested_fit/blob/master/examples/jupyter_notebooks/pandas_extended_analysis.ipynb)
+[![Open in Visual Studio Code](https://img.shields.io/static/v1?logo=visualstudiocode&label=&message=Open%20in%20Visual%20Studio&labelColor=2c2c32&color=007acc&logoColor=007acc)](https://vscode.dev/github/martinit18/nested_fit/blob/master/examples/jupyter_notebooks/pandas_extended_analysis.ipynb)
+
+
+
 ## Installation instructions ##
 
 If you have to install everything from scratch, please refer to the file *STEPBYSTEP_INSTALL.md*
