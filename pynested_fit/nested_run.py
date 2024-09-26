@@ -392,6 +392,7 @@ class Configurator():
                  params={},
 
                  livepoints=200,
+                 num_tries=1,
                  search_method='SLICE_SAMPLING',
                  search_params=(0.5, 3),
                  search_maxtries=1000,
@@ -435,7 +436,7 @@ class Configurator():
         self._config['search']['param2'] = search_params[1]
         self._config['search']['max_tries'] = search_maxtries
         self._config['search']['tries_mult'] = search_multries
-        self._config['search']['num_tries'] = 1
+        self._config['search']['num_tries'] = num_tries
         self._config['search']['max_steps'] = search_maxsteps
 
         # convergence

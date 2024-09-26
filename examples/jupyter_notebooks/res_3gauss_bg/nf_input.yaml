@@ -1,6 +1,6 @@
 clustering:
   enabled: false
-  method: f
+  method: k
   parameter1: 0.5
   parameter2: 0.2
 convergence:
@@ -13,66 +13,46 @@ data:
 datafiles: he-histo.dat
 filefmt: .tsv
 function:
-  expression: QUAD_GAUSS_BG
+  expression: triple_gauss_bg(x, x_1, x_2, x_3, A_1, A_2, A_3, s, b_g) = + \texttt{GAUSS_IF}(x, x_1, A_1, s) + \texttt{GAUSS_IF}(x, x_2, A_2, s) + \texttt{GAUSS_IF}(x, x_3, A_3, s) + b_g
   params:
     A_1:
       max: 500
       min: 0
-      npar: 6
       step: -1
       value: 300
     A_2:
       max: 500
       min: 0
-      npar: 7
       step: -1
       value: 300
     A_3:
       max: 500
       min: 0
-      npar: 8
-      step: -1
-      value: 300
-    A_4:
-      max: 500
-      min: 0
-      npar: 9
       step: -1
       value: 300
     b_g:
       max: 0.3
       min: 0
-      npar: 1
       step: -1
       value: 0.01
     s:
       max: 30
       min: 10
-      npar: 10
       step: -1
       value: 20
     x_1:
       max: 600
       min: 300
-      npar: 2
       step: -1
       value: 454.6
     x_2:
       max: 600
       min: 300
-      npar: 3
       step: -1
       value: 454.6
     x_3:
       max: 600
       min: 300
-      npar: 4
-      step: -1
-      value: 454.6
-    x_4:
-      max: 600
-      min: 300
-      npar: 5
       step: -1
       value: 454.6
 likelihood: GAUSSIAN

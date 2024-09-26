@@ -4,6 +4,23 @@
 ! Author : César Godinho
 ! Date   : 09/08/2023
 
+REAL(8) FUNCTION GAUSS_IF(x, x0, amp, sigma)
+    ! Normalized Gaussian distribution
+    ! The value of 'amp' is the value of the surface below the curve
+    IMPLICIT NONE
+    REAL(8) :: x, x0, amp, sigma
+    REAL(8), PARAMETER :: pi=3.141592653589793d0
+
+    ! Test of under of underflow first
+    IF(DABS((x-x0)**2/(2*sigma**2)).LT.700) THEN:
+        GAUSS_IF = amp/(DSQRT(2*pi)*sigma)*DEXP(-(x-x0)**2/(2*sigma**2))
+    ELSE
+        GAUSS_IF = 0.d0
+    END IF
+
+END FUNCTION GAUSS_IF
+
+
 ! Compute the real value out of the faddeeva function w(z)
 FUNCTION WofzRe(zr, zi)
     IMPLICIT NONE
