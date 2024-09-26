@@ -36,7 +36,17 @@ César Godinho\
 LIBPhys / NOVA University of Lisbon\
 email: c.godinho AT campus.fct.unl.pt
 
-## Installation instructions ##
+## Quick start examples
+
+**A Simple Analysis:** 
+[Download](https://github.com/martinit18/nested_fit/blob/dev/examples/jupyter_notebooks/simple_analysis_visu.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/martinit18/nested_fit/blob/dev/examples/jupyter_notebooks/simple_analysis_visu.ipynb)
+
+**ICFO tutorial 2024:**
+[Download](https://github.com/martinit18/nested_fit/blob/dev/exercices/exercices_ICFO/ICFO2024_nested_fit_tutorial.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/martinit18/nested_fit/blob/dev/exercices/exercices_ICFO/ICFO2024_nested_fit_tutorial.ipynb)
+
+## Installation instructions 
 
 If you have to install everything from scratch, please refer to the file *STEPBYSTEP_INSTALL.md*
 ### From PyPI
@@ -235,7 +245,7 @@ A complete selection of input files example is given in the folder `examples` wh
 It follows a complete description of `nf_input.yaml` file.
 
 ```yaml
-version: 5.2                             # Program version
+version: 5.3                             # Program version
 datafiles: file1.csv [, file2.csv, ...]  # Name of the data file(s)
 ```
 If you have space- or tab-separated files, select the `.tsv` format adding the line
@@ -392,7 +402,7 @@ function:
 ```
 Or it is also possible to add the function via the command line:
 ```sh
-nested_fit5.2.0 -fa 'test_func(x, a, b) = \frac{x}{\exp{2b\pi}} + \sin{b}'
+nested_fit5.2.1 -fa 'test_func(x, a, b) = \frac{x}{\exp{2b\pi}} + \sin{b}'
 ```
 
 This function would then be available and could be used in the following fashion (which is functionally equivalent to using the function directly):
@@ -417,6 +427,7 @@ This is the second mode to declare functions. Althouth giving a bit more work, i
 
 The present version is 5.3.1\
 New features:
+- New jupyter notebooks running in Google Colab
 - New innterpolation functions in python library
 - Live display when sampling from python. Works in console and jupyter notebooks.
 - Live display featured maximum likelihood prediction plot.
