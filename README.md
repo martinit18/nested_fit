@@ -392,6 +392,7 @@ Now for the function `<definition>`. Here one can:
 
 |Function|Declaration|Description|
 |:-:|:-:|:-:|
+| GAUSS_IF | GAUSS_IF(x, x_0, A, s) | Gaussian with integral `A`, mean `x_0` and standard deviation  `s` |
 |`WofzRe`| `WofzRe(zr, zi)` | `zr`/`zi`: the real and imaginary part of the<br/> given input, respectively.
 |`Interpolate`| `Interpolate(filename, x, smooth)` | `filename`: the name of the file where the xy data<br/> is availabe (`.csv` format).<br/><br/>`x`: where to evaluate the spline.<br/><br/>`smooth`: The spline smoothing factor. Around the same order of magnitude as the number of points.
 
