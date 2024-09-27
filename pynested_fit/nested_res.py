@@ -833,7 +833,7 @@ class Analysis(object):
         plt.show()
 
 ############################################################################################
-    def plot_clusters(self,par_number1,par_number2,label=None,xmin=None,xmax=None,ymin=None,ymax=None,path=currentpath):
+    def plot_clusters(self,par_name1,par_name2,label=None,xmin=None,xmax=None,ymin=None,ymax=None,path=currentpath):
         '''Plot the clusters if cluster analysis is on.
         'label' is the timestamp of the file to analyse'''
         from numpy import loadtxt, max, log, shape
@@ -841,16 +841,17 @@ class Analysis(object):
 
         self.path = path
 
-        # Find the good number of parameter from its number or name
-        par_index1, title1 = self.get_parinfo(par_number1)
-        par_index2, title2 = self.get_parinfo(par_number2)
+        # Find the good number of parameter from its name
+        par_index1 = self.df.columns.get_loc(par_name1)
+        par_index2 = self.df.columns.get_loc(par_name2)
 
 
         # Read the data
         if label == None:
             available_files = sorted(glob.glob('nf_output_cluster_final_*.dat'))
             print('Taking the last available file')
-            label = available_files[-1].split('_')[4]+'_'+available_files[-1].split('_')[5].split('.')[0]
+            parts = available_files[-1].split('_')
+            label = parts[4] + '_' + parts[5].split('.')[0]
 
 
         filename = 'nf_output_cluster_final_' + label + '.dat'
@@ -875,8 +876,8 @@ class Analysis(object):
         #plt.xlim(0,max(data[:,0])*1.1)
         plt.xlim(xmin,xmax)
         plt.ylim(ymin,ymax)
-        plt.xlabel(title1)
-        plt.ylabel(title2)
+        plt.xlabel(par_name1)
+        plt.ylabel(par_name2)
         #plt.ylabel('Value of parameter ' + title)
         #cmap=plt.cm.get_cmap('jet')
         for i in range(ncl): plt.plot(data[data[:,0]==i][:,par_index1],data[data[:,0]==i][:,par_index2],'o')
@@ -886,7 +887,7 @@ class Analysis(object):
 
 
 ############################################################################################
-    def plot_clusters3D(self,par_number1,par_number2,par_number3,label=None,
+    def plot_clusters3D(self,par_name1,par_name2,par_name3,label=None,
                             xmin=None,xmax=None,ymin=None,ymax=None,zmin=None,zmax=None,azm=None,ele=None,
                             figsize=None,filename=None,path=currentpath):
         '''Plot the clusters if cluster analysis is on in 3D.
@@ -898,10 +899,10 @@ class Analysis(object):
 
         self.path = path
 
-        # Find the good number of parameter from its number or name
-        par_index1, title1 = self.get_parinfo(par_number1)
-        par_index2, title2 = self.get_parinfo(par_number2)
-        par_index3, title3 = self.get_parinfo(par_number3)
+        # Find the good number of parameter from its name
+        par_index1 = self.df.columns.get_loc(par_name1)
+        par_index2 = self.df.columns.get_loc(par_name2)
+        par_index3 = self.df.columns.get_loc(par_name3)
 
 
         # Read the data
@@ -938,9 +939,9 @@ class Analysis(object):
         ax.set_xlim(xmin,xmax)
         ax.set_ylim(ymin,ymax)
         ax.set_zlim(zmin,zmax)
-        ax.set_xlabel(title1)
-        ax.set_ylabel(title2)
-        ax.set_zlabel(title3)
+        ax.set_xlabel(par_name1)
+        ax.set_ylabel(par_name2)
+        ax.set_zlabel(par_name3)
         for i in range(ncl):
             ax.scatter(data[data[:,0]==i][:,par_index1],data[data[:,0]==i][:,par_index2],data[data[:,0]==i][:,par_index3])
         #ax.scatter(data[:,3],data[:,4],data[:,5])
