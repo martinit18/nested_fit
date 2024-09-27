@@ -211,6 +211,9 @@ class Analysis(object):
         output_data['mean'] = [float(lines[13+npar+index].split()[1]) for index in range(npar)]
         output_data['sd']   = [float(lines[13+npar+index].split()[3]) for index in range(npar)]
 
+        # Name of parameters
+        output_data['par_name'] = [lines[15+2*npar+index].split()[0] for index in range(npar)]
+
         # Confidence levels of parameters
         #output_data['conf_level'] = [[float(lines[12+2*npar+index].split()[1]),float(lines[12+2*npar+index].split()[2]),float(lines[12+2*npar+index].split()[3]),float(lines[12+2*npar+index].split()[5]),float(lines[12+2*npar+index].split()[6]),float(lines[12+2*npar+index].split()[7])] for index in range(npar)]
         output_data['conf_level_m99'] = [float(lines[15+2*npar+index].split()[1]) for index in range(npar)]
