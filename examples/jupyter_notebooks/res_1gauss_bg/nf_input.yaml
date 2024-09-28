@@ -13,7 +13,7 @@ data:
 datafiles: he-histo.dat
 filefmt: .tsv
 function:
-  expression: gauss_bg(x, A_1, x_1, s, b_g) = \texttt{GAUSS_IF}(x, x_1, A_1, s) + b_g
+  expression: gauss_bg(x, A_1, x_1, s, b_g) = A_1 / (s \sqrt{2\pi}) \exp{-(x-x_1)^2/(2s^2)} + b_g
   params:
     A_1:
       max: 500
