@@ -12,7 +12,7 @@ REAL(8) FUNCTION GAUSS_IF(x, x0, amp, sigma)
     REAL(8), PARAMETER :: pi=3.141592653589793d0
 
     ! Test of under of underflow first
-    IF(DABS((x-x0)**2/(2*sigma**2)).LT.700) THEN:
+    IF(DABS((x-x0)**2/(2*sigma**2)).LT.700) THEN
         GAUSS_IF = amp/(DSQRT(2*pi)*sigma)*DEXP(-(x-x0)**2/(2*sigma**2))
     ELSE
         GAUSS_IF = 0.d0
