@@ -38,13 +38,15 @@ email: c.godinho AT campus.fct.unl.pt
 
 ## Quick start examples
 
-**A Simple Analysis:** 
-[Download](https://github.com/martinit18/nested_fit/blob/dev/examples/jupyter_notebooks/simple_analysis_visu.ipynb)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/martinit18/nested_fit/blob/dev/examples/jupyter_notebooks/simple_analysis_visu.ipynb)
+**Quick start with google collabs:** 
+[Download](https://github.com/martinit18/nested_fit/blob/dev/examples/jupyter_notebooks/quick_start_with_google_colab.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/martinit18/nested_fit/blob/dev/examples/jupyter_notebooks/quick_start_with_google_colab.ipynb)
 
 **ICFO tutorial 2024:**
-[Download](https://github.com/martinit18/nested_fit/blob/dev/exercices/exercices_ICFO/ICFO2024_nested_fit_tutorial.ipynb)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/martinit18/nested_fit/blob/dev/exercices/exercices_ICFO/ICFO2024_nested_fit_tutorial.ipynb)
+[Download](https://github.com/martinit18/nested_fit/blob/dev/exercises/exercices_ICFO/ICFO2024_nested_fit_tutorial.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/martinit18/nested_fit/blob/dev/exercises/exercices_ICFO/ICFO2024_nested_fit_tutorial.ipynb)
+
+Other jupyter notebook examples can be found in `examples/jupyter_notebooks`.
 
 ## Installation instructions 
 
