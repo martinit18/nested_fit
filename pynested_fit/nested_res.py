@@ -798,7 +798,8 @@ class Analysis(object):
             data = zeros(shape(histo_data))
             data[:,0] = pos
             data[:,1] = histo_raw
-            savetxt(self.path + 'histo.dat',data)
+            savetxt(os.path.join(self.path,'nf_output_histo.dat'),data)
+            print('Saving histogram in ', self.path)
 
         # TO DO INTERPOLATION WITH scipy.interpolate.UnivariateSpline
         plt.tight_layout()
