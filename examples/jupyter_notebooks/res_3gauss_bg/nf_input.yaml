@@ -1,5 +1,5 @@
 clustering:
-  enabled: false
+  enabled: true
   method: k
   parameter1: 0.5
   parameter2: 0.2

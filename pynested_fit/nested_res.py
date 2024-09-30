@@ -81,7 +81,7 @@ class Analysis(object):
         # self.par_names = [p[0] for p in self.input_data['parameters']]
         
         # Read parameters names
-        f = open('nf_output_points.paramnames','r')
+        f = open(path+'nf_output_points.paramnames','r')
         self.par_names = [line.strip() for line in f.readlines()]
         print(self.par_names)
         f.close()
