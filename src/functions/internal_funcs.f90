@@ -21,6 +21,19 @@ REAL(8) FUNCTION GAUSS_IF(x, x0, amp, sigma)
 END FUNCTION GAUSS_IF
 
 
+
+REAL(8) FUNCTION LORE_IF(x, x0, amp, gamma)
+    ! Normalized Lorentzian distribution
+    ! The value of 'amp' is the value of the surface below the curve
+    IMPLICIT NONE
+    REAL(8) :: LORE, x, x0, amp, gamma
+    REAL(8), PARAMETER :: pi=3.141592653589793d0
+    
+    LORE_IF = amp*gamma/(pi*((x-x0)**2+gamma**2))
+    
+END FUNCTION LORE_IF
+
+
 ! Compute the real value out of the faddeeva function w(z)
 FUNCTION WofzRe(zr, zi)
     IMPLICIT NONE
