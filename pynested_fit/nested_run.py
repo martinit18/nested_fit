@@ -571,7 +571,9 @@ class Configurator():
             self._nf_process = subprocess.Popen(
                 [f'nested_fit{version}', '-lo', '-v', 'error'],
                 stdout=subprocess.PIPE,
-                cwd=pathlib.Path(path).resolve()
+                cwd=pathlib.Path(path).resolve(),
+                encoding='utf-8',
+                text=True
             )
 
             self._generate_live_dashboard()
@@ -591,25 +593,23 @@ class Configurator():
 
             self._nf_process = subprocess.Popen(
                 [f'nested_fit{version}'],
-                stdout=subprocess.PIPE,
+                stdout=subprocess.PIPE, # NOTE: (Cesar) PIPE for errors
                 cwd=pathlib.Path(path).resolve()
             )
 
             while self._nf_process.poll() is None:
-                # NOTE: (César) This `silent_output` hides errors for now (the user will need to check the log)
                 # Added to avoit a strange error (the program start but never finish)
                 _, errors = self._nf_process.communicate() 
                 print('Errors: ', errors)
-
-                # time.sleep(0.1) # Wait until nf stops regardless of result
 
         elif output_mode == 'live':
 
             self._nf_process = subprocess.Popen(
                 [f'nested_fit{version}'],
-                text=True,
                 stdout=subprocess.PIPE,
-                cwd=pathlib.Path(path).resolve()
+                cwd=pathlib.Path(path).resolve(),
+                encoding='utf-8',
+                text=True
             )
 
             # # NOTE: (Martino) Not working: printing None everywhere
@@ -636,7 +636,7 @@ class Configurator():
 
             # # NOTE: (Martino) Working but slowing down the program execution, and very much at the screen
             while True:
-                out = self._nf_process.stdout.read(1)
+                out = self._nf_process.stdout.read(1) # type: ignore
                 if out == '' and self._nf_process.poll() != None:
                     break
                 if out != '':
@@ -644,7 +644,9 @@ class Configurator():
                     sys.stdout.flush()
 
         else:
-            os.system(f'nested_fit{version}') # NOTE: (César) We should really avoid os.system() when we can
+            self.logger.error('Unknown `output_mode`.')
+            self.logger.error('Valid modes: [full, live, none].')
+            return None
 
         if not self._keep_yaml:
             pathlib.Path(f'{path}/nf_input.yaml').unlink(missing_ok=True)
@@ -726,9 +728,10 @@ class Configurator():
         if not line:
             return None
 
-        #line = line.readline().decode("utf-8").split('|') 
+        
+        line = line.readline().decode("utf-8").split('|') # type: ignore 
         # Not working on mac decode command. Alternative to be used in future:
-        line = line.readline().split('|')
+        line = line.readline().split('|') # type: ignore
         error, errormsg = self._parse_stdout_error(line)
 
         if error:
