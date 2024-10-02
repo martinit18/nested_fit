@@ -8,6 +8,7 @@ from ctypes import cdll, c_double, c_int, POINTER, RTLD_GLOBAL, CDLL, byref
 import numpy as np # We need numpy for other parts of pynested_fit anyways
 import numpy.typing as npt
 import platform
+import logging
 from .metadata import __cache__
 
 class NFEvaluator():
@@ -19,8 +20,18 @@ class NFEvaluator():
             self._gfortran_lib = CDLL('libgfortran.so', mode = RTLD_GLOBAL)
             self._nf_func_lib = CDLL(f'{__cache__}/dynamic_calls.so', mode = RTLD_GLOBAL)
         elif platform.system() == 'Darwin':
-            self._gfortran_lib = CDLL('libgfortran.dylib', mode = RTLD_GLOBAL)
-            # self._nf_func_lib = CDLL(f'{__cache__}/dynamic_calls.so', mode = RTLD_GLOBAL)
+            try:
+                self._gfortran_lib = CDLL('libgfortran.dylib', mode = RTLD_GLOBAL)
+            except OSError:
+                try:
+                    # If we are using gfortran from brew this will likely be the valid lib location
+                    self._gfortran_lib = CDLL('gcc/current/libgfortran.dylib', mode = RTLD_GLOBAL)
+                except OSError as err:
+                    # Finally error out
+                    logging.getLogger('rich').error('Could not find libgfortran.dylib. Check your shared lib system lookup.')
+                    logging.getLogger('rich').error('Expected locations: /usr/lib/ and /usr/local/lib/gcc/current/')
+                    raise err
+            self._nf_func_lib = CDLL(f'{__cache__}/dynamic_calls.so', mode = RTLD_GLOBAL)
         elif platform.system() == 'Windows':
             self._nf_func_lib = CDLL(f'{__cache__}/dynamic_calls.dll') # HACK: (César) Not sure about this for Windows...
         else:
