@@ -390,7 +390,8 @@ Now for the function `<definition>`. Here one can:
 - Use some LaTeX constructs. Examples `\frac{x}{a + b}` or `a\exp{\frac{x}{b}}`. [Available constructs: `frac`]
 - Use mathematical constants: `a\pi + bx`. [Available constants: `pi`]
 - Call other user defined functions via syntax: `\texttt{<other_func_name>}(x, a_0, a_1, ..., a_n)`, where the passed parameters should be some currently available arguments. Alternatively one can also use `mathrm` isntead of `texttt`.
-- Call system defined functions via the same syntax as above. [Available system functions: `WofzRe` (real part of the Fadeeva function), `Interpolate` (cubic spline interpolation from a given file)]
+- Call system defined functions via the same syntax as above and listed here below.
+Additional functions can be added by the user in the function `internal_func.f90`.
 
 |Function|Declaration|Description|
 |:-:|:-:|:-:|
