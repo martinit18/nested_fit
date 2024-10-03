@@ -722,14 +722,14 @@ class Configurator():
     def _get_last_error(self) -> Optional[str]:
         return self._last_error
 
-    def _parse_nf_stdout(self) -> Optional[str]:
+    def _parse_nf_stdout(self) -> Optional[str | bytes]:
         line = self._nf_process.stdout
 
         if not line:
             return None
 
         
-        line = line.readline().decode("utf-8").split('|') # type: ignore 
+        # line = line.readline().decode("utf-8").split('|') # type: ignore 
         # Not working on mac decode command. Alternative to be used in future:
         line = line.readline().split('|') # type: ignore
         error, errormsg = self._parse_stdout_error(line)
