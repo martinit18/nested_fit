@@ -394,7 +394,8 @@ Now for the function `<definition>`. Here one can:
 
 |Function|Declaration|Description|
 |:-:|:-:|:-:|
-| GAUSS_IF | GAUSS_IF(x, x_0, A, s) | Gaussian with integral `A`, mean `x_0` and standard deviation  `s` |
+| `GAUSS_IF` | `GAUSS_IF(x, x_0, A, s)` | Gaussian with integral `A`, mean `x_0` and standard deviation  `s` |
+| `LORE_IF` | `LORE_IF(x, x_0, A, g)` | Lorentzian (Cauchy) profile with integral `A`, mean `x_0` and width  `g` |
 |`WofzRe`| `WofzRe(zr, zi)` | `zr`/`zi`: the real and imaginary part of the<br/> given input, respectively.
 |`Interpolate`| `Interpolate(filename, x, smooth)` | `filename`: the name of the file where the xy data<br/> is availabe (`.csv` format).<br/><br/>`x`: where to evaluate the spline.<br/><br/>`smooth`: The spline smoothing factor. Around the same order of magnitude as the number of points.
 
@@ -420,11 +421,19 @@ function:
 
 This is the second mode to declare functions. Althouth giving a bit more work, it allows for a much finer control of what is going on.
 
+There are two ways to do it:
+1. by compyling your `.cpp` or `.f90` file with the command  
+```sh
+nested_fitx.x.x -fa example.f90
+```
+2. by writing the function in the file `internal_func.f90` and recompiling the ensemble of the program.
+
 ### Legacy function
 
+Legacy functions are listed in USERFCN*.f files. They need the additional configuration parameter `npar`. 
+Examples of use of a legacy function can be found in `examples/data_analysis/aaa_simple_example/legacy_func_input` directory.
 
-
-**Additional information can be found in the reference articles.*
+*Additional information can be found in the reference articles.*
 
 ## Present version and history of the past versions
 

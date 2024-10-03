@@ -61,34 +61,8 @@ c     Test of under of underflow first
 
 c     _______________________________________________________________________________________________
 
-      FUNCTION ERFPEAK_OLD(X,npar,val)
-c     Normalized Supergaussian distribution
-c     The value of 'amp' is the value of the surface below the curve
-      IMPLICIT NONE
-      INTEGER*4 npar
-      REAL*8 val(npar)
-      REAL*8 ERFPEAK_OLD, x
-      REAL*8 pi
-      PARAMETER(pi=3.141592653589793d0)
-      REAL*8 x0, amp, sigma, w
-
-      x0    = val(1)
-      amp   = val(2)
-      sigma = val(3)
-      w     = val(4)
-
-      ERFPEAK_OLD = amp*(0.5 - DERF((-w + ABS(x - x0))/sigma)/2.)/
-     +     (sigma/(DEXP(w**2/sigma**2)*SQRT(pi)) + w + w*DERF(w/sigma))
-
-
-
-      RETURN
-      END
-
-c     _______________________________________________________________________________________________
-
       FUNCTION ERFPEAK(X,npar,val)
-c     Normalized Supergaussian distribution
+c     Convolution between a flat distribution and a Gaussian distribution
 c     The value of 'amp' is the value of the surface below the curve
       IMPLICIT NONE
       INTEGER*4 npar
