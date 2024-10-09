@@ -26,12 +26,31 @@ REAL(8) FUNCTION LORE_IF(x, x0, amp, gamma)
     ! Normalized Lorentzian distribution
     ! The value of 'amp' is the value of the surface below the curve
     IMPLICIT NONE
-    REAL(8) :: LORE, x, x0, amp, gamma
+    REAL(8) :: x, x0, amp, gamma
     REAL(8), PARAMETER :: pi=3.141592653589793d0
     
     LORE_IF = amp*gamma/(pi*((x-x0)**2+gamma**2))
     
 END FUNCTION LORE_IF
+
+
+REAL(8) FUNCTION VOIGT_IF(x, x0, amp, sigma, gamma)
+    ! Voigt profile using the complex error function
+    ! (from the official one for fortran 2008) and following
+    ! the wikipedia text to obtain a normalized voigt profile
+    IMPLICIT NONE
+    REAL(8) :: x, x0, amp, sigma, gamma, zr, zi, wr, wi
+    REAL(8), PARAMETER :: pi=3.141592653589793d0
+    LOGICAL :: flag
+
+    zr = (x-x0)/(sigma*dsqrt(2.d0))
+    zi = gamma/(sigma*dsqrt(2.d0))
+
+    CALL WOFZ(zr,zi,wr,wi,flag)
+    
+    VOIGT_IF =  amp*wr/(sigma*dsqrt(2.d0*pi))
+    
+END FUNCTION VOIGT_IF
 
 
 ! Compute the real value out of the faddeeva function w(z)
