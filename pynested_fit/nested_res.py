@@ -1446,7 +1446,7 @@ class Summary(object):
             #print par_tmp
         parameters = []
         [parameters.append(x) for x in par_tmp if x not in parameters]
-        print("Parameters  found ", parameters)
+        print("Parameters found", parameters)
 
 
         # Exceptions that have to be expanded with the parameter name
@@ -1469,7 +1469,7 @@ class Summary(object):
         #print(len(summary))
 
         print('\n #### Available output keys ###')
-        for k  in output_types:
+        for k in output_types:
             if k in outputs_par:
                 print(k)
                 for p in parameters:
@@ -1490,6 +1490,10 @@ class Summary(object):
                 continue
             input = an.load_input(dirname)
             output = an.load_output_results(dirname)
+
+            f = open(dirname+'nf_output_points.paramnames','r')
+            par_names = [line.strip() for line in f.readlines()]
+            f.close()
 
 
             dir_output = {}
@@ -1513,8 +1517,9 @@ class Summary(object):
             # From outputs
             for k, v  in output.items():
                 if k in outputs_par:
-                    for pn, p in enumerate(an.parameters):
-                        dir_output[k+'_'+p] = v[pn]
+                    for pn, p in enumerate(par_names):
+                         dir_output[k+'_'+p] = v[pn]
+                         print(k+'_'+p, v[pn])
                 elif k !=  'ntry':
                     dir_output[k] = v
 
