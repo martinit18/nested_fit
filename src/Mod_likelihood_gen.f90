@@ -11,9 +11,10 @@ MODULE MOD_LIKELIHOOD_GEN
     IMPLICIT NONE
 
     PUBLIC :: LOGLIKELIHOOD
+    
     PRIVATE
     
-    PROCEDURE(proc_ptr_t), POINTER :: LOGLIKELIHOOD => null() ! TODO change the procedure
+    PROCEDURE(proc_like), POINTER :: LOGLIKELIHOOD => null() ! TODO change the procedure
 
     CONTAINS
     
