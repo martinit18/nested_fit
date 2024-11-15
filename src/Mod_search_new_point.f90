@@ -1,11 +1,11 @@
 MODULE MOD_SEARCH_NEW_POINT
-  ! Automatic Time-stamp: <Last changed by martino on Thursday 01 June 2023 at CEST 15:23:06>
+  ! Automatic Time-stamp: <Last changed by martino on Friday 15 November 2024 at CET 22:36:28>
   ! Module for search of new points
 
   ! Module for the input parameter definition
-  USE MOD_PARAMETERS, ONLY:  npar, par_step, par_bnd1, par_bnd2, par_fix, searchid
+  USE MOD_PARAMETERS !, ONLY:  npar, par_step, par_bnd1, par_bnd2, par_fix, searchid
   ! Module for likelihood
-  USE MOD_LIKELIHOOD
+  USE MOD_LIKELIHOOD_GEN
   ! Module for cluster analysis
   USE MOD_CLUSTER_ANALYSIS
   ! Module for math
@@ -27,8 +27,33 @@ MODULE MOD_SEARCH_NEW_POINT
 !#endif
 
 CONTAINS
-
+  
   ! TODO(César): Remap all of these writes to the mpi_status_process
+  
+  SUBROUTINE INIT_SEARCH_METHOD()
+#ifdef OPENMPI_ON
+    INTEGER(4) :: mpi_ierror
+#endif
+    IF (search_method.eq.'RANDOM_WALK') THEN
+       searchid = 0
+    ELSE IF(search_method.EQ.'UNIFORM') THEN
+       searchid = 1
+    ELSE IF(search_method.EQ.'SLICE_SAMPLING_TRANSF') THEN
+       searchid = 2
+    ELSE IF(search_method.EQ.'SLICE_SAMPLING') THEN
+       searchid = 3
+    ELSE IF(search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
+       searchid = 4
+    ELSE
+       CALL LOG_ERROR_HEADER()
+       CALL LOG_ERROR('Error of the search type name in Mod_search_new_point module.')
+       CALL LOG_ERROR('Check the manual and the input file.')
+       CALL LOG_ERROR_HEADER()
+       CALL HALT_EXECUTION()
+    END IF
+  END SUBROUTINE INIT_SEARCH_METHOD
+  
+   
 
   SUBROUTINE MAKE_LIVE_MEAN_SD(live)  
    

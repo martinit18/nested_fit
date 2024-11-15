@@ -371,6 +371,9 @@ PROGRAM NESTED_FIT
 #endif
 
       ! General configuration
+      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'calculation_mode' , calc_mode        , MANDATORY=.TRUE. ) ! data by default !!NEW!! Mode of code calculation
+      ! TODO put mandatory relative conditions with respect to this value
+      ! The idea is to put three mode: data (for data likelihood calc), function (for simple function exploration), partition (for potentials and for building partition functions)
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'datafiles' , string             , MANDATORY=.TRUE. )
       CALL POPULATE_INPUTFILES       (string)
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'specstr'   , spec_str           , MANDATORY=.FALSE.) !      x,c by default

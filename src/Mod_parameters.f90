@@ -4,6 +4,7 @@ MODULE MOD_PARAMETERS
   IMPLICIT NONE
 
   ! General parameters
+  CHARACTER(16)         :: calc_mode = 'DATA'
   INTEGER(4), PARAMETER :: maxdata=10000, nsetmax=10
   INTEGER(4), PARAMETER :: specstrmaxcol = 32
   CHARACTER(16)         :: fileformat = '.csv'
@@ -46,6 +47,7 @@ MODULE MOD_PARAMETERS
   INTEGER(4) :: funcid=0
   INTEGER(4) :: dataid=0
   INTEGER(4) :: searchid=0
+  INTEGER(8) :: ncall=0, ncall9=0
 
   COMMON /func_exp/ lr
   COMMON /func_conv/ npoint, nwidth

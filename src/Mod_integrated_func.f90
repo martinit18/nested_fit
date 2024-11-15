@@ -1,4 +1,4 @@
-MODULE MOD_LIKELIHOOD
+MODULE MOD_INTEGRATED_FUNC
   ! Automatic Time-stamp: <Last changed by martino on Monday 03 May 2021 at CEST 13:23:14>
   ! Module of likelihood test function, no real data are involved here
 
@@ -23,13 +23,12 @@ MODULE MOD_LIKELIHOOD
   IMPLICIT NONE
   PUBLIC :: SELECT_LIKELIHOODFCN
 
-  INTEGER(8) :: ncall=0, ncall9=0
   REAL(8)    :: a_norm=0.
 
 CONTAINS
 
 
-  SUBROUTINE INIT_LIKELIHOOD()
+  SUBROUTINE INIT_LIKELIHOOD_INTEG()
     ! Initialize the normal likelihood with data files and special function
     
     ! Initialize the search method params
@@ -43,31 +42,8 @@ CONTAINS
     
     funcid = SELECT_LIKELIHOODFCN(funcname(1))
 
-  END SUBROUTINE INIT_LIKELIHOOD
+  END SUBROUTINE INIT_LIKELIHOOD_INTEG
 
-  SUBROUTINE INIT_SEARCH_METHOD()
-#ifdef OPENMPI_ON
-      INTEGER(4) :: mpi_ierror
-#endif
-
-      IF (search_method.eq.'RANDOM_WALK') THEN
-          searchid = 0
-      ELSE IF(search_method.EQ.'UNIFORM') THEN
-            searchid = 1
-      ELSE IF(search_method.EQ.'SLICE_SAMPLING_TRANSF') THEN
-            searchid = 2
-      ELSE IF(search_method.EQ.'SLICE_SAMPLING') THEN
-            searchid = 3
-      ELSE IF(search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
-            searchid = 4
-      ELSE
-          CALL LOG_ERROR_HEADER()
-          CALL LOG_ERROR('Error of the search type name in Mod_search_new_point module.')
-          CALL LOG_ERROR('Check the manual and the input file.')
-          CALL LOG_ERROR_HEADER()
-          CALL HALT_EXECUTION()
-      END IF
-  END SUBROUTINE INIT_SEARCH_METHOD
 
   !#####################################################################################################################
 
@@ -78,7 +54,7 @@ CONTAINS
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
 
 
-    LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD(par)
+    LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_INTEG(par)
 
   END FUNCTION LOGLIKELIHOOD_WITH_TEST
 
@@ -101,20 +77,21 @@ CONTAINS
       SELECT_LIKELIHOODFCN = 4
     ELSE IF (funcname.eq.'TEST_GAUSS_WITH_CORRELATION') THEN
       SELECT_LIKELIHOODFCN = 5
-    ELSE IF(funcname.eq.'ENERGY_HARM_3D') THEN
-      SELECT_LIKELIHOODFCN = 6
     ELSE IF(funcname.eq.'TEST_LOGGAMMA') THEN
-      SELECT_LIKELIHOODFCN = 7
-    ELSE IF(funcname.eq.'ENERGY_LJ_3D_PBC') THEN
-      SELECT_LIKELIHOODFCN = 8
+      SELECT_LIKELIHOODFCN = 6
     ELSE
-      SELECT_LIKELIHOODFCN = -1
+      ! SELECT_LIKELIHOODFCN = -1
+      CALL LOG_ERROR_HEADER()
+      CALL LOG_ERROR('You selected the calculation mode`'//TRIM(calc_mode)//'`.')
+      CALL LOG_ERROR('Select a valid function to be integrated.')
+      CALL LOG_ERROR('Aborting Execution...')
+      CALL LOG_ERROR_HEADER() 
     END IF
 
     RETURN
   END
 
-  REAL(8) FUNCTION LOGLIKELIHOOD(par)
+  REAL(8) FUNCTION LOGLIKELIHOOD_INTEG(par)
     ! Main likelihood function
 
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
@@ -130,45 +107,41 @@ CONTAINS
     ! Select the test function
     SELECT CASE (funcid)
     CASE (0)
-       LOGLIKELIHOOD = TEST_SIMPLE_GAUSS(par)
+       LOGLIKELIHOOD_INTEG = TEST_SIMPLE_GAUSS(par)
     CASE (1)
-       LOGLIKELIHOOD = TEST_GAUSS(par)
+       LOGLIKELIHOOD_INTEG = TEST_GAUSS(par)
     CASE (2)
-       LOGLIKELIHOOD = TEST_GAUSSIAN_SHELLS(par)
+       LOGLIKELIHOOD_INTEG = TEST_GAUSSIAN_SHELLS(par)
     CASE (3)
-       LOGLIKELIHOOD = TEST_EGGBOX(par)
+       LOGLIKELIHOOD_INTEG = TEST_EGGBOX(par)
     CASE (4)
-       LOGLIKELIHOOD = TEST_ROSENBROCK(par)
+       LOGLIKELIHOOD_INTEG = TEST_ROSENBROCK(par)
     CASE (5)
-       LOGLIKELIHOOD = TEST_GAUSS_WITH_CORRELATION(par)
+       LOGLIKELIHOOD_INTEG = TEST_GAUSS_WITH_CORRELATION(par)
     CASE (6)
-       LOGLIKELIHOOD = ENERGY_HARM_3D(par)
-    CASE (7)
-       LOGLIKELIHOOD = TEST_LOGGAMMA(par)
-    CASE (8)
-       LOGLIKELIHOOD = ENERGY_LJ_3D_PBC(par)
+       LOGLIKELIHOOD_INTEG = TEST_LOGGAMMA(par)
     END SELECT
 
 
-  END FUNCTION LOGLIKELIHOOD
+  END FUNCTION LOGLIKELIHOOD_INTEG
 
 
   !#####################################################################################################################
 
-  SUBROUTINE FINAL_LIKELIHOOD(live_max,par_mean,par_median_w)
+  SUBROUTINE FINAL_LIKELIHOOD_INTEG(live_max,par_mean,par_median_w)
     ! Final action for the likelihood function
 
     REAL(8), DIMENSION(npar), INTENT(IN) :: live_max, par_mean, par_median_w
 
     CALL LOG_MESSAGE_HEADER()
-    CALL LOG_MESSAGE('End of likelihood test.')
+    CALL LOG_MESSAGE('End of function integration.')
     CALL LOG_MESSAGE('Number of calls : '//TRIM(ADJUSTL(INT8_TO_STR_INLINE(ncall))))
     CALL LOG_MESSAGE_HEADER()
-    OPEN(11,FILE='nf_output_n_likelihood_calls.txt',STATUS= 'UNKNOWN')
-    WRITE(11,*) ncall
-    CLOSE(11)
+    ! OPEN(11,FILE='nf_output_n_likelihood_calls.txt',STATUS= 'UNKNOWN')
+    ! WRITE(11,*) ncall
+    ! CLOSE(11)
 
-  END SUBROUTINE FINAL_LIKELIHOOD
+  END SUBROUTINE FINAL_LIKELIHOOD_INTEG
 
 
   !#####################################################################################################################
@@ -348,31 +321,7 @@ CONTAINS
 
 
   END FUNCTION TEST_GAUSS_WITH_CORRELATION
-  !#####################################################################################################################
 
-
-  REAL(8) FUNCTION ENERGY_HARM_3D(par)
-    !> The parameters are the positions of the points (...,x_i,y_i,z_i,....)
-    !> Potential of the form eps*SUM(x-i**2+y_i**2+z_i**2)
-
-    REAL(8), DIMENSION(:), INTENT(IN) :: par
-    REAL(8), PARAMETER :: pi=3.141592653589793d0
-    REAL(8), PARAMETER ::  eps=1.
-    REAL(8), DIMENSION(SIZE(par)) :: x     
-    INTEGER(4) :: N, i
-    REAL(8) :: rij, ener
-
-    x = par
-    N=INT(SIZE(x)/3)
-    
-    ener=0.
-    DO i=1,N
-      rij=(x(i*3-2))**2+(x(i*3-1))**2+(x(i*3))**2
-      ener=ener+eps*(rij)   
-    END DO
-    
-    ENERGY_HARM_3D=-ener
-  END FUNCTION ENERGY_HARM_3D
 
 !#####################################################################################################################   
   
@@ -419,46 +368,8 @@ CONTAINS
 
   END FUNCTION TEST_LOGGAMMA
   
-!#####################################################################################################################   
 
-  REAL(8) FUNCTION ENERGY_LJ_3D_PBC(par)
-    !> The parameters are the positions of the points (...,x_i,y_i,z_i,....)
-    !> Potential of the form 4*eps*((rij/r0)**12-(rij/r0)**6) with rij=sqrt((x_i-x_j)**2+(y_i-y_j)**2+(z_i-z_j)**2) with periodic boundary conditions
-
-    REAL(8), DIMENSION(:), INTENT(IN) :: par
-    REAL(8), PARAMETER :: pi=3.141592653589793d0
-    REAL(8), PARAMETER ::  eps=1.
-    REAL(8), DIMENSION(SIZE(par)-1) :: x     
-    INTEGER(4) :: N, i, j
-    REAL(8) :: rij, ener, r0, dx, dy, dz, box_x, box_y, box_z
-    
-    r0=par(1)
-    x = par(2:)
-    N=INT(SIZE(x)/3)
-    box_x=par_bnd2(2)-par_bnd1(2)
-    box_y=par_bnd2(3)-par_bnd1(3)
-    box_z=par_bnd2(4)-par_bnd1(4)
-    
-    ener=0.
-    DO i=1,N
-      DO j=i+1,N
-        dx=x(i*3-2)-x(j*3-2)
-        dy=x(i*3-1)-x(j*3-1)
-        dz=x(i*3)-x(j*3)
-        dx=dx-box_x*NINT(dx/box_x)
-        dy=dy-box_y*NINT(dy/box_y)
-        dz=dz-box_z*NINT(dz/box_z)
-        rij=SQRT(dx**2+dy**2+dz**2)
-        IF(rij<=3*r0) ener=ener+4*eps*((r0/rij)**12-(r0/rij)**6-(1./3.)**12+(1./3.)**6) 
-      END DO    
-    END DO
-    
-    !ener=ener+0.5*k*(SUM(x(1:npar:2))**2+SUM(x(2:npar:2))**2)!/npar
-
-    ENERGY_LJ_3D_PBC=-ener!*1./N
-  END FUNCTION ENERGY_LJ_3D_PBC
-  
   !##################################################################################################################### 
 
 
-END MODULE MOD_LIKELIHOOD
+END MODULE MOD_INTEGRATED_FUNC

@@ -30,7 +30,6 @@ MODULE MOD_LIKELIHOOD
 
   ! Data variables
   INTEGER(4) :: ndata
-  INTEGER(8) :: ncall=0, ncall9=0
   INTEGER(4), DIMENSION(nsetmax) :: ndata_set=0
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: x, nc, nc_err
   ! Data variable for 2D images
@@ -62,6 +61,7 @@ MODULE MOD_LIKELIHOOD
   TYPE(SpecMap_t) :: specstr_ordermap
 
 CONTAINS
+
 
    SUBROUTINE SPEC_MAP_INIT(map, cap)
       CLASS(SpecMap_t), INTENT(OUT) :: map
@@ -182,7 +182,7 @@ CONTAINS
    CALL specstr_ordermap%init(64)   ! Init the specstr map for data file load ordering
   END SUBROUTINE
 
-  SUBROUTINE INIT_LIKELIHOOD()
+  SUBROUTINE INIT_LIKELIHOOD_DATA()
     ! Initialize the normal likelihood with data files and special function
 
     ! Initialize the search method params
@@ -200,34 +200,34 @@ CONTAINS
     ! Free the spec string map
     CALL specstr_ordermap%free() ! NOTE(César): This is safe for a non-inited map
 
-  END SUBROUTINE INIT_LIKELIHOOD
+  END SUBROUTINE INIT_LIKELIHOOD_DATA
 
   !#####################################################################################################################
 
-  SUBROUTINE INIT_SEARCH_METHOD()
-#ifdef OPENMPI_ON
-   INTEGER(4) :: mpi_ierror
-#endif
+!   SUBROUTINE INIT_SEARCH_METHOD()
+! #ifdef OPENMPI_ON
+!    INTEGER(4) :: mpi_ierror
+! #endif
 
-    IF (search_method.eq.'RANDOM_WALK') THEN
-      searchid = 0
-    ELSE IF(search_method.EQ.'UNIFORM') THEN
-       searchid = 1
-    ELSE IF(search_method.EQ.'SLICE_SAMPLING_TRANSF') THEN
-       searchid = 2
-    ELSE IF(search_method.EQ.'SLICE_SAMPLING') THEN
-       searchid = 3
-    ELSE IF(search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
-       searchid = 4
-    ELSE
-      CALL LOG_ERROR_HEADER()
-      CALL LOG_ERROR('Error of the search type name in Mod_likelihood module.')
-      CALL LOG_ERROR('Check the manual and the input file.')
-      CALL LOG_ERROR('Available options: [RANDOM_WALK, UNIFORM, SLICE_SAMPLING, SLICE_SAMPLING_ADAPT]')
-      CALL LOG_ERROR_HEADER()
-      CALL HALT_EXECUTION()
-    END IF
-  END SUBROUTINE INIT_SEARCH_METHOD
+!     IF (search_method.eq.'RANDOM_WALK') THEN
+!       searchid = 0
+!     ELSE IF(search_method.EQ.'UNIFORM') THEN
+!        searchid = 1
+!     ELSE IF(search_method.EQ.'SLICE_SAMPLING_TRANSF') THEN
+!        searchid = 2
+!     ELSE IF(search_method.EQ.'SLICE_SAMPLING') THEN
+!        searchid = 3
+!     ELSE IF(search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
+!        searchid = 4
+!     ELSE
+!       CALL LOG_ERROR_HEADER()
+!       CALL LOG_ERROR('Error of the search type name in Mod_likelihood module.')
+!       CALL LOG_ERROR('Check the manual and the input file.')
+!       CALL LOG_ERROR('Available options: [RANDOM_WALK, UNIFORM, SLICE_SAMPLING, SLICE_SAMPLING_ADAPT]')
+!       CALL LOG_ERROR_HEADER()
+!       CALL HALT_EXECUTION()
+!     END IF
+!   END SUBROUTINE INIT_SEARCH_METHOD
 
   SUBROUTINE INIT_LIKELIHOOD_FUNC()
 #ifdef OPENMPI_ON
@@ -688,7 +688,7 @@ CONTAINS
 
 !#####################################################################################################################
 
-  REAL(8) FUNCTION LOGLIKELIHOOD(par)
+  REAL(8) FUNCTION LOGLIKELIHOOD_DATA(par)
     ! Main likelihood function
 
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
@@ -702,12 +702,12 @@ CONTAINS
     !$OMP END CRITICAL
     
     IF (BIT_CHECK_IF(DATA_IS_1D)) THEN
-       LOGLIKELIHOOD = LOGLIKELIHOOD_1D(par)
+       LOGLIKELIHOOD_DATA= LOGLIKELIHOOD_1D(par)
     ELSE IF (BIT_CHECK_IF(DATA_IS_2D)) THEN
-       LOGLIKELIHOOD = LOGLIKELIHOOD_2D(par)
+       LOGLIKELIHOOD_DATA= LOGLIKELIHOOD_2D(par)
     END IF
 
-  END FUNCTION LOGLIKELIHOOD
+  END FUNCTION LOGLIKELIHOOD_DATA
 
   !#####################################################################################################################
 
@@ -924,7 +924,7 @@ CONTAINS
 
   !#####################################################################################################################
 
-  SUBROUTINE FINAL_LIKELIHOOD(live_max,par_mean,par_median_w)
+  SUBROUTINE FINAL_LIKELIHOOD_DATA(live_max,par_mean,par_median_w)
     ! Final action for the likelihood function
 
     REAL(8), DIMENSION(npar), INTENT(IN) :: live_max, par_mean, par_median_w
@@ -947,7 +947,7 @@ CONTAINS
     ! Deallocate variables
     CALL DEALLOCATE_DATA()
 
-  END SUBROUTINE FINAL_LIKELIHOOD
+  END SUBROUTINE FINAL_LIKELIHOOD_DATA
 
   !#####################################################################################################################
   SUBROUTINE WRITE_EXPECTED_VALUES(live_max,par_mean,par_median_w)
