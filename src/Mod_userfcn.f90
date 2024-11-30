@@ -252,6 +252,35 @@ MODULE MOD_USERFCN
             IS_LEGACY_USERFCN = .TRUE.
         ELSE IF(funcname.EQ.'ROCKING_CURVE_SET') THEN
             IS_LEGACY_USERFCN = .TRUE.
+        
+        ! 2D data functions
+        ELSE IF(funcname.EQ.'GAUSS_SIMPLE_2D') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+         ELSE IF(funcname.EQ.'GAUSS_BG_2D') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+         ELSE IF(funcname.EQ.'GAUSS_LINE_BG_2D') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+         ELSE IF(funcname.EQ.'LORE_LINE_BG_2D') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+         ELSE IF(funcname.EQ.'VOIGT_LINE_BG_2D') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+         ELSE IF(funcname.EQ.'SUPERGAUSS_LINE_BG_2D') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+         ELSE IF(funcname.EQ.'ERFPEAK_LINE_BG_2D') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+         ELSE IF(funcname.EQ.'TWO_ERFPEAK_LINE_BG_2D') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+         ELSE IF(funcname.EQ.'TWO_LORE_LINE_BG_2D') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+         ELSE IF(funcname.EQ.'TWO_LORE_LINE_BG_2D') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+         ELSE IF(funcname.EQ.'TWO_LORE_WF_LINE_BG_2D') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+         ELSE IF(funcname.EQ.'FOUR_LORE_WF_LINE_BG_2D') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+         ELSE IF(funcname.EQ.'TWO_VOIGT_LINE_BG_2D') THEN
+            IS_LEGACY_USERFCN = .TRUE.
+
         ELSE
             IS_LEGACY_USERFCN = .FALSE.
         END IF
