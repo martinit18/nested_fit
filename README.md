@@ -51,7 +51,24 @@ Other jupyter notebook examples can be found in `examples/jupyter_notebooks`.
 ## Installation instructions 
 
 If you have to install everything from scratch, please refer to the file *STEPBYSTEP_INSTALL.md*
-### From PyPI
+
+### Quick installation (to fully test)
+In the directory of your choice in the terminal execute the following commands:
+- `git clone https://github.com/martinit18/nested_fit.git`
+- `mkdir -p nested_fit/build`
+- `cd nested_fit/build`
+- `cmake -DOPENMP=ON -DCMAKE_BUILD_TYPE=Release ..`
+- `cmake --build . --config Release --target install`
+- `cd ..`
+- `pip install -e .`
+- and to execute the program in any terminal, add the exetuable in your path with (in your .bashrc or similar)
+`export PATH=$PATH:<your installation directory>/nested_fit/bin`
+
+To test if everything is working, go to the directory `examples/data_analysis/aaa_simple_example/legacy_func_input` and run `nested_fit_xxx`
+
+
+
+### From PyPI (not yet working)
 
 The simplest way to install nested_fit.
 
