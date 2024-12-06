@@ -111,7 +111,7 @@ PROGRAM NESTED_FIT
    ! Module for the input parameter definition
    USE MOD_PARAMETERS
    ! Module for likelihood for data analysis
-   USE MOD_LIKELIHOOD
+   USE MOD_LIKELIHOOD_GEN
    ! Module for metadata
    USE MOD_METADATA
    ! Module for logging and displaying messages

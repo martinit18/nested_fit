@@ -15,7 +15,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
         search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, &
         make_cluster, nth, maxtries, maxntries, searchid
   ! Module for likelihood
-  USE MOD_LIKELIHOOD
+  USE MOD_LIKELIHOOD_GEN
   ! Module for searching new live points
   USE MOD_SEARCH_NEW_POINT
   ! Module for cluster analysis
