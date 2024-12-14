@@ -1,5 +1,6 @@
-version:    5.3              # Program version
-datafiles:  test_matrix.dat     # Name of the data file
+version:    5.4              # Program version
+calculation_mode: DATA       # Type of calculation (DATA for data, POTENTIAL for potential landscapes, INTEGRAL for function integrals)
+datafiles:  test_matrix.dat  # Name of the data file
 specstr:    img              # Datafile layout
 # filefmt: .tsv              # (optional) for data separated by spaces or tabs
 # likelihood: GAUSSIAN       # (for data with error bars only) Name of the likelihood function
@@ -12,7 +13,7 @@ function:
     y_0:  { value: 6,     step: -1, min: 0,     max: 60,     npar: 3 }
     s_x:  { value: 3,     step: -1, min: 0,     max: 10,     npar: 4 }
     s_y:  { value: 1,     step: -1, min: 0,     max: 10,     npar: 5 }
-    b_g:  { value: 1,     step: -1, min: 0,     max: §0,     npar: 6 }
+    b_g:  { value: 1,     step: -1, min: 0,     max: 10,     npar: 6 }
 
 data: { xmin: 0, xmax: 12, ymin: 0, ymax: 8 }    # Boundaries of data
 
