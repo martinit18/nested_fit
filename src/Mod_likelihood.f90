@@ -688,9 +688,10 @@ CONTAINS
 
 !#####################################################################################################################
 
-  REAL(8) FUNCTION LOGLIKELIHOOD_DATA(par)
+  REAL(8) FUNCTION LOGLIKELIHOOD_DATA(npar, par)
     ! Main likelihood function
 
+    INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
 
     !$OMP CRITICAL
@@ -702,19 +703,21 @@ CONTAINS
     !$OMP END CRITICAL
     
     IF (BIT_CHECK_IF(DATA_IS_1D)) THEN
-       LOGLIKELIHOOD_DATA= LOGLIKELIHOOD_1D(par)
+       LOGLIKELIHOOD_DATA= LOGLIKELIHOOD_1D(npar, par)
     ELSE IF (BIT_CHECK_IF(DATA_IS_2D)) THEN
-       LOGLIKELIHOOD_DATA= LOGLIKELIHOOD_2D(par)
+       LOGLIKELIHOOD_DATA= LOGLIKELIHOOD_2D(npar, par)
     END IF
 
   END FUNCTION LOGLIKELIHOOD_DATA
 
   !#####################################################################################################################
 
-  REAL(8) FUNCTION LOGLIKELIHOOD_WITH_TEST(par)
+  REAL(8) FUNCTION LOGLIKELIHOOD_WITH_TEST(npar, par)
     ! Main likelihood function with a preliminary test for Poisson
     ! This allows for avoid this test in the main loop calculation to speed the parallel computation
 
+    
+    INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
     !
     REAL(8) :: enc
@@ -753,9 +756,9 @@ CONTAINS
              END IF
           END DO
        END DO
-       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_1D(par)
+       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_1D(npar, par)
     ELSE IF (BIT_CHECK_IF(DATA_IS_E).AND.BIT_CHECK_IF(DATA_IS_1D)) THEN
-       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_1D(par)
+       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_1D(npar, par)
     ELSE IF (BIT_CHECK_IF(DATA_IS_C).AND.BIT_CHECK_IF(DATA_IS_2D)) THEN
        ! Check if the choosen function assumes zero or negative values
        DO i=1, nx
@@ -777,9 +780,9 @@ CONTAINS
              END IF
           END DO
        END DO
-       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_2D(par)
+       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_2D(npar, par)
     ELSE IF (BIT_CHECK_IF(DATA_IS_E).AND.BIT_CHECK_IF(DATA_IS_2D)) THEN
-       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_2D(par)
+       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_2D(npar, par)
 
     END IF
 
@@ -787,11 +790,13 @@ CONTAINS
 
   !#####################################################################################################################
 
-  REAL(8) FUNCTION LOGLIKELIHOOD_1D(par)
+  REAL(8) FUNCTION LOGLIKELIHOOD_1D(npar, par)
     
     ! Main likelihood function
     ! Type: Poisson , Gaussian , .... soon 2D I hope
     
+    
+    INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
     !
     REAL(8) :: ll_tmp, rk, rk2
@@ -885,11 +890,12 @@ CONTAINS
 
   !###################################################################################################
 
-  REAL(8) FUNCTION LOGLIKELIHOOD_2D(par)
+  REAL(8) FUNCTION LOGLIKELIHOOD_2D(npar, par)
 
     ! Main likelihood function for 2D data
     ! Type: Poisson only for the moment
 
+    INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
     !
     REAL(8) :: USERFCN_2D

@@ -14,8 +14,18 @@ MODULE MOD_LIKELIHOOD_GEN
     
     PRIVATE
     
-    PROCEDURE(proc_like), POINTER :: LOGLIKELIHOOD => null() ! TODO change the procedure
+    PROCEDURE(proc_like_t), POINTER :: LOGLIKELIHOOD => null() ! TODO change the procedure
 
+    ABSTRACT INTERFACE
+       REAL*8 FUNCTION proc_like_t(npar,par)
+         USE, INTRINSIC :: iso_c_binding
+         IMPLICIT NONE
+         REAL(c_double)      :: proc_time_t
+         INTEGER, INTENT(IN) :: npar
+         REAL(8), DIMENSION(npar), INTENT(IN) :: par
+       END FUNCTION proc_like_t
+    END INTERFACE
+    
     CONTAINS
     
     SUBROUTINE INIT_LIKELIHOOD

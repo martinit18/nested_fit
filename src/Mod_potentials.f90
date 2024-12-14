@@ -37,13 +37,14 @@ CONTAINS
   !#####################################################################################################################
 
 
-  REAL(8) FUNCTION LOGLIKELIHOOD_WITH_TEST(par)
+  REAL(8) FUNCTION LOGLIKELIHOOD_WITH_TEST(npar, par)
     ! Make some tests first if required
 
+    INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
 
 
-    LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_POT(par)
+    LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_POT(npar,par)
 
   END FUNCTION LOGLIKELIHOOD_WITH_TEST
 
@@ -70,9 +71,10 @@ CONTAINS
     RETURN
   END
 
-  REAL(8) FUNCTION LOGLIKELIHOOD_POT(par)
+  REAL(8) FUNCTION LOGLIKELIHOOD_POT(npar, par)
     ! Main likelihood function
 
+    INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
 
     !$OMP CRITICAL
@@ -86,9 +88,9 @@ CONTAINS
     ! Select the test function
     SELECT CASE (funcid)
     CASE (0)
-       LOGLIKELIHOOD_POT = ENERGY_HARM_3D(par)
+       LOGLIKELIHOOD_POT = ENERGY_HARM_3D(npar, par)
     CASE (1)
-       LOGLIKELIHOOD_POT = ENERGY_LJ_3D_PBC(par)
+       LOGLIKELIHOOD_POT = ENERGY_LJ_3D_PBC(npar, par)
     END SELECT
 
 
@@ -118,19 +120,20 @@ CONTAINS
   !#####################################################################################################################
 
 
-  REAL(8) FUNCTION ENERGY_HARM_3D(par)
+  REAL(8) FUNCTION ENERGY_HARM_3D(npar, par)
     !> The parameters are the positions of the points (...,x_i,y_i,z_i,....)
     !> Potential of the form eps*SUM(x-i**2+y_i**2+z_i**2)
 
+    INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(:), INTENT(IN) :: par
     REAL(8), PARAMETER :: pi=3.141592653589793d0
     REAL(8), PARAMETER ::  eps=1.
-    REAL(8), DIMENSION(SIZE(par)) :: x     
+    REAL(8), DIMENSION(npar) :: x     
     INTEGER(4) :: N, i
     REAL(8) :: rij, ener
 
     x = par
-    N=INT(SIZE(x)/3)
+    N=INT(npar/3)
     
     ener=0.
     DO i=1,N
@@ -144,20 +147,21 @@ CONTAINS
 
 !#####################################################################################################################   
 
-  REAL(8) FUNCTION ENERGY_LJ_3D_PBC(par)
+  REAL(8) FUNCTION ENERGY_LJ_3D_PBC(npar, par)
     !> The parameters are the positions of the points (...,x_i,y_i,z_i,....)
     !> Potential of the form 4*eps*((rij/r0)**12-(rij/r0)**6) with rij=sqrt((x_i-x_j)**2+(y_i-y_j)**2+(z_i-z_j)**2) with periodic boundary conditions
 
+    INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(:), INTENT(IN) :: par
     REAL(8), PARAMETER :: pi=3.141592653589793d0
     REAL(8), PARAMETER ::  eps=1.
-    REAL(8), DIMENSION(SIZE(par)-1) :: x     
+    REAL(8), DIMENSION(npar-1) :: x     
     INTEGER(4) :: N, i, j
     REAL(8) :: rij, ener, r0, dx, dy, dz, box_x, box_y, box_z
     
     r0=par(1)
     x = par(2:)
-    N=INT(SIZE(x)/3)
+    N=INT(npar/3)
     box_x=par_bnd2(2)-par_bnd1(2)
     box_y=par_bnd2(3)-par_bnd1(3)
     box_z=par_bnd2(4)-par_bnd1(4)

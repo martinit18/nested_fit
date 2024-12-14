@@ -48,13 +48,14 @@ CONTAINS
   !#####################################################################################################################
 
 
-  REAL(8) FUNCTION LOGLIKELIHOOD_WITH_TEST(par)
+  REAL(8) FUNCTION LOGLIKELIHOOD_WITH_TEST(npar, par)
     ! Make some tests first if required
 
+    INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
 
 
-    LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_INTEG(par)
+    LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_INTEG(npar, par)
 
   END FUNCTION LOGLIKELIHOOD_WITH_TEST
 
@@ -91,9 +92,10 @@ CONTAINS
     RETURN
   END
 
-  REAL(8) FUNCTION LOGLIKELIHOOD_INTEG(par)
+  REAL(8) FUNCTION LOGLIKELIHOOD_INTEG(npar, par)
     ! Main likelihood function
 
+    INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
 
     !$OMP CRITICAL
@@ -107,19 +109,19 @@ CONTAINS
     ! Select the test function
     SELECT CASE (funcid)
     CASE (0)
-       LOGLIKELIHOOD_INTEG = TEST_SIMPLE_GAUSS(par)
+       LOGLIKELIHOOD_INTEG = TEST_SIMPLE_GAUSS(npar, par)
     CASE (1)
-       LOGLIKELIHOOD_INTEG = TEST_GAUSS(par)
+       LOGLIKELIHOOD_INTEG = TEST_GAUSS(npar, par)
     CASE (2)
-       LOGLIKELIHOOD_INTEG = TEST_GAUSSIAN_SHELLS(par)
+       LOGLIKELIHOOD_INTEG = TEST_GAUSSIAN_SHELLS(npar, par)
     CASE (3)
-       LOGLIKELIHOOD_INTEG = TEST_EGGBOX(par)
+       LOGLIKELIHOOD_INTEG = TEST_EGGBOX(npar, par)
     CASE (4)
-       LOGLIKELIHOOD_INTEG = TEST_ROSENBROCK(par)
+       LOGLIKELIHOOD_INTEG = TEST_ROSENBROCK(npar, par)
     CASE (5)
-       LOGLIKELIHOOD_INTEG = TEST_GAUSS_WITH_CORRELATION(par)
+       LOGLIKELIHOOD_INTEG = TEST_GAUSS_WITH_CORRELATION(npar, par)
     CASE (6)
-       LOGLIKELIHOOD_INTEG = TEST_LOGGAMMA(par)
+       LOGLIKELIHOOD_INTEG = TEST_LOGGAMMA(npar, par)
     END SELECT
 
 
@@ -150,8 +152,9 @@ CONTAINS
 
 
   !#####################################################################################################################
-  REAL(8) FUNCTION TEST_SIMPLE_GAUSS(par)
+  REAL(8) FUNCTION TEST_SIMPLE_GAUSS(npar, par)
 
+    INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
     REAL(8), PARAMETER :: pi=3.141592653589793d0
     REAL(8), PARAMETER :: x0=0., sigma=1., amp=1.
@@ -170,7 +173,7 @@ CONTAINS
 
   !#####################################################################################################################
 
-  REAL(8) FUNCTION TEST_GAUSS(par)
+  REAL(8) FUNCTION TEST_GAUSS(npar, par)
     !> Basic multidimensional Gaussian likelihood with mean mu(:) and an uncorrelated covariance sigma(:).
     !! Inspired from polychord code
     !!
@@ -179,11 +182,12 @@ CONTAINS
     !!
     !! The mean is set at 0.0 by default, and all sigmas at 0.01
 
+    INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(:), INTENT(IN) :: par
     REAL(8), PARAMETER :: pi=3.141592653589793d0
-    REAL(8), DIMENSION(SIZE(par)) :: sigma ! Standard deviation (uncorrelated)
-    REAL(8), DIMENSION(SIZE(par)) :: mu    ! Mean
-    REAL(8), DIMENSION(SIZE(par)) :: x     ! Variable to explore
+    REAL(8), DIMENSION(npar) :: sigma ! Standard deviation (uncorrelated)
+    REAL(8), DIMENSION(npar) :: mu    ! Mean
+    REAL(8), DIMENSION(npar) :: x     ! Variable to explore
 
     x = par
 
@@ -202,15 +206,16 @@ CONTAINS
 
   !#####################################################################################################################
 
-  REAL(8) FUNCTION TEST_GAUSSIAN_SHELLS(par)
+  REAL(8) FUNCTION TEST_GAUSSIAN_SHELLS(npar, par)
     !> Basic multidimensional Gaussian shells likelihood with mean mu(:) and an uncorrelated covariance sigma(:).
     !! Inspired from polychord and multinest codes
 
+    INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(:), INTENT(IN) :: par
     REAL(8), PARAMETER :: pi=3.141592653589793d0
     REAL(8) :: ADDLOG, radius, sigma, A_norm, value_shell_1, value_shell_2
-    REAL(8), DIMENSION(SIZE(par)) :: mu    ! Mean
-    REAL(8), DIMENSION(SIZE(par)) :: x     ! Variable to explore
+    REAL(8), DIMENSION(npar) :: mu    ! Mean
+    REAL(8), DIMENSION(npar) :: x     ! Variable to explore
 
     x = par
 
@@ -241,12 +246,13 @@ CONTAINS
 
   !#####################################################################################################################
 
-  REAL(8) FUNCTION TEST_EGGBOX(par)
+  REAL(8) FUNCTION TEST_EGGBOX(npar, par)
     !> Eggbox likelihood for tests
 
+    INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(:), INTENT(IN) :: par
     REAL(8), PARAMETER :: pi=3.141592653589793d0
-    REAL(8), DIMENSION(SIZE(par)) :: theta ! Variable to explore
+    REAL(8), DIMENSION(npar) :: theta ! Variable to explore
 
     theta = par
 
@@ -269,7 +275,7 @@ CONTAINS
 
   END SUBROUTINE INIT_ROSENBROCK
 
-  REAL(8) FUNCTION TEST_ROSENBROCK(par)
+  REAL(8) FUNCTION TEST_ROSENBROCK(npar, par)
     ! Upside down Rosenbock function
     ! http://en.wikipedia.org/wiki/Rosenbrock_function
     !
@@ -279,8 +285,9 @@ CONTAINS
     ! For N = 2, it is normalized to 1.
     ! For N = 5, the integral is equal to -15.1091 following Handley MNRAS (2015)
 
+    INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(:), INTENT(IN) :: par
-    REAL(8), DIMENSION(SIZE(par)) :: x ! Variable to explore
+    REAL(8), DIMENSION(npar) :: x ! Variable to explore
 
     x = par
 
@@ -290,7 +297,7 @@ CONTAINS
 
   !#####################################################################################################################
 
-  REAL(8) FUNCTION TEST_GAUSS_WITH_CORRELATION(par)
+  REAL(8) FUNCTION TEST_GAUSS_WITH_CORRELATION(npar, par)
     !> Multidimensional Gaussian likelihood with mean mu(:) and a correlated covariance Sigma(:). (Here 2D)
     !! Inspired by the TEST_GAUSS function (https://en.wikipedia.org/wiki/Multivariate_normal_distribution)
     !!
@@ -299,11 +306,12 @@ CONTAINS
     !!
     !! The mean is set at 0.0 by default, the diagonal terms of the covariance matrix at 0.01, and the non diagonal terms at 0.009
 
+    INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(:), INTENT(IN) :: par
     REAL(8), PARAMETER :: pi=3.141592653589793d0
     REAL(8) :: sigma_d, sigma_c ! diagonal and non diagonal terms of the covariance (correlated)
-    REAL(8), DIMENSION(SIZE(par)) :: mu    ! Mean
-    REAL(8), DIMENSION(SIZE(par)) :: x     ! Variable to explore
+    REAL(8), DIMENSION(npar) :: mu    ! Mean
+    REAL(8), DIMENSION(npar) :: x     ! Variable to explore
 
     x = par
 
@@ -325,7 +333,7 @@ CONTAINS
 
 !#####################################################################################################################   
   
-  REAL(8) FUNCTION TEST_LOGGAMMA(par)
+  REAL(8) FUNCTION TEST_LOGGAMMA(npar, par)
     !> Basic multidimensional Gaussian likelihood with mean mu(:) and an uncorrelated covariance sigma(:).
     !! Inspired from multinest and ultranest code
     !!
@@ -334,12 +342,13 @@ CONTAINS
     !!
     !! The mean is set at 0.0 by default, and all sigmas at 0.01
 
+    INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(:), INTENT(IN) :: par
     REAL(8), PARAMETER :: pi=3.141592653589793d0
     REAL(8) :: sigma ! Standard deviation (uncorrelated)
     REAL(8) :: mu1, mu2    ! Mean
     REAL(8) :: c    ! Shape
-    REAL(8), DIMENSION(SIZE(par)) :: x     ! Variable to explore
+    REAL(8), DIMENSION(npar) :: x     ! Variable to explore
     REAL(8) :: L1, L2
     INTEGER(8) :: half, i
 

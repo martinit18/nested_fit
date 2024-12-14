@@ -580,7 +580,7 @@ PROGRAM NESTED_FIT
      par_mean = par_in
      par_median_w = par_in
      ! To check the likelihood function
-     evsum_final = LOGLIKELIHOOD(par_in)
+     evsum_final = LOGLIKELIHOOD(npar, par_in)
      IF(mpi_rank.EQ.0) THEN
          CALL LOG_WARNING_HEADER()
          CALL LOG_WARNING('All parameters are fixed.')
