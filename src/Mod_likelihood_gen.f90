@@ -8,13 +8,16 @@ MODULE MOD_LIKELIHOOD_GEN
     USE MOD_LOGGER
     USE MOD_AUTOFUNC
     USE MOD_PARAMETERS
+    USE MOD_SEARCH_NEW_POINT, ONLY: INIT_SEARCH_METHOD
+
     IMPLICIT NONE
 
-    PUBLIC :: LOGLIKELIHOOD
+    PUBLIC :: LOGLIKELIHOOD, LOGLIKELIHOOD_WITH_TEST, INIT_LIKELIHOOD, FINAL_LIKELIHOOD
     
     PRIVATE
     
-    PROCEDURE(proc_like_t), POINTER :: LOGLIKELIHOOD => null() ! TODO change the procedure
+    PROCEDURE(proc_like_t), POINTER :: LOGLIKELIHOOD => null()
+    PROCEDURE(proc_like_t), POINTER :: LOGLIKELIHOOD_WITH_TEST => null()
 
     ABSTRACT INTERFACE
        REAL*8 FUNCTION proc_like_t(npar,par)
@@ -32,15 +35,21 @@ MODULE MOD_LIKELIHOOD_GEN
         ! Select the likelihood type and the init and final associated calculations
         
         REAL*8, EXTERNAL :: LIKELIHOOD_DATA, LIKELIHOOD_POT, LIKELIHOOD_INTEG
+
+        ! Initialize the search method params
+        CALL INIT_SEARCH_METHOD()
         
         IF (calc_mode.EQ.'DATA') THEN !----------------------------------
             CALL INIT_LIKELIHOOD_DATA()
+            LOGLIKELIHOOD_WITH_TEST => LOGLIKELIHOOD_WITH_TEST_DATA
             LOGLIKELIHOOD => LOGLIKELIHOOD_DATA
         ELSE IF (calc_mode.EQ.'POTENTIAL') THEN !------------------------
             CALL INIT_LIKELIHOOD_POT()
+            LOGLIKELIHOOD_WITH_TEST => LOGLIKELIHOOD_WITH_TEST_POT
             LOGLIKELIHOOD => LOGLIKELIHOOD_POT
         ELSE IF (calc_mode.EQ.'INTEGRAL') THEN ! ------------------------
             CALL INIT_LIKELIHOOD_INTEG()
+            LOGLIKELIHOOD_WITH_TEST => LOGLIKELIHOOD_WITH_TEST_INTEG
             LOGLIKELIHOOD => LOGLIKELIHOOD_INTEG
         ELSE ! -------------------------------------------------------------
             CALL LOG_ERROR_HEADER()

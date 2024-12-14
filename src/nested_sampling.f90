@@ -162,7 +162,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
      END DO
      ! If it is good, take it
      live(j,:) = par_prior(:)
-     live_like(j) = LOGLIKELIHOOD_WITH_TEST(par_prior)
+     live_like(j) = LOGLIKELIHOOD_WITH_TEST(npar, par_prior)
      live_rank(j) = j
   END DO
   live_birth = MINVAL(live_like) - 10.d0

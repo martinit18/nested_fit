@@ -185,9 +185,6 @@ CONTAINS
   SUBROUTINE INIT_LIKELIHOOD_DATA()
     ! Initialize the normal likelihood with data files and special function
 
-    ! Initialize the search method params
-    CALL INIT_SEARCH_METHOD()
-
     ! Read data ------------------------------------------------------------------------------------------------------------------------
     CALL READ_DATA()
 
@@ -712,7 +709,7 @@ CONTAINS
 
   !#####################################################################################################################
 
-  REAL(8) FUNCTION LOGLIKELIHOOD_WITH_TEST(npar, par)
+  REAL(8) FUNCTION LOGLIKELIHOOD_WITH_TEST_DATA(npar, par)
     ! Main likelihood function with a preliminary test for Poisson
     ! This allows for avoid this test in the main loop calculation to speed the parallel computation
 
@@ -756,9 +753,9 @@ CONTAINS
              END IF
           END DO
        END DO
-       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_1D(npar, par)
+       LOGLIKELIHOOD_WITH_TEST_DATA = LOGLIKELIHOOD_1D(npar, par)
     ELSE IF (BIT_CHECK_IF(DATA_IS_E).AND.BIT_CHECK_IF(DATA_IS_1D)) THEN
-       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_1D(npar, par)
+       LOGLIKELIHOOD_WITH_TEST_DATA = LOGLIKELIHOOD_1D(npar, par)
     ELSE IF (BIT_CHECK_IF(DATA_IS_C).AND.BIT_CHECK_IF(DATA_IS_2D)) THEN
        ! Check if the choosen function assumes zero or negative values
        DO i=1, nx
@@ -780,13 +777,13 @@ CONTAINS
              END IF
           END DO
        END DO
-       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_2D(npar, par)
+       LOGLIKELIHOOD_WITH_TEST_DATA = LOGLIKELIHOOD_2D(npar, par)
     ELSE IF (BIT_CHECK_IF(DATA_IS_E).AND.BIT_CHECK_IF(DATA_IS_2D)) THEN
-       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_2D(npar, par)
+       LOGLIKELIHOOD_WITH_TEST_DATA = LOGLIKELIHOOD_2D(npar, par)
 
     END IF
 
-  END FUNCTION LOGLIKELIHOOD_WITH_TEST
+  END FUNCTION LOGLIKELIHOOD_WITH_TEST_DATA
 
   !#####################################################################################################################
 

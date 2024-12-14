@@ -31,9 +31,6 @@ CONTAINS
   SUBROUTINE INIT_LIKELIHOOD_INTEG()
     ! Initialize the normal likelihood with data files and special function
     
-    ! Initialize the search method params
-    CALL INIT_SEARCH_METHOD()
-    
     CALL LOG_TRACE('Initialization of func likelihood.')
 
     !IF (funcname.eq.'TEST_ROSENBROCK') THEN
@@ -48,16 +45,16 @@ CONTAINS
   !#####################################################################################################################
 
 
-  REAL(8) FUNCTION LOGLIKELIHOOD_WITH_TEST(npar, par)
+  REAL(8) FUNCTION LOGLIKELIHOOD_WITH_TEST_INTEG(npar, par)
     ! Make some tests first if required
 
     INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
 
 
-    LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_INTEG(npar, par)
+    LOGLIKELIHOOD_WITH_TEST_INTEG = LOGLIKELIHOOD_INTEG(npar, par)
 
-  END FUNCTION LOGLIKELIHOOD_WITH_TEST
+  END FUNCTION LOGLIKELIHOOD_WITH_TEST_INTEG
 
   !------------------------------------------------------------------------------------------------------------------------
   ! TODO(César): In reality this should be in another file, but I am following the previous "rules"...
