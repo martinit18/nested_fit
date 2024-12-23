@@ -178,9 +178,9 @@ CONTAINS
 #define DATA_IS_SET B'10000000'
 #define BIT_CHECK_IF(what) (IAND(dataid, what).GT.0)
 
-  SUBROUTINE PREPARE_LIKELIHOOD()
+  SUBROUTINE PREINIT_LIKELIHOOD_DATA()
    CALL specstr_ordermap%init(64)   ! Init the specstr map for data file load ordering
-  END SUBROUTINE
+  END SUBROUTINE 
 
   SUBROUTINE INIT_LIKELIHOOD_DATA()
     ! Initialize the normal likelihood with data files and special function

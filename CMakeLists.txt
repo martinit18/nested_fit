@@ -170,7 +170,7 @@ string(REPLACE ";" " " SRC_FILES_COMM_AC "${SRC_FILES_COMM}")
 ac_dec_obj_dep("src/Mod_cluster_analysis" "src/Mod_logger")
 ac_dec_obj_dep("src/Mod_logger" "src/Mod_timestamp")
 ac_dec_obj_dep("src/Mod_cluster_analysis" "src/Mod_parameters")
-ac_dec_obj_dep("src/Mod_search_new_point" "src/Mod_likelihood")
+ac_dec_obj_dep("src/Mod_search_new_point" "src/Mod_gen")
 ac_dec_obj_dep("src/Mod_search_new_point" "src/Mod_perfprof") # Performance profilling is not compatible with autoconf
 ac_dec_obj_dep("src/Mod_likelihood" "src/Mod_userfcn")
 ac_dec_obj_dep("src/Mod_userfcn" "src/funceval/auto_func")

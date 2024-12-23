@@ -114,6 +114,8 @@ PROGRAM NESTED_FIT
    USE MOD_LIKELIHOOD_GEN
    ! Module for general likelihood 
    USE MOD_LIKELIHOOD
+   ! Module for search new point
+   USE MOD_SEARCH_NEW_POINT
    ! Module for metadata
    USE MOD_METADATA
    ! Module for logging and displaying messages
@@ -367,11 +369,9 @@ PROGRAM NESTED_FIT
          CALL LOG_WARNING_HEADER()
       END IF
 
-#ifndef FUNC_TARGET
-      ! Prepare the likelihood module to receive values from the input file
-      CALL PREPARE_LIKELIHOOD()
-#endif
-
+      ! Prepare the likelihood 
+      CALL PREINIT_LIKELIHOOD()
+      
       ! General configuration
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'calculation_mode' , calc_mode        , MANDATORY=.TRUE. ) ! data by default !!NEW!! Mode of code calculation
       ! TODO put mandatory relative conditions with respect to this value
@@ -529,6 +529,9 @@ PROGRAM NESTED_FIT
       END IF
   END IF
 
+
+  ! Initialize the search method params
+  CALL INIT_SEARCH_METHOD()
   ! Initialize likelihood function
   CALL INIT_LIKELIHOOD()
 

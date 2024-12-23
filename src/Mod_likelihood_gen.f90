@@ -1,18 +1,18 @@
 ! Brief  : This is the likelihood pointer to distringuish between data likelihood, function integrals and partition functions
 ! Date   : 14/11/2024
 
-MODULE MOD_LIKELIHOOD_GEN
+MODULE MOD_LIKELIHOOD_GEN  
     USE MOD_LIKELIHOOD
     USE MOD_POTENTIALS
     USE MOD_INTEGRATED_FUNC
     USE MOD_LOGGER
     USE MOD_AUTOFUNC
     USE MOD_PARAMETERS
-    USE MOD_SEARCH_NEW_POINT, ONLY: INIT_SEARCH_METHOD
 
     IMPLICIT NONE
 
-    PUBLIC :: LOGLIKELIHOOD, LOGLIKELIHOOD_WITH_TEST, INIT_LIKELIHOOD, FINAL_LIKELIHOOD
+    PUBLIC :: LOGLIKELIHOOD, LOGLIKELIHOOD_WITH_TEST
+    PUBLIC :: PREINIT_LIKELIHOOD, INIT_LIKELIHOOD, FINAL_LIKELIHOOD
     
     PRIVATE
     
@@ -30,14 +30,23 @@ MODULE MOD_LIKELIHOOD_GEN
     END INTERFACE
     
     CONTAINS
+
+    SUBROUTINE PREINIT_LIKELIHOOD
+        ! Make preliminary operation if needed
+            
+        IF (calc_mode.EQ.'DATA') THEN !----------------------------------
+#ifndef FUNC_TARGET            
+            ! Prepare the likelihood module to receive values from the input file
+            CALL PREINIT_LIKELIHOOD_DATA()
+#endif
+        END IF ! -----------------------------------------------------------
+
+    END SUBROUTINE PREINIT_LIKELIHOOD
     
     SUBROUTINE INIT_LIKELIHOOD
         ! Select the likelihood type and the init and final associated calculations
         
         REAL*8, EXTERNAL :: LIKELIHOOD_DATA, LIKELIHOOD_POT, LIKELIHOOD_INTEG
-
-        ! Initialize the search method params
-        CALL INIT_SEARCH_METHOD()
         
         IF (calc_mode.EQ.'DATA') THEN !----------------------------------
             CALL INIT_LIKELIHOOD_DATA()
