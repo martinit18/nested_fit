@@ -430,7 +430,7 @@ PROGRAM NESTED_FIT
       CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'npoint', npoint, MANDATORY=.FALSE.) ! 0 by default
       CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'nwidth', nwidth, MANDATORY=.FALSE.) ! 0 by default
       
-      ! Function configuration
+      ! Function configuration inputs
       IF(is_set) THEN
          DO i = 1, nset
             CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'function.expression_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i))), funcname(i), MANDATORY=.TRUE.) ! LaTeX Expression or Legacy name
@@ -438,6 +438,14 @@ PROGRAM NESTED_FIT
       ELSE
          CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'function.expression', funcname(1), MANDATORY=.TRUE.) ! LaTeX Expression or Legacy name
       ENDIF
+
+      ! Initialize the search method params
+      CALL INIT_SEARCH_METHOD()
+
+      ! Initialize likelihood function
+      CALL INIT_LIKELIHOOD()
+
+      ! Function configuration
       CALL CONFIGURE_USERFUNCTION()
 
       ! Read set of spectra file parameter
@@ -529,11 +537,6 @@ PROGRAM NESTED_FIT
       END IF
   END IF
 
-
-  ! Initialize the search method params
-  CALL INIT_SEARCH_METHOD()
-  ! Initialize likelihood function
-  CALL INIT_LIKELIHOOD()
 
 #ifdef OPENMPI_ON
    CALL MPI_Bcast(par_num, npar, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
@@ -1143,7 +1146,7 @@ PROGRAM NESTED_FIT
 
    ! Check if the function is legacy or not
    ! If the first function is legacy, we don't need to worry about this
-   IF(.NOT.IS_LEGACY_USERFCN(TRIM(funcname(1)))) THEN
+   IF(.NOT.LEGACY_USERFCN) THEN
       ! Try to extract an expression
       DO i = 1, nset
         parse_result(i) = PARSE_LATEX(TRIM(funcname(i)))

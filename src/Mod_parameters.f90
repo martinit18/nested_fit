@@ -48,6 +48,7 @@ MODULE MOD_PARAMETERS
   INTEGER(4) :: dataid=0
   INTEGER(4) :: searchid=0
   INTEGER(8) :: ncall=0, ncall9=0
+  LOGICAL    :: LEGACY_USERFCN=.FALSE.
 
   COMMON /func_exp/ lr
   COMMON /func_conv/ npoint, nwidth

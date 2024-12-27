@@ -26,6 +26,9 @@ CONTAINS
     !IF (funcname.eq.'TEST_ROSENBROCK') THEN
     !   CALL INIT_ROSENBROCK()
     !END IF
+
+    ! All potentials are legacy function (for the moment)
+    LEGACY_USERFCN = .TRUE.
     
     funcid = SELECT_LIKELIHOODFCN(funcname(1))
 

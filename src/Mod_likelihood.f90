@@ -188,6 +188,11 @@ CONTAINS
     ! Read data ------------------------------------------------------------------------------------------------------------------------
     CALL READ_DATA()
 
+    write(*,*) 'and here'
+
+    ! Is it a legacy function?
+    LEGACY_USERFCN = IS_LEGACY_USERFCN(funcname(1))
+
     ! Initialize functions
     CALL INIT_FUNCTIONS()
 
