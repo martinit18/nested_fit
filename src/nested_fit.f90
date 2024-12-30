@@ -2,6 +2,13 @@ PROGRAM NESTED_FIT
   ! Time-stamp: <Last changed by martino on Monday 07 June 2021 at CEST 10:29:22>
   !
   ! Please read README and LICENSE files for more information
+  !
+  ! 5.4  Merge of executable for data analysis and function exploration
+  ! 5.3  New innterpolation functions in python library 
+  !      Live display when sampling from python
+  !      Works in console and jupyter notebooks
+  ! 5.2  Add JSON output for easier manipulation of results
+  !      New simple python interface to embed nested_fit on source code
   ! 5.1  Add feature for older systems not easily supporting cmake to configure via GNU autotools.
   !      Add performance profiling tool boilerplate code enabling a detailed analysis without hindering performance.
   ! 5.0  Update README.md
@@ -112,8 +119,6 @@ PROGRAM NESTED_FIT
    USE MOD_PARAMETERS
    ! Module for likelihood for data analysis
    USE MOD_LIKELIHOOD_GEN
-   ! Module for general likelihood 
-   USE MOD_LIKELIHOOD
    ! Module for search new point
    USE MOD_SEARCH_NEW_POINT
    ! Module for metadata
@@ -136,7 +141,6 @@ PROGRAM NESTED_FIT
 
   ! Parameters values and co.
   CHARACTER :: string*2048
-  CHARACTER :: spec_str*1024 = 'x,c'
   CHARACTER :: version_file*20
   LOGICAL   :: file_exists
 
@@ -373,15 +377,12 @@ PROGRAM NESTED_FIT
       CALL PREINIT_LIKELIHOOD()
       
       ! General configuration
-      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'calculation_mode' , calc_mode        , MANDATORY=.TRUE. ) ! data by default !!NEW!! Mode of code calculation
+      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'calculation_mode' , calc_mode   , MANDATORY=.TRUE. ) ! data by default !!NEW!! Mode of code calculation
       ! TODO put mandatory relative conditions with respect to this value
       ! The idea is to put three mode: data (for data likelihood calc), function (for simple function exploration), partition (for potentials and for building partition functions)
-      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'datafiles' , string             , MANDATORY=.TRUE. )
-      CALL POPULATE_INPUTFILES       (string)
+      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'datafiles' , filenames             , MANDATORY=(calc_mode.EQ.'DATA')) ! Only required if data analysis
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'specstr'   , spec_str           , MANDATORY=.FALSE.) !      x,c by default
-      CALL POPULATE_DATATYPE         (spec_str, data_type)
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'filefmt'   , fileformat         , MANDATORY=.FALSE.) !     .csv by default
-      CALL POPULATE_FILEFMT          (fileformat)
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'likelihood', likelihood_funcname, MANDATORY=.FALSE.) ! GAUSSIAN by default
       CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'fileheader', opt_file_has_header, MANDATORY=.FALSE.) !    False by default
       
@@ -397,29 +398,43 @@ PROGRAM NESTED_FIT
       
       ! Convergence configuration
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'convergence.method'   , conv_method, MANDATORY=.TRUE.)
+      ! Check compatibility between calculation method and convergence method
+      IF(calc_mode.NE.'POTENTIAL'.AND.conv_method.NE.'LIKE_ACC') THEN
+         CALL LOG_ERROR_HEADER()
+         CALL LOG_ERROR('Use "LIKE_ACC" convergence mode for "DATA" and "INTEGRA:" calculation modes')
+         CALL LOG_ERROR('Aborting Execution...')
+         CALL LOG_ERROR_HEADER()
+         CALL HALT_EXECUTION()
+      ELSE IF(calc_mode.EQ.'POTENTIAL'.AND.conv_method.EQ.'LIKE_ACC')
+         CALL LOG_ERROR_HEADER()
+         CALL LOG_ERROR('Use "ENERGY_ACC" or "ENERGY_MAX" convergence mode for "POTENTIAL" calculation mode')
+         CALL LOG_ERROR('Aborting Execution...')
+         CALL LOG_ERROR_HEADER()
+         CALL HALT_EXECUTION()
+      ENDIF
       CALL FIELD_FROM_INPUT_REAL     (input_config, 'convergence.accuracy' , evaccuracy , MANDATORY=.TRUE.)
-      CALL FIELD_FROM_INPUT_REAL     (input_config, 'convergence.parameter', conv_par   , MANDATORY=.FALSE.)
+      CALL FIELD_FROM_INPUT_REAL     (input_config, 'convergence.parameter', conv_par   , MANDATORY=(conv_method.NE.'LIKE_ACC'))
 
       ! Clustering configuration
       CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'clustering.enabled'  , make_cluster  , MANDATORY=.FALSE.) ! False by default
       IF(make_cluster) THEN
          CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'clustering.method'   , cluster_method, MANDATORY=.TRUE.)
-         CALL FIELD_FROM_INPUT_REAL     (input_config, 'clustering.parameter1' , cluster_par1  , MANDATORY=.TRUE.)
-         CALL FIELD_FROM_INPUT_REAL     (input_config, 'clustering.parameter2', cluster_par2  , MANDATORY=.TRUE.)
+         CALL FIELD_FROM_INPUT_REAL     (input_config, 'clustering.parameter1' , cluster_par1  , MANDATORY=(cluster_method.NE.'k'))
+         CALL FIELD_FROM_INPUT_REAL     (input_config, 'clustering.parameter2', cluster_par2  , MANDATORY=(cluster_method.NE.'k'))
       END IF
 
       ! Data configuration
       ! TODO(César): Make this not mandatory and get bounds from data file
       IF(is_set) THEN
          DO i = 1, nset
-            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.xmin', xmin(i), MANDATORY=.TRUE. )
-            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.xmax', xmax(i), MANDATORY=.TRUE. )
+            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.xmin', xmin(i), MANDATORY=(calc_mode.EQ.'DATA') ) ! Only required for data analysis
+            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.xmax', xmax(i), MANDATORY=(calc_mode.EQ.'DATA') ) ! Only required for data analysis
             CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.ymin', ymin(i), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
             CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.ymax', ymax(i), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
          END DO
       ELSE
-         CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.xmin', xmin(1), MANDATORY=.TRUE. )
-         CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.xmax', xmax(1), MANDATORY=.TRUE. )
+         CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.xmin', xmin(1), MANDATORY=(calc_mode.EQ.'DATA') ) ! Only required for data analysis
+         CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.xmax', xmax(1), MANDATORY=(calc_mode.EQ.'DATA') ) ! Only required for data analysis
          CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.ymin', ymin(1), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
          CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.ymax', ymax(1), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
       ENDIF
@@ -1299,160 +1314,6 @@ PROGRAM NESTED_FIT
 
    ENDIF
 
-  END SUBROUTINE
-
-  SUBROUTINE POPULATE_FILEFMT(format)
-   IMPLICIT NONE
-   CHARACTER(LEN=16), INTENT(INOUT) :: format
-
-   CALL STR_TO_LOWER(format)
-   IF((TRIM(format).NE.'.csv').AND.(TRIM(format).NE.'.tsv')) THEN
-      CALL LOG_ERROR_HEADER()
-      CALL LOG_ERROR('Unrecognized filefmt: `'//TRIM(format)//'`.')
-      CALL LOG_ERROR('Aborting Execution...')
-      CALL LOG_ERROR_HEADER()
-      CALL HALT_EXECUTION()
-   ENDIF
-
-  END SUBROUTINE
-
-  SUBROUTINE POPULATE_INPUTFILES(filestr)
-   IMPLICIT NONE
-   CHARACTER(LEN=*), INTENT(IN) :: filestr
-   INTEGER                      :: count
-
-   CALL SPLIT_INPUT_ON(',', filestr, filename, count, nsetmax)
-
-   IF(count.GT.1) THEN
-      ! We have a set of files
-      CALL LOG_TRACE('Running for a set of files.')
-
-      is_set = .TRUE.
-      nset = count
-      DO i = 1, count
-         filename(i) = ADJUSTL(filename(i)) ! Skip possible left spaces from comma separation
-      END DO
-   ELSE
-      nset = 1
-      is_set = .FALSE.
-   ENDIF
-
-  END SUBROUTINE
-
-
-  SUBROUTINE POPULATE_DATATYPE(specstr, output)
-   IMPLICIT NONE
-   CHARACTER(LEN=*), INTENT(IN)  :: specstr
-   CHARACTER(3)    , INTENT(OUT) :: output
-   CHARACTER(64)                 :: specifiers(specstrmaxcol)
-   CHARACTER                     :: dimensions
-   INTEGER                       :: count
-   INTEGER                       :: i, j
-   INTEGER                       :: order_int
-   LOGICAL                       :: found_spec, spec_err
-
-! Ignore populating the data for the nested_fit_func target
-#ifndef FUNC_TARGET
-   ! Declare the valid spec string fields
-   CHARACTER(32), PARAMETER :: spec_fields(7) = [CHARACTER(LEN=32) ::&
-         'x',&
-         'y',&
-         ! 'xe',&
-         ! 'ye',&
-         'c',&
-         'ce',&
-         't',&
-         'i',&
-         'img'&
-      ]
-
-   CALL SPLIT_INPUT_ON(',', specstr, specifiers, count, specstrmaxcol)
-   
-   IF(count.LT.1) THEN
-      CALL LOG_ERROR_HEADER()
-      CALL LOG_ERROR('Specified `specstr` is not valid.')
-      CALL LOG_ERROR('Aborting Execution...')
-      CALL LOG_ERROR_HEADER()
-      CALL HALT_EXECUTION()
-   ENDIF
-
-   CALL specstr_ordermap%insert('ncols', count)
-
-   ! NOTE(César): Special case for image data (legacy 2D)
-   IF(TRIM(spec_str).EQ.'img') THEN
-      CALL specstr_ordermap%insert('img_v', 1)
-      output = '2c'
-      RETURN
-   ELSE IF(INDEX(spec_str, 'img').GT.0) THEN
-      CALL LOG_ERROR_HEADER()
-      CALL LOG_ERROR('Specified `specstr` is not valid.')
-      CALL LOG_ERROR('Spec name `img` is an exclusive spec. But other specs were found.')
-      CALL LOG_ERROR('Aborting Execution...')
-      CALL LOG_ERROR_HEADER()
-      CALL HALT_EXECUTION()
-   ENDIF
-   
-   dimensions = ' '
-   found_spec = .FALSE.
-   DO i = 1, count
-      ! Try and find a spec
-      DO j = 1, 7
-         IF(TRIM(specifiers(i)).EQ.TRIM(spec_fields(j))) THEN
-            CALL LOG_TRACE('specstr: Found valid specifier `'//TRIM(spec_fields(j))//'`.')
-            ! HACK(César): This is required for the hash to work with some keys (why ???)
-            CALL specstr_ordermap%insert(TRIM(spec_fields(j))//'_v', i)
-            found_spec = .TRUE.
-            GOTO 919
-         ENDIF
-      END DO
-
-      919   CONTINUE
-      IF(.NOT.found_spec) THEN
-         CALL LOG_ERROR_HEADER()
-         CALL LOG_ERROR('Specified `specstr` is not valid.')
-         CALL LOG_ERROR('Spec name `'//TRIM(specifiers(i))//'` is not a valid name.')
-         CALL LOG_ERROR('Aborting Execution...')
-         CALL LOG_ERROR_HEADER()
-         CALL HALT_EXECUTION()
-      ENDIF
-      found_spec = .FALSE.
-   END DO
-
-   CALL specstr_ordermap%find('x_v', order_int, spec_err)
-   IF(spec_err) THEN
-      CALL LOG_ERROR_HEADER()
-      CALL LOG_ERROR('Specified `specstr` is valid.')
-      CALL LOG_ERROR('But spec `x` is required and was not found.')
-      CALL LOG_ERROR('Aborting Execution...')
-      CALL LOG_ERROR_HEADER()
-      CALL HALT_EXECUTION()
-   ENDIF
-   dimensions = '1'
-
-   CALL specstr_ordermap%find('y_v', order_int, spec_err)
-   IF(.NOT.spec_err) THEN
-      dimensions = '2'
-   ENDIF
-
-   CALL specstr_ordermap%find('c_v', order_int, spec_err)
-   IF(spec_err) THEN
-      CALL LOG_ERROR_HEADER()
-      CALL LOG_ERROR('Specified `specstr` is valid.')
-      CALL LOG_ERROR('But spec `c` is required and was not found.')
-      CALL LOG_ERROR('Aborting Execution...')
-      CALL LOG_ERROR_HEADER()
-      CALL HALT_EXECUTION()
-   ENDIF
-
-   output(1:1) = dimensions(1:1)
-
-   CALL specstr_ordermap%find('ce_v', order_int, spec_err)
-   IF(.NOT.spec_err) THEN
-      output(2:2) = 'e'
-   ELSE
-      output(2:2) = 'c'
-   ENDIF
-#endif
   END SUBROUTINE
 
   SUBROUTINE FIELD_FROM_INPUT_REAL(config, field_name, field_value, mandatory)

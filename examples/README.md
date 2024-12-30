@@ -8,9 +8,10 @@
 - in `data_2D` an example of **2D data** is given,
 - in `set_of_datafile` an example of **simultaneous analysis of set data files** is given.
 
-Examples of nested fit input files for function exploration are presented in the folder `function_exploration`. In particular
-- in `func_EGGBOX` different **clustering methods** are presented,
-- in `func_ENERGY_HARM_3D` an analysis of **partition function** with a choice of minimum temperature is given.
+Examples of nested fit input files for function exploration are presented in the folder `function_integration`. 
+
+Examples of nested fit input files for potential exploration and analysis of the **partition function** with a choice of minimum temperature is given in the folder `potential_exploration`.
+
 
 Examples of use of the python library `nested_res.py` are presented in two jupyter notebooks
 - `simple_analysis_visu.ipynb` for a simple visualization of `nested_fit` outputs for a single analysis

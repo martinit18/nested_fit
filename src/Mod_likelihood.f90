@@ -182,13 +182,171 @@ CONTAINS
    CALL specstr_ordermap%init(64)   ! Init the specstr map for data file load ordering
   END SUBROUTINE 
 
+  SUBROUTINE POPULATE_INPUTFILES(filestr)
+   IMPLICIT NONE
+   CHARACTER(LEN=*), INTENT(IN) :: filestr
+   INTEGER                      :: count, i
+
+   CALL SPLIT_INPUT_ON(',', filestr, filename, count, nsetmax)
+
+   IF(count.GT.1) THEN
+      ! We have a set of files
+      CALL LOG_TRACE('Running for a set of files.')
+
+      is_set = .TRUE.
+      nset = count
+      DO i = 1, count
+         filename(i) = ADJUSTL(filename(i)) ! Skip possible left spaces from comma separation
+      END DO
+   ELSE
+      nset = 1
+      is_set = .FALSE.
+   ENDIF
+
+  END SUBROUTINE
+
+  SUBROUTINE POPULATE_DATATYPE(specstr, output)
+   IMPLICIT NONE
+   CHARACTER(LEN=*), INTENT(IN)  :: specstr
+   CHARACTER(3)    , INTENT(OUT) :: output
+   CHARACTER(64)                 :: specifiers(specstrmaxcol)
+   CHARACTER                     :: dimensions
+   INTEGER                       :: count
+   INTEGER                       :: i, j
+   INTEGER                       :: order_int
+   LOGICAL                       :: found_spec, spec_err
+
+! Ignore populating the data for the nested_fit_func target
+#ifndef FUNC_TARGET
+   ! Declare the valid spec string fields
+   CHARACTER(32), PARAMETER :: spec_fields(7) = [CHARACTER(LEN=32) ::&
+         'x',&
+         'y',&
+         ! 'xe',&
+         ! 'ye',&
+         'c',&
+         'ce',&
+         't',&
+         'i',&
+         'img'&
+      ]
+
+   CALL SPLIT_INPUT_ON(',', specstr, specifiers, count, specstrmaxcol)
+   
+   IF(count.LT.1) THEN
+      CALL LOG_ERROR_HEADER()
+      CALL LOG_ERROR('Specified `specstr` is not valid.')
+      CALL LOG_ERROR('Aborting Execution...')
+      CALL LOG_ERROR_HEADER()
+      CALL HALT_EXECUTION()
+   ENDIF
+
+   CALL specstr_ordermap%insert('ncols', count)
+
+   ! NOTE(César): Special case for image data (legacy 2D)
+   IF(TRIM(spec_str).EQ.'img') THEN
+      CALL specstr_ordermap%insert('img_v', 1)
+      output = '2c'
+      RETURN
+   ELSE IF(INDEX(spec_str, 'img').GT.0) THEN
+      CALL LOG_ERROR_HEADER()
+      CALL LOG_ERROR('Specified `specstr` is not valid.')
+      CALL LOG_ERROR('Spec name `img` is an exclusive spec. But other specs were found.')
+      CALL LOG_ERROR('Aborting Execution...')
+      CALL LOG_ERROR_HEADER()
+      CALL HALT_EXECUTION()
+   ENDIF
+   
+   dimensions = ' '
+   found_spec = .FALSE.
+   DO i = 1, count
+      ! Try and find a spec
+      DO j = 1, 7
+         IF(TRIM(specifiers(i)).EQ.TRIM(spec_fields(j))) THEN
+            CALL LOG_TRACE('specstr: Found valid specifier `'//TRIM(spec_fields(j))//'`.')
+            ! HACK(César): This is required for the hash to work with some keys (why ???)
+            CALL specstr_ordermap%insert(TRIM(spec_fields(j))//'_v', i)
+            found_spec = .TRUE.
+            GOTO 919
+         ENDIF
+      END DO
+
+      919   CONTINUE
+      IF(.NOT.found_spec) THEN
+         CALL LOG_ERROR_HEADER()
+         CALL LOG_ERROR('Specified `specstr` is not valid.')
+         CALL LOG_ERROR('Spec name `'//TRIM(specifiers(i))//'` is not a valid name.')
+         CALL LOG_ERROR('Aborting Execution...')
+         CALL LOG_ERROR_HEADER()
+         CALL HALT_EXECUTION()
+      ENDIF
+      found_spec = .FALSE.
+   END DO
+
+   CALL specstr_ordermap%find('x_v', order_int, spec_err)
+   IF(spec_err) THEN
+      CALL LOG_ERROR_HEADER()
+      CALL LOG_ERROR('Specified `specstr` is valid.')
+      CALL LOG_ERROR('But spec `x` is required and was not found.')
+      CALL LOG_ERROR('Aborting Execution...')
+      CALL LOG_ERROR_HEADER()
+      CALL HALT_EXECUTION()
+   ENDIF
+   dimensions = '1'
+
+   CALL specstr_ordermap%find('y_v', order_int, spec_err)
+   IF(.NOT.spec_err) THEN
+      dimensions = '2'
+   ENDIF
+
+   CALL specstr_ordermap%find('c_v', order_int, spec_err)
+   IF(spec_err) THEN
+      CALL LOG_ERROR_HEADER()
+      CALL LOG_ERROR('Specified `specstr` is valid.')
+      CALL LOG_ERROR('But spec `c` is required and was not found.')
+      CALL LOG_ERROR('Aborting Execution...')
+      CALL LOG_ERROR_HEADER()
+      CALL HALT_EXECUTION()
+   ENDIF
+
+   output(1:1) = dimensions(1:1)
+
+   CALL specstr_ordermap%find('ce_v', order_int, spec_err)
+   IF(.NOT.spec_err) THEN
+      output(2:2) = 'e'
+   ELSE
+      output(2:2) = 'c'
+   ENDIF
+#endif
+  END SUBROUTINE
+
+  SUBROUTINE POPULATE_FILEFMT(format)
+   IMPLICIT NONE
+   CHARACTER(LEN=16), INTENT(INOUT) :: format
+
+   CALL STR_TO_LOWER(format)
+   IF((TRIM(format).NE.'.csv').AND.(TRIM(format).NE.'.tsv')) THEN
+      CALL LOG_ERROR_HEADER()
+      CALL LOG_ERROR('Unrecognized filefmt: `'//TRIM(format)//'`.')
+      CALL LOG_ERROR('Aborting Execution...')
+      CALL LOG_ERROR_HEADER()
+      CALL HALT_EXECUTION()
+   ENDIF
+
+  END SUBROUTINE
+
   SUBROUTINE INIT_LIKELIHOOD_DATA()
     ! Initialize the normal likelihood with data files and special function
 
+    ! Separate the name of the different files
+    CALL POPULATE_INPUTFILES(filenames)
+
+    ! Populate data formats
+    CALL POPULATE_DATATYPE(spec_str, data_type)
+    CALL POPULATE_FILEFMT(fileformat)
+
     ! Read data ------------------------------------------------------------------------------------------------------------------------
     CALL READ_DATA()
-
-    write(*,*) 'and here'
 
     ! Is it a legacy function?
     LEGACY_USERFCN = IS_LEGACY_USERFCN(funcname(1))

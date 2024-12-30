@@ -64,7 +64,8 @@ MODULE MOD_LIKELIHOOD_GEN
             CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Select a valid calculation mode.')
             CALL LOG_ERROR('Aborting Execution...')
-            CALL LOG_ERROR_HEADER() 
+            CALL LOG_ERROR_HEADER()
+            CALL HALT_EXECUTION() 
         END IF ! -----------------------------------------------------------
     END SUBROUTINE INIT_LIKELIHOOD
 
