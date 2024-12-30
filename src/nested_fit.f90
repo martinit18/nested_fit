@@ -405,7 +405,7 @@ PROGRAM NESTED_FIT
          CALL LOG_ERROR('Aborting Execution...')
          CALL LOG_ERROR_HEADER()
          CALL HALT_EXECUTION()
-      ELSE IF(calc_mode.EQ.'POTENTIAL'.AND.conv_method.EQ.'LIKE_ACC')
+      ELSE IF(calc_mode.EQ.'POTENTIAL'.AND.conv_method.EQ.'LIKE_ACC') THEN
          CALL LOG_ERROR_HEADER()
          CALL LOG_ERROR('Use "ENERGY_ACC" or "ENERGY_MAX" convergence mode for "POTENTIAL" calculation mode')
          CALL LOG_ERROR('Aborting Execution...')
@@ -1240,6 +1240,9 @@ PROGRAM NESTED_FIT
       ! Nothing to be done here (for now)
       ! Get legacy required parameters
       CALL input_config%subkeys_of('function.params.', legacy_param_keys, legacy_param_count)
+
+      write(*,*) '!!!Problem HERE!!! legacy_param_count = ', legacy_param_count
+
       DO i = 1, legacy_param_count
          legacy_param_keys(i) = legacy_param_keys(i)(1:INDEX(legacy_param_keys(i), '.', back=.TRUE.)-1)
       END DO

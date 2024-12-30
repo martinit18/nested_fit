@@ -252,6 +252,9 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   
   ! Create covariance matrix and Cholesky decomposition
   CALL ALLOCATE_PAR_VAR()
+
+  write(*,*) '!!!Problem HERE!!! npar = ', npar
+
   CALL CREATE_MAT_COV(live(:,par_var))
   DO WHILE (n.LE.nstep)
      ! ##########################################################################
