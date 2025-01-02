@@ -14,8 +14,8 @@ function:
     y_3:  { value: 0.5, step: -1, min: -5, max: 5,  npar: 8 }
     z_3:  { value: 0.5, step: -1, min: -5, max: 5,  npar: 9 }
     x_4:  { value: 0.5, step: -1, min: -5, max: 5,  npar: 10 }
-    y_3:  { value: 0.5, step: -1, min: -5, max: 5,  npar: 11 }
-    z_3:  { value: 0.5, step: -1, min: -5, max: 5,  npar: 12 }
+    y_4:  { value: 0.5, step: -1, min: -5, max: 5,  npar: 11 }
+    z_4:  { value: 0.5, step: -1, min: -5, max: 5,  npar: 12 }
     x_5:  { value: 0.5, step: -1, min: -5, max: 5,  npar: 13 }
     y_5:  { value: 0.5, step: -1, min: -5, max: 5,  npar: 14 }
     z_5:  { value: 0.5, step: -1, min: -5, max: 5,  npar: 15 }
