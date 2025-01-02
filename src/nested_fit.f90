@@ -1241,8 +1241,6 @@ PROGRAM NESTED_FIT
       ! Get legacy required parameters
       CALL input_config%subkeys_of('function.params.', legacy_param_keys, legacy_param_count)
 
-      write(*,*) '!!!Problem HERE!!! legacy_param_count = ', legacy_param_count
-
       DO i = 1, legacy_param_count
          legacy_param_keys(i) = legacy_param_keys(i)(1:INDEX(legacy_param_keys(i), '.', back=.TRUE.)-1)
       END DO
