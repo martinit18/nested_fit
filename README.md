@@ -52,7 +52,7 @@ Other jupyter notebook examples can be found in `examples/jupyter_notebooks`.
 
 If you have to install everything from scratch, please refer to the file *STEPBYSTEP_INSTALL.md*
 
-### Quick installation (to fully test)
+### Quick installation (to fully be tested)
 In the directory of your choice in the terminal execute the following commands:
 - `git clone https://github.com/martinit18/nested_fit.git`
 - `mkdir -p nested_fit/build`
