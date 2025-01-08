@@ -264,16 +264,22 @@ A complete selection of input files example is given in the folder `examples` wh
 It follows a complete description of `nf_input.yaml` file.
 
 ```yaml
-version: 5.3                             # Program version
+version: 5.4                             # Program version
+calculation_mode: DATA                   # Type of calculation
+```
+The type of calculation is spefified by `calculation_mode` variable. 
+Available options are:
+- `DATA`: for data analysis. A likelihood function is explored the Bayesian evidence is evaluated. It  requires a data file to read and thus the inputs `datafiles, specstr, likelihood`.
+- `INTEGRAL`: for the calculation of the integral of a given function.
+- `POTENTIAL`: for exploration of a potential energy and for building the partition function. 
+
+```yaml
 datafiles: file1.csv [, file2.csv, ...]  # Name of the data file(s)
 ```
 If you have space- or tab-separated files, select the `.tsv` format adding the line
 ```yaml
 filefmt: .tsv
-```
-
-```yaml
-specstr: x,c,ce                          # Datafile layout
+specstr: x,c,ce                          # Datafile layout 
 ```
 A typical example could be `ce, i, i, x, c`, where the first column indicate the error bars, the second and the third are ignored, the fourt indicates the x-coordinate and the last the values.
 
@@ -456,15 +462,17 @@ Examples of use of a legacy function can be found in `examples/data_analysis/aaa
 
 ## Present version and history of the past versions
 
-The present version is 5.3.1\
+The present version is 5.4.0\
 New features:
-- New jupyter notebooks running in Google Colab
-- New innterpolation functions in python library
-- Live display when sampling from python. Works in console and jupyter notebooks.
-- Live display featured maximum likelihood prediction plot.
-- Add input info on JSON output file for parsing.
+- Merge of executable for data analysis and function exploration via the new calculation mode variable
+
 
 Previous versions are:
+ - 5.3 New jupyter notebooks running in Google Colab \
+New innterpolation functions in python library \
+Live display when sampling from python. Works in console and jupyter notebooks \
+Live display featured maximum likelihood prediction plot \
+Add input info on JSON output file for parsing.
  - 5.2 Add JSON output for easier manipulation of results. \
 New simple python interface to embed nested_fit on source code.
  - 5.1 Add feature for older systems not easily supporting cmake to configure via GNU autotools. \

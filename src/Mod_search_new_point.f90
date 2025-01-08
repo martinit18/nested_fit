@@ -1,11 +1,11 @@
 MODULE MOD_SEARCH_NEW_POINT
-  ! Automatic Time-stamp: <Last changed by martino on Thursday 01 June 2023 at CEST 15:23:06>
+  ! Automatic Time-stamp: <Last changed by martino on Friday 15 November 2024 at CET 22:36:28>
   ! Module for search of new points
 
   ! Module for the input parameter definition
-  USE MOD_PARAMETERS, ONLY:  npar, par_step, par_bnd1, par_bnd2, par_fix, searchid
+  USE MOD_PARAMETERS !, ONLY:  npar, par_step, par_bnd1, par_bnd2, par_fix, searchid
   ! Module for likelihood
-  USE MOD_LIKELIHOOD
+  USE MOD_LIKELIHOOD_GEN, ONLY: LOGLIKELIHOOD
   ! Module for cluster analysis
   USE MOD_CLUSTER_ANALYSIS
   ! Module for math
@@ -27,8 +27,33 @@ MODULE MOD_SEARCH_NEW_POINT
 !#endif
 
 CONTAINS
-
+  
   ! TODO(César): Remap all of these writes to the mpi_status_process
+  
+  SUBROUTINE INIT_SEARCH_METHOD()
+#ifdef OPENMPI_ON
+    INTEGER(4) :: mpi_ierror
+#endif
+    IF (search_method.eq.'RANDOM_WALK') THEN
+       searchid = 0
+    ELSE IF(search_method.EQ.'UNIFORM') THEN
+       searchid = 1
+    ELSE IF(search_method.EQ.'SLICE_SAMPLING_TRANSF') THEN
+       searchid = 2
+    ELSE IF(search_method.EQ.'SLICE_SAMPLING') THEN
+       searchid = 3
+    ELSE IF(search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
+       searchid = 4
+    ELSE
+       CALL LOG_ERROR_HEADER()
+       CALL LOG_ERROR('Error of the search type name in Mod_search_new_point module.')
+       CALL LOG_ERROR('Check the manual and the input file.')
+       CALL LOG_ERROR_HEADER()
+       CALL HALT_EXECUTION()
+    END IF
+  END SUBROUTINE INIT_SEARCH_METHOD
+  
+   
 
   SUBROUTINE MAKE_LIVE_MEAN_SD(live)  
    
@@ -221,7 +246,7 @@ CONTAINS
        !!$OMP END PARALLEL DO
 
        ! Check if the new point is inside the parameter volume defined by the minimum likelihood of the live points
-       IF (LOGLIKELIHOOD(new_jump).GT.min_live_like) THEN
+       IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
           start_jump = new_jump
        ELSE
           ! Check failures
@@ -294,7 +319,7 @@ CONTAINS
                 END IF
                 !
 
-                IF (LOGLIKELIHOOD(new_jump).GT.min_live_like) THEN
+                IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
                    start_jump = new_jump
                 ELSE
                    ! Choose a new random live point and restart all
@@ -314,7 +339,7 @@ CONTAINS
                    END IF
                 END DO
                 !!$OMP END PARALLEL DO
-                IF (LOGLIKELIHOOD(new_jump).GT.min_live_like) THEN
+                IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
                    start_jump = new_jump
                 ELSE
                    ! Choose a new random live point and restart all
@@ -349,7 +374,7 @@ CONTAINS
 
 
     ! Last(maybe useless) check
-    loglike = LOGLIKELIHOOD(new_jump)
+    loglike = LOGLIKELIHOOD(npar, new_jump)
     IF (loglike.LT.min_live_like) GOTO 500
 
     ! Take the last point after jumps as new livepoint
@@ -450,7 +475,7 @@ CONTAINS
 
 
        ! Check if the new point is inside the parameter volume defined by the minimum likelihood of the live points
-       IF (LOGLIKELIHOOD(new_jump).GT.min_live_like) THEN
+       IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
            !$OMP SIMD REDUCTION(+:nb_cube)
            DO j=1, nlive
               IF(ALL(ABS(new_jump-live(j,:)) .LT. frac*live_sd)) nb_cube=nb_cube+1
@@ -525,7 +550,7 @@ CONTAINS
                    !!$OMP END PARALLEL DO
                 END IF
                 !
-                 IF (LOGLIKELIHOOD(new_jump).GT.min_live_like) THEN
+                 IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
                    start_jump = new_jump
                 ELSE
                    ! Choose a new random live point and restart all
@@ -545,7 +570,7 @@ CONTAINS
                    END IF
                 END DO
                 !!$OMP END PARALLEL DO
-                IF (LOGLIKELIHOOD(new_jump).GT.min_live_like) THEN
+                IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
                    start_jump = new_jump
                 ELSE
                    ! Choose a new random live point and restart all
@@ -576,7 +601,7 @@ CONTAINS
 
 
     ! Last(maybe useless) check
-    loglike = LOGLIKELIHOOD(new_jump)
+    loglike = LOGLIKELIHOOD(npar, new_jump)
     IF(loglike.LT.min_live_like) GOTO 700
 
     ! Take the last point after jumps as new livepoint
@@ -815,7 +840,7 @@ SUBROUTINE SLICE_SAMPLING_TRANSF(n,itry,min_live_like,live_like,live, &
     END DO
 
     ! Last(maybe useless) check
-    loglike = LOGLIKELIHOOD(new_jump_comp)
+    loglike = LOGLIKELIHOOD(npar, new_jump_comp)
     IF(loglike.LT.min_live_like) GOTO 700
 
 
@@ -937,7 +962,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
          !Extend the interval left then right
          !size_jump_save=size_jump
          j=1
-         part_like=LOGLIKELIHOOD(left)
+         part_like=LOGLIKELIHOOD(npar, left)
          DO WHILE(part_like.GT.min_live_like .AND. j<=kl) !check if the left boundary verifies the condition
            left=left-basis(:,l)*size_jump
            test_bnd=.TRUE.
@@ -950,7 +975,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
            IF(.NOT. test_bnd) THEN
              GOTO 202
            END IF
-           part_like=LOGLIKELIHOOD(left)
+           part_like=LOGLIKELIHOOD(npar, left)
            j=j+1
          END DO
 202      test_bnd=.TRUE.
@@ -962,7 +987,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
          END DO
          IF(.NOT.test_bnd) GOTO 203
          j=1
-         part_like=LOGLIKELIHOOD(right)
+         part_like=LOGLIKELIHOOD(npar, right)
          !WRITE(*,*) 'Right', part_like, min_live_like
          DO WHILE(part_like.GT.min_live_like .AND. j<=kr) !check if the right boundary verifies the condition
            right=right+basis(:,l)*size_jump
@@ -976,7 +1001,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
            IF(.NOT. test_bnd) THEN
              GOTO 203
            END IF
-           part_like=LOGLIKELIHOOD(right)
+           part_like=LOGLIKELIHOOD(npar, right)
            j=j+1
          END DO
          !Select new point
@@ -991,7 +1016,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
             ENDIF
          END DO !check if the new point is inside the sampled space
          IF(test_bnd) THEN
-            part_like=LOGLIKELIHOOD(new_jump) !check if the new point verifies the condition
+            part_like=LOGLIKELIHOOD(npar, new_jump) !check if the new point verifies the condition
          ELSE
             part_like=min_live_like-1
          END IF
@@ -1029,7 +1054,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
               ENDIF
            END DO 
            IF(.NOT. test_bnd) GOTO 204
-           part_like=LOGLIKELIHOOD(new_jump)
+           part_like=LOGLIKELIHOOD(npar, new_jump)
          END DO
          start_jump=new_jump
        END DO
@@ -1049,7 +1074,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     END DO
 
     ! Last(maybe useless) check
-    loglike = LOGLIKELIHOOD(new_jump)
+    loglike = LOGLIKELIHOOD(npar, new_jump)
     IF(loglike.LT.min_live_like) GOTO 700
 
     ! Take the last point after jumps as new livepoint
@@ -1284,7 +1309,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     END DO
 
     ! Last(maybe useless) check
-    loglike = LOGLIKELIHOOD(new_jump_comp)
+    loglike = LOGLIKELIHOOD(npar, new_jump_comp)
     IF(loglike.LT.min_live_like) GOTO 700
 
     ! Take the last point after jumps as new livepoint
@@ -1363,7 +1388,7 @@ SUBROUTINE PART_LIKE_SUB(D,pt,chol,part_like) !calculates the likelihood for a p
       pt_comp(l)=par_in(l)
     END IF
   END DO
-  part_like=LOGLIKELIHOOD(pt_comp)
+  part_like=LOGLIKELIHOOD(npar, pt_comp)
 END SUBROUTINE PART_LIKE_SUB
 
 

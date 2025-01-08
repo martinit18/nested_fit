@@ -54,6 +54,7 @@ MODULE MOD_INTERPOLATE
             CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Spline evaluation failed this iteration.')
             CALL LOG_ERROR_HEADER()
+            CALL HALT_EXECUTION()
         ENDIF
     END SUBROUTINE
 
@@ -89,7 +90,7 @@ MODULE MOD_INTERPOLATE
 ! #ifdef OPENMPI_ON
 !             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
 ! #endif
-            STOP
+            CALL HALT_EXECUTION()
         ENDIF
 
         ! Figure out the file size (i.e. the number of points)

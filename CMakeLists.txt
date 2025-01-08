@@ -117,10 +117,8 @@ set(nested_fit_version_str "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSI
 string(CONCAT nested_fit_mpi_child_comm_proc_name "nf_child_proc" ${nested_fit_version_full_str})
 
 string(CONCAT nested_fit_target "nested_fit" ${nested_fit_version_full_str})
-string(CONCAT nested_fit_target_func "nested_fit_func" ${nested_fit_version_full_str})
 
 string(REPLACE "." "_" nested_fit_target_ac ${nested_fit_target})
-string(REPLACE "." "_" nested_fit_target_func_ac ${nested_fit_target_func})
 
 set(SRC_FILES_COMM
     src/Mod_cluster_analysis.f90
@@ -128,6 +126,14 @@ set(SRC_FILES_COMM
     src/Mod_covariance_matrix.f90
     src/Mod_search_new_point.f90    #
     src/Mod_timestamp.f90
+    src/Mod_likelihood_gen.f90
+    src/Mod_likelihood.f90   
+    src/Mod_potentials.f90
+    src/Mod_integrated_func.f90
+
+    src/USERFCN_2D.f90
+    src/USERFCN_SET.f
+    src/USERFCN.f
 
     src/Mod_mpi.f90
     src/Mod_math.f90
@@ -164,7 +170,7 @@ string(REPLACE ";" " " SRC_FILES_COMM_AC "${SRC_FILES_COMM}")
 ac_dec_obj_dep("src/Mod_cluster_analysis" "src/Mod_logger")
 ac_dec_obj_dep("src/Mod_logger" "src/Mod_timestamp")
 ac_dec_obj_dep("src/Mod_cluster_analysis" "src/Mod_parameters")
-ac_dec_obj_dep("src/Mod_search_new_point" "src/Mod_likelihood")
+ac_dec_obj_dep("src/Mod_search_new_point" "src/Mod_gen")
 ac_dec_obj_dep("src/Mod_search_new_point" "src/Mod_perfprof") # Performance profilling is not compatible with autoconf
 ac_dec_obj_dep("src/Mod_likelihood" "src/Mod_userfcn")
 ac_dec_obj_dep("src/Mod_userfcn" "src/funceval/auto_func")
@@ -205,20 +211,6 @@ endforeach()
 ac_dec_obj_dep("src/Mod_interpolate" "src/Mod_logger")
 ac_dec_obj_dep("src/functions/internal_funcs" "src/Mod_logger")
 # ac_dec_obj_dep("src/functions/internal_funcs" "src/hash")
-
-set(SRC_FILES_DATA
-    src/Mod_likelihood.f90
-
-    src/USERFCN_2D.f90
-    src/USERFCN_SET.f
-    src/USERFCN.f
-)
-string(REPLACE ";" " " SRC_FILES_DATA_AC "${SRC_FILES_DATA}")
-
-set(SRC_FILES_FUNC
-    src/Mod_likelihood_func.f90
-)
-string(REPLACE ";" " " SRC_FILES_FUNC_AC "${SRC_FILES_FUNC}")
 
 set(CHILD_SRC_FILES
     src/helper/mpi_status_process.f90
@@ -316,19 +308,10 @@ add_executable(${nested_fit_target}
     ${CFG_FILES}
     ${SRC_DIERCKX}
     ${SRC_SLATEC}
-    ${SRC_FILES_DATA}
     ${SRC_FILES_COMM}
     ${SRC_FILES_CXX}
 )
 
-add_executable(${nested_fit_target_func}
-    ${CFG_FILES}
-    ${SRC_DIERCKX}
-    ${SRC_SLATEC}
-    ${SRC_FILES_FUNC}
-    ${SRC_FILES_COMM}
-    ${SRC_FILES_CXX}
-)
 
 # TODO(César): This assumes we are using gfortran!
 set(SRC_FLAGS_D     -cpp -O0 -Wall -g -ffree-line-length-0 -ffixed-line-length-0 -Wno-ampersand -Wno-tabs -Wno-unused-dummy-argument)
@@ -362,66 +345,50 @@ target_compile_options(${nested_fit_target} PUBLIC
     ${SRC_FLAGS_OMP}
 )
 
-target_compile_options(${nested_fit_target_func} PUBLIC 
-    $<$<COMPILE_LANGUAGE:Fortran>:$<IF:$<CONFIG:Debug>,${SRC_FLAGS_D},${SRC_FLAGS_R}>>
-    $<$<COMPILE_LANGUAGE:CXX>:$<IF:$<CONFIG:Debug>,${SRC_FLAGS_CXX_D},${SRC_FLAGS_CXX_R}>>
-    ${SRC_FLAGS_OMP}
-)
-
-target_compile_definitions(${nested_fit_target_func} PRIVATE -DFUNC_TARGET)
+# target_compile_definitions(${nested_fit_target_func} PRIVATE -DFUNC_TARGET) # TODO What is that? 
 
 if(LAPACK)
     target_compile_definitions(${nested_fit_target}      PUBLIC -DLAPACK_ON)
-    target_compile_definitions(${nested_fit_target_func} PUBLIC -DLAPACK_ON)
     if(UNIX)
         # Find LAPACK and BLAS on Unix-like systems
         # old try set(SRC_FLAGS "${SRC_FLAGS} -L/usr/lib/x86_64-linux-gnu/liblapack.so -llapack -L/usr/lib/x86_64-linux-gnu/libblas.so -lblas")
         find_package(LAPACK REQUIRED)  
         if(LAPACK_FOUND)
             target_link_libraries(${nested_fit_target} PRIVATE ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
-            target_link_libraries(${nested_fit_target_func} PRIVATE ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
         else()
             message(FATAL_ERROR "LAPACK library not found. Please install LAPACK.")
         endif()
     elseif(APPLE)
         find_library(ACCELERATE_FRAMEWORK Accelerate)
         target_link_libraries(${nested_fit_target}      PRIVATE ${ACCELERATE_FRAMEWORK})
-        target_link_libraries(${nested_fit_target_func} PRIVATE ${ACCELERATE_FRAMEWORK})
     elseif(WIN32)
         # Specify LAPACK and BLAS paths and names on Windows
         #set(LAPACK_LIBRARIES "path/to/lapack.lib")
         #set(BLAS_LIBRARIES "path/to/blas.lib")
         #target_link_libraries(${nested_fit_target} PRIVATE ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
-        #target_link_libraries(${nested_fit_target_func} PRIVATE ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
         message(FATAL_ERROR "LAPACK library not found. Please install LAPACK.")
     endif()
 endif()
 
 target_link_libraries(${nested_fit_target}      PUBLIC dl)
-target_link_libraries(${nested_fit_target_func} PUBLIC dl)
 
 target_include_directories(${nested_fit_target}      PRIVATE ${tracy_SOURCE_DIR})
-target_include_directories(${nested_fit_target_func} PRIVATE ${tracy_SOURCE_DIR})
 
 target_link_libraries(${nested_fit_target}      PRIVATE TracyClient)
-target_link_libraries(${nested_fit_target_func} PRIVATE TracyClient)
 
 if(OPENMP)
     target_link_options(${nested_fit_target}      PRIVATE "-fopenmp")
-    target_link_options(${nested_fit_target_func} PRIVATE "-fopenmp")
 endif()
 
 if(NORNG)
     # Set the NORNG_ON flag for the preprocessor
     target_compile_definitions(${nested_fit_target}      PUBLIC -DNORNG_ON)
-    target_compile_definitions(${nested_fit_target_func} PUBLIC -DNORNG_ON)
 endif()
 
 # Find MPI
 if(OPENMPI)
     # Set the OPENMPI_ON flag for the preprocessor
     target_compile_definitions(${nested_fit_target}      PUBLIC -DOPENMPI_ON)
-    target_compile_definitions(${nested_fit_target_func} PUBLIC -DOPENMPI_ON)
 
     # Add the required console writter (monitor) executable
     # This runs on a separate OpenMPI COMM
@@ -434,7 +401,6 @@ if(OPENMPI)
     if(MPI_FOUND)
         if(MPI_Fortran_HAVE_F90_MODULE)
             target_link_libraries(${nested_fit_target}                   PUBLIC MPI::MPI_Fortran)
-            target_link_libraries(${nested_fit_target_func}              PUBLIC MPI::MPI_Fortran)
             target_link_libraries(${nested_fit_mpi_child_comm_proc_name} PUBLIC MPI::MPI_Fortran)
         else()
             message(FATAL_ERROR "This project requires the MPI Fortran 90 module.")
@@ -483,7 +449,6 @@ add_custom_target(copy_internal_functions ALL
 )
 
 install(TARGETS ${nested_fit_target}      DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
-install(TARGETS ${nested_fit_target_func} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
 
 # Write a manifest file into the cache
 # This makes things easier on the python side

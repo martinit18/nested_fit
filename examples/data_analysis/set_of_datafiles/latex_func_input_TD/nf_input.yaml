@@ -1,4 +1,5 @@
-version:    5.3
+version:    5.4              # Program version
+calculation_mode: DATA       # Type of calculation (DATA for data, POTENTIAL for potential landscapes, INTEGRAL for function integrals)
 datafiles:  gauss_bg-x0_300-sigma_20-A_300-p_to_bg_20-bin_1.dat, gauss_bg-x0_310-sigma_20-A_150-p_to_bg_10-bin_1.dat
 filefmt: .tsv
 #specstr:    x,c,ce

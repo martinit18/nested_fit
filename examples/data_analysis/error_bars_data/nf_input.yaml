@@ -1,4 +1,5 @@
-version:    5.3
+version:    5.4              # Program version
+calculation_mode: DATA       # Type of calculation (DATA for data, POTENTIAL for potential landscapes, INTEGRAL for function integrals)
 datafiles:  eb_gauss_bg-x0_300-sigma_20-A_20000-p_to_bg_0.05-bin_1.dat
 #specstr:    x,c,ce
 specstr:    x,c,ce
