@@ -257,7 +257,7 @@ MODULE MOD_AUTOFUNC
         USE iso_c_binding
         TYPE(c_ptr), INTENT(IN)                              :: c_string
         CHARACTER(LEN=*), INTENT(OUT)                        :: f_string
-        CHARACTER(256), POINTER                              :: f_ptr
+        CHARACTER(512), POINTER                              :: f_ptr
 
         CALL C_F_POINTER(c_string, f_ptr)
         f_string = f_ptr(1:index(f_ptr, c_null_char)-1)
