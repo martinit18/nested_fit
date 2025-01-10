@@ -90,7 +90,7 @@ MODULE MOD_INTERPOLATE
 ! #ifdef OPENMPI_ON
 !             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
 ! #endif
-            CALL HALT_EXECUTION()
+            STOP
         ENDIF
 
         ! Figure out the file size (i.e. the number of points)
