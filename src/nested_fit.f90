@@ -1574,7 +1574,6 @@ PROGRAM NESTED_FIT
       READ(tmp, *) args(nargs)
    ENDIF
 
-
    CALL GET_USER_FUNC_PROCPTR(function_name, fptr, loaded_ok)
 
    IF(.NOT.loaded_ok) THEN

@@ -295,6 +295,7 @@ MODULE MOD_USERFCN
             func_header = TRIM(funcname(1:INDEX(funcname, '(')-1))
             CALL LOG_TRACE('Setting user function pointer named => '//TRIM(func_header))
 
+            write(*,*) 'so I am here' 
             CALL GET_USER_FUNC_PROCPTR(func_header, USERFCN, loaded_ok)
 
             IF(.NOT.loaded_ok) THEN
