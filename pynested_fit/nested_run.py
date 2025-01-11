@@ -384,6 +384,7 @@ class Configurator():
     '''
 
     def __init__(self,
+                 calculation_mode='DATA',
                  datafiles=[],
                  specstr='x,c',
                  filefmt='auto',
@@ -424,6 +425,9 @@ class Configurator():
 
         # major.minor only
         self._config['version'] = float('.'.join(imp_version('nested_fit').split('.')[:2]))
+
+        # Type of calculation
+        self._config['calculation_mode'] = calculation_mode
 
         # datafiles
         self._config['datafiles'] = datafiles
