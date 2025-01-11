@@ -431,7 +431,7 @@ function:
 ```
 Or it is also possible to add the function via the command line:
 ```sh
-nested_fit5.2.1 -fa 'test_func(x, a, b) = \frac{x}{\exp{2b\pi}} + \sin{b}'
+nested_fitx.x.x -fa 'test_func(x, a, b) = \frac{x}{\exp{2b\pi}} + \sin{b}'
 ```
 
 This function would then be available and could be used in the following fashion (which is functionally equivalent to using the function directly):
