@@ -456,12 +456,12 @@ PROGRAM NESTED_FIT
 
       ! Initialize the search method params
       CALL INIT_SEARCH_METHOD()
+      
+      ! Function configuration
+      CALL CONFIGURE_USERFUNCTION()
 
       ! Initialize likelihood function
       CALL INIT_LIKELIHOOD()
-
-      ! Function configuration
-      CALL CONFIGURE_USERFUNCTION()
 
       ! Read set of spectra file parameter
       ! IF (is_set) THEN

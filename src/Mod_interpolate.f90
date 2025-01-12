@@ -54,7 +54,7 @@ MODULE MOD_INTERPOLATE
             CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Spline evaluation failed this iteration.')
             CALL LOG_ERROR_HEADER()
-            CALL HALT_EXECUTION()
+            STOP
         ENDIF
     END SUBROUTINE
 
