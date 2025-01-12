@@ -372,15 +372,16 @@ PROGRAM NESTED_FIT
          CALL LOG_WARNING('Continuing with possible future errors...')
          CALL LOG_WARNING_HEADER()
       END IF
-
-      ! Prepare the likelihood 
-      CALL PREINIT_LIKELIHOOD()
       
       ! General configuration
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'calculation_mode' , calc_mode   , MANDATORY=.TRUE. ) ! data by default !!NEW!! Mode of code calculation
       ! TODO put mandatory relative conditions with respect to this value
       ! The idea is to put three mode: data (for data likelihood calc), function (for simple function exploration), partition (for potentials and for building partition functions)
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'datafiles' , filenames             , MANDATORY=(calc_mode.EQ.'DATA')) ! Only required if data analysis
+
+      ! Prepare the likelihood and the data filenames if needed
+      CALL PREINIT_LIKELIHOOD()
+      
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'specstr'   , spec_str           , MANDATORY=.FALSE.) !      x,c by default
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'filefmt'   , fileformat         , MANDATORY=.FALSE.) !     .csv by default
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'likelihood', likelihood_funcname, MANDATORY=.FALSE.) ! GAUSSIAN by default
@@ -453,7 +454,7 @@ PROGRAM NESTED_FIT
       ELSE
          CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'function.expression', funcname(1), MANDATORY=.TRUE.) ! LaTeX Expression or Legacy name
       ENDIF
-
+   
       ! Initialize the search method params
       CALL INIT_SEARCH_METHOD()
       
@@ -1158,6 +1159,10 @@ PROGRAM NESTED_FIT
    INTEGER                        :: splitarr_count
 
    PROFILED(CONFIGURE_USERFUNCTION)
+
+   ! Is it a legacy function?
+   LEGACY_USERFCN = IS_LEGACY_USERFCN(funcname(1))
+   
 
    ! Check if the function is legacy or not
    ! If the first function is legacy, we don't need to worry about this

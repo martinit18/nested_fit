@@ -179,7 +179,13 @@ CONTAINS
 #define BIT_CHECK_IF(what) (IAND(dataid, what).GT.0)
 
   SUBROUTINE PREINIT_LIKELIHOOD_DATA()
-   CALL specstr_ordermap%init(64)   ! Init the specstr map for data file load ordering
+
+   ! Init the specstr map for data file load ordering
+   CALL specstr_ordermap%init(64)   
+
+    ! Separate the name of the different files
+   CALL POPULATE_INPUTFILES(filenames)
+
   END SUBROUTINE 
 
   SUBROUTINE POPULATE_INPUTFILES(filestr)
@@ -338,18 +344,12 @@ CONTAINS
   SUBROUTINE INIT_LIKELIHOOD_DATA()
     ! Initialize the normal likelihood with data files and special function
 
-    ! Separate the name of the different files
-    CALL POPULATE_INPUTFILES(filenames)
-
     ! Populate data formats
     CALL POPULATE_DATATYPE(spec_str, data_type)
     CALL POPULATE_FILEFMT(fileformat)
 
     ! Read data ------------------------------------------------------------------------------------------------------------------------
     CALL READ_DATA()
-
-    ! Is it a legacy function?
-    LEGACY_USERFCN = IS_LEGACY_USERFCN(funcname(1))
 
     ! Initialize functions
     CALL INIT_FUNCTIONS()
