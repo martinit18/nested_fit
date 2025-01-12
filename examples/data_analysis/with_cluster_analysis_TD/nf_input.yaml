@@ -41,5 +41,5 @@ convergence:
 clustering:
   enabled:   true
   method:    k
-  parameter1:  0.5
-  parameter2: 0.2
+  #parameter1:  0.5
+  #parameter2: 0.2

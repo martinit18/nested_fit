@@ -39,6 +39,7 @@ MODULE MOD_LIKELIHOOD_GEN
             ! Prepare the likelihood module to receive values from the input file
             CALL PREINIT_LIKELIHOOD_DATA()
 #endif
+            
         END IF ! -----------------------------------------------------------
 
     END SUBROUTINE PREINIT_LIKELIHOOD

@@ -457,7 +457,7 @@ PROGRAM NESTED_FIT
    
       ! Initialize the search method params
       CALL INIT_SEARCH_METHOD()
-      
+
       ! Function configuration
       CALL CONFIGURE_USERFUNCTION()
 
@@ -1160,9 +1160,14 @@ PROGRAM NESTED_FIT
 
    PROFILED(CONFIGURE_USERFUNCTION)
 
-   ! Is it a legacy function?
-   LEGACY_USERFCN = IS_LEGACY_USERFCN(funcname(1))
-   
+   IF(calc_mode.EQ.'DATA') THEN
+      ! Is it a legacy function?
+      LEGACY_USERFCN = IS_LEGACY_USERFCN(funcname(1))
+   ELSE
+      ! All integrated functions potentials are legacy function (for the moment)
+      LEGACY_USERFCN = .TRUE.
+   ENDIF
+
 
    ! Check if the function is legacy or not
    ! If the first function is legacy, we don't need to worry about this
