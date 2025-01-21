@@ -67,8 +67,10 @@ In the directory of your choice in the terminal execute the following commands:
   `export PATH=$PATH:<your installation directory>/nested_fit/bin`
 
 To test if everything is working, go to the directory `examples/data_analysis/aaa_simple_example/legacy_func_input` and run `nested_fit_xxx`<br>
-**NOTE:** Always activate your Python virtual environment before using the Nested Fit:<br>
+**NOTE:** 
+- Always activate your Python virtual environment before using the Nested Fit:<br>
          `source <path_to_your_virtual_env_name>/bin/activate`
+- **This installation does not works with ANACONDA**
 
 
 
