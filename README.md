@@ -96,12 +96,14 @@ pip install . -v
 
 ### From source (CMake)
 
-Has more control on system specific optimizations.
+You will have more control on system specific optimizations.
 
 **Prerequisite**:
 - CMake
 - Fortran build toolchain (`gcc`, `g++` and `gfortran` or `ifort` or `ifx`)
 - Python 3 with numpy, scipy, matplotlib, padas, getdist (optional)
+
+For properly install these requirement, please read also `STEPBYSTEP_INSTALL.md`. This is particularly important for **the installation in Mac OS with Silicon chip**
 
 **Instruction**:
 

@@ -5,6 +5,14 @@
 Then in a terminal install with homebrew the required components:\
  `brew install gcc g++ gfortran make cmake`
 
+If you did not do it yet, add homebrew binary directory in the shell variable `PATH` by adding **IN THIS ORDER** in `.bashrc`: 
+```sh
+export PATH=/opt/homebrew/bin:/opt/homebrew/opt/make/libexec/gnubin:$PATH
+```
+(adapt it if needed).
+The order force to override the default binaries by the homebrew binaries and thus take `gcc` from homebrew and not the Mac OS preinstalled one.
+
+
 2) If you do not have python installed (the native python with Mac OS is generally outdated), install with\
  `brew install python`
 
