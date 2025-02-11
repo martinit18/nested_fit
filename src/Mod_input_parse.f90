@@ -17,7 +17,7 @@ MODULE MOD_INPUTPARSE
     PRIVATE
 
     TYPE :: InputDataGenericValue_t
-        CHARACTER(512) :: data
+        CHARACTER(4096) :: data
         
         CONTAINS
         PROCEDURE, PUBLIC :: toLogical   => INPUTDATA_CONVERT_VAL_LOGICAL
@@ -122,7 +122,8 @@ MODULE MOD_INPUTPARSE
         TYPE(InputDataMap_t), INTENT(OUT) :: config
 
         INTEGER                       :: i, j, splitidx, lblanks, top, count, nbindex, lastidx, ninline_vars, dstart, dend
-        CHARACTER(512)                :: line, key, inline_key, inline_dict
+        CHARACTER(4096)               :: line
+        CHARACTER(512)                :: key, inline_key, inline_dict
         CHARACTER(128)                :: name
         TYPE(IntegerStack_t)          :: parent_stack
         CHARACTER(128), DIMENSION(32) :: scope = ''
@@ -266,7 +267,7 @@ MODULE MOD_INPUTPARSE
 
     FUNCTION INPUTDATA_CONVERT_VAL_CHARACTER(this)
         CLASS(InputDataGenericValue_t), INTENT(IN) :: this
-        CHARACTER(512)                             :: INPUTDATA_CONVERT_VAL_CHARACTER
+        CHARACTER(4096)                            :: INPUTDATA_CONVERT_VAL_CHARACTER
 
         INPUTDATA_CONVERT_VAL_CHARACTER = this%data
         RETURN

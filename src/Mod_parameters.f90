@@ -32,7 +32,7 @@ MODULE MOD_PARAMETERS
   REAL(8)    :: cluster_par1=0.4, cluster_par2=0.1
 
   ! Function
-  CHARACTER(512), DIMENSION(nsetmax)     :: funcname
+  CHARACTER(4096), DIMENSION(nsetmax)    :: funcname
   CHARACTER                              :: lr= 'r'
   INTEGER(4)                             :: npoint=0, nwidth=0
   REAL(8), DIMENSION(nsetmax)            :: xmin=0., xmax=0., ymin=0., ymax=0.
