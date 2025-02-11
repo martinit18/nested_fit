@@ -607,8 +607,9 @@ MODULE MOD_AUTOFUNC
         IF(ANY([ CHARACTER(8) :: 'cpp', 'cxx', 'c++', 'inl' ].EQ.ext)) HAS_VALID_CPP_EXT = .TRUE.
     END FUNCTION 
 
-    SUBROUTINE COMPILE_CACHE_FUNC_NATIVE(filename)
-        CHARACTER(LEN=*), INTENT(IN) :: filename
+    SUBROUTINE COMPILE_CACHE_FUNC_NATIVE(filename, write_metadata)
+        CHARACTER(LEN=*),   INTENT(IN) :: filename
+        LOGICAL, OPTIONAL , INTENT(IN) :: write_metadata
 
         CHARACTER(128) :: ext
         CHARACTER(3)   :: lang
@@ -618,7 +619,8 @@ MODULE MOD_AUTOFUNC
         CHARACTER(64)  :: compiler_spec
         CHARACTER(512) :: output
         INTEGER        :: status
-        
+        LOGICAL        :: write_meta_ = .TRUE.
+
         CHARACTER(c_char), DIMENSION(:), POINTER :: c_input_lang
         CHARACTER(c_char), DIMENSION(:), POINTER :: c_input_filename
         CHARACTER(c_char), DIMENSION(:), POINTER :: c_output
@@ -626,6 +628,10 @@ MODULE MOD_AUTOFUNC
 
         TYPE(ParseNative_t) :: parsed_data
         CHARACTER(512) :: long_filename
+
+        IF(PRESENT(write_metadata)) THEN
+            write_meta_ = write_metadata
+        ENDIF
 
         ! NOTE(César): We support two languagues for function definitions: F and C++
         CALL FILENAME_FIND_EXT(filename, ext)
@@ -672,12 +678,28 @@ MODULE MOD_AUTOFUNC
             CALL LOG_ERROR_HEADER()
             CALL HALT_EXECUTION()
         ENDIF
+
+        ! Copy symbol from object file with appended '_' for the ABI calls
+        CALL EXECUTE_COMMAND_LINE('objcopy &
+        --redefine-sym '//TRIM(parsed_data%function_name)//'='//TRIM(parsed_data%function_name)//'_ &
+        '//TRIM(nf_cache_folder)//'user/'//TRIM(parsed_data%function_name)//'.o &
+        '//TRIM(nf_cache_folder)//'user/'//TRIM(parsed_data%function_name)//'_.o', EXITSTAT=status)
+        IF(status.NE.0) THEN
+            CALL LOG_ERROR_HEADER()
+            CALL LOG_ERROR('Failed to compile the function provided.')
+            CALL LOG_ERROR('Aborting Execution...')
+            CALL LOG_ERROR_HEADER()
+            CALL HALT_EXECUTION()
+        ENDIF
+      
         CALL RECOMPILE_CACHE()
 
-        long_filename = ''
-        long_filename = TRIM(filename)
-        CALL UPDATE_CACHE(TRIM(parsed_data%function_name), parsed_data%num_params + 1, long_filename)
-        CALL WRITE_CACHE()
+        IF(write_meta_) THEN
+            long_filename = ''
+            long_filename = TRIM(filename)
+            CALL UPDATE_CACHE(TRIM(parsed_data%function_name), parsed_data%num_params + 1, long_filename)
+            CALL WRITE_CACHE()
+        ENDIF
 
         CALL PARSE_NATIVE_DEALLOC(parsed_data)
     END SUBROUTINE
