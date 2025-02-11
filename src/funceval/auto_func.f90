@@ -664,7 +664,7 @@ MODULE MOD_AUTOFUNC
 
         CALL LOG_TRACE('Compiling native function `'//TRIM(parsed_data%function_name)//'` from file `'//TRIM(filename)//'`.')
         
-        CALL EXECUTE_COMMAND_LINE(TRIM(compiler_spec)//' '//TRIM(filename)//' -o '//TRIM(nf_cache_folder)//TRIM(parsed_data%function_name)//'.o', EXITSTAT=status)
+        CALL EXECUTE_COMMAND_LINE(TRIM(compiler_spec)//' '//TRIM(filename)//' -o '//TRIM(nf_cache_folder)//'user/'//TRIM(parsed_data%function_name)//'.o', EXITSTAT=status)
         IF(status.NE.0) THEN
             CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Failed to compile the function provided.')
