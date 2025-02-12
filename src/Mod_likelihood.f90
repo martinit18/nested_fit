@@ -808,7 +808,7 @@ CONTAINS
           CALL LOG_ERROR_HEADER()
           CALL HALT_EXECUTION()
        END IF
-       CALL SET_USERFUNC_SET_PROCPTR(funcname(1))
+       CALL SET_USERFUNC_SET_PROCPTR(funcname)
     END IF
 
     ! Initialise functions if needed

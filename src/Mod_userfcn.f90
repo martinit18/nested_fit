@@ -313,10 +313,10 @@ MODULE MOD_USERFCN
     END SUBROUTINE
 
     SUBROUTINE SET_USERFUNC_SET_PROCPTR(funcname)
-        CHARACTER(512), INTENT(IN) :: funcname(nsetmax)
-        CHARACTER(128)             :: func_header
-        LOGICAL                    :: loaded_ok
-        INTEGER                    :: i
+        CHARACTER(4096), INTENT(IN) :: funcname(nsetmax)
+        CHARACTER(128)              :: func_header
+        LOGICAL                     :: loaded_ok
+        INTEGER                     :: i
 
         IF(.NOT.LEGACY_USERFCN) THEN
             ! Setup the user function for each available set
