@@ -714,8 +714,9 @@ MODULE MOD_AUTOFUNC
         INTEGER                        :: argc
         CHARACTER(512)                 :: expression
         INTEGER                        :: i
-        LOGICAL                        :: write_meta_ = .TRUE.
+        LOGICAL                        :: write_meta_
 
+        write_meta_ = .TRUE.
         IF(PRESENT(write_metadata)) THEN
             write_meta_ = write_metadata
         ENDIF
