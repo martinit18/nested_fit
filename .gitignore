@@ -33,6 +33,12 @@ __pycache__/
 # Python dist build
 dist/
 
+# Python virtual environments
+.venv/
+
+# Jupyter cache
+.virtual_documents/
+
 # Logfiles
 *.log
 
