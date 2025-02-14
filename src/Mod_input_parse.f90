@@ -369,6 +369,7 @@ MODULE MOD_INPUTPARSE
         ENDIF
 
         DO
+            WRITE(*,*) '---------------', len(trim(pair%key)), pair%key
             IF(TRIM(pair%key).EQ.TRIM(key)) THEN
                 error  = .FALSE.
                 output = pair%value

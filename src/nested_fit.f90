@@ -358,8 +358,9 @@ PROGRAM NESTED_FIT
          CALL HALT_EXECUTION()
       ENDIF
 
+      WRITE(*,*) 'Test 1'
       CALL PARSE_INPUT(TRIM(opt_input_file), input_config)
-
+      WRITE(*,*) 'Test 2'
       ! Check the version
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'version', version_file, MANDATORY=.TRUE.)
       IF(version.NE.version_file) THEN
@@ -445,7 +446,7 @@ PROGRAM NESTED_FIT
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'lr'    , lr    , MANDATORY=.FALSE.) ! r by default
       CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'npoint', npoint, MANDATORY=.FALSE.) ! 0 by default
       CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'nwidth', nwidth, MANDATORY=.FALSE.) ! 0 by default
-      
+      WRITE(*,*) 'Test 1'
       ! Function configuration inputs
       IF(is_set) THEN
          DO i = 1, nset
@@ -1159,7 +1160,7 @@ PROGRAM NESTED_FIT
    INTEGER                        :: splitarr_count
 
    PROFILED(CONFIGURE_USERFUNCTION)
-
+   WRITE(*,*) 'SUB'
    IF(calc_mode.EQ.'DATA') THEN
       ! Is it a legacy function?
       LEGACY_USERFCN = IS_LEGACY_USERFCN(funcname(1))
@@ -1295,24 +1296,36 @@ PROGRAM NESTED_FIT
       par_p95_w = 0.
       par_m99_w = 0.
       par_p99_w = 0.
-
+      WRITE(*,*) 'IN'
       ! Handle the arguments from the input file
       DO i=1, npar
+         WRITE(*,*) '---1---'
          CALL SPLIT_INPUT_ON('.', legacy_param_keys(i), splitarr, splitarr_count, 16)
          key         = TRIM(legacy_param_keys(i))//'.'
+         WRITE(*,*) '---2---'
          CALL LOG_TRACE('Reading key: '//key)
+         WRITE(*,*) '---3---'
          CALL FIELD_FROM_INPUT_INTEGER(input_config, TRIM(key)//'npar' , par_num(i)          , MANDATORY=.TRUE. )
          par_name(par_num(i)) = TRIM(splitarr(splitarr_count))
+         WRITE(*,*) '---4---'
          CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'value', par_in(par_num(i))  , MANDATORY=.TRUE. )
+         WRITE(*,*) '---5---'
          CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'step' , par_step(par_num(i)), MANDATORY=.FALSE.) !    -1 by default
+         WRITE(*,*) '---6---'
          CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'min'  , par_bnd1(par_num(i)), MANDATORY=.TRUE. )
+         WRITE(*,*) '---7---'
          CALL FIELD_FROM_INPUT_REAL   (input_config, TRIM(key)//'max'  , par_bnd2(par_num(i)), MANDATORY=.TRUE. )
          ! Reset fix_logical to .FALSE., its default value
          ! TODO: (César) Prefer a DEFAULT param in the FIELD_FROM_INPUT_* functions
          fix_logical = .FALSE.
+         WRITE(*,*) '---8---'
+         WRITE(*,*) i, par_fix(par_num(i)), fix_logical, key
          CALL FIELD_FROM_INPUT_LOGICAL(input_config, TRIM(key)//'fixed', fix_logical         , MANDATORY=.FALSE.) ! False by default
+         WRITE(*,*) '---9---'
          par_fix(par_num(i)) = MERGE(1, 0, fix_logical)
+         WRITE(*,*) i, par_fix(par_num(i))
 
+         WRITE(*,*) '---10---'
          IF (par_bnd1(par_num(i)).GE.par_bnd2(par_num(i))) THEN
             CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Bad limits for parameter `'//TRIM(splitarr(splitarr_count))//'`.')
@@ -1321,6 +1334,7 @@ PROGRAM NESTED_FIT
             CALL LOG_ERROR_HEADER()
             CALL HALT_EXECUTION()
          END IF
+         WRITE(*,*) i, npar
       END DO
 
    ENDIF

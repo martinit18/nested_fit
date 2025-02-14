@@ -1130,6 +1130,7 @@ src/Mod_userfcn.o: src/funceval/auto_func.o
 src/funceval/auto_func.o: src/Mod_metadata.o
 src/funceval/auto_func.o: src/helper/strutil.o
 src/funceval/auto_func.o: src/Mod_options.o
+src/funceval/auto_func.o: src/Mod_logger.o
 src/Mod_likelihood.o: src/Mod_math.o
 src/nested_fit.o: src/Mod_input_parse.o
 src/Mod_input_parse.o: src/helper/int_stack.o
