@@ -19,6 +19,7 @@ MODULE MOD_AUTOFUNC
     IMPLICIT NONE
     
     PUBLIC :: COMPILE_CACHE_FUNC, &
+        COMPILE_CACHE_MFG, &
         COMPILE_CACHE_FUNC_NATIVE, &
         RECOMPILE_CACHE, &
         LOAD_DLL_PROC, &
@@ -777,6 +778,119 @@ MODULE MOD_AUTOFUNC
             CALL UPDATE_CACHE(TRIM(funcname), argc, original_data)
             CALL WRITE_CACHE()
         ENDIF
+    END SUBROUTINE
+
+    SUBROUTINE CALCULATE_PARAMETER_ORDER(param, mfg_params, mfg_nparams, idx)
+        IMPLICIT NONE
+        CHARACTER(64), INTENT(IN)               :: param
+        CHARACTER(64), INTENT(IN), DIMENSION(:) :: mfg_params
+        INTEGER, INTENT(IN)                     :: mfg_nparams
+        INTEGER, INTENT(OUT)                    :: idx
+
+        INTEGER :: i
+
+        idx = 0
+        DO i = 1, mfg_nparams
+            IF(TRIM(param).EQ.TRIM(mfg_params(i))) THEN
+                idx = i
+                EXIT
+            END IF
+        END DO
+    END SUBROUTINE
+
+    SUBROUTINE ARRAYIFY_MFG_CALL(f_params, f_nparams, output)
+        IMPLICIT NONE
+        CHARACTER(64) , INTENT(IN), DIMENSION(:) :: f_params
+        INTEGER, INTENT(IN)                      :: f_nparams
+        CHARACTER(512), INTENT(OUT)              :: output
+
+        INTEGER :: i
+
+        output = 'x,'//TRIM(ADJUSTL(INT_TO_STR_INLINE(f_nparams)))//',[real(8)::'
+
+        DO i = 1, f_nparams - 1
+            output = TRIM(output)//TRIM(ADJUSTL(f_params(i)))//','
+        END DO
+
+        output = TRIM(output)//TRIM(ADJUSTL(f_params(f_nparams)))//']'
+    END SUBROUTINE
+
+    SUBROUTINE COMPILE_CACHE_MFG(funcname, mfg_name, f_params, f_params_id, f_nparams, mfg_params, mfg_nparams)
+        IMPLICIT NONE
+        CHARACTER(128), INTENT(IN)               :: funcname
+        CHARACTER(128), INTENT(IN)               :: mfg_name
+        CHARACTER(64) , INTENT(IN), DIMENSION(:) :: f_params
+        CHARACTER(64) , INTENT(IN), DIMENSION(:) :: f_params_id
+        INTEGER, INTENT(IN)                      :: f_nparams
+        CHARACTER(64) , INTENT(IN), DIMENSION(:) :: mfg_params
+        INTEGER, INTENT(IN)                      :: mfg_nparams
+
+        CHARACTER(128)                 :: filename
+        INTEGER                        :: status
+        CHARACTER(128)                 :: mfg_lowercase
+        INTEGER                        :: argc
+        CHARACTER(512)                 :: expression
+        INTEGER                        :: i, k
+        CHARACTER(512)                 :: params_signature
+
+        mfg_lowercase = mfg_name
+        CALL STR_TO_LOWER(mfg_lowercase)
+
+        WRITE(filename, '(a,a)') TRIM(nf_cache_folder), 'last_compile_mfg.f90'
+        OPEN(UNIT=77, FILE=TRIM(filename), STATUS='UNKNOWN')
+            WRITE(77,'(a)') 'function '//TRIM(mfg_name)//"(x, npar, params) bind(c, name='"//TRIM(mfg_lowercase)//"')"
+            WRITE(77,'(a)') char(9)//'use, intrinsic :: iso_c_binding'
+            WRITE(77,'(a)') char(9)//'implicit none'
+            WRITE(77,'(a)') char(9)//'real(8), intent(in) :: x'
+            WRITE(77,'(a)') char(9)//'integer, intent(in) :: npar'
+            WRITE(77,'(a)') char(9)//'real(8), intent(in) :: params(npar)'
+            WRITE(77,'(a)') char(9)//'real(c_double)      :: '//TRIM(mfg_name)
+            WRITE(77,'(a)') char(9)
+            WRITE(77,'(a)') char(9)//'real(8), parameter  :: pi = 3.141592653589793d0'
+            WRITE(77,'(a)') char(9)
+            WRITE(77,'(a)') char(9)//'real(c_double), external :: '//TRIM(funcname)
+            WRITE(77,'(a)') char(9)
+            DO i = 1, f_nparams
+                WRITE(77,'(a)') char(9)//'real(8) :: '//TRIM(f_params_id(i))
+            END DO
+            WRITE(77,'(a)') char(9)
+            DO i = 1, f_nparams
+                CALL CALCULATE_PARAMETER_ORDER(f_params(i), mfg_params, mfg_nparams, k)
+
+                IF(k.EQ.0) THEN
+                    CALL LOG_ERROR_HEADER()
+                    CALL LOG_ERROR('Error calculating parameter for MFG: '//TRIM(f_params(i)))
+                    CALL LOG_ERROR_HEADER()
+                    CALL HALT_EXECUTION()
+                END IF
+
+                IF(LEN_TRIM(f_params_id(i)).EQ.2) THEN
+                    WRITE(77,'(a, I0, a)') char(9)//TRIM(f_params_id(i))//' = params(',k,')'
+                ELSE
+                    WRITE(77,'(a, I0, a)') char(9)//TRIM(f_params_id(i))//'  = params(',k,')'
+                ENDIF
+            END DO
+
+            CALL ARRAYIFY_MFG_CALL(f_params_id, f_nparams, params_signature)
+
+            WRITE(77,'(a)') char(9)
+            WRITE(77,'(a)') char(9)//TRIM(mfg_name)//' = '//TRIM(funcname)//'('//TRIM(ADJUSTL(params_signature))//')'
+            WRITE(77,'(a)') 'end function '//TRIM(mfg_name)
+        CLOSE(77)
+
+        CALL EXECUTE_COMMAND_LINE(TRIM(opt_f90_comp_cmd)//' '//TRIM(filename)//' -o '//TRIM(nf_cache_folder)//'user/'//TRIM(mfg_name)//TRIM(obj_ext), EXITSTAT=status)
+        IF(status.NE.0) THEN
+            CALL LOG_ERROR_HEADER()
+            CALL LOG_ERROR('Failed to compile the function provided.')
+            CALL LOG_ERROR('Aborting Execution...')
+            CALL LOG_ERROR_HEADER()
+            CALL HALT_EXECUTION()
+        ENDIF
+        CALL RECOMPILE_CACHE()
+        ! IF(write_meta_) THEN
+        !     CALL UPDATE_CACHE(TRIM(funcname), argc, original_data)
+        !     CALL WRITE_CACHE()
+        ! ENDIF
     END SUBROUTINE
 
     SUBROUTINE RECOMPILE_CACHE()

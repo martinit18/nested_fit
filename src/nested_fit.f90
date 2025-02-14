@@ -1157,6 +1157,9 @@ PROGRAM NESTED_FIT
    INTEGER                        :: legacy_param_count
    CHARACTER(128)                 :: splitarr(16)
    INTEGER                        :: splitarr_count
+   CHARACTER(64)                  :: mfg_prefix = '_mfg_set'
+   CHARACTER(128)                 :: mfg_name
+   CHARACTER(128)                 :: fname_original
 
    PROFILED(CONFIGURE_USERFUNCTION)
 
@@ -1193,6 +1196,41 @@ PROGRAM NESTED_FIT
       ! Now figure out the required parameters (relatively complex for a set)
       CALL FIND_TOTAL_PARAMS_USERFUNCTION(parse_result(1:nset), parameters, numparams)
       npar = numparams
+
+      ! If we have a set generate a meta-function for argument forwarding
+      ! And use the mock implementation instead
+      IF(nset.GT.1) THEN
+        DO i = 1, nset
+          ! Parse result as been changed by adding '_' due to the ABI. Fix it.
+          fname_original = TRIM(parse_result(i)%function_name(1:LEN_TRIM(parse_result(i)%function_name)-1))
+
+          CALL LOG_TRACE('Running MFG for function: '//TRIM(fname_original))
+
+          mfg_name = TRIM(fname_original)//TRIM(mfg_prefix)
+          CALL LOG_TRACE(TRIM(fname_original)//' => '//TRIM(mfg_name))
+          CALL COMPILE_CACHE_MFG(&
+                    fname_original,&
+                    mfg_name,&
+                    parse_result(i)%parameter_names,&
+                    parse_result(i)%parameter_identifiers,&
+                    parse_result(i)%num_params,&
+                    parameters,&
+                    numparams)
+          
+          ! Also compile an ABI compatible version
+          ! in case we want to reference within other function
+          ! NOTE: (Cesar) This call might not be necessary
+          mfg_name = TRIM(mfg_name)//'_'
+          CALL COMPILE_CACHE_MFG(&
+                    fname_original,&
+                    mfg_name,&
+                    parse_result(i)%parameter_names,&
+                    parse_result(i)%parameter_identifiers,&
+                    parse_result(i)%num_params,&
+                    parameters,&
+                    numparams)
+        END DO
+      END IF
 
       ! Deallocate all of the parsed data
       DO i = 1, nset
