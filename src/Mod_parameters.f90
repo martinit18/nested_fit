@@ -4,13 +4,16 @@ MODULE MOD_PARAMETERS
   IMPLICIT NONE
 
   ! General parameters
+  CHARACTER(16)         :: calc_mode = 'DATA'
   INTEGER(4), PARAMETER :: maxdata=10000, nsetmax=10
   INTEGER(4), PARAMETER :: specstrmaxcol = 32
   CHARACTER(16)         :: fileformat = '.csv'
 
   ! Input variables
+  CHARACTER :: filenames*2048
   CHARACTER(512), DIMENSION(nsetmax) :: filename
   LOGICAL                            :: is_set=.FALSE.
+  CHARACTER                          :: spec_str*1024 = 'x,c'
   CHARACTER(3)                       :: data_type='1c'
   CHARACTER(64)                      :: likelihood_funcname = 'GAUSSIAN'
   INTEGER(4)                         :: nset=1
@@ -29,7 +32,7 @@ MODULE MOD_PARAMETERS
   REAL(8)    :: cluster_par1=0.4, cluster_par2=0.1
 
   ! Function
-  CHARACTER(512), DIMENSION(nsetmax)     :: funcname
+  CHARACTER(4096), DIMENSION(nsetmax)    :: funcname
   CHARACTER                              :: lr= 'r'
   INTEGER(4)                             :: npoint=0, nwidth=0
   REAL(8), DIMENSION(nsetmax)            :: xmin=0., xmax=0., ymin=0., ymax=0.
@@ -46,6 +49,8 @@ MODULE MOD_PARAMETERS
   INTEGER(4) :: funcid=0
   INTEGER(4) :: dataid=0
   INTEGER(4) :: searchid=0
+  INTEGER(8) :: ncall=0, ncall9=0
+  LOGICAL    :: LEGACY_USERFCN=.FALSE.
 
   COMMON /func_exp/ lr
   COMMON /func_conv/ npoint, nwidth

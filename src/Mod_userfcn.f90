@@ -291,7 +291,7 @@ MODULE MOD_USERFCN
         CHARACTER(128)             :: func_header
         LOGICAL                    :: loaded_ok
 
-        IF(.NOT.IS_LEGACY_USERFCN(TRIM(funcname))) THEN
+        IF(.NOT.LEGACY_USERFCN) THEN
             func_header = TRIM(funcname(1:INDEX(funcname, '(')-1))
             CALL LOG_TRACE('Setting user function pointer named => '//TRIM(func_header))
 
@@ -313,16 +313,20 @@ MODULE MOD_USERFCN
     END SUBROUTINE
 
     SUBROUTINE SET_USERFUNC_SET_PROCPTR(funcname)
-        CHARACTER(512), INTENT(IN) :: funcname(nsetmax)
-        CHARACTER(128)             :: func_header
-        LOGICAL                    :: loaded_ok
-        INTEGER                    :: i
+        CHARACTER(4096), INTENT(IN) :: funcname(nsetmax)
+        CHARACTER(128)              :: func_header
+        LOGICAL                     :: loaded_ok
+        INTEGER                     :: i
 
-        IF(.NOT.IS_LEGACY_USERFCN(TRIM(funcname(1)))) THEN
+        IF(.NOT.LEGACY_USERFCN) THEN
             ! Setup the user function for each available set
             DO i = 1, nset
                 func_header = TRIM(funcname(i)(1:INDEX(funcname(i), '(')-1))
                 CALL LOG_TRACE('Setting user function pointer set named => '//TRIM(func_header))
+                IF(nset.GT.1) THEN
+                    func_header = TRIM(func_header)//'_mfg_set'
+                    CALL LOG_TRACE('Using MFC pointer => '//TRIM(func_header))
+                END IF
                 CALL GET_USER_FUNC_PROCPTR(func_header, SET_PTR_ARR(i)%ptr, loaded_ok)
             
                 IF(.NOT.loaded_ok) THEN

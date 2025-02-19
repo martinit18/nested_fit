@@ -1,5 +1,6 @@
-version:    5.3              # Program version
-datafiles:  test_matrix.dat     # Name of the data file
+version:    5.4              # Program version
+calculation_mode: DATA       # Type of calculation (DATA for data, POTENTIAL for potential landscapes, INTEGRAL for function integrals)
+datafiles:  test_matrix.dat  # Name of the data file
 specstr:    img              # Datafile layout
 # filefmt: .tsv              # (optional) for data separated by spaces or tabs
 # likelihood: GAUSSIAN       # (for data with error bars only) Name of the likelihood function

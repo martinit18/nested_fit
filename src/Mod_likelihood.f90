@@ -30,7 +30,6 @@ MODULE MOD_LIKELIHOOD
 
   ! Data variables
   INTEGER(4) :: ndata
-  INTEGER(8) :: ncall=0, ncall9=0
   INTEGER(4), DIMENSION(nsetmax) :: ndata_set=0
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: x, nc, nc_err
   ! Data variable for 2D images
@@ -62,6 +61,7 @@ MODULE MOD_LIKELIHOOD
   TYPE(SpecMap_t) :: specstr_ordermap
 
 CONTAINS
+
 
    SUBROUTINE SPEC_MAP_INIT(map, cap)
       CLASS(SpecMap_t), INTENT(OUT) :: map
@@ -178,15 +178,175 @@ CONTAINS
 #define DATA_IS_SET B'10000000'
 #define BIT_CHECK_IF(what) (IAND(dataid, what).GT.0)
 
-  SUBROUTINE PREPARE_LIKELIHOOD()
-   CALL specstr_ordermap%init(64)   ! Init the specstr map for data file load ordering
+  SUBROUTINE PREINIT_LIKELIHOOD_DATA()
+
+   ! Init the specstr map for data file load ordering
+   CALL specstr_ordermap%init(64)   
+
+    ! Separate the name of the different files
+   CALL POPULATE_INPUTFILES(filenames)
+
+  END SUBROUTINE 
+
+  SUBROUTINE POPULATE_INPUTFILES(filestr)
+   IMPLICIT NONE
+   CHARACTER(LEN=*), INTENT(IN) :: filestr
+   INTEGER                      :: count, i
+
+   CALL SPLIT_INPUT_ON(',', filestr, filename, count, nsetmax)
+
+   IF(count.GT.1) THEN
+      ! We have a set of files
+      CALL LOG_TRACE('Running for a set of files.')
+
+      is_set = .TRUE.
+      nset = count
+      DO i = 1, count
+         filename(i) = ADJUSTL(filename(i)) ! Skip possible left spaces from comma separation
+      END DO
+   ELSE
+      nset = 1
+      is_set = .FALSE.
+   ENDIF
+
   END SUBROUTINE
 
-  SUBROUTINE INIT_LIKELIHOOD()
+  SUBROUTINE POPULATE_DATATYPE(specstr, output)
+   IMPLICIT NONE
+   CHARACTER(LEN=*), INTENT(IN)  :: specstr
+   CHARACTER(3)    , INTENT(OUT) :: output
+   CHARACTER(64)                 :: specifiers(specstrmaxcol)
+   CHARACTER                     :: dimensions
+   INTEGER                       :: count
+   INTEGER                       :: i, j
+   INTEGER                       :: order_int
+   LOGICAL                       :: found_spec, spec_err
+
+! Ignore populating the data for the nested_fit_func target
+#ifndef FUNC_TARGET
+   ! Declare the valid spec string fields
+   CHARACTER(32), PARAMETER :: spec_fields(7) = [CHARACTER(LEN=32) ::&
+         'x',&
+         'y',&
+         ! 'xe',&
+         ! 'ye',&
+         'c',&
+         'ce',&
+         't',&
+         'i',&
+         'img'&
+      ]
+
+   CALL SPLIT_INPUT_ON(',', specstr, specifiers, count, specstrmaxcol)
+   
+   IF(count.LT.1) THEN
+      CALL LOG_ERROR_HEADER()
+      CALL LOG_ERROR('Specified `specstr` is not valid.')
+      CALL LOG_ERROR('Aborting Execution...')
+      CALL LOG_ERROR_HEADER()
+      CALL HALT_EXECUTION()
+   ENDIF
+
+   CALL specstr_ordermap%insert('ncols', count)
+
+   ! NOTE(César): Special case for image data (legacy 2D)
+   IF(TRIM(spec_str).EQ.'img') THEN
+      CALL specstr_ordermap%insert('img_v', 1)
+      output = '2c'
+      RETURN
+   ELSE IF(INDEX(spec_str, 'img').GT.0) THEN
+      CALL LOG_ERROR_HEADER()
+      CALL LOG_ERROR('Specified `specstr` is not valid.')
+      CALL LOG_ERROR('Spec name `img` is an exclusive spec. But other specs were found.')
+      CALL LOG_ERROR('Aborting Execution...')
+      CALL LOG_ERROR_HEADER()
+      CALL HALT_EXECUTION()
+   ENDIF
+   
+   dimensions = ' '
+   found_spec = .FALSE.
+   DO i = 1, count
+      ! Try and find a spec
+      DO j = 1, 7
+         IF(TRIM(specifiers(i)).EQ.TRIM(spec_fields(j))) THEN
+            CALL LOG_TRACE('specstr: Found valid specifier `'//TRIM(spec_fields(j))//'`.')
+            ! HACK(César): This is required for the hash to work with some keys (why ???)
+            CALL specstr_ordermap%insert(TRIM(spec_fields(j))//'_v', i)
+            found_spec = .TRUE.
+            GOTO 919
+         ENDIF
+      END DO
+
+      919   CONTINUE
+      IF(.NOT.found_spec) THEN
+         CALL LOG_ERROR_HEADER()
+         CALL LOG_ERROR('Specified `specstr` is not valid.')
+         CALL LOG_ERROR('Spec name `'//TRIM(specifiers(i))//'` is not a valid name.')
+         CALL LOG_ERROR('Aborting Execution...')
+         CALL LOG_ERROR_HEADER()
+         CALL HALT_EXECUTION()
+      ENDIF
+      found_spec = .FALSE.
+   END DO
+
+   CALL specstr_ordermap%find('x_v', order_int, spec_err)
+   IF(spec_err) THEN
+      CALL LOG_ERROR_HEADER()
+      CALL LOG_ERROR('Specified `specstr` is valid.')
+      CALL LOG_ERROR('But spec `x` is required and was not found.')
+      CALL LOG_ERROR('Aborting Execution...')
+      CALL LOG_ERROR_HEADER()
+      CALL HALT_EXECUTION()
+   ENDIF
+   dimensions = '1'
+
+   CALL specstr_ordermap%find('y_v', order_int, spec_err)
+   IF(.NOT.spec_err) THEN
+      dimensions = '2'
+   ENDIF
+
+   CALL specstr_ordermap%find('c_v', order_int, spec_err)
+   IF(spec_err) THEN
+      CALL LOG_ERROR_HEADER()
+      CALL LOG_ERROR('Specified `specstr` is valid.')
+      CALL LOG_ERROR('But spec `c` is required and was not found.')
+      CALL LOG_ERROR('Aborting Execution...')
+      CALL LOG_ERROR_HEADER()
+      CALL HALT_EXECUTION()
+   ENDIF
+
+   output(1:1) = dimensions(1:1)
+
+   CALL specstr_ordermap%find('ce_v', order_int, spec_err)
+   IF(.NOT.spec_err) THEN
+      output(2:2) = 'e'
+   ELSE
+      output(2:2) = 'c'
+   ENDIF
+#endif
+  END SUBROUTINE
+
+  SUBROUTINE POPULATE_FILEFMT(format)
+   IMPLICIT NONE
+   CHARACTER(LEN=16), INTENT(INOUT) :: format
+
+   CALL STR_TO_LOWER(format)
+   IF((TRIM(format).NE.'.csv').AND.(TRIM(format).NE.'.tsv')) THEN
+      CALL LOG_ERROR_HEADER()
+      CALL LOG_ERROR('Unrecognized filefmt: `'//TRIM(format)//'`.')
+      CALL LOG_ERROR('Aborting Execution...')
+      CALL LOG_ERROR_HEADER()
+      CALL HALT_EXECUTION()
+   ENDIF
+
+  END SUBROUTINE
+
+  SUBROUTINE INIT_LIKELIHOOD_DATA()
     ! Initialize the normal likelihood with data files and special function
 
-    ! Initialize the search method params
-    CALL INIT_SEARCH_METHOD()
+    ! Populate data formats
+    CALL POPULATE_DATATYPE(spec_str, data_type)
+    CALL POPULATE_FILEFMT(fileformat)
 
     ! Read data ------------------------------------------------------------------------------------------------------------------------
     CALL READ_DATA()
@@ -200,34 +360,34 @@ CONTAINS
     ! Free the spec string map
     CALL specstr_ordermap%free() ! NOTE(César): This is safe for a non-inited map
 
-  END SUBROUTINE INIT_LIKELIHOOD
+  END SUBROUTINE INIT_LIKELIHOOD_DATA
 
   !#####################################################################################################################
 
-  SUBROUTINE INIT_SEARCH_METHOD()
-#ifdef OPENMPI_ON
-   INTEGER(4) :: mpi_ierror
-#endif
+!   SUBROUTINE INIT_SEARCH_METHOD()
+! #ifdef OPENMPI_ON
+!    INTEGER(4) :: mpi_ierror
+! #endif
 
-    IF (search_method.eq.'RANDOM_WALK') THEN
-      searchid = 0
-    ELSE IF(search_method.EQ.'UNIFORM') THEN
-       searchid = 1
-    ELSE IF(search_method.EQ.'SLICE_SAMPLING_TRANSF') THEN
-       searchid = 2
-    ELSE IF(search_method.EQ.'SLICE_SAMPLING') THEN
-       searchid = 3
-    ELSE IF(search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
-       searchid = 4
-    ELSE
-      CALL LOG_ERROR_HEADER()
-      CALL LOG_ERROR('Error of the search type name in Mod_likelihood module.')
-      CALL LOG_ERROR('Check the manual and the input file.')
-      CALL LOG_ERROR('Available options: [RANDOM_WALK, UNIFORM, SLICE_SAMPLING, SLICE_SAMPLING_ADAPT]')
-      CALL LOG_ERROR_HEADER()
-      CALL HALT_EXECUTION()
-    END IF
-  END SUBROUTINE INIT_SEARCH_METHOD
+!     IF (search_method.eq.'RANDOM_WALK') THEN
+!       searchid = 0
+!     ELSE IF(search_method.EQ.'UNIFORM') THEN
+!        searchid = 1
+!     ELSE IF(search_method.EQ.'SLICE_SAMPLING_TRANSF') THEN
+!        searchid = 2
+!     ELSE IF(search_method.EQ.'SLICE_SAMPLING') THEN
+!        searchid = 3
+!     ELSE IF(search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
+!        searchid = 4
+!     ELSE
+!       CALL LOG_ERROR_HEADER()
+!       CALL LOG_ERROR('Error of the search type name in Mod_likelihood module.')
+!       CALL LOG_ERROR('Check the manual and the input file.')
+!       CALL LOG_ERROR('Available options: [RANDOM_WALK, UNIFORM, SLICE_SAMPLING, SLICE_SAMPLING_ADAPT]')
+!       CALL LOG_ERROR_HEADER()
+!       CALL HALT_EXECUTION()
+!     END IF
+!   END SUBROUTINE INIT_SEARCH_METHOD
 
   SUBROUTINE INIT_LIKELIHOOD_FUNC()
 #ifdef OPENMPI_ON
@@ -648,7 +808,7 @@ CONTAINS
           CALL LOG_ERROR_HEADER()
           CALL HALT_EXECUTION()
        END IF
-       CALL SET_USERFUNC_SET_PROCPTR(funcname(1))
+       CALL SET_USERFUNC_SET_PROCPTR(funcname)
     END IF
 
     ! Initialise functions if needed
@@ -688,9 +848,10 @@ CONTAINS
 
 !#####################################################################################################################
 
-  REAL(8) FUNCTION LOGLIKELIHOOD(par)
+  REAL(8) FUNCTION LOGLIKELIHOOD_DATA(npar, par)
     ! Main likelihood function
 
+    INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
 
     !$OMP CRITICAL
@@ -702,19 +863,21 @@ CONTAINS
     !$OMP END CRITICAL
     
     IF (BIT_CHECK_IF(DATA_IS_1D)) THEN
-       LOGLIKELIHOOD = LOGLIKELIHOOD_1D(par)
+       LOGLIKELIHOOD_DATA= LOGLIKELIHOOD_1D(npar, par)
     ELSE IF (BIT_CHECK_IF(DATA_IS_2D)) THEN
-       LOGLIKELIHOOD = LOGLIKELIHOOD_2D(par)
+       LOGLIKELIHOOD_DATA= LOGLIKELIHOOD_2D(npar, par)
     END IF
 
-  END FUNCTION LOGLIKELIHOOD
+  END FUNCTION LOGLIKELIHOOD_DATA
 
   !#####################################################################################################################
 
-  REAL(8) FUNCTION LOGLIKELIHOOD_WITH_TEST(par)
+  REAL(8) FUNCTION LOGLIKELIHOOD_WITH_TEST_DATA(npar, par)
     ! Main likelihood function with a preliminary test for Poisson
     ! This allows for avoid this test in the main loop calculation to speed the parallel computation
 
+    
+    INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
     !
     REAL(8) :: enc
@@ -753,9 +916,9 @@ CONTAINS
              END IF
           END DO
        END DO
-       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_1D(par)
+       LOGLIKELIHOOD_WITH_TEST_DATA = LOGLIKELIHOOD_1D(npar, par)
     ELSE IF (BIT_CHECK_IF(DATA_IS_E).AND.BIT_CHECK_IF(DATA_IS_1D)) THEN
-       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_1D(par)
+       LOGLIKELIHOOD_WITH_TEST_DATA = LOGLIKELIHOOD_1D(npar, par)
     ELSE IF (BIT_CHECK_IF(DATA_IS_C).AND.BIT_CHECK_IF(DATA_IS_2D)) THEN
        ! Check if the choosen function assumes zero or negative values
        DO i=1, nx
@@ -777,21 +940,23 @@ CONTAINS
              END IF
           END DO
        END DO
-       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_2D(par)
+       LOGLIKELIHOOD_WITH_TEST_DATA = LOGLIKELIHOOD_2D(npar, par)
     ELSE IF (BIT_CHECK_IF(DATA_IS_E).AND.BIT_CHECK_IF(DATA_IS_2D)) THEN
-       LOGLIKELIHOOD_WITH_TEST = LOGLIKELIHOOD_2D(par)
+       LOGLIKELIHOOD_WITH_TEST_DATA = LOGLIKELIHOOD_2D(npar, par)
 
     END IF
 
-  END FUNCTION LOGLIKELIHOOD_WITH_TEST
+  END FUNCTION LOGLIKELIHOOD_WITH_TEST_DATA
 
   !#####################################################################################################################
 
-  REAL(8) FUNCTION LOGLIKELIHOOD_1D(par)
+  REAL(8) FUNCTION LOGLIKELIHOOD_1D(npar, par)
     
     ! Main likelihood function
     ! Type: Poisson , Gaussian , .... soon 2D I hope
     
+    
+    INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
     !
     REAL(8) :: ll_tmp, rk, rk2
@@ -885,11 +1050,12 @@ CONTAINS
 
   !###################################################################################################
 
-  REAL(8) FUNCTION LOGLIKELIHOOD_2D(par)
+  REAL(8) FUNCTION LOGLIKELIHOOD_2D(npar, par)
 
     ! Main likelihood function for 2D data
     ! Type: Poisson only for the moment
 
+    INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
     !
     REAL(8) :: USERFCN_2D
@@ -924,7 +1090,7 @@ CONTAINS
 
   !#####################################################################################################################
 
-  SUBROUTINE FINAL_LIKELIHOOD(live_max,par_mean,par_median_w)
+  SUBROUTINE FINAL_LIKELIHOOD_DATA(live_max,par_mean,par_median_w)
     ! Final action for the likelihood function
 
     REAL(8), DIMENSION(npar), INTENT(IN) :: live_max, par_mean, par_median_w
@@ -947,7 +1113,7 @@ CONTAINS
     ! Deallocate variables
     CALL DEALLOCATE_DATA()
 
-  END SUBROUTINE FINAL_LIKELIHOOD
+  END SUBROUTINE FINAL_LIKELIHOOD_DATA
 
   !#####################################################################################################################
   SUBROUTINE WRITE_EXPECTED_VALUES(live_max,par_mean,par_median_w)

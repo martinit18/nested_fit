@@ -2,6 +2,13 @@ PROGRAM NESTED_FIT
   ! Time-stamp: <Last changed by martino on Monday 07 June 2021 at CEST 10:29:22>
   !
   ! Please read README and LICENSE files for more information
+  !
+  ! 5.4  Merge of executable for data analysis and function exploration
+  ! 5.3  New innterpolation functions in python library 
+  !      Live display when sampling from python
+  !      Works in console and jupyter notebooks
+  ! 5.2  Add JSON output for easier manipulation of results
+  !      New simple python interface to embed nested_fit on source code
   ! 5.1  Add feature for older systems not easily supporting cmake to configure via GNU autotools.
   !      Add performance profiling tool boilerplate code enabling a detailed analysis without hindering performance.
   ! 5.0  Update README.md
@@ -111,7 +118,9 @@ PROGRAM NESTED_FIT
    ! Module for the input parameter definition
    USE MOD_PARAMETERS
    ! Module for likelihood for data analysis
-   USE MOD_LIKELIHOOD
+   USE MOD_LIKELIHOOD_GEN
+   ! Module for search new point
+   USE MOD_SEARCH_NEW_POINT
    ! Module for metadata
    USE MOD_METADATA
    ! Module for logging and displaying messages
@@ -132,7 +141,6 @@ PROGRAM NESTED_FIT
 
   ! Parameters values and co.
   CHARACTER :: string*2048
-  CHARACTER :: spec_str*1024 = 'x,c'
   CHARACTER :: version_file*20
   LOGICAL   :: file_exists
 
@@ -364,19 +372,18 @@ PROGRAM NESTED_FIT
          CALL LOG_WARNING('Continuing with possible future errors...')
          CALL LOG_WARNING_HEADER()
       END IF
-
-#ifndef FUNC_TARGET
-      ! Prepare the likelihood module to receive values from the input file
-      CALL PREPARE_LIKELIHOOD()
-#endif
-
+      
       ! General configuration
-      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'datafiles' , string             , MANDATORY=.TRUE. )
-      CALL POPULATE_INPUTFILES       (string)
+      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'calculation_mode' , calc_mode   , MANDATORY=.TRUE. ) ! data by default !!NEW!! Mode of code calculation
+      ! TODO put mandatory relative conditions with respect to this value
+      ! The idea is to put three mode: data (for data likelihood calc), function (for simple function exploration), partition (for potentials and for building partition functions)
+      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'datafiles' , filenames             , MANDATORY=(calc_mode.EQ.'DATA')) ! Only required if data analysis
+
+      ! Prepare the likelihood and the data filenames if needed
+      CALL PREINIT_LIKELIHOOD()
+      
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'specstr'   , spec_str           , MANDATORY=.FALSE.) !      x,c by default
-      CALL POPULATE_DATATYPE         (spec_str, data_type)
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'filefmt'   , fileformat         , MANDATORY=.FALSE.) !     .csv by default
-      CALL POPULATE_FILEFMT          (fileformat)
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'likelihood', likelihood_funcname, MANDATORY=.FALSE.) ! GAUSSIAN by default
       CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'fileheader', opt_file_has_header, MANDATORY=.FALSE.) !    False by default
       
@@ -392,29 +399,43 @@ PROGRAM NESTED_FIT
       
       ! Convergence configuration
       CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'convergence.method'   , conv_method, MANDATORY=.TRUE.)
+      ! Check compatibility between calculation method and convergence method
+      IF(calc_mode.NE.'POTENTIAL'.AND.conv_method.NE.'LIKE_ACC') THEN
+         CALL LOG_ERROR_HEADER()
+         CALL LOG_ERROR('Use "LIKE_ACC" convergence mode for "DATA" and "INTEGRA:" calculation modes')
+         CALL LOG_ERROR('Aborting Execution...')
+         CALL LOG_ERROR_HEADER()
+         CALL HALT_EXECUTION()
+      ELSE IF(calc_mode.EQ.'POTENTIAL'.AND.conv_method.EQ.'LIKE_ACC') THEN
+         CALL LOG_ERROR_HEADER()
+         CALL LOG_ERROR('Use "ENERGY_ACC" or "ENERGY_MAX" convergence mode for "POTENTIAL" calculation mode')
+         CALL LOG_ERROR('Aborting Execution...')
+         CALL LOG_ERROR_HEADER()
+         CALL HALT_EXECUTION()
+      ENDIF
       CALL FIELD_FROM_INPUT_REAL     (input_config, 'convergence.accuracy' , evaccuracy , MANDATORY=.TRUE.)
-      CALL FIELD_FROM_INPUT_REAL     (input_config, 'convergence.parameter', conv_par   , MANDATORY=.FALSE.)
+      CALL FIELD_FROM_INPUT_REAL     (input_config, 'convergence.parameter', conv_par   , MANDATORY=(conv_method.NE.'LIKE_ACC'))
 
       ! Clustering configuration
       CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'clustering.enabled'  , make_cluster  , MANDATORY=.FALSE.) ! False by default
       IF(make_cluster) THEN
          CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'clustering.method'   , cluster_method, MANDATORY=.TRUE.)
-         CALL FIELD_FROM_INPUT_REAL     (input_config, 'clustering.parameter1' , cluster_par1  , MANDATORY=.TRUE.)
-         CALL FIELD_FROM_INPUT_REAL     (input_config, 'clustering.parameter2', cluster_par2  , MANDATORY=.TRUE.)
+         CALL FIELD_FROM_INPUT_REAL     (input_config, 'clustering.parameter1' , cluster_par1  , MANDATORY=(cluster_method.NE.'k'))
+         CALL FIELD_FROM_INPUT_REAL     (input_config, 'clustering.parameter2', cluster_par2  , MANDATORY=(cluster_method.NE.'k'))
       END IF
 
       ! Data configuration
       ! TODO(César): Make this not mandatory and get bounds from data file
       IF(is_set) THEN
          DO i = 1, nset
-            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.xmin', xmin(i), MANDATORY=.TRUE. )
-            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.xmax', xmax(i), MANDATORY=.TRUE. )
+            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.xmin', xmin(i), MANDATORY=(calc_mode.EQ.'DATA') ) ! Only required for data analysis
+            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.xmax', xmax(i), MANDATORY=(calc_mode.EQ.'DATA') ) ! Only required for data analysis
             CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.ymin', ymin(i), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
             CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.ymax', ymax(i), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
          END DO
       ELSE
-         CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.xmin', xmin(1), MANDATORY=.TRUE. )
-         CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.xmax', xmax(1), MANDATORY=.TRUE. )
+         CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.xmin', xmin(1), MANDATORY=(calc_mode.EQ.'DATA') ) ! Only required for data analysis
+         CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.xmax', xmax(1), MANDATORY=(calc_mode.EQ.'DATA') ) ! Only required for data analysis
          CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.ymin', ymin(1), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
          CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.ymax', ymax(1), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
       ENDIF
@@ -425,7 +446,7 @@ PROGRAM NESTED_FIT
       CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'npoint', npoint, MANDATORY=.FALSE.) ! 0 by default
       CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'nwidth', nwidth, MANDATORY=.FALSE.) ! 0 by default
       
-      ! Function configuration
+      ! Function configuration inputs
       IF(is_set) THEN
          DO i = 1, nset
             CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'function.expression_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i))), funcname(i), MANDATORY=.TRUE.) ! LaTeX Expression or Legacy name
@@ -433,7 +454,15 @@ PROGRAM NESTED_FIT
       ELSE
          CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'function.expression', funcname(1), MANDATORY=.TRUE.) ! LaTeX Expression or Legacy name
       ENDIF
+   
+      ! Initialize the search method params
+      CALL INIT_SEARCH_METHOD()
+
+      ! Function configuration
       CALL CONFIGURE_USERFUNCTION()
+
+      ! Initialize likelihood function
+      CALL INIT_LIKELIHOOD()
 
       ! Read set of spectra file parameter
       ! IF (is_set) THEN
@@ -524,8 +553,6 @@ PROGRAM NESTED_FIT
       END IF
   END IF
 
-  ! Initialize likelihood function
-  CALL INIT_LIKELIHOOD()
 
 #ifdef OPENMPI_ON
    CALL MPI_Bcast(par_num, npar, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
@@ -577,7 +604,7 @@ PROGRAM NESTED_FIT
      par_mean = par_in
      par_median_w = par_in
      ! To check the likelihood function
-     evsum_final = LOGLIKELIHOOD(par_in)
+     evsum_final = LOGLIKELIHOOD(npar, par_in)
      IF(mpi_rank.EQ.0) THEN
          CALL LOG_WARNING_HEADER()
          CALL LOG_WARNING('All parameters are fixed.')
@@ -1117,6 +1144,27 @@ PROGRAM NESTED_FIT
     ENDIF
   END SUBROUTINE
 
+  SUBROUTINE CHECK_FUNCTION_DEF_SIZE(func)
+   CHARACTER(LEN=*), INTENT(IN) :: func 
+   WRITE(*,*) LEN_TRIM(func), LEN(func)
+   IF(LEN_TRIM(func).GE.(0.9d0 * LEN(func))) THEN
+      CALL LOG_ERROR_HEADER()
+      CALL LOG_ERROR('Function defition size exceeds 90% of total allowed size. (max='//TRIM(ADJUSTL(INT_TO_STR_INLINE(LEN(func))))//')')
+      CALL LOG_ERROR('Consider shortening your function definition.')
+      CALL LOG_ERROR('Aborting execution...')
+      CALL LOG_ERROR_HEADER()
+      CALL HALT_EXECUTION()
+   ENDIF
+
+   IF(LEN_TRIM(func).GT.(0.8d0 * LEN(func))) THEN
+      CALL LOG_WARNING_HEADER()
+      CALL LOG_WARNING('Function definition size exceeds 80% of total allowed size. (max='//TRIM(ADJUSTL(INT_TO_STR_INLINE(LEN(func))))//')')
+      CALL LOG_WARNING('Any additions to the function might cause an early out.')
+      CALL LOG_WARNING_HEADER()
+      RETURN
+   ENDIF
+  END SUBROUTINE
+
   SUBROUTINE CONFIGURE_USERFUNCTION()
 
    CHARACTER(512)                 :: definition, key
@@ -1130,12 +1178,23 @@ PROGRAM NESTED_FIT
    INTEGER                        :: legacy_param_count
    CHARACTER(128)                 :: splitarr(16)
    INTEGER                        :: splitarr_count
+   CHARACTER(64)                  :: mfg_prefix = '_mfg_set'
+   CHARACTER(128)                 :: mfg_name
+   CHARACTER(128)                 :: fname_original
 
    PROFILED(CONFIGURE_USERFUNCTION)
 
+   IF(calc_mode.EQ.'DATA') THEN
+      ! Is it a legacy function?
+      LEGACY_USERFCN = IS_LEGACY_USERFCN(funcname(1))
+   ELSE
+      ! All integrated functions potentials are legacy function (for the moment)
+      LEGACY_USERFCN = .TRUE.
+   ENDIF
+
    ! Check if the function is legacy or not
    ! If the first function is legacy, we don't need to worry about this
-   IF(.NOT.IS_LEGACY_USERFCN(TRIM(funcname(1)))) THEN
+   IF(.NOT.LEGACY_USERFCN) THEN
       ! Try to extract an expression
       DO i = 1, nset
         parse_result(i) = PARSE_LATEX(TRIM(funcname(i)))
@@ -1144,6 +1203,10 @@ PROGRAM NESTED_FIT
         IF(parse_result(i)%error.NE.0) CALL HALT_EXECUTION()
 
         definition = TRIM(funcname(i)(INDEX(funcname(i), '=')+1:LEN_TRIM(funcname(i))))
+
+        ! Before compiling, check for the definition size, and issue a warning/error accordingly
+        ! This subroutine is allowed to terminate execution if required
+        CALL CHECK_FUNCTION_DEF_SIZE(funcname(i))
         
         ! All fine, so just compile the function
         CALL COMPILE_CACHE_FUNC(parse_result(i), definition)
@@ -1157,6 +1220,41 @@ PROGRAM NESTED_FIT
       ! Now figure out the required parameters (relatively complex for a set)
       CALL FIND_TOTAL_PARAMS_USERFUNCTION(parse_result(1:nset), parameters, numparams)
       npar = numparams
+
+      ! If we have a set generate a meta-function for argument forwarding
+      ! And use the mock implementation instead
+      IF(nset.GT.1) THEN
+        DO i = 1, nset
+          ! Parse result as been changed by adding '_' due to the ABI. Fix it.
+          fname_original = TRIM(parse_result(i)%function_name(1:LEN_TRIM(parse_result(i)%function_name)-1))
+
+          CALL LOG_TRACE('Running MFG for function: '//TRIM(fname_original))
+
+          mfg_name = TRIM(fname_original)//TRIM(mfg_prefix)
+          CALL LOG_TRACE(TRIM(fname_original)//' => '//TRIM(mfg_name))
+          CALL COMPILE_CACHE_MFG(&
+                    fname_original,&
+                    mfg_name,&
+                    parse_result(i)%parameter_names,&
+                    parse_result(i)%parameter_identifiers,&
+                    parse_result(i)%num_params,&
+                    parameters,&
+                    numparams)
+          
+          ! Also compile an ABI compatible version
+          ! in case we want to reference within other function
+          ! NOTE: (Cesar) This call might not be necessary
+          mfg_name = TRIM(mfg_name)//'_'
+          CALL COMPILE_CACHE_MFG(&
+                    fname_original,&
+                    mfg_name,&
+                    parse_result(i)%parameter_names,&
+                    parse_result(i)%parameter_identifiers,&
+                    parse_result(i)%num_params,&
+                    parameters,&
+                    numparams)
+        END DO
+      END IF
 
       ! Deallocate all of the parsed data
       DO i = 1, nset
@@ -1214,6 +1312,7 @@ PROGRAM NESTED_FIT
       ! Nothing to be done here (for now)
       ! Get legacy required parameters
       CALL input_config%subkeys_of('function.params.', legacy_param_keys, legacy_param_count)
+
       DO i = 1, legacy_param_count
          legacy_param_keys(i) = legacy_param_keys(i)(1:INDEX(legacy_param_keys(i), '.', back=.TRUE.)-1)
       END DO
@@ -1288,160 +1387,6 @@ PROGRAM NESTED_FIT
 
    ENDIF
 
-  END SUBROUTINE
-
-  SUBROUTINE POPULATE_FILEFMT(format)
-   IMPLICIT NONE
-   CHARACTER(LEN=16), INTENT(INOUT) :: format
-
-   CALL STR_TO_LOWER(format)
-   IF((TRIM(format).NE.'.csv').AND.(TRIM(format).NE.'.tsv')) THEN
-      CALL LOG_ERROR_HEADER()
-      CALL LOG_ERROR('Unrecognized filefmt: `'//TRIM(format)//'`.')
-      CALL LOG_ERROR('Aborting Execution...')
-      CALL LOG_ERROR_HEADER()
-      CALL HALT_EXECUTION()
-   ENDIF
-
-  END SUBROUTINE
-
-  SUBROUTINE POPULATE_INPUTFILES(filestr)
-   IMPLICIT NONE
-   CHARACTER(LEN=*), INTENT(IN) :: filestr
-   INTEGER                      :: count
-
-   CALL SPLIT_INPUT_ON(',', filestr, filename, count, nsetmax)
-
-   IF(count.GT.1) THEN
-      ! We have a set of files
-      CALL LOG_TRACE('Running for a set of files.')
-
-      is_set = .TRUE.
-      nset = count
-      DO i = 1, count
-         filename(i) = ADJUSTL(filename(i)) ! Skip possible left spaces from comma separation
-      END DO
-   ELSE
-      nset = 1
-      is_set = .FALSE.
-   ENDIF
-
-  END SUBROUTINE
-
-
-  SUBROUTINE POPULATE_DATATYPE(specstr, output)
-   IMPLICIT NONE
-   CHARACTER(LEN=*), INTENT(IN)  :: specstr
-   CHARACTER(3)    , INTENT(OUT) :: output
-   CHARACTER(64)                 :: specifiers(specstrmaxcol)
-   CHARACTER                     :: dimensions
-   INTEGER                       :: count
-   INTEGER                       :: i, j
-   INTEGER                       :: order_int
-   LOGICAL                       :: found_spec, spec_err
-
-! Ignore populating the data for the nested_fit_func target
-#ifndef FUNC_TARGET
-   ! Declare the valid spec string fields
-   CHARACTER(32), PARAMETER :: spec_fields(7) = [CHARACTER(LEN=32) ::&
-         'x',&
-         'y',&
-         ! 'xe',&
-         ! 'ye',&
-         'c',&
-         'ce',&
-         't',&
-         'i',&
-         'img'&
-      ]
-
-   CALL SPLIT_INPUT_ON(',', specstr, specifiers, count, specstrmaxcol)
-   
-   IF(count.LT.1) THEN
-      CALL LOG_ERROR_HEADER()
-      CALL LOG_ERROR('Specified `specstr` is not valid.')
-      CALL LOG_ERROR('Aborting Execution...')
-      CALL LOG_ERROR_HEADER()
-      CALL HALT_EXECUTION()
-   ENDIF
-
-   CALL specstr_ordermap%insert('ncols', count)
-
-   ! NOTE(César): Special case for image data (legacy 2D)
-   IF(TRIM(spec_str).EQ.'img') THEN
-      CALL specstr_ordermap%insert('img_v', 1)
-      output = '2c'
-      RETURN
-   ELSE IF(INDEX(spec_str, 'img').GT.0) THEN
-      CALL LOG_ERROR_HEADER()
-      CALL LOG_ERROR('Specified `specstr` is not valid.')
-      CALL LOG_ERROR('Spec name `img` is an exclusive spec. But other specs were found.')
-      CALL LOG_ERROR('Aborting Execution...')
-      CALL LOG_ERROR_HEADER()
-      CALL HALT_EXECUTION()
-   ENDIF
-   
-   dimensions = ' '
-   found_spec = .FALSE.
-   DO i = 1, count
-      ! Try and find a spec
-      DO j = 1, 7
-         IF(TRIM(specifiers(i)).EQ.TRIM(spec_fields(j))) THEN
-            CALL LOG_TRACE('specstr: Found valid specifier `'//TRIM(spec_fields(j))//'`.')
-            ! HACK(César): This is required for the hash to work with some keys (why ???)
-            CALL specstr_ordermap%insert(TRIM(spec_fields(j))//'_v', i)
-            found_spec = .TRUE.
-            GOTO 919
-         ENDIF
-      END DO
-
-      919   CONTINUE
-      IF(.NOT.found_spec) THEN
-         CALL LOG_ERROR_HEADER()
-         CALL LOG_ERROR('Specified `specstr` is not valid.')
-         CALL LOG_ERROR('Spec name `'//TRIM(specifiers(i))//'` is not a valid name.')
-         CALL LOG_ERROR('Aborting Execution...')
-         CALL LOG_ERROR_HEADER()
-         CALL HALT_EXECUTION()
-      ENDIF
-      found_spec = .FALSE.
-   END DO
-
-   CALL specstr_ordermap%find('x_v', order_int, spec_err)
-   IF(spec_err) THEN
-      CALL LOG_ERROR_HEADER()
-      CALL LOG_ERROR('Specified `specstr` is valid.')
-      CALL LOG_ERROR('But spec `x` is required and was not found.')
-      CALL LOG_ERROR('Aborting Execution...')
-      CALL LOG_ERROR_HEADER()
-      CALL HALT_EXECUTION()
-   ENDIF
-   dimensions = '1'
-
-   CALL specstr_ordermap%find('y_v', order_int, spec_err)
-   IF(.NOT.spec_err) THEN
-      dimensions = '2'
-   ENDIF
-
-   CALL specstr_ordermap%find('c_v', order_int, spec_err)
-   IF(spec_err) THEN
-      CALL LOG_ERROR_HEADER()
-      CALL LOG_ERROR('Specified `specstr` is valid.')
-      CALL LOG_ERROR('But spec `c` is required and was not found.')
-      CALL LOG_ERROR('Aborting Execution...')
-      CALL LOG_ERROR_HEADER()
-      CALL HALT_EXECUTION()
-   ENDIF
-
-   output(1:1) = dimensions(1:1)
-
-   CALL specstr_ordermap%find('ce_v', order_int, spec_err)
-   IF(.NOT.spec_err) THEN
-      output(2:2) = 'e'
-   ELSE
-      output(2:2) = 'c'
-   ENDIF
-#endif
   END SUBROUTINE
 
   SUBROUTINE FIELD_FROM_INPUT_REAL(config, field_name, field_value, mandatory)
@@ -1700,7 +1645,6 @@ PROGRAM NESTED_FIT
    
       READ(tmp, *) args(nargs)
    ENDIF
-
 
    CALL GET_USER_FUNC_PROCPTR(function_name, fptr, loaded_ok)
 

@@ -33,6 +33,12 @@ __pycache__/
 # Python dist build
 dist/
 
+# Python virtual environments
+.venv/
+
+# Jupyter cache
+.virtual_documents/
+
 # Logfiles
 *.log
 
@@ -41,8 +47,10 @@ dist/
 
 # Ignore autoconf/automake stuff
 autom4te.cache/
+build-aux/
 configure.ac
 Makefile.am
+Makefile.in
 aclocal.m4
 
 # Apparently autoconf generates a back configure (???)

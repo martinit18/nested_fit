@@ -15,7 +15,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
         search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, &
         make_cluster, nth, maxtries, maxntries, searchid
   ! Module for likelihood
-  USE MOD_LIKELIHOOD
+  USE MOD_LIKELIHOOD_GEN
   ! Module for searching new live points
   USE MOD_SEARCH_NEW_POINT
   ! Module for cluster analysis
@@ -162,7 +162,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
      END DO
      ! If it is good, take it
      live(j,:) = par_prior(:)
-     live_like(j) = LOGLIKELIHOOD_WITH_TEST(par_prior)
+     live_like(j) = LOGLIKELIHOOD_WITH_TEST(npar, par_prior)
      live_rank(j) = j
   END DO
   live_birth = MINVAL(live_like) - 10.d0
@@ -252,6 +252,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   
   ! Create covariance matrix and Cholesky decomposition
   CALL ALLOCATE_PAR_VAR()
+
   CALL CREATE_MAT_COV(live(:,par_var))
   DO WHILE (n.LE.nstep)
      ! ##########################################################################

@@ -52,54 +52,51 @@ Other jupyter notebook examples can be found in `examples/jupyter_notebooks`.
 
 If you have to install everything from scratch, please refer to the file *STEPBYSTEP_INSTALL.md*
 
-### Quick installation (to fully test)
+### Quick installation (to fully be tested)
 In the directory of your choice in the terminal execute the following commands:
-- `python -m venv <your_virtual_env_name>`  #Create a Python virtual environment
-- `source <your_virtual_env_name>/bin/activate` #Activate your virtual environment 
+- (`python -m venv <your_virtual_env_name>`)  This is optional to create a Python virtual environment
+- (`source <your_virtual_env_name>/bin/activate`) This is optional to activate your virtual environment 
 - `git clone https://github.com/martinit18/nested_fit.git`
 - `mkdir -p nested_fit/build`
 - `cd nested_fit/build`
 - `cmake -DOPENMP=ON -DCMAKE_BUILD_TYPE=Release ..`
 - `cmake --build . --config Release --target install`
 - `cd ..`
-- `pip install -e .`
+- `pip install . -v`
 - and to execute the program in any terminal, add the exetuable in your path with (in your .bashrc or similar) <br>
   `export PATH=$PATH:<your installation directory>/nested_fit/bin`
 
 To test if everything is working, go to the directory `examples/data_analysis/aaa_simple_example/legacy_func_input` and run `nested_fit_xxx`<br>
-**NOTE:** Always activate your Python virtual environment before using the Nested Fit:<br>
+**NOTE:** 
+- If needed, activate your Python virtual environment before using the Nested Fit:<br>
          `source <path_to_your_virtual_env_name>/bin/activate`
+- **This installation may not works with ANACONDA**
 
 
+### Generalities for the installation
 
-### From PyPI (not yet working)
+1) The first step of the installation is the compilation using `cmake` or `make`commands. The detailed instructions are presented below.
 
-The simplest way to install nested_fit.
-
-**Prerequisites**:
-- CMake
-- Fortran build toolchain (`gcc`, `g++` and `gfortran` or `ifort` or `ifx`)
-- Python 3 with numpy, scipy, matplotlib, pandas, getdist, anesthetic
-
-**Instructions**:
-
-1. Just run pip from the server repository:
-```sh
-pip install nested_fit
-```
-or locally 
+2) Then, to have all python tools available, you should use `pip`command locally with the commands
 ```sh
 pip install . -v
 ```
+or 
+```sh
+pip install -e .
+```
+for the editable installation.
 
 ### From source (CMake)
 
-Has more control on system specific optimizations.
+You will have more control on system specific optimizations.
 
 **Prerequisite**:
 - CMake
 - Fortran build toolchain (`gcc`, `g++` and `gfortran` or `ifort` or `ifx`)
 - Python 3 with numpy, scipy, matplotlib, padas, getdist (optional)
+
+For properly install these requirement, please read also `STEPBYSTEP_INSTALL.md`. This is particularly important for **the installation in Mac OS with Silicon chip**
 
 **Instruction**:
 
@@ -231,15 +228,13 @@ The other options for the Makefile are the same as the ones for the CMake. For a
 
 ### Comments for macOS users
 
-If you are running `gfortran` installed with homebrew, you should avoid use `gcc` and `g++` from homebrew as well and not the macOS preinstalled one. For this use the option
-
-``-DCMAKE_Fortran_COMPILER=`which gfortran` -DCMAKE_C_COMPILER=`which gcc` -DCMAKE_CXX_COMPILER=`which g++``
-
-and 1) make sure that homebrew/bin has a priority on the other bin directories (for put something like `export PATH=/opt/homebrew/bin:<other stuff of you>:$PATH` in your .bashrc) and make sure your `g++` is pointing the homebrew `g++-XX`. Eventually create the link:
+If you are running `gfortran` installed with homebrew, you should avoid use `gcc` and `g++` from homebrew as well and not the macOS preinstalled one. For this make sure that homebrew/bin has a priority on the other bin directories (for put something like `export PATH=/opt/homebrew/bin:<other stuff of you>:$PATH` in your .bashrc) and make sure your `g++` is pointing the homebrew `g++-XX`. Eventually create the link:
 ```sh
 cd  /opt/homebrew/bin
 ln -s g++-XX g++ 
 ```
+The use of the following cmake option can help too:
+``-DCMAKE_Fortran_COMPILER=`which gfortran` -DCMAKE_C_COMPILER=`which gcc` -DCMAKE_CXX_COMPILER=`which g++``
 
 ## File descriptions
 
@@ -268,16 +263,22 @@ A complete selection of input files example is given in the folder `examples` wh
 It follows a complete description of `nf_input.yaml` file.
 
 ```yaml
-version: 5.3                             # Program version
+version: 5.4                             # Program version
+calculation_mode: DATA                   # Type of calculation
+```
+The type of calculation is spefified by `calculation_mode` variable. 
+Available options are:
+- `DATA`: for data analysis. A likelihood function is explored the Bayesian evidence is evaluated. It  requires a data file to read and thus the inputs `datafiles, specstr, likelihood`.
+- `INTEGRAL`: for the calculation of the integral of a given function.
+- `POTENTIAL`: for exploration of a potential energy and for building the partition function. 
+
+```yaml
 datafiles: file1.csv [, file2.csv, ...]  # Name of the data file(s)
 ```
 If you have space- or tab-separated files, select the `.tsv` format adding the line
 ```yaml
 filefmt: .tsv
-```
-
-```yaml
-specstr: x,c,ce                          # Datafile layout
+specstr: x,c,ce                          # Datafile layout 
 ```
 A typical example could be `ce, i, i, x, c`, where the first column indicate the error bars, the second and the third are ignored, the fourt indicates the x-coordinate and the last the values.
 
@@ -420,7 +421,7 @@ Additional functions can be added by the user in the function `internal_func.f90
 | `LORE_IF` | `LORE_IF(x, x_0, A, g)` | Lorentzian (Cauchy) profile with integral `A`, mean `x_0` and width (gamma)  `g` |
 | `VOIGT_IF` | `VOIGT_IF(x, x_0, A, s, g)` | Voigt profile (convolution between a Gaussian and a Lorentzian, with integral `A`, mean `x_0`, sigma `s` and gamma  `g` |
 |`WofzRe`| `WofzRe(zr, zi)` | `zr`/`zi`: the real and imaginary part of the<br/> given input, respectively.
-|`Interpolate`| `Interpolate(filename, x, smooth)` | `filename`: the name of the file where the xy data<br/> is availabe (`.csv` format).<br/><br/>`x`: where to evaluate the spline.<br/><br/>`smooth`: The spline smoothing factor. Around the same order of magnitude as the number of points.
+|`Interpolate`| `Interpolate(filename, x, smooth)` | `filename`: the name of the file where the xy data<br/> is availabe (`.csv` format).<br/><br/>`x`: where to evaluate the spline.<br/><br/>`smooth`: The spline smoothing factor. Around the same order of magnitude as the number of points m (more precisely, between m - sqrt( 2 * m ) and m + sqrt( 2 * m ), see `curfit.f`for more details).
 
 One can use this declaration mode directly on the input file:
 ```yaml
@@ -429,7 +430,7 @@ function:
 ```
 Or it is also possible to add the function via the command line:
 ```sh
-nested_fit5.2.1 -fa 'test_func(x, a, b) = \frac{x}{\exp{2b\pi}} + \sin{b}'
+nested_fitx.x.x -fa 'test_func(x, a, b) = \frac{x}{\exp{2b\pi}} + \sin{b}'
 ```
 
 This function would then be available and could be used in the following fashion (which is functionally equivalent to using the function directly):
@@ -449,6 +450,8 @@ There are two ways to do it:
 ```sh
 nested_fitx.x.x -fa example.f90
 ```
+N.B. the function file has to be in the analysis folder where you execute the program.
+
 2. by writing the function in the file `internal_func.f90` and recompiling the ensemble of the program.
 
 ### Legacy function
@@ -460,15 +463,18 @@ Examples of use of a legacy function can be found in `examples/data_analysis/aaa
 
 ## Present version and history of the past versions
 
-The present version is 5.3.1\
+The present version is 5.4.1\
 New features:
-- New jupyter notebooks running in Google Colab
-- New innterpolation functions in python library
-- Live display when sampling from python. Works in console and jupyter notebooks.
-- Live display featured maximum likelihood prediction plot.
-- Add input info on JSON output file for parsing.
+- Merge of executable for data analysis and function exploration via the new calculation mode variable
+- Debug of not-yet  working feature of the version 5 compared to the version 4
+
 
 Previous versions are:
+ - 5.3 New jupyter notebooks running in Google Colab \
+New innterpolation functions in python library \
+Live display when sampling from python. Works in console and jupyter notebooks \
+Live display featured maximum likelihood prediction plot \
+Add input info on JSON output file for parsing.
  - 5.2 Add JSON output for easier manipulation of results. \
 New simple python interface to embed nested_fit on source code.
  - 5.1 Add feature for older systems not easily supporting cmake to configure via GNU autotools. \
