@@ -62,7 +62,7 @@ In the directory of your choice in the terminal execute the following commands:
 - `cmake -DOPENMP=ON -DCMAKE_BUILD_TYPE=Release ..`
 - `cmake --build . --config Release --target install`
 - `cd ..`
-- `pip install -e .`
+- `pip install . -v`
 - and to execute the program in any terminal, add the exetuable in your path with (in your .bashrc or similar) <br>
   `export PATH=$PATH:<your installation directory>/nested_fit/bin`
 
@@ -73,26 +73,19 @@ To test if everything is working, go to the directory `examples/data_analysis/aa
 - **This installation does not works with ANACONDA**
 
 
+### Generalities for the installation
 
-### From PyPI (not yet working)
+1) The first step of the installation is the compilation using `cmake` or `make`commands. The detailed instructions are presented below.
 
-The simplest way to install nested_fit.
-
-**Prerequisites**:
-- CMake
-- Fortran build toolchain (`gcc`, `g++` and `gfortran` or `ifort` or `ifx`)
-- Python 3 with numpy, scipy, matplotlib, pandas, getdist, anesthetic
-
-**Instructions**:
-
-1. Just run pip from the server repository:
-```sh
-pip install nested_fit
-```
-or locally 
+2) Then, to have all python tools available, you should use `pip`command locally with the commands
 ```sh
 pip install . -v
 ```
+or 
+```sh
+pip install -e .
+```
+for the editable installation.
 
 ### From source (CMake)
 
@@ -235,15 +228,13 @@ The other options for the Makefile are the same as the ones for the CMake. For a
 
 ### Comments for macOS users
 
-If you are running `gfortran` installed with homebrew, you should avoid use `gcc` and `g++` from homebrew as well and not the macOS preinstalled one. For this use the option
-
-``-DCMAKE_Fortran_COMPILER=`which gfortran` -DCMAKE_C_COMPILER=`which gcc` -DCMAKE_CXX_COMPILER=`which g++``
-
-and 1) make sure that homebrew/bin has a priority on the other bin directories (for put something like `export PATH=/opt/homebrew/bin:<other stuff of you>:$PATH` in your .bashrc) and make sure your `g++` is pointing the homebrew `g++-XX`. Eventually create the link:
+If you are running `gfortran` installed with homebrew, you should avoid use `gcc` and `g++` from homebrew as well and not the macOS preinstalled one. For this make sure that homebrew/bin has a priority on the other bin directories (for put something like `export PATH=/opt/homebrew/bin:<other stuff of you>:$PATH` in your .bashrc) and make sure your `g++` is pointing the homebrew `g++-XX`. Eventually create the link:
 ```sh
 cd  /opt/homebrew/bin
 ln -s g++-XX g++ 
 ```
+The use of the following cmake option can help too:
+``-DCMAKE_Fortran_COMPILER=`which gfortran` -DCMAKE_C_COMPILER=`which gcc` -DCMAKE_CXX_COMPILER=`which g++``
 
 ## File descriptions
 
@@ -459,6 +450,8 @@ There are two ways to do it:
 ```sh
 nested_fitx.x.x -fa example.f90
 ```
+N.B. the function file has to be in the analysis folder where you execute the program.
+
 2. by writing the function in the file `internal_func.f90` and recompiling the ensemble of the program.
 
 ### Legacy function
@@ -470,9 +463,10 @@ Examples of use of a legacy function can be found in `examples/data_analysis/aaa
 
 ## Present version and history of the past versions
 
-The present version is 5.4.0\
+The present version is 5.4.1\
 New features:
 - Merge of executable for data analysis and function exploration via the new calculation mode variable
+- Debug of not-yet  working feature of the version 5 compared to the version 4
 
 
 Previous versions are:
