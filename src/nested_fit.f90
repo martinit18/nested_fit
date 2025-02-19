@@ -1144,6 +1144,27 @@ PROGRAM NESTED_FIT
     ENDIF
   END SUBROUTINE
 
+  SUBROUTINE CHECK_FUNCTION_DEF_SIZE(func)
+   CHARACTER(LEN=*), INTENT(IN) :: func 
+   WRITE(*,*) LEN_TRIM(func), LEN(func)
+   IF(LEN_TRIM(func).GE.(0.9d0 * LEN(func))) THEN
+      CALL LOG_ERROR_HEADER()
+      CALL LOG_ERROR('Function defition size exceeds 90% of total allowed size. (max='//TRIM(ADJUSTL(INT_TO_STR_INLINE(LEN(func))))//')')
+      CALL LOG_ERROR('Consider shortening your function definition.')
+      CALL LOG_ERROR('Aborting execution...')
+      CALL LOG_ERROR_HEADER()
+      CALL HALT_EXECUTION()
+   ENDIF
+
+   IF(LEN_TRIM(func).GT.(0.8d0 * LEN(func))) THEN
+      CALL LOG_WARNING_HEADER()
+      CALL LOG_WARNING('Function definition size exceeds 80% of total allowed size. (max='//TRIM(ADJUSTL(INT_TO_STR_INLINE(LEN(func))))//')')
+      CALL LOG_WARNING('Any additions to the function might cause an early out.')
+      CALL LOG_WARNING_HEADER()
+      RETURN
+   ENDIF
+  END SUBROUTINE
+
   SUBROUTINE CONFIGURE_USERFUNCTION()
 
    CHARACTER(512)                 :: definition, key
@@ -1171,7 +1192,6 @@ PROGRAM NESTED_FIT
       LEGACY_USERFCN = .TRUE.
    ENDIF
 
-
    ! Check if the function is legacy or not
    ! If the first function is legacy, we don't need to worry about this
    IF(.NOT.LEGACY_USERFCN) THEN
@@ -1183,6 +1203,10 @@ PROGRAM NESTED_FIT
         IF(parse_result(i)%error.NE.0) CALL HALT_EXECUTION()
 
         definition = TRIM(funcname(i)(INDEX(funcname(i), '=')+1:LEN_TRIM(funcname(i))))
+
+        ! Before compiling, check for the definition size, and issue a warning/error accordingly
+        ! This subroutine is allowed to terminate execution if required
+        CALL CHECK_FUNCTION_DEF_SIZE(funcname(i))
         
         ! All fine, so just compile the function
         CALL COMPILE_CACHE_FUNC(parse_result(i), definition)
