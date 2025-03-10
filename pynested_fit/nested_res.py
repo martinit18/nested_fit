@@ -123,8 +123,8 @@ class Analysis(object):
             input_data = yaml.load(f, Loader=SafeLoader)
         
         # Quick parse on the version strings
-        if(not self.check_version(input_data['version'])):
-            sys.exit('Wrong input file version. Please check.')
+        #if(not self.check_version(input_data['version'])):
+        #    sys.exit('Wrong input file version. Please check.')
 
         # Parameter list for build analysis dataframe
         parameters = []
