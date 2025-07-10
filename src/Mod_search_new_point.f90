@@ -20,8 +20,6 @@ MODULE MOD_SEARCH_NEW_POINT
   IMPLICIT NONE
 
   REAL(8), DIMENSION(:), ALLOCATABLE :: live_ave, live_sd
-  INTEGER(4) :: n_call_clusterj=0
-  INTEGER(4), PARAMETER :: n_call_cluster_it_maxj=3, n_call_cluster_maxj=10
 !#ifdef LAPACK_ON
 !  EXTERNAL :: dpotrf, dtrtri, dtrmv
 !#endif

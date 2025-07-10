@@ -1,6 +1,6 @@
 SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_birth_final,live_rank_final,&
    weight,live_final,live_like_max,live_max,mpi_rank,mpi_cluster_size)
-  ! Time-stamp: <Last changed by martino on Tuesday 16 May 2023 at CEST 12:59:49>
+  ! Time-stamp: <Last changed by martino on Thursday 10 July 2025 at CEST 11:29:19>
 
 #ifdef OPENMPI_ON
   USE MPI
@@ -292,93 +292,101 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
 
      !IF (ANY(too_many_tries)) THEN
      !   nstep_final = n - 1
-     !   GOTO 601
-     !END IF
-
-     IF(ALL(too_many_tries)) THEN
-     !If all searches failed to find a new point, a cluster analysis will be performed immediately if clustering is used. Otherwise, the run will end.
+      !   GOTO 601
+      !END IF
+      
+      IF(ALL(too_many_tries)) THEN
+         !If all searches failed to find a new point, a cluster analysis will be performed immediately if clustering is used. Otherwise, the run will end.
 #ifdef OPENMPI_ON
-        ! Signal final data MAXED_OUT
-        CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_DONE_MANY_TRIES, mpi_child_writter_comm, mpi_ierror)
+         ! Signal final data MAXED_OUT
+         CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_DONE_MANY_TRIES, mpi_child_writter_comm, mpi_ierror)
 #endif
-        IF (make_cluster) THEN
-           IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
-              CALL LOG_ERROR_HEADER()
-              CALL LOG_ERROR('Too many cluster analysis for an iteration.')
-              CALL LOG_ERROR('Change cluster recognition parameters.')
-              CALL LOG_ERROR_HEADER()
-              CALL HALT_EXECUTION()
-           END IF
-           IF(n_call_cluster>=n_call_cluster_max) THEN
-              CALL LOG_ERROR_HEADER()
-              CALL LOG_ERROR('Too many cluster analysis.')
-              CALL LOG_ERROR('Change cluster recognition parameters.')
-              CALL LOG_ERROR_HEADER()
-              CALL HALT_EXECUTION()
-           END IF
-           make_cluster_internal=.true.
-           need_cluster=.true.
-           GOTO 901
-        ELSE
-           CALL LOG_WARNING_HEADER()
-           CALL LOG_WARNING('Too many tries to find new live points for try n.: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(itry))))
-           CALL LOG_WARNING('More than '//TRIM(ADJUSTL(INT_TO_STR_INLINE(maxtries))))
-           CALL LOG_WARNING('We take the data as they are :-~')
-           CALL LOG_WARNING_HEADER()
-           nstep_final = n - 1
-           GOTO 601
-        END IF
-    ELSE IF(ANY(too_many_tries)) THEN ! TODO Redo it to work with MPI
-         !If at least one search failed to find a new point, a cluster analysis will be performed after adding the points from the successful searches if clustering is used. Otherwise, the run will end.
-#ifdef OPENMPI_ON
-            ! Signal final data MAXED_OUT
-            CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_DONE_MANY_TRIES, mpi_child_writter_comm, mpi_ierror)
-#endif
-            IF (make_cluster) THEN
-               IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
-                  CALL LOG_ERROR_HEADER()
-                  CALL LOG_ERROR('Too many cluster analysis for an iteration.')
-                  CALL LOG_ERROR('Change cluster recognition parameters.')
-                  CALL LOG_ERROR_HEADER()
-                  CALL HALT_EXECUTION()
-               END IF
-               IF(n_call_cluster>=n_call_cluster_max) THEN
-                  CALL LOG_ERROR_HEADER()
-                  CALL LOG_ERROR('Too many cluster analysis.')
-                  CALL LOG_ERROR('Change cluster recognition parameters.')
-                  CALL LOG_ERROR_HEADER()
-                  CALL HALT_EXECUTION()
-               END IF
-               make_cluster_internal=.true.
-               need_cluster=.true.
-            ELSE
+         IF (make_cluster) THEN
+            IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
                CALL LOG_WARNING_HEADER()
-               CALL LOG_WARNING('Too many tries to find new live points for try n.: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(itry))))
-               CALL LOG_WARNING('More than '//TRIM(ADJUSTL(INT_TO_STR_INLINE(maxtries*maxntries))))
+               CALL LOG_WARNING('Too many cluster analysis for an iteration.')
+               CALL LOG_WARNING('Change cluster recognition parameters.')
                CALL LOG_WARNING('We take the data as they are :-~')
                CALL LOG_WARNING_HEADER()
                nstep_final = n - 1
                GOTO 601
             END IF
-     END IF
-     ! -------------------------------------!
-     !     Subloop for threads starts       !
-     ! -------------------------------------!      
-     
-     
-     DO it = 1, nth
-        
-        ! If the parallely computed live point is still good, take it for loop calculation.
-        ! Otherwise skip it
-        IF ((live_like_new(it).GT.min_live_like)) THEN
-           n = n + 1
-           n_call_cluster_it=0
-           n_mat_cov=n_mat_cov+1
-        ELSE
-           CYCLE
-        ENDIF
-
-
+            IF(n_call_cluster>=n_call_cluster_max) THEN
+               CALL LOG_WARNING_HEADER()
+               CALL LOG_WARNING('Too many cluster analysis.')
+               CALL LOG_WARNING('Change cluster recognition parameters.')
+               CALL LOG_WARNING('We take the data as they are :-~')
+               CALL LOG_WARNING_HEADER()
+               nstep_final = n - 1
+               GOTO 601
+            END IF
+            make_cluster_internal=.true.
+            need_cluster=.true.
+            GOTO 901
+         ELSE
+            CALL LOG_WARNING_HEADER()
+            CALL LOG_WARNING('Too many tries to find new live points for try n.: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(itry))))
+            CALL LOG_WARNING('More than '//TRIM(ADJUSTL(INT_TO_STR_INLINE(maxtries))))
+            CALL LOG_WARNING('We take the data as they are :-~')
+            CALL LOG_WARNING_HEADER()
+            nstep_final = n - 1
+            GOTO 601
+         END IF
+      ELSE IF(ANY(too_many_tries)) THEN ! TODO Redo it to work with MPI
+         !If at least one search failed to find a new point, a cluster analysis will be performed after adding the points from the successful searches if clustering is used. Otherwise, the run will end.
+#ifdef OPENMPI_ON
+         ! Signal final data MAXED_OUT
+         CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_DONE_MANY_TRIES, mpi_child_writter_comm, mpi_ierror)
+#endif
+         IF (make_cluster) THEN
+            IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
+               CALL LOG_WARNING_HEADER()
+               CALL LOG_WARNING('Too many cluster analysis for an iteration.')
+               CALL LOG_WARNING('Change cluster recognition parameters.')
+               CALL LOG_WARNING('We take the data as they are :-~')
+               CALL LOG_WARNING_HEADER()
+               nstep_final = n - 1
+               GOTO 601
+            END IF
+            IF(n_call_cluster>=n_call_cluster_max) THEN
+               CALL LOG_WARNING_HEADER()
+               CALL LOG_WARNING('Too many cluster analysis.')
+               CALL LOG_WARNING('Change cluster recognition parameters.')
+               CALL LOG_WARNING('We take the data as they are :-~')
+               CALL LOG_WARNING_HEADER()
+               nstep_final = n - 1
+               GOTO 601
+            END IF
+            make_cluster_internal=.true.
+            need_cluster=.true.
+         ELSE
+            CALL LOG_WARNING_HEADER()
+            CALL LOG_WARNING('Too many tries to find new live points for try n.: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(itry))))
+            CALL LOG_WARNING('More than '//TRIM(ADJUSTL(INT_TO_STR_INLINE(maxtries*maxntries))))
+            CALL LOG_WARNING('We take the data as they are :-~')
+            CALL LOG_WARNING_HEADER()
+            nstep_final = n - 1
+            GOTO 601
+         END IF
+      END IF
+      ! -------------------------------------!
+      !     Subloop for threads starts       !
+      ! -------------------------------------!      
+      
+      
+      DO it = 1, nth
+         
+         ! If the parallely computed live point is still good, take it for loop calculation.
+         ! Otherwise skip it
+         IF ((live_like_new(it).GT.min_live_like)) THEN
+            n = n + 1
+            n_call_cluster_it=0
+            n_mat_cov=n_mat_cov+1
+         ELSE
+            CYCLE
+         ENDIF
+         
+         
         ! Calculate steps, mass and rest each time
         ! trapezoidal rule applied here (Skilling Entropy 2006)
         !tlnmass(n) = DLOG(-(tstep(n+1)-tstep(n-1))/2.d0)
