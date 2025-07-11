@@ -319,7 +319,6 @@ More details on the function definitions are presented below [here](#Function-De
 - LaTeX specification [here](#LaTeX-Specification).
 - C++/Fortran API specification [here](#C++/Fortran-Specification).
 
-
 ```yaml
 search:
     livepoints: 200     # Number of live points
@@ -330,7 +329,20 @@ search:
     tries_mult: 100     # Max tries multiplier
     num_tries: 1        # Number of runs
     max_steps: 100000   # Max number of steps before stop
+```
 
+For the moment there are, 
+- two random walks: `RANDOM_WALK`, `RANDOM_WALK_NO_DB`. 
+For `RANDOM_WALK_NO_DB` the detailed balance is not respected in some cases but it can be more efficient for finding the minima for certain cases.
+- A uniform search around each live point `UNIFORM`, 
+- Three versions of slice sampling: `SLICE_SAMPLING`, `SLICE_SAMPLING_TRANSF`,`SLICE_SAMPLING_ADAPT`.  The first two correspond, respectively, to the search being done in two different spaces (transformed and real) with the first one faster than the second one. `SLICE_SAMPLING_ADAPT` an adaptable step but the detailed balance is maybe not respected. 
+
+The first two parameters of the above line are specific to the search algorithm:
+- `RANDOM_WALK`,  `RANDOM_WALK_NO_DB` par. 1: fraction of standard deviation for each jump, par. 2: number of jumps. Suggested values: 0.1-0.2, 10-40. 
+-  `SLICE_SAMPLING`, `SLICE_SAMPLING_TRANSF`, and `SLICE_SAMPLING_ADAPT` par. 1: fraction of standard deviation for segment exploration, par. 2: number of jumps. Suggested values: ~1, 3-5. 
+- `UNIFORM` par. 1: fraction of standard deviation for the box size, par. 2: number of jumps. Suggested values: 0.1-1, 1.
+
+```yaml
 convergence:
     method:    LIKE_ACC  # Method used for convergence 
     accuracy:  1.E-05    # Evidence final accuracy (in this case)
@@ -345,14 +357,7 @@ For the moment, there are three convergence methods:
 After convergence is reached, all remaining live points are assigned: 
 - the logarithm of the likelihoods averaged over the live points (`LIKE_ACC` case),
 - the opposite of the energies averaged over the live points (`ENERGY_ACC` and `ENERGY_MAX` cases).
-```
-RANDOM_WALK         # Type of search of live points
-0.1  20   100  10   # Param. search algo.(2), max n. tries, max of max tries
-```
-For the moment, a random walk (`RANDOM_WALK`), a uniform search around each live point (`UNIFORM`), two versions of slice sampling (`SLICE_SAMPLING_TRANSF` and `SLICE_SAMPLING`), corresponding to the search being done in two different spaces (transformed and real), and slice sampling with an adaptable step (`SLICE_SAMPLING_ADAPT`) are implemented. The first two parameters of the above line are specific to the search algorithm:
-- `RANDOM_WALK` par. 1: fraction of standard deviation for each jump, par. 2: number of jumps. Suggested values: 0.1-0.2, 10-40.
-- `SLICE_SAMPLING_TRANSF`, `SLICE_SAMPLING` and `SLICE_SAMPLING_ADAPT` par. 1: fraction of standard deviation for segment exploration, par. 2: number of jumps. Suggested values: ~1, 3-5.
-- `UNIFORM` par. 1: fraction of standard deviation for the box size, par. 2: number of jumps. Suggested values: 0.1-1, 1.
+
 
 
 ```yaml
@@ -470,6 +475,7 @@ New features:
 - Merge of executable for data analysis and function exploration via the new calculation mode variable
 - Debug of not-yet  working feature of the version 5 compared to the version 4
 - New outputs with maxima of each cluster
+- New RANDOM_WALK function with detailed balance respected
 
 
 Previous versions are:

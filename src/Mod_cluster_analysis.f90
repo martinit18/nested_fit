@@ -1,5 +1,5 @@
 MODULE MOD_CLUSTER_ANALYSIS
-  ! Automatic Time-stamp: <Last changed by martino on Monday 03 May 2021 at CEST 12:08:59>
+  ! Automatic Time-stamp: <Last changed by martino on Friday 11 July 2025 at CEST 15:35:10>
   ! Module for cluster analysis for point in n dimensions
   !
   ! To eventually change to select and add other cluster analyses (eventually to be selected in the input file)
@@ -913,7 +913,7 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
   END SUBROUTINE REMAKE_CLUSTER_STD
 
    !--------------------------------------------------------------------------------------------------------------
-
+  
   SUBROUTINE MAKE_CLUSTER_MAX(p,val,icl,p_max,max_val)
     ! Find maximum value of the cluster and corresponding point
     REAL(8), DIMENSION(np,ndim), INTENT(IN) :: p ! Input points
@@ -922,41 +922,41 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     ! Output variables
     REAL(8), DIMENSION(ndim), INTENT(OUT) :: p_max ! point with maximum value in the cluster
     REAL(8), INTENT(OUT) :: max_val ! maximum value of the cluster
-
+    
     INTEGER(4) :: j
-
+    
     p_max = 0.
     max_val = 0.
-
+    
     ! Recognize cluster elements and find the maximum value----------------
     DO j=np,1,-1 ! Loop from the end to the beginning to find the maximum value
-        IF(p_cluster(j).EQ.icl) THEN
-           ! Because p and val are ordered, the maximum value is the last one of the cluster
-           max_val = val(j)
-           p_max = p(j,:)
+       IF(p_cluster(j).EQ.icl) THEN
+          ! Because p and val are ordered, the maximum value is the last one of the cluster
+          max_val = val(j)
+          p_max = p(j,:)
           EXIT
-        END IF
+       END IF
     END DO
-
-
+    
+    
   END SUBROUTINE MAKE_CLUSTER_MAX
-
-
-     !--------------------------------------------------------------------------------------------------------------
-
+  
+  
+  !--------------------------------------------------------------------------------------------------------------
+  
   SUBROUTINE WRITE_CLUSTER_DATA(p,val)
     ! Write information about the clusters to files 
     REAL(8), DIMENSION(np,ndim), INTENT(IN) :: p ! Input points
     REAL(8), DIMENSION(np), INTENT(IN) :: val ! Input likelihood values
-
+    
     REAL(8), DIMENSION(ndim) :: cluster_max
     REAL(8) :: cluster_max_val
-
+    
     INTEGER(4) :: k
-
+    
     OPEN(UNIT=10, FILE='nf_output_cluster_max.dat', STATUS='unknown')
     WRITE(10,*) '# Cluster n.\t', 'Max. like value\t', 'Point with max. like value'
-
+    
     DO k=1,ncluster
        ! Write information about the max of the cluster
        ! Calculate the maximum value and the point with maximum value
@@ -966,10 +966,10 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
        ! Write cluster information to files
        WRITE(10,*) k, cluster_max_val, cluster_max
     END DO
-
+    
     CLOSE(10)
-
-
+    
+    
   END SUBROUTINE WRITE_CLUSTER_DATA
 
 

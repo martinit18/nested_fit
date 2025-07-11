@@ -95,7 +95,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
 
   LOGICAL :: make_cluster_internal, need_cluster
   INTEGER(4) :: n_call_cluster, n_call_cluster_it, n_mat_cov
-  INTEGER(4), PARAMETER :: n_call_cluster_it_max=3, n_call_cluster_max=10
+  INTEGER(4), PARAMETER :: n_call_cluster_it_max=10, n_call_cluster_max=100
 
   PROFILED(NESTED_SAMPLING)
 
@@ -259,7 +259,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
      ! Find a new live point
       
 901   IF(make_cluster_internal) THEN
-         CALL LOG_TRACE('Performing cluster analysis. Number of step = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(n))))
+         CALL LOG_MESSAGE('Performing cluster analysis. Number of analyses = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(n_call_cluster+1))))
          CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
          cluster_on = .true.
          make_cluster_internal=.false.
