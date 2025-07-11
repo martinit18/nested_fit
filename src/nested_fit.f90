@@ -4,6 +4,7 @@ PROGRAM NESTED_FIT
   ! Please read README and LICENSE files for more information
   !
   ! 5.4  Merge of executable for data analysis and function exploration
+  !      New outout with max of clusters in a file
   ! 5.3  New innterpolation functions in python library 
   !      Live display when sampling from python
   !      Works in console and jupyter notebooks
@@ -117,7 +118,7 @@ PROGRAM NESTED_FIT
    USE MOD_OPTIONS
    ! Module for the input parameter definition
    USE MOD_PARAMETERS
-   ! Module for likelihood for data analysis
+   ! Module for likelihood for data analysis and function exploration
    USE MOD_LIKELIHOOD_GEN
    ! Module for search new point
    USE MOD_SEARCH_NEW_POINT

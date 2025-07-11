@@ -179,7 +179,6 @@ CONTAINS
     ! Other variables
     INTEGER(4) :: i, l, irn
     REAL(8) :: rn
-    INTEGER(4) :: n_call_cluster_itj
     REAL(8) :: sdfraction
     INTEGER(4) :: njump
     REAL(8) :: loglike
@@ -198,7 +197,6 @@ CONTAINS
     too_many_tries = .false.
     gval = 0.
 
-    n_call_cluster_itj=0
     sdfraction=search_par1
     njump=INT(search_par2)
 
@@ -408,7 +406,6 @@ CONTAINS
     ! Other variables
     INTEGER(4) :: i, l, irn, j
     REAL(8) :: rn, frac
-    INTEGER(4) :: n_call_cluster_itj
     INTEGER(4) :: nb_cube, njump
     REAL(8) :: loglike
 
@@ -425,7 +422,6 @@ CONTAINS
     too_many_tries = .false.
     gval = 0.
     frac=search_par1
-    n_call_cluster_itj=0
     nb_cube=0
     njump=INT(search_par2)
 
@@ -638,7 +634,6 @@ SUBROUTINE SLICE_SAMPLING_TRANSF(n,itry,min_live_like,live_like,live, &
     ! Other variables
     INTEGER(4) :: i, l, j, kr, kl
     REAL(8) :: rn
-    INTEGER(4) :: n_call_cluster_itj
     !INTEGER(4) :: dim_eff
     REAL(8), DIMENSION(:,:),ALLOCATABLE :: basis
     REAL(8), DIMENSION(:), ALLOCATABLE :: left, right, left_prov,right_prov
@@ -658,7 +653,6 @@ SUBROUTINE SLICE_SAMPLING_TRANSF(n,itry,min_live_like,live_like,live, &
     istart   = 0
     n_ntries = 0
     too_many_tries = .false.
-    n_call_cluster_itj=0
     gval = 0.
     size_jump=search_par1
     init_fail=0
@@ -873,7 +867,6 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     ! Other variables
     INTEGER(4) :: i, l, j, kr, kl, m
     REAL(8) :: rn
-    INTEGER(4) :: n_call_cluster_itj
     REAL(8), DIMENSION(:,:),ALLOCATABLE :: basis_eff, basis
     REAL(8), DIMENSION(npar) :: left, right
     REAL(8), DIMENSION(:,:), ALLOCATABLE  :: live_cov, live_chol
@@ -888,7 +881,6 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     istart   = 0
     n_ntries = 0
     too_many_tries = .false.
-    n_call_cluster_itj=0
     gval = 0.
     !dim_eff=npar-SUM(par_fix) !number of parameters not fixed
     size_jump=search_par1
@@ -1106,7 +1098,6 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     ! Other variables
     INTEGER(4) :: i, l, j, k
     REAL(8) :: rn
-    INTEGER(4) :: n_call_cluster_itj
     REAL(8), DIMENSION(:,:),ALLOCATABLE :: basis
     REAL(8), DIMENSION(:), ALLOCATABLE :: left, right, left_prov,right_prov
     REAL(8), DIMENSION(:,:), ALLOCATABLE  :: live_cov, live_chol, inv_chol
@@ -1125,7 +1116,6 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     istart   = 0
     n_ntries = 0
     too_many_tries = .false.
-    n_call_cluster_itj=0
     gval = 0.
     size_jump=search_par1
     init_fail=0

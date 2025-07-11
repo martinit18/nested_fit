@@ -9,10 +9,10 @@ MODULE MOD_CLUSTER_ANALYSIS
   IMPLICIT NONE
   
   LOGICAL :: cluster_on = .false.
-  INTEGER(4) :: np=0, ndim=0, ncluster=1
-  INTEGER(4), PARAMETER :: ncluster_max=500
-  REAL(8), ALLOCATABLE, DIMENSION(:,:) :: cluster_std, cluster_mean
-  INTEGER(4), ALLOCATABLE, DIMENSION(:) :: p_cluster, cluster_np
+  INTEGER(4) :: np=0, ndim=0, ncluster=1 
+  INTEGER(4), PARAMETER :: ncluster_max=500 ! maximum number of clusters allowed in the analysis
+  REAL(8), ALLOCATABLE, DIMENSION(:,:) :: cluster_std, cluster_mean ! standard deviation, mean of the cluster
+  INTEGER(4), ALLOCATABLE, DIMENSION(:) :: p_cluster, cluster_np ! cluster number of each point and number of points in each cluster
 
 
 
@@ -260,9 +260,7 @@ CONTAINS
 
     OPEN (UNIT=10, FILE='nf_output_cluster_mean_std.dat', STATUS='unknown')
     DO k=1,ncluster
-       DO l=1,ndim
-          WRITE(10,*) k, cluster_np(k), l, cluster_mean(k,l), cluster_std(k,l)
-       END DO
+        WRITE(10,*) j, cluster_np(j), cluster_mean(j,:), cluster_std(j,:)
     END DO
     CLOSE(10)
 
@@ -439,15 +437,11 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     OPEN (UNIT=10, FILE='nf_output_cluster_mean_std.dat', STATUS='unknown')
     IF(COUNT(p_cluster==0)==0) THEN
       DO j=1,ncluster
-         DO k=1,ndim
-            WRITE(10,*) j, cluster_np(j), k, cluster_mean(j,k), cluster_std(j,k)
-         END DO
+        WRITE(10,*) j, cluster_np(j), cluster_mean(j,:), cluster_std(j,:)
       END DO
     ELSE
       DO j=0,ncluster
-         DO k=1,ndim
-            WRITE(10,*) j, cluster_np(j), k, cluster_mean(j,k), cluster_std(j,k)
-         END DO
+        WRITE(10,*) j, cluster_np(j), cluster_mean(j,:), cluster_std(j,:)
       END DO  
     END IF
     CLOSE(10)
@@ -760,9 +754,7 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
 
     OPEN (UNIT=10, FILE='nf_output_cluster_mean_std.dat', STATUS='unknown')
     DO j=1,ncluster
-       DO k=1,ndim
-         WRITE(10,*) j, cluster_np(j), k, cluster_mean(j,k), cluster_std(j,k)
-       END DO
+        WRITE(10,*) j, cluster_np(j), cluster_mean(j,:), cluster_std(j,:)
     END DO
     CLOSE(10)
 
@@ -919,6 +911,66 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     END IF
 
   END SUBROUTINE REMAKE_CLUSTER_STD
+
+   !--------------------------------------------------------------------------------------------------------------
+
+  SUBROUTINE MAKE_CLUSTER_MAX(p,val,icl,p_max,max_val)
+    ! Find maximum value of the cluster and corresponding point
+    REAL(8), DIMENSION(np,ndim), INTENT(IN) :: p ! Input points
+    REAL(8), DIMENSION(np), INTENT(IN) :: val ! Input likelihood values
+    INTEGER(4), INTENT(IN) :: icl
+    ! Output variables
+    REAL(8), DIMENSION(ndim), INTENT(OUT) :: p_max ! point with maximum value in the cluster
+    REAL(8), INTENT(OUT) :: max_val ! maximum value of the cluster
+
+    INTEGER(4) :: j
+
+    p_max = 0.
+    max_val = 0.
+
+    ! Recognize cluster elements and find the maximum value----------------
+    DO j=np,1,-1 ! Loop from the end to the beginning to find the maximum value
+        IF(p_cluster(j).EQ.icl) THEN
+           ! Because p and val are ordered, the maximum value is the last one of the cluster
+           max_val = val(j)
+           p_max = p(j,:)
+          EXIT
+        END IF
+    END DO
+
+
+  END SUBROUTINE MAKE_CLUSTER_MAX
+
+
+     !--------------------------------------------------------------------------------------------------------------
+
+  SUBROUTINE WRITE_CLUSTER_DATA(p,val)
+    ! Write information about the clusters to files 
+    REAL(8), DIMENSION(np,ndim), INTENT(IN) :: p ! Input points
+    REAL(8), DIMENSION(np), INTENT(IN) :: val ! Input likelihood values
+
+    REAL(8), DIMENSION(ndim) :: cluster_max
+    REAL(8) :: cluster_max_val
+
+    INTEGER(4) :: k
+
+    OPEN(UNIT=10, FILE='nf_output_cluster_max.dat', STATUS='unknown')
+    WRITE(10,*) '# Cluster n.\t', 'Max. like value\t', 'Point with max. like value'
+
+    DO k=1,ncluster
+       ! Write information about the max of the cluster
+       ! Calculate the maximum value and the point with maximum value
+       cluster_max = 0.
+       cluster_max_val = 0.
+       CALL MAKE_CLUSTER_MAX(p,val,k,cluster_max,cluster_max_val)
+       ! Write cluster information to files
+       WRITE(10,*) k, cluster_max_val, cluster_max
+    END DO
+
+    CLOSE(10)
+
+
+  END SUBROUTINE WRITE_CLUSTER_DATA
 
 
   !--------------------------------------------------------------------------------------------------------------

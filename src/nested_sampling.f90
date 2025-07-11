@@ -677,6 +677,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
 
   ! Deallocate variables for cluster analysis
   IF (cluster_on) THEN
+      ! Write cluster max information
+      IF(cluster_on) THEN
+         CALL WRITE_CLUSTER_DATA(live,live_like)
+      END IF
      ! Reset cluster analysis
      cluster_on = .FALSE.
      CALL DEALLOCATE_CLUSTER()

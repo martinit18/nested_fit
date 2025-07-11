@@ -255,6 +255,8 @@ The corresponding information gain and the Bayesian complexity are also provided
 - `nf_output_diag.dat`: contains likelihood values corresponding to the birth of the discarded and final live points, and the rank of the new live point once inserted in the enemble. These values are used for statistics of the evidence (with the help of Anesthetic library) and for diagnostics.
 For this purpose, the python module `nested_py` can be used also for compressed `nf_output_points.txt` files (using gzip with the name `nf_output_points.txt.gz`).
 Together with this file, also the files `nf_output_points.paramnames` and `nf_output_points.ranges` are created for the use of GetDist and Anesthetic python libraries.
+- `nf_output_cluster_mean_std.dat`: contains the number of clusters, number of point per clusters, and mean and standard deviations for each cluster (if the clustering option is activated).
+- `nf_output_cluster_max.dat`: contains the number of clusters, the maximum value of the likelihood and the corresponding parameter values (if the clustering option is activated).
 
 **Details of the input file line by line**
 
@@ -463,10 +465,11 @@ Examples of use of a legacy function can be found in `examples/data_analysis/aaa
 
 ## Present version and history of the past versions
 
-The present version is 5.4.1\
+The present version is 5.4.3\
 New features:
 - Merge of executable for data analysis and function exploration via the new calculation mode variable
 - Debug of not-yet  working feature of the version 5 compared to the version 4
+- New outputs with maxima of each cluster
 
 
 Previous versions are:
