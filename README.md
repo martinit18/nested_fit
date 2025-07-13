@@ -332,8 +332,9 @@ search:
 ```
 
 For the moment there are, 
-- three random walks: `RANDOM_WALK`, `RANDOM_WALK_SYN`, `RANDOM_WALK_NO_DB`. 
-For `RANDOM_WALK_NO_DB` (where two alternative methods are implemented, see Ref. [C]), and maybe `RANDOM_WALK_SYN` (where only the synthetic live point creation is implemented), the detailed balance is not respected in some cases but it can be more efficient for finding the minima for certain cases.
+- four random walks: `RANDOM_WALK`, `RANDOM_WALK_SYN`, `RANDOM_WALK_RECENT`,`RANDOM_WALK_NO_DB`. 
+For `RANDOM_WALK_NO_DB` (where two alternative methods are implemented, see Ref. [C]) or just one:  `RANDOM_WALK_SYN` (where only the synthetic live point creation is implemented) and `RANDOM_WALK_RECENT` where we recenter with respect to the mean value of the live point. 
+Except for the simplest researche, the detailed balance is maybe not respected but it can be more efficient for finding the minima for certain cases.
 - A uniform search around each live point `UNIFORM`, 
 - Three versions of slice sampling: `SLICE_SAMPLING`, `SLICE_SAMPLING_TRANSF`,`SLICE_SAMPLING_ADAPT`.  The first two correspond, respectively, to the search being done in two different spaces (transformed and real) with the first one faster than the second one. `SLICE_SAMPLING_ADAPT` an adaptable step but the detailed balance is maybe not respected. 
 

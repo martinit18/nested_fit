@@ -1,5 +1,5 @@
 MODULE MOD_SEARCH_NEW_POINT
-  ! Automatic Time-stamp: <Last changed by martino on Sunday 13 July 2025 at CEST 23:58:16>
+  ! Automatic Time-stamp: <Last changed by martino on Monday 14 July 2025 at CEST 00:36:01>
   ! Module for search of new points
   
   ! Module for the input parameter definition
@@ -44,8 +44,10 @@ CONTAINS
        searchid = 4
     ELSE IF(search_method.EQ.'RANDOM_WALK_SYN') THEN
        searchid = 5
-    ELSE IF(search_method.EQ.'RANDOM_WALK_NO_DB') THEN
+    ELSE IF(search_method.EQ.'RANDOM_WALK_RECENT') THEN
        searchid = 6
+    ELSE IF(search_method.EQ.'RANDOM_WALK_NO_DB') THEN
+       searchid = 7
     ELSE
        CALL LOG_ERROR_HEADER()
        CALL LOG_ERROR('Error of the search type name in Mod_search_new_point module.')
@@ -158,6 +160,9 @@ CONTAINS
          CALL RANDOM_WALK_SYN(n,itry,min_live_like,live_like,live, &
           live_like_new,live_new,icluster,ntries,too_many_tries)
       CASE (6)
+         CALL RANDOM_WALK_RECENT(n,itry,min_live_like,live_like,live, &
+          live_like_new,live_new,icluster,ntries,too_many_tries)
+      CASE (7)
          CALL RANDOM_WALK_NO_DB(n,itry,min_live_like,live_like,live, &
           live_like_new,live_new,icluster,ntries,too_many_tries)
     END SELECT
@@ -637,8 +642,185 @@ CONTAINS
              END IF
           END IF
        END DO
+       !!$OMP END PARALLEL DO
+
+       ! Check if the new point is inside the parameter volume defined by the minimum likelihood of the live points
+       IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
+          start_jump = new_jump
+       ELSE
+          ! Check failures
+          ! message of too many failures
+          ! Choose another point determinated with a specific method (at present mine)
+          
+          !
+          ! But before, if you already tried many times, do something different or eventually gave up
+          IF (ntries.GT.maxtries) THEN   ! Loop for ntries > maxtries
+             n_ntries = n_ntries + 1
+             ! If nothing is found, restart from a livepoint
+             ntries = 1
+             
+             !
+             !  WRITE(*,*) 'Too many tries to find new live points for try n.', &
+             !  itry,'!!!! More than',maxtries,&
+             !  'n_ntries =',n_ntries,' over ', maxntries, 'n. step =', n
+             
+             ! If you already did too much tries, gave up or start a cluster analysis
+             IF (n_ntries.GE.maxntries) THEN
+                too_many_tries=.true.
+                live_like_new=min_live_like
+                live_new = live(1,:)
+                GOTO 600
+             END IF
+             ! Some test for desesperate seeking (for presence of several maxima)
+
+
+             ! DO CLUSTER ANALYSIS if selected, or use other randomizations
+             ! For all live points, assign a cluster number, which is used to calculate specific standard deviation
+             ! for the search of the new point
+             
+             IF(.not.cluster_on) THEN
+                
+                ! My new technique: mix parameter values from different sets to hope to find a good new value
+!!$OMP PARALLEL DO
+                DO l=1,npar
+                   IF (par_fix(l).NE.1) THEN
+                      CALL RANDOM_NUMBER(rn)
+                      istart= FLOOR((nlive-1)*rn+1)
+                      new_jump(l) = live(istart,l)
+                   END IF
+                END DO
 !!$OMP END PARALLEL DO
-       
+                !
+                
+                IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
+                   start_jump = new_jump
+                ELSE
+                   ! Choose a new random live point and restart all
+                   CALL RANDOM_NUMBER(rn)
+                   istart= FLOOR((nlive-1)*rn+1)
+                   start_jump = live(istart,:)
+                END IF
+                GOTO 500
+             ELSE
+                ! Choose a new random live point and restart all
+                CALL RANDOM_NUMBER(rn)
+                istart= FLOOR((nlive-1)*rn+1)
+                start_jump = live(istart,:)
+             END IF
+             GOTO 400
+             
+          END IF    ! End loop for ntries > maxtries
+          
+          GOTO 501  ! Restart looking for new points without changing the starting point
+          
+       END IF  ! End of loop with failure for likelihood value
+    END DO
+
+
+    ! Last(maybe useless) check
+    loglike = LOGLIKELIHOOD(npar, new_jump)
+    IF (loglike.LT.min_live_like) GOTO 500
+
+    ! Take the last point after jumps as new livepoint
+    live_new = new_jump
+    live_like_new = loglike
+
+600 CONTINUE
+
+    RETURN
+
+
+  END SUBROUTINE RANDOM_WALK_SYN 
+
+  ! ------------------------------------------------------------------------------------
+
+! ------------------------------------------------------------------------------------
+
+  SUBROUTINE RANDOM_WALK_RECENT(n,itry,min_live_like,live_like,live, &
+       live_like_new,live_new,icluster,ntries,too_many_tries)
+    ! Random walk search function with recentering the serarch of live points (Leo's. method)
+    
+    
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in
+    
+    ! MCMC search function from Leo's ideas and mine
+    INTEGER(4), INTENT(IN) :: n, itry
+    REAL(8), INTENT(IN) :: min_live_like
+    REAL(8), INTENT(IN), DIMENSION(nlive) :: live_like
+    REAL(8), INTENT(IN), DIMENSION(nlive,npar) :: live
+    REAL(8), INTENT(OUT) :: live_like_new
+    REAL(8), DIMENSION(npar), INTENT(OUT) :: live_new
+    INTEGER(4), INTENT(OUT) :: icluster, ntries
+    LOGICAL, INTENT(OUT) :: too_many_tries
+    ! MCMC new point search variables
+    REAL(8) :: gval
+    REAL(8), DIMENSION(npar) :: start_jump, new_jump
+    INTEGER(4) :: istart, n_ntries
+    ! Other variables
+    INTEGER(4) :: i, l, irn
+    REAL(8) :: rn
+    REAL(8) :: sdfraction
+    INTEGER(4) :: njump
+    REAL(8) :: loglike
+
+
+    PROFILED(RANDOM_WALK_RECENT)
+
+    ! Find new live points
+    ! ----------------------------------FIND_POINT_MCMC------------------------------------
+    new_jump = par_in
+    live_new = 0.
+    live_like_new = 0.
+    ntries   = 1
+    istart   = 0
+    n_ntries = 0
+    too_many_tries = .false.
+    gval = 0.
+
+    sdfraction=search_par1
+    njump=INT(search_par2)
+
+    ! Select a live point as starting point
+    CALL RANDOM_NUMBER(rn)
+    istart= FLOOR((nlive-1)*rn+1)
+    start_jump = live(istart,:)
+
+
+    ! Calculate momenta of the live points
+400 IF (cluster_on) THEN
+       ! Identify cluster appartenance
+       icluster = p_cluster(istart)
+       ! Get for the specific cluster if the cluster analysis is on
+       ! Standard deviation
+       live_sd(:) = cluster_std(icluster,:)
+       IF(cluster_std(icluster,1).EQ.0.) THEN
+          ! If the cluster is formed only from one point, take the standard standard deviation
+          CALL REMAKE_LIVE_MEAN_SD(live)
+       END IF
+       ! and mean
+       live_ave(:) = cluster_mean(icluster,:)
+    END IF
+
+
+
+    ! Make several consecutive casual jumps in the region with loglikelyhood > minlogll
+500 CONTINUE
+    ntries = 0
+    DO i=1,njump
+501    CONTINUE
+       ntries = ntries + 1
+       DO l=1,npar
+          IF (par_fix(l).NE.1) THEN
+502          CALL RANDOM_NUMBER(rn)
+             new_jump(l) = start_jump(l) + live_sd(l)*sdfraction*(2.*rn-1.)
+             IF (new_jump(l).LT.par_bnd1(l).OR.new_jump(l).GT.par_bnd2(l)) THEN
+                ntries = ntries + 1
+                GOTO 502
+             END IF
+          END IF
+       END DO
+       !!$OMP END PARALLEL DO
+
        ! Check if the new point is inside the parameter volume defined by the minimum likelihood of the live points
        IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
           start_jump = new_jump
@@ -667,18 +849,15 @@ CONTAINS
                 GOTO 600
              END IF
              
-             ! Alternate the two techniques to find a new life point
-             ! My new technique: mix parameter values from different sets to hope to find a good new value
+             ! Leo's technique, go between the average and this point
 !!$OMP PARALLEL DO
              DO l=1,npar
                 IF (par_fix(l).NE.1) THEN
                    CALL RANDOM_NUMBER(rn)
-                   istart= FLOOR((nlive-1)*rn+1)
-                   new_jump(l) = live(istart,l)
+                   new_jump(l) = live_ave(l) + (new_jump(l) - live_ave(l))*rn
                 END IF
              END DO
 !!$OMP END PARALLEL DO
-             
              !
              
              IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
@@ -689,15 +868,15 @@ CONTAINS
                 istart= FLOOR((nlive-1)*rn+1)
                 start_jump = live(istart,:)
              END IF
-             GOTO 500
+             GOTO 400
              
           END IF    ! End loop for ntries > maxtries
           
           GOTO 501  ! Restart looking for new points without changing the starting point
-          
+       
        END IF  ! End of loop with failure for likelihood value
     END DO
-
+    
     ! Final check of the last point for gaussian priors
     !CALL USERCONDITIONS(funcname,npar,par_fix,new_jump,par_in,par_step,par_bnd1,par_bnd2, &
     !     live_sd,start_jump,sdfraction,outlimits)
@@ -726,9 +905,11 @@ CONTAINS
     RETURN
 
 
-  END SUBROUTINE RANDOM_WALK_SYN 
+  END SUBROUTINE RANDOM_WALK_RECENT 
 
   ! ------------------------------------------------------------------------------------
+
+
 
   SUBROUTINE UNIFORM(n,itry,min_live_like,live_like,live, &
        live_like_new,live_new,icluster,ntries,too_many_tries)
