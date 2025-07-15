@@ -36,6 +36,9 @@ dist/
 # Python virtual environments
 .venv/
 
+# Python wheel building toolkit house
+wheelhouse/
+
 # Jupyter cache
 .virtual_documents/
 

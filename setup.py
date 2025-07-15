@@ -45,10 +45,12 @@ class NFInstallExt(install_lib):
                             os.path.isfile(os.path.join(bin_dir, file)) and file.startswith('nested_fit')
                            ]
 
+        # HACK: (César) The package name is hardcoded...
+        pathlib.Path(os.path.join(self.build_dir, 'pynested_fit/')).mkdir(exist_ok=True)
         for file in additional_files:
-            shutil.copy(file, os.path.join(self.build_dir, os.path.basename(file)))
+            shutil.copy(file, os.path.join(self.build_dir, 'pynested_fit/' + os.path.basename(file)))
         
-        self.distribution.data_files = [os.path.join(self.build_dir, os.path.basename(file)) for file in additional_files]
+        self.distribution.data_files = [os.path.join(self.build_dir, 'pynested_fit/' + os.path.basename(file)) for file in additional_files]
 
         print('Dist files: ', self.distribution.data_files)
         print('Dist files: ', additional_files)
@@ -91,7 +93,9 @@ class NFBuildExt(build_ext):
 
         for ext in self.extensions:
             self.build_nf(ext)
-        super().run()
+
+        # NOTE: (César) Do not run the base method, we don't want a .so file out of this
+        # super().run() 
 
     def build_nf(self, ext: CMakeExt):
         print('DBG | BuildNF')
@@ -114,9 +118,6 @@ class NFBuildExt(build_ext):
                      os.path.isfile(os.path.join(bin_dir, file)) and file.startswith('nested_fit')
                     ]
         print('Bin file(s) found:', bin_files)
-
-        for file in bin_files:
-            shutil.copy(file, pathlib.Path(self.get_ext_fullpath(ext.name)))
 
 
 setup(
