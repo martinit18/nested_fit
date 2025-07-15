@@ -604,7 +604,9 @@ class Configurator():
             while self._nf_process.poll() is None:
                 # Added to avoit a strange error (the program start but never finish)
                 _, errors = self._nf_process.communicate() 
-                print('Errors: ', errors)
+                # Only print if there are errors
+                if errors:
+                    print('Errors: ', errors)
 
         elif output_mode == 'live':
 
