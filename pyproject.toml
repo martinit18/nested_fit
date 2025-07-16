@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nested_fit"
-version = "5.4.4"
+version = "5.4.5"
 description = "The nested_fit package."
 
 authors = [
@@ -32,6 +32,9 @@ dependencies = [
     "anesthetic",
 	"plotext"
 ]
+
+[project.scripts]
+nested_fit = "pynested_fit.cliw:main"
 
 [project.urls]
 "Homepage" = "https://github.com/martinit18/nested_fit"
