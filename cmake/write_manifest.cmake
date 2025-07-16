@@ -9,7 +9,6 @@ function(write_manifest)
     # Selectively choose what to write to the manifest file
     file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/manifest.txt "[Features]\n")
     file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/manifest.txt "OPENMP=${OPENMP}\n")
-    file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/manifest.txt "OPENMPI=${OPENMPI}\n")
     if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
         file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/manifest.txt "BUILDTYPE=Debug\n")
     else()

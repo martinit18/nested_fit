@@ -86,10 +86,6 @@ MODULE MOD_INTERPOLATE
             CALL LOG_ERROR('The specified interpolation file ('//TRIM(interpolator_file)//') was not found.')
             CALL LOG_ERROR('Aborting Execution...')
             CALL LOG_ERROR_HEADER()
-            ! TODO(César) : How do we handle this if we are inside an OpenMPI context???
-! #ifdef OPENMPI_ON
-!             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-! #endif
             STOP
         ENDIF
 
@@ -108,10 +104,6 @@ MODULE MOD_INTERPOLATE
             CALL LOG_ERROR('The specified interpolation file ('//TRIM(interpolator_file)//') needs at least '//TRIM(ADJUSTL(INT_TO_STR_INLINE(k)))//' points.')
             CALL LOG_ERROR('Aborting Execution...')
             CALL LOG_ERROR_HEADER()
-            ! TODO(César) : How do we handle this if we are inside an OpenMPI context???
-! #ifdef OPENMPI_ON
-!             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-! #endif
             STOP
         ENDIF
 
@@ -140,10 +132,6 @@ MODULE MOD_INTERPOLATE
                 CALL LOG_ERROR('The specified interpolation file ('//TRIM(interpolator_file)//') requires positive y data.')
                 CALL LOG_ERROR('Aborting Execution...')
                 CALL LOG_ERROR_HEADER()
-                ! TODO(César) : How do we handle this if we are inside an OpenMPI context???
-    ! #ifdef OPENMPI_ON
-    !             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-    ! #endif
                 STOP
             ENDIF
         ENDDO
@@ -156,10 +144,6 @@ MODULE MOD_INTERPOLATE
             CALL LOG_ERROR('ierr='//TRIM(ADJUSTL(INT_TO_STR_INLINE(ierr))))
             CALL LOG_ERROR('Aborting Execution...')
             CALL LOG_ERROR_HEADER()
-            ! TODO(César) : How do we handle this if we are inside an OpenMPI context???
-! #ifdef OPENMPI_ON
-!             CALL MPI_Abort(MPI_COMM_WORLD, 1, mpi_ierror)
-! #endif
             STOP
         ENDIF
 

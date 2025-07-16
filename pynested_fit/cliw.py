@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Brief  : CLI wrapper for nested_fit executable (when installed via pip)
 # Author : César Godinho
 # Date   : 16/07/2025

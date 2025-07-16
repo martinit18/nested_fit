@@ -132,9 +132,6 @@ PROGRAM NESTED_FIT
    ! Parallelization library !!!CAREFULL to the table dimension in this case!!
    USE OMP_LIB
 
-#ifdef OPENMPI_ON
-   USE MPI
-#endif
   !USE RNG
   !
   IMPLICIT NONE
@@ -181,9 +178,6 @@ PROGRAM NESTED_FIT
   REAL(8), ALLOCATABLE, DIMENSION(:) :: live_birth_final_try_instance
   INTEGER(4), ALLOCATABLE, DIMENSION(:) :: live_rank_final_try_instance
 
-  ! OpenMPI stuff
-  INTEGER(4) :: mpi_rank !, mpi_cluster_size, mpi_ierror
-
   ! Time measurement variables
   REAL(8) :: seconds, seconds_omp, startt, stopt, startt_omp, stopt_omp
 
@@ -218,6 +212,9 @@ PROGRAM NESTED_FIT
 
   ! Init the logger file
   CALL START_LOG()
+
+  ! Init the cache folder with saved data from compile time
+  CALL INIT_NF_CACHE()
 
   ! Init the autofunc module
   CALL INIT_AUTOFUNC()
@@ -311,29 +308,15 @@ PROGRAM NESTED_FIT
   ! Parse executable arguments !!! THIS NEEDS TO COME BEFORE THE MPI_INIT() SUBROUTINE !!!
   CALL PARSE_ARGUMENTS()
 
-#ifdef OPENMPI_ON
-    CALL MPI_INIT(mpi_ierror)
-    CALL MPI_COMM_SIZE(MPI_COMM_WORLD, mpi_cluster_size, mpi_ierror)
-    CALL MPI_COMM_RANK(MPI_COMM_WORLD, mpi_rank, mpi_ierror)
-#else
-    mpi_rank = 0
-#endif
-
   !!!!!!!! Initiate random generator with the same seed each time !!!!!!!!!!!
 #ifdef NORNG_ON  
-  IF(mpi_rank.EQ.0) THEN
-      CALL LOG_WARNING_HEADER()
-      CALL LOG_WARNING('Nested_fit is running with a set seed! This is intended for testing only!')
-      CALL LOG_WARNING('If you are using this as a production setting change the cmake NORNG option to OFF.')
-      CALL LOG_WARNING_HEADER()
-      CALL sleep(1)
-  ENDIF
+  CALL LOG_WARNING_HEADER()
+  CALL LOG_WARNING('Nested_fit is running with a set seed! This is intended for testing only!')
+  CALL LOG_WARNING('If you are using this as a production setting change the cmake NORNG option to OFF.')
+  CALL LOG_WARNING_HEADER()
+  CALL sleep(1)
 
   CALL RANDOM_SEED(PUT=seed_array)
-#endif
-
-#ifdef OPENMPI_ON
-   CALL MPI_BARRIER(MPI_COMM_WORLD, mpi_ierror)
 #endif
 
   ! Calculate time elapsed !!!!!!!!!!!!!!!!!!!!
@@ -345,259 +328,165 @@ PROGRAM NESTED_FIT
   CALL CPU_TIME(startt)
   !$ startt_omp = omp_get_wtime( )
 
-  IF(mpi_rank.EQ.0) THEN
-      ! Initialize values --------------------------------------------------------------------------------------------------------------
-      filename = ' '
-      funcname = ' '
+  ! Initialize values --------------------------------------------------------------------------------------------------------------
+  filename = ' '
+  funcname = ' '
 
-      ! Read parameter file ------------------------------------------------------------------------------------------------------------
-      INQUIRE(FILE=TRIM(opt_input_file), EXIST=file_exists)
-      IF(.NOT.file_exists) THEN
-         CALL LOG_ERROR_HEADER()
-         CALL LOG_ERROR('Input file ('//TRIM(opt_input_file)//') was not found.')
-         CALL LOG_ERROR('Aborting Execution...')
-         CALL LOG_ERROR_HEADER()
-         CALL HALT_EXECUTION()
-      ENDIF
-
-      CALL PARSE_INPUT(TRIM(opt_input_file), input_config)
-
-      ! Check the version
-      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'version', version_file, MANDATORY=.TRUE.)
-      IF(version.NE.version_file) THEN
-         CALL LOG_WARNING_HEADER()
-         CALL LOG_WARNING('Specified program version does not match the current one.')
-         CALL LOG_WARNING('Specified = '//TRIM(version_file))
-         CALL LOG_WARNING('Current   = '//TRIM(version))
-         CALL LOG_WARNING('Some features could be deprecated, or not used.')
-         CALL LOG_WARNING('Please upgrade the input file version.')
-         CALL LOG_WARNING('Continuing with possible future errors...')
-         CALL LOG_WARNING_HEADER()
-      END IF
-      
-      ! General configuration
-      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'calculation_mode' , calc_mode   , MANDATORY=.TRUE. ) ! data by default !!NEW!! Mode of code calculation
-      ! TODO put mandatory relative conditions with respect to this value
-      ! The idea is to put three mode: data (for data likelihood calc), function (for simple function exploration), partition (for potentials and for building partition functions)
-      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'datafiles' , filenames             , MANDATORY=(calc_mode.EQ.'DATA')) ! Only required if data analysis
-
-      ! Prepare the likelihood and the data filenames if needed
-      CALL PREINIT_LIKELIHOOD()
-      
-      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'specstr'   , spec_str           , MANDATORY=.FALSE.) !      x,c by default
-      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'filefmt'   , fileformat         , MANDATORY=.FALSE.) !     .csv by default
-      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'likelihood', likelihood_funcname, MANDATORY=.FALSE.) ! GAUSSIAN by default
-      CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'fileheader', opt_file_has_header, MANDATORY=.FALSE.) !    False by default
-      
-      ! Search configuration
-      CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.livepoints', nlive        , MANDATORY=.TRUE. )
-      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'search.method'    , search_method, MANDATORY=.TRUE. )
-      CALL FIELD_FROM_INPUT_REAL     (input_config, 'search.param1'    , search_par1  , MANDATORY=.TRUE. )
-      CALL FIELD_FROM_INPUT_REAL     (input_config, 'search.param2'    , search_par2  , MANDATORY=.TRUE. )
-      CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.max_tries' , maxtries     , MANDATORY=.TRUE. )
-      CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.tries_mult', maxntries    , MANDATORY=.TRUE. )
-      CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.num_tries' , ntry         , MANDATORY=.FALSE.) !      1 by default
-      CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.max_steps' , maxstep_try  , MANDATORY=.FALSE.) ! 100000 by default
-      
-      ! Convergence configuration
-      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'convergence.method'   , conv_method, MANDATORY=.TRUE.)
-      ! Check compatibility between calculation method and convergence method
-      IF(calc_mode.NE.'POTENTIAL'.AND.conv_method.NE.'LIKE_ACC') THEN
-         CALL LOG_ERROR_HEADER()
-         CALL LOG_ERROR('Use "LIKE_ACC" convergence mode for "DATA" and "INTEGRA:" calculation modes')
-         CALL LOG_ERROR('Aborting Execution...')
-         CALL LOG_ERROR_HEADER()
-         CALL HALT_EXECUTION()
-      ELSE IF(calc_mode.EQ.'POTENTIAL'.AND.conv_method.EQ.'LIKE_ACC') THEN
-         CALL LOG_ERROR_HEADER()
-         CALL LOG_ERROR('Use "ENERGY_ACC" or "ENERGY_MAX" convergence mode for "POTENTIAL" calculation mode')
-         CALL LOG_ERROR('Aborting Execution...')
-         CALL LOG_ERROR_HEADER()
-         CALL HALT_EXECUTION()
-      ENDIF
-      CALL FIELD_FROM_INPUT_REAL     (input_config, 'convergence.accuracy' , evaccuracy , MANDATORY=.TRUE.)
-      CALL FIELD_FROM_INPUT_REAL     (input_config, 'convergence.parameter', conv_par   , MANDATORY=(conv_method.NE.'LIKE_ACC'))
-
-      ! Clustering configuration
-      CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'clustering.enabled'  , make_cluster  , MANDATORY=.FALSE.) ! False by default
-      IF(make_cluster) THEN
-         CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'clustering.method'   , cluster_method, MANDATORY=.TRUE.)
-         CALL FIELD_FROM_INPUT_REAL     (input_config, 'clustering.parameter1' , cluster_par1  , MANDATORY=(cluster_method.NE.'k'))
-         CALL FIELD_FROM_INPUT_REAL     (input_config, 'clustering.parameter2', cluster_par2  , MANDATORY=(cluster_method.NE.'k'))
-      END IF
-
-      ! Data configuration
-      ! TODO(César): Make this not mandatory and get bounds from data file
-      IF(is_set) THEN
-         DO i = 1, nset
-            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.xmin', xmin(i), MANDATORY=(calc_mode.EQ.'DATA') ) ! Only required for data analysis
-            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.xmax', xmax(i), MANDATORY=(calc_mode.EQ.'DATA') ) ! Only required for data analysis
-            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.ymin', ymin(i), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
-            CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.ymax', ymax(i), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
-         END DO
-      ELSE
-         CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.xmin', xmin(1), MANDATORY=(calc_mode.EQ.'DATA') ) ! Only required for data analysis
-         CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.xmax', xmax(1), MANDATORY=(calc_mode.EQ.'DATA') ) ! Only required for data analysis
-         CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.ymin', ymin(1), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
-         CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.ymax', ymax(1), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
-      ENDIF
-
-      ! Legacy stuff required
-      ! TODO(César): Deprecate this (whenever we implement the convolution function)
-      CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'lr'    , lr    , MANDATORY=.FALSE.) ! r by default
-      CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'npoint', npoint, MANDATORY=.FALSE.) ! 0 by default
-      CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'nwidth', nwidth, MANDATORY=.FALSE.) ! 0 by default
-      
-      ! Function configuration inputs
-      IF(is_set) THEN
-         DO i = 1, nset
-            CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'function.expression_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i))), funcname(i), MANDATORY=.TRUE.) ! LaTeX Expression or Legacy name
-         END DO
-      ELSE
-         CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'function.expression', funcname(1), MANDATORY=.TRUE.) ! LaTeX Expression or Legacy name
-      ENDIF
-   
-      ! Initialize the search method params
-      CALL INIT_SEARCH_METHOD()
-
-      ! Function configuration
-      CALL CONFIGURE_USERFUNCTION()
-
-      ! Initialize likelihood function
-      CALL INIT_LIKELIHOOD()
-
-      ! Read set of spectra file parameter
-      ! IF (is_set) THEN
-      !    OPEN (UNIT=88, FILE='nf_input_set.dat', STATUS='old')
-      !    ! READ(88,*,ERR=11,END=11) nset
-      !    DO k = 2, nset
-      !       READ(88,*,ERR=11,END=11) xmin(k), xmax(k), string ! TODO
-      !    END DO
-      !    ! DO k = 2, nset
-      !    !    READ(88,*,ERR=11,END=11) filename(k)
-      !    ! END DO
-      ! 11   CONTINUE
-      !    CLOSE(88)
-      ! ENDIF
+  ! Read parameter file ------------------------------------------------------------------------------------------------------------
+  INQUIRE(FILE=TRIM(opt_input_file), EXIST=file_exists)
+  IF(.NOT.file_exists) THEN
+     CALL LOG_ERROR_HEADER()
+     CALL LOG_ERROR('Input file ('//TRIM(opt_input_file)//') was not found.')
+     CALL LOG_ERROR('Aborting Execution...')
+     CALL LOG_ERROR_HEADER()
+     CALL HALT_EXECUTION()
   ENDIF
 
-  ! Receive data from the mpi root node
-  ! All the code should be refactored really but for now
-  ! TODO(César): Refactor this to a function
-#ifdef OPENMPI_ON
-      CALL MPI_Bcast(filename(1), 64, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(is_set, 1, MPI_LOGICAL, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(data_type, 3, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(likelihood_funcname, 64, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(nlive, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(conv_method, 64, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(evaccuracy, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(conv_par, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(search_method, 64, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(search_par1, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(search_par2, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(maxtries, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(maxntries, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(make_cluster, 1, MPI_LOGICAL, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(cluster_method, 1, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(cluster_par1, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(cluster_par2, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(ntry, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(maxstep_try, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(funcname(1), 64, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(lr, 1, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(npoint, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(nwidth, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(xmin(1), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(xmax(1), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(ymin(1), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(ymax(1), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
-      CALL MPI_Bcast(npar, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
+  CALL PARSE_INPUT(TRIM(opt_input_file), input_config)
 
-   IF(mpi_rank.NE.0) THEN
-      !
-      ! Allocate space for parameters and initialize
-      ALLOCATE(live_max(npar),par_num(npar),par_name(npar),par_in(npar),par_step(npar), &
-         par_bnd1(npar),par_bnd2(npar),par_fix(npar), &
-         par_mean(npar),par_sd(npar), &
-         par_median_w(npar), &
-         par_m68_w(npar),par_p68_w(npar),par_m95_w(npar),par_p95_w(npar),par_m99_w(npar),par_p99_w(npar))
-         live_max = 0.
-         par_num = 0
-         par_name = ' '
-         par_in = 0.
-         par_step = 0.
-         par_bnd1 = 0.
-         par_bnd2 = 0.
-         par_fix = 0
-         par_mean = 0.
-         par_sd = 0.
-         par_median_w = 0.
-         par_m68_w = 0.
-         par_p68_w = 0.
-         par_m95_w = 0.
-         par_p95_w = 0.
-         par_m99_w = 0.
-         par_p99_w = 0.
-   ENDIF
-#endif
+  ! Check the version
+  CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'version', version_file, MANDATORY=.TRUE.)
+  IF(version.NE.version_file) THEN
+     CALL LOG_WARNING_HEADER()
+     CALL LOG_WARNING('Specified program version does not match the current one.')
+     CALL LOG_WARNING('Specified = '//TRIM(version_file))
+     CALL LOG_WARNING('Current   = '//TRIM(version))
+     CALL LOG_WARNING('Some features could be deprecated, or not used.')
+     CALL LOG_WARNING('Please upgrade the input file version.')
+     CALL LOG_WARNING('Continuing with possible future errors...')
+     CALL LOG_WARNING_HEADER()
+  END IF
+  
+  ! General configuration
+  CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'calculation_mode' , calc_mode   , MANDATORY=.TRUE. ) ! data by default !!NEW!! Mode of code calculation
+  ! TODO put mandatory relative conditions with respect to this value
+  ! The idea is to put three mode: data (for data likelihood calc), function (for simple function exploration), partition (for potentials and for building partition functions)
+  CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'datafiles' , filenames             , MANDATORY=(calc_mode.EQ.'DATA')) ! Only required if data analysis
+
+  ! Prepare the likelihood and the data filenames if needed
+  CALL PREINIT_LIKELIHOOD()
+  
+  CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'specstr'   , spec_str           , MANDATORY=.FALSE.) !      x,c by default
+  CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'filefmt'   , fileformat         , MANDATORY=.FALSE.) !     .csv by default
+  CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'likelihood', likelihood_funcname, MANDATORY=.FALSE.) ! GAUSSIAN by default
+  CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'fileheader', opt_file_has_header, MANDATORY=.FALSE.) !    False by default
+  
+  ! Search configuration
+  CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.livepoints', nlive        , MANDATORY=.TRUE. )
+  CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'search.method'    , search_method, MANDATORY=.TRUE. )
+  CALL FIELD_FROM_INPUT_REAL     (input_config, 'search.param1'    , search_par1  , MANDATORY=.TRUE. )
+  CALL FIELD_FROM_INPUT_REAL     (input_config, 'search.param2'    , search_par2  , MANDATORY=.TRUE. )
+  CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.max_tries' , maxtries     , MANDATORY=.TRUE. )
+  CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.tries_mult', maxntries    , MANDATORY=.TRUE. )
+  CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.num_tries' , ntry         , MANDATORY=.FALSE.) !      1 by default
+  CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.max_steps' , maxstep_try  , MANDATORY=.FALSE.) ! 100000 by default
+  
+  ! Convergence configuration
+  CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'convergence.method'   , conv_method, MANDATORY=.TRUE.)
+  ! Check compatibility between calculation method and convergence method
+  IF(calc_mode.NE.'POTENTIAL'.AND.conv_method.NE.'LIKE_ACC') THEN
+     CALL LOG_ERROR_HEADER()
+     CALL LOG_ERROR('Use "LIKE_ACC" convergence mode for "DATA" and "INTEGRA:" calculation modes')
+     CALL LOG_ERROR('Aborting Execution...')
+     CALL LOG_ERROR_HEADER()
+     CALL HALT_EXECUTION()
+  ELSE IF(calc_mode.EQ.'POTENTIAL'.AND.conv_method.EQ.'LIKE_ACC') THEN
+     CALL LOG_ERROR_HEADER()
+     CALL LOG_ERROR('Use "ENERGY_ACC" or "ENERGY_MAX" convergence mode for "POTENTIAL" calculation mode')
+     CALL LOG_ERROR('Aborting Execution...')
+     CALL LOG_ERROR_HEADER()
+     CALL HALT_EXECUTION()
+  ENDIF
+  CALL FIELD_FROM_INPUT_REAL     (input_config, 'convergence.accuracy' , evaccuracy , MANDATORY=.TRUE.)
+  CALL FIELD_FROM_INPUT_REAL     (input_config, 'convergence.parameter', conv_par   , MANDATORY=(conv_method.NE.'LIKE_ACC'))
+
+  ! Clustering configuration
+  CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'clustering.enabled'  , make_cluster  , MANDATORY=.FALSE.) ! False by default
+  IF(make_cluster) THEN
+     CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'clustering.method'   , cluster_method, MANDATORY=.TRUE.)
+     CALL FIELD_FROM_INPUT_REAL     (input_config, 'clustering.parameter1' , cluster_par1  , MANDATORY=(cluster_method.NE.'k'))
+     CALL FIELD_FROM_INPUT_REAL     (input_config, 'clustering.parameter2', cluster_par2  , MANDATORY=(cluster_method.NE.'k'))
+  END IF
+
+  ! Data configuration
+  ! TODO(César): Make this not mandatory and get bounds from data file
+  IF(is_set) THEN
+     DO i = 1, nset
+        CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.xmin', xmin(i), MANDATORY=(calc_mode.EQ.'DATA') ) ! Only required for data analysis
+        CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.xmax', xmax(i), MANDATORY=(calc_mode.EQ.'DATA') ) ! Only required for data analysis
+        CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.ymin', ymin(i), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
+        CALL FIELD_FROM_INPUT_REAL     (input_config, 'data_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i)))//'.ymax', ymax(i), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
+     END DO
+  ELSE
+     CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.xmin', xmin(1), MANDATORY=(calc_mode.EQ.'DATA') ) ! Only required for data analysis
+     CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.xmax', xmax(1), MANDATORY=(calc_mode.EQ.'DATA') ) ! Only required for data analysis
+     CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.ymin', ymin(1), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
+     CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.ymax', ymax(1), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
+  ENDIF
+
+  ! Legacy stuff required
+  ! TODO(César): Deprecate this (whenever we implement the convolution function)
+  CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'lr'    , lr    , MANDATORY=.FALSE.) ! r by default
+  CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'npoint', npoint, MANDATORY=.FALSE.) ! 0 by default
+  CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'nwidth', nwidth, MANDATORY=.FALSE.) ! 0 by default
+  
+  ! Function configuration inputs
+  IF(is_set) THEN
+     DO i = 1, nset
+        CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'function.expression_'//TRIM(ADJUSTL(INT_TO_STR_INLINE(i))), funcname(i), MANDATORY=.TRUE.) ! LaTeX Expression or Legacy name
+     END DO
+  ELSE
+     CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'function.expression', funcname(1), MANDATORY=.TRUE.) ! LaTeX Expression or Legacy name
+  ENDIF
+
+  ! Initialize the search method params
+  CALL INIT_SEARCH_METHOD()
+
+  ! Function configuration
+  CALL CONFIGURE_USERFUNCTION()
+
+  ! Initialize likelihood function
+  CALL INIT_LIKELIHOOD()
+
+  ! Read set of spectra file parameter
+  ! IF (is_set) THEN
+  !    OPEN (UNIT=88, FILE='nf_input_set.dat', STATUS='old')
+  !    ! READ(88,*,ERR=11,END=11) nset
+  !    DO k = 2, nset
+  !       READ(88,*,ERR=11,END=11) xmin(k), xmax(k), string ! TODO
+  !    END DO
+  !    ! DO k = 2, nset
+  !    !    READ(88,*,ERR=11,END=11) filename(k)
+  !    ! END DO
+  ! 11   CONTINUE
+  !    CLOSE(88)
+  ! ENDIF
 
  !----------------------------------------------------------------------------------------------------------------------------------
 
   ! Some tests and messages
-  IF(mpi_rank.EQ.0) THEN
-      ! Not implemented combination of inputs
-      IF (data_type(1:1).EQ.'2'.AND.is_set) THEN
-         CALL LOG_ERROR_HEADER()
-         CALL LOG_ERROR('Set of 2D files not yet implemented. Change your input file.')
-         CALL LOG_ERROR_HEADER()
-         CALL HALT_EXECUTION()
-      END IF
+  ! Not implemented combination of inputs
+  IF (data_type(1:1).EQ.'2'.AND.is_set) THEN
+     CALL LOG_ERROR_HEADER()
+     CALL LOG_ERROR('Set of 2D files not yet implemented. Change your input file.')
+     CALL LOG_ERROR_HEADER()
+     CALL HALT_EXECUTION()
   END IF
 
-
-#ifdef OPENMPI_ON
-   CALL MPI_Bcast(par_num, npar, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
-   CALL MPI_Bcast(par_fix, npar, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
-   CALL MPI_Bcast(par_name,npar*10, MPI_CHARACTER, 0, MPI_COMM_WORLD, mpi_ierror)
-   CALL MPI_Bcast(par_step, npar, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
-   CALL MPI_Bcast(par_in, npar, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
-   CALL MPI_Bcast(par_bnd1, npar, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
-   CALL MPI_Bcast(par_bnd2, npar, MPI_DOUBLE, 0, MPI_COMM_WORLD, mpi_ierror)
-
-   CALL MPI_Bcast(funcid, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_ierror)
-
-   CALL MPI_BARRIER(MPI_COMM_WORLD, mpi_ierror)
-#endif
-
-
-  IF(mpi_rank.EQ.0) THEN
-     ! Allocate parallel stuff ---------------------------------------------------------------------------------------------------------
-     ALLOCATE(live_like_final_try(maxstep_try,ntry),weight_try(maxstep_try,ntry),&
-          live_final_try(maxstep_try,npar,ntry),live_max_try(npar,ntry),&
-          nall_try(ntry),evsum_final_try(ntry),live_like_max_try(ntry),&
-          live_birth_final_try(maxstep_try,ntry),live_rank_final_try(maxstep_try,ntry))
-     live_like_final_try = 0.
-     live_birth_final_try = 0.
-     live_rank_final_try = 0
-     weight_try = 0.
-     live_final_try = 0.
-     live_max_try = 0.
-     nall_try = 0
-     evsum_final_try = 0.
-     live_like_max_try = -100000.
-#ifdef OPENMPI_ON
-     ALLOCATE(live_final_try_instance(maxstep_try,npar))
-     ALLOCATE(live_like_final_try_instance(maxstep_try), weight_try_instance(maxstep_try), live_max_try_instance(npar))
-     ALLOCATE(live_birth_final_try_instance(maxstep_try),live_rank_final_try_instance(maxstep_try))
-#endif
-     !
-  ELSE
-     ALLOCATE(live_final_try_instance(maxstep_try,npar))
-     ALLOCATE(live_like_final_try_instance(maxstep_try), weight_try_instance(maxstep_try), live_max_try_instance(npar))
-     ALLOCATE(live_birth_final_try_instance(maxstep_try),live_rank_final_try_instance(maxstep_try))
-  ENDIF
-
+    ! Allocate parallel stuff ---------------------------------------------------------------------------------------------------------
+    ALLOCATE(live_like_final_try(maxstep_try,ntry),weight_try(maxstep_try,ntry),&
+      live_final_try(maxstep_try,npar,ntry),live_max_try(npar,ntry),&
+      nall_try(ntry),evsum_final_try(ntry),live_like_max_try(ntry),&
+      live_birth_final_try(maxstep_try,ntry),live_rank_final_try(maxstep_try,ntry))
+    live_like_final_try = 0.
+    live_birth_final_try = 0.
+    live_rank_final_try = 0
+    weight_try = 0.
+    live_final_try = 0.
+    live_max_try = 0.
+    nall_try = 0
+    evsum_final_try = 0.
+    live_like_max_try = -100000.
 
 
   ! If all parameters are fixed, skip Nested sampling ------------------------------------------------------------------------------
@@ -607,29 +496,14 @@ PROGRAM NESTED_FIT
      par_median_w = par_in
      ! To check the likelihood function
      evsum_final = LOGLIKELIHOOD(npar, par_in)
-     IF(mpi_rank.EQ.0) THEN
-         CALL LOG_WARNING_HEADER()
-         CALL LOG_WARNING('All parameters are fixed.')
-         CALL LOG_WARNING_HEADER()
-     ENDIF
+     CALL LOG_WARNING_HEADER()
+     CALL LOG_WARNING('All parameters are fixed.')
+     CALL LOG_WARNING_HEADER()
      GOTO 501
   END IF
 
-#ifdef OPENMPI_ON
-  IF(mpi_rank.EQ.0) THEN
-      IF(mpi_cluster_size.GT.ntry) THEN
-         CALL LOG_WARNING_HEADER()
-         CALL LOG_WARNING('Specified MPI cluster size is bigger than the number of tries in the input file.')
-         CALL LOG_WARNING('This feature is not supported at the moment.')
-         CALL LOG_WARNING('Idling the unused processes.')
-         CALL LOG_WARNING_HEADER()
-      ENDIF
-  ENDIF
-#endif
-
   !
   ! Run the Nested sampling
-#ifndef OPENMPI_ON
    DO itry=1,ntry
       CALL NESTED_SAMPLING(itry,maxstep_try,nall_try(itry),evsum_final_try(itry), &
             live_like_final_try(:,itry),live_birth_final_try(:,itry),live_rank_final_try(:,itry),weight_try(:,itry),&
@@ -638,276 +512,209 @@ PROGRAM NESTED_FIT
             ! write(*,*) 'there', nall_try(itry), live_like_final_try(nall_try(itry),itry), live_birth_final_try(nall_try(itry),itry)!????
             ! pause
    END DO
-#else
-   IF(mpi_rank.LT.ntry) THEN
-      CALL NESTED_SAMPLING(mpi_rank,maxstep_try,nall_try_instance,evsum_final_try_instance, &
-         live_like_final_try_instance,live_birth_final_try_instance,live_rank_final_try_instance,weight_try_instance,&
-         live_final_try_instance,live_like_max_try_instance,live_max_try_instance, mpi_rank, mpi_cluster_size)
-      
-      ! Wait for all the calculations to finish
-      CALL MPI_BARRIER(MPI_COMM_WORLD, mpi_ierror)
 
-      ! All the code should be refactored really but for now
-      ! TODO(César): Refactor this to a function
-      IF(mpi_rank.NE.0) THEN
-         CALL MPI_SEND(nall_try_instance, 1, MPI_INT, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
-         CALL MPI_SEND(evsum_final_try_instance, 1, MPI_DOUBLE, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
-         CALL MPI_SEND(live_like_final_try_instance, maxstep_try, MPI_DOUBLE, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
-         CALL MPI_SEND(live_birth_final_try_instance, maxstep_try, MPI_DOUBLE, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
-         CALL MPI_SEND(live_rank_final_try_instance, maxstep_try, MPI_INT, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
-         CALL MPI_SEND(weight_try_instance, maxstep_try, MPI_DOUBLE, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
-         CALL MPI_SEND(live_final_try_instance, maxstep_try*npar, MPI_DOUBLE, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
-         CALL MPI_SEND(live_like_max_try_instance, 1, MPI_DOUBLE, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
-         CALL MPI_SEND(live_max_try_instance, npar, MPI_DOUBLE, 0, mpi_rank, MPI_COMM_WORLD, mpi_ierror)
-      ENDIF
-   ENDIF
-#endif
+  ! Re-assemble the points ---------------------------------------------------------------
+  ! Final number of points
+  nall = SUM(nall_try)
+  ALLOCATE(weight(nall),live_like_final(nall),live_birth_final(nall),live_rank_final(nall),&
+  live_final(nall,npar),weight_par(nall,2))
+  weight = 0.
+  live_final = 0.
+  live_like_final = 0.
+  live_birth_final = 0.
+  live_rank_final = 0
+  weight_par = 0.
 
-#ifdef OPENMPI_ON
-   ! Gather all of the runs in the root node back again
-   IF(mpi_rank.EQ.0) THEN
-         nall_try(1) = nall_try_instance
-         evsum_final_try(1) = evsum_final_try_instance
-         live_like_final_try(:,1) = live_like_final_try_instance
-         live_birth_final_try(:,1) = live_birth_final_try_instance
-         live_rank_final_try(:,1) = live_rank_final_try_instance
-         weight_try(:,1) = weight_try_instance
-         live_final_try(:,:,1) = live_final_try_instance
-         live_like_max_try(1) = live_like_max_try_instance
-         live_max_try(:,1) = live_max_try_instance
-         DO itry=1,ntry-1
-            CALL MPI_RECV(nall_try(itry+1), 1, MPI_INT, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
-            CALL MPI_RECV(evsum_final_try(itry+1), 1, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
-            CALL MPI_RECV(live_like_final_try(:,itry+1), maxstep_try, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
-            CALL MPI_RECV(live_birth_final_try(:,itry+1), maxstep_try, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
-            CALL MPI_RECV(live_rank_final_try(:,itry+1), maxstep_try, MPI_INT, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
-            CALL MPI_RECV(weight_try(:,itry+1), maxstep_try, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
-            CALL MPI_RECV(live_final_try(:,:,itry+1), maxstep_try*npar, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
-            CALL MPI_RECV(live_like_max_try(itry+1), 1, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
-            CALL MPI_RECV(live_max_try(:,itry+1), npar, MPI_DOUBLE, itry, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE, mpi_ierror)
-         END DO
-   ENDIF
-#endif
+  ! Final evidence and dispersion
+  !evsum_final = SUM(evsum_final_try)/ntry
+  IF(ntry.GT.1) THEN
+     CALL MEANVAR(evsum_final_try(:ntry),ntry,evsum_final,evsum_err)
+     evsum_err = SQRT(evsum_err)
 
-  IF(mpi_rank.EQ.0) THEN
-      ! Re-assemble the points ---------------------------------------------------------------
-      ! Final number of points
-      nall = SUM(nall_try)
-      ALLOCATE(weight(nall),live_like_final(nall),live_birth_final(nall),live_rank_final(nall),&
-      live_final(nall,npar),weight_par(nall,2))
-      weight = 0.
-      live_final = 0.
-      live_like_final = 0.
-      live_birth_final = 0.
-      live_rank_final = 0
-      weight_par = 0.
-
-      ! Final evidence and dispersion
-      !evsum_final = SUM(evsum_final_try)/ntry
-      IF(ntry.GT.1) THEN
-         CALL MEANVAR(evsum_final_try(:ntry),ntry,evsum_final,evsum_err)
-         evsum_err = SQRT(evsum_err)
-
-         WRITE(*,*) ' '
-         WRITE(*,*) 'Results of the singles try ----------------------------------------------------'
-         DO itry=1,ntry
-            WRITE(*,*) 'N. try', itry , 'n. steps', nall_try(itry), 'Final evidence', evsum_final_try(itry), &
-                  'Max loglikelihood', live_like_max_try(itry)
-         END DO
-         WRITE(*,*) 'Evidence average:', evsum_final
-         WRITE(*,*) 'Evidence standard deviation:', evsum_err
-         WRITE(*,*) '-----------------------------------------------------------------------------------'
+     WRITE(*,*) ' '
+     WRITE(*,*) 'Results of the singles try ----------------------------------------------------'
+     DO itry=1,ntry
+        WRITE(*,*) 'N. try', itry , 'n. steps', nall_try(itry), 'Final evidence', evsum_final_try(itry), &
+              'Max loglikelihood', live_like_max_try(itry)
+     END DO
+     WRITE(*,*) 'Evidence average:', evsum_final
+     WRITE(*,*) 'Evidence standard deviation:', evsum_err
+     WRITE(*,*) '-----------------------------------------------------------------------------------'
 
 
-         OPEN(23,FILE='nf_output_tries.dat',STATUS= 'UNKNOWN')
-         WRITE(23,*) 'Number_of_tries ', ntry
-         WRITE(23,*) 'Evidence_average:', evsum_final
-         WRITE(23,*) 'Evidence_standard_deviation:', evsum_err
-         WRITE(23,*) '# N. try   n. steps    Final evidence   Max loglikelihood'
-         DO itry=1,ntry
-            WRITE(23,*)  itry , nall_try(itry), evsum_final_try(itry), live_like_max_try(itry)
-         END DO
-         CLOSE(23)
+     OPEN(23,FILE='nf_output_tries.dat',STATUS= 'UNKNOWN')
+     WRITE(23,*) 'Number_of_tries ', ntry
+     WRITE(23,*) 'Evidence_average:', evsum_final
+     WRITE(23,*) 'Evidence_standard_deviation:', evsum_err
+     WRITE(23,*) '# N. try   n. steps    Final evidence   Max loglikelihood'
+     DO itry=1,ntry
+        WRITE(23,*)  itry , nall_try(itry), evsum_final_try(itry), live_like_max_try(itry)
+     END DO
+     CLOSE(23)
 
-         ! Assemble all points and weights
-         DO itry=1,ntry
-            !WRITE(*,*) 'Sum from', SUM(nall_try(:itry-1))+1, 'to', SUM(nall_try(:itry))
-            live_like_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = live_like_final_try(:nall_try(itry),itry)
-            live_birth_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = live_birth_final_try(:nall_try(itry),itry)
-            live_rank_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = live_rank_final_try(:nall_try(itry),itry)
-            weight(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = weight_try(:nall_try(itry),itry)*nall_try(itry)/nall
-            live_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry)),:) = live_final_try(:nall_try(itry),:,itry)
-         END DO
-         ! Reorder them (not necessary maybe, but finally yes for plotting)
-         !CALL SORTN2(nall,npar,1,live_like_final(:nall),live_final(:nall,:),weight(:nall))
-
-
-         !Take the maximum of the maximum
-         itrymax = MAXLOC(live_like_max_try)
-         live_like_max = live_like_max_try(itrymax(1))
-         live_max = live_max_try(:,itrymax(1))
-
-      ELSE
-         ! Just one try, much more simple!
-         evsum_final = evsum_final_try(1)
-         evsum_err = 0.
-
-         live_like_final = live_like_final_try(:nall,1)
-         live_birth_final = live_birth_final_try(:nall,1)
-         live_rank_final = live_rank_final_try(:nall,1)
-         weight          = weight_try(:nall,1)
-         live_final      = live_final_try(:nall,:,1)
-         live_like_max   = live_like_max_try(1)
-         live_max        = live_max_try(:,1)
-      END IF
+     ! Assemble all points and weights
+     DO itry=1,ntry
+        !WRITE(*,*) 'Sum from', SUM(nall_try(:itry-1))+1, 'to', SUM(nall_try(:itry))
+        live_like_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = live_like_final_try(:nall_try(itry),itry)
+        live_birth_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = live_birth_final_try(:nall_try(itry),itry)
+        live_rank_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = live_rank_final_try(:nall_try(itry),itry)
+        weight(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = weight_try(:nall_try(itry),itry)*nall_try(itry)/nall
+        live_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry)),:) = live_final_try(:nall_try(itry),:,itry)
+     END DO
+     ! Reorder them (not necessary maybe, but finally yes for plotting)
+     !CALL SORTN2(nall,npar,1,live_like_final(:nall),live_final(:nall,:),weight(:nall))
 
 
-      ! ------------Calculate the final parameters, errors and data  --------------------------
+     !Take the maximum of the maximum
+     itrymax = MAXLOC(live_like_max_try)
+     live_like_max = live_like_max_try(itrymax(1))
+     live_max = live_max_try(:,itrymax(1))
 
 
-      ! Calculate the mean and the standard deviation for each parameter
-
-      ! Normalize the weights
-      weight_tot = 0.
-      DO i=1,nall
-         weight_tot = weight_tot + weight(i)
-      END DO
-      weight = weight/weight_tot
-
-      DO j=1,npar
-         IF (par_fix(j).NE.1) THEN
-            mean_tmp = 0.
-            mean2_tmp = 0.
-
-            ! Mean calculation
-            DO i=1,nall
-               mean_tmp = mean_tmp + live_final(i,j)*weight(i)
-            END DO
-            par_mean(j) = mean_tmp
-
-            !! Standard deviation calculation
-            DO i=1,nall
-               mean2_tmp = mean2_tmp + (live_final(i,j)-par_mean(j))**2*weight(i)
-            END DO
-            par_sd(j) = DSQRT(mean2_tmp)
+  ! ------------Calculate the final parameters, errors and data  --------------------------
 
 
-            ! Median and confidence levels
-            ! Order a defined parameter with his weight
-            weight_par(:,1) = weight
-            weight_par(:,2) = live_final(:,j)
-            CALL SORTN(nall,2,weight_par(:,2),weight_par)
-            ! Look for confidential levels and median
-            weight_int = 0.
-            DO i=1,nall-1
-               weight_int = weight_int + weight_par(i,1)
-               weight_int_next = weight_int + weight_par(i+1,1)
-               !write(*,*) j, i, nall, weight_int, weight_int_next, weight_par(i,2)
-               ! Low limit 99%
-               IF(weight_int.LT.0.005d0.AND.weight_int_next.GT.0.005) THEN
-                  par_m99_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
-                  !write(*,*) 'par_m99_w found', j, i, par_m99_w(j)
-                  ! Low limit 95%
-               ELSE IF(weight_int.LT.0.025d0.AND.weight_int_next.GT.0.025) THEN
-                  par_m95_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
-                  !write(*,*) 'par_m95_w found', j, i, par_m95_w(j)
-                  ! Low limit 68%
-               ELSE IF(weight_int.LT.0.16d0.AND.weight_int_next.GT.0.16) THEN
-                  par_m68_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
-                  !write(*,*) 'par_m68_w found', j, i, par_m68_w(j)
-                  ! Median
-               ELSE IF(weight_int.LT.0.5d0.AND.weight_int_next.GT.0.5) THEN
-                  par_median_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
-                  !write(*,*) 'median found', j, i, par_median_w(j)
-                  ! High limit 68%
-               ELSE IF(weight_int.LT.0.84d0.AND.weight_int_next.GT.0.84) THEN
-                  par_p68_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
-                  !write(*,*) 'par_p68_w found', j, i, par_p68_w(j)
-                  ! High limit 95%
-               ELSE IF(weight_int.LT.0.975d0.AND.weight_int_next.GT.0.975) THEN
-                  par_p95_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
-                  !write(*,*) 'par_p95_w found', j, i, par_p95_w(j)
-                  ! High limit 99%
-               ELSE IF(weight_int.LT.0.995d0.AND.weight_int_next.GT.0.995) THEN
-                  par_p99_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
-                  !write(*,*) 'par_p99_w found', j, i, par_p99_w(j)
-               END IF
-            END DO
-         ELSE
-            par_mean(j) =  par_in(j)
-            par_median_w(j) = par_in(j)
-         END IF
-      END DO
+  ! Calculate the mean and the standard deviation for each parameter
+
+  ! Normalize the weights
+  weight_tot = 0.
+  DO i=1,nall
+     weight_tot = weight_tot + weight(i)
+  END DO
+  weight = weight/weight_tot
+
+  DO j=1,npar
+     IF (par_fix(j).NE.1) THEN
+        mean_tmp = 0.
+        mean2_tmp = 0.
+
+        ! Mean calculation
+        DO i=1,nall
+           mean_tmp = mean_tmp + live_final(i,j)*weight(i)
+        END DO
+        par_mean(j) = mean_tmp
+
+        !! Standard deviation calculation
+        DO i=1,nall
+           mean2_tmp = mean2_tmp + (live_final(i,j)-par_mean(j))**2*weight(i)
+        END DO
+        par_sd(j) = DSQRT(mean2_tmp)
+
+
+        ! Median and confidence levels
+        ! Order a defined parameter with his weight
+        weight_par(:,1) = weight
+        weight_par(:,2) = live_final(:,j)
+        CALL SORTN(nall,2,weight_par(:,2),weight_par)
+        ! Look for confidential levels and median
+        weight_int = 0.
+        DO i=1,nall-1
+           weight_int = weight_int + weight_par(i,1)
+           weight_int_next = weight_int + weight_par(i+1,1)
+           !write(*,*) j, i, nall, weight_int, weight_int_next, weight_par(i,2)
+           ! Low limit 99%
+           IF(weight_int.LT.0.005d0.AND.weight_int_next.GT.0.005) THEN
+              par_m99_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
+              !write(*,*) 'par_m99_w found', j, i, par_m99_w(j)
+              ! Low limit 95%
+           ELSE IF(weight_int.LT.0.025d0.AND.weight_int_next.GT.0.025) THEN
+              par_m95_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
+              !write(*,*) 'par_m95_w found', j, i, par_m95_w(j)
+              ! Low limit 68%
+           ELSE IF(weight_int.LT.0.16d0.AND.weight_int_next.GT.0.16) THEN
+              par_m68_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
+              !write(*,*) 'par_m68_w found', j, i, par_m68_w(j)
+              ! Median
+           ELSE IF(weight_int.LT.0.5d0.AND.weight_int_next.GT.0.5) THEN
+              par_median_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
+              !write(*,*) 'median found', j, i, par_median_w(j)
+              ! High limit 68%
+           ELSE IF(weight_int.LT.0.84d0.AND.weight_int_next.GT.0.84) THEN
+              par_p68_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
+              !write(*,*) 'par_p68_w found', j, i, par_p68_w(j)
+              ! High limit 95%
+           ELSE IF(weight_int.LT.0.975d0.AND.weight_int_next.GT.0.975) THEN
+              par_p95_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
+              !write(*,*) 'par_p95_w found', j, i, par_p95_w(j)
+              ! High limit 99%
+           ELSE IF(weight_int.LT.0.995d0.AND.weight_int_next.GT.0.995) THEN
+              par_p99_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
+              !write(*,*) 'par_p99_w found', j, i, par_p99_w(j)
+           END IF
+        END DO
+     ELSE
+        par_mean(j) =  par_in(j)
+        par_median_w(j) = par_in(j)
+     END IF
+  END DO
   ENDIF
 
    501 CONTINUE
 
-   IF(mpi_rank.EQ.0) THEN
-      ! Final actions for the likelihood function
-      CALL FINAL_LIKELIHOOD(live_max,par_mean,par_median_w)
+  ! Final actions for the likelihood function
+  CALL FINAL_LIKELIHOOD(live_max,par_mean,par_median_w)
 
-      !-----------------Calculate information and bayesian complexity --------------------------
-      ! Calculation of the mean loglikelihood
-      live_like_mean = 0.
-      weight_tot = 0.
-      DO i=1,nall
-         live_like_mean = live_like_mean + weight(i)*live_like_final(i)
-      END DO
-      live_like_mean = live_like_mean
+  !-----------------Calculate information and bayesian complexity --------------------------
+  ! Calculation of the mean loglikelihood
+  live_like_mean = 0.
+  weight_tot = 0.
+  DO i=1,nall
+     live_like_mean = live_like_mean + weight(i)*live_like_final(i)
+  END DO
+  live_like_mean = live_like_mean
 
 
-      ! Calculation of the information (see Sivia page 186)
-      info = live_like_mean - evsum_final
-      ! Calculation of the complexity (Trotta 06 + Sivia)
-      comp = -2*(live_like_mean - live_like_max)
-      ! Calculation of the minimal number of iteration (Veitch and Vecchio 2010)
-      ! (Skilling in Sivia suggest EXP(nlive*info) per process)
-      ! Test overflow
-      IF(DABS(info).LT.700) THEN
-         nexp = FLOOR(DEXP(info)*ntry)
-      ELSE
-         nexp= 0
-      END IF
-      !write(*,*) info, DEXP(info), ntry, FLOOR(DEXP(info)*ntry), nexp, live_like_mean,  evsum_final
-      !pause
+  ! Calculation of the information (see Sivia page 186)
+  info = live_like_mean - evsum_final
+  ! Calculation of the complexity (Trotta 06 + Sivia)
+  comp = -2*(live_like_mean - live_like_max)
+  ! Calculation of the minimal number of iteration (Veitch and Vecchio 2010)
+  ! (Skilling in Sivia suggest EXP(nlive*info) per process)
+  ! Test overflow
+  IF(DABS(info).LT.700) THEN
+     nexp = FLOOR(DEXP(info)*ntry)
+  ELSE
+     nexp= 0
+  END IF
+  !write(*,*) info, DEXP(info), ntry, FLOOR(DEXP(info)*ntry), nexp, live_like_mean,  evsum_final
+  !pause
 
-      ! Calculate the uncertanity of the evidence calculation
-      ! (See J. Veitch and A. Vecchio, Phys. Rev. D 81, 062003 (2010)), but not really and strange behaviour
-      ! evsum_err_est = DSQRT(DBLE(nall))/(nlive*ntry)
-      ! Skilling uncertainty
-      evsum_err_est = DSQRT(info/nlive)
-      ! Empirical
-      ! evsum_err_est = DSQRT(DBLE(nall)/ntry)/(nlive)
+  ! Calculate the uncertanity of the evidence calculation
+  ! (See J. Veitch and A. Vecchio, Phys. Rev. D 81, 062003 (2010)), but not really and strange behaviour
+  ! evsum_err_est = DSQRT(DBLE(nall))/(nlive*ntry)
+  ! Skilling uncertainty
+  evsum_err_est = DSQRT(info/nlive)
+  ! Empirical
+  ! evsum_err_est = DSQRT(DBLE(nall)/ntry)/(nlive)
 
-      ! ---------------- Write results on screen and files -------------------------------------
-      ! Write files in the format for GetDist
-      ! Data
-      OPEN(23,FILE='nf_output_points.txt',STATUS= 'UNKNOWN')
-      WRITE(23,*) '# weight   lnlikelihood      parameters'
-      DO j=1,nall
-         WRITE(23,*) weight(j), live_like_final(j), live_final(j,:)
-      END DO
-      CLOSE(23)
-      ! Diagnostic additional stuff
-      OPEN(23,FILE='nf_output_diag.dat',STATUS= 'UNKNOWN')
-      WRITE(23,*) '# birth_lnlike   rank'
-      DO j=1,nall
-         WRITE(23,*) live_birth_final(j), live_rank_final(j)
-      END DO
-      CLOSE(23)
-      ! Names of parameters
-      OPEN(23,FILE='nf_output_points.paramnames',STATUS= 'UNKNOWN')
-      DO i=1,npar
-         WRITE(23,*) par_name(i)
-      END DO
-      CLOSE(23)
-      ! Range of parameters
-      OPEN(23,FILE='nf_output_points.ranges',STATUS= 'UNKNOWN')
-      DO i=1,npar
-         WRITE(23,*) par_name(i), par_bnd1(i), par_bnd2(i)
-      END DO
-      CLOSE(23)
-   ENDIF
+  ! ---------------- Write results on screen and files -------------------------------------
+  ! Write files in the format for GetDist
+  ! Data
+  OPEN(23,FILE='nf_output_points.txt',STATUS= 'UNKNOWN')
+  WRITE(23,*) '# weight   lnlikelihood      parameters'
+  DO j=1,nall
+     WRITE(23,*) weight(j), live_like_final(j), live_final(j,:)
+  END DO
+  CLOSE(23)
+  ! Diagnostic additional stuff
+  OPEN(23,FILE='nf_output_diag.dat',STATUS= 'UNKNOWN')
+  WRITE(23,*) '# birth_lnlike   rank'
+  DO j=1,nall
+     WRITE(23,*) live_birth_final(j), live_rank_final(j)
+  END DO
+  CLOSE(23)
+  ! Names of parameters
+  OPEN(23,FILE='nf_output_points.paramnames',STATUS= 'UNKNOWN')
+  DO i=1,npar
+     WRITE(23,*) par_name(i)
+  END DO
+  CLOSE(23)
+  ! Range of parameters
+  OPEN(23,FILE='nf_output_points.ranges',STATUS= 'UNKNOWN')
+  DO i=1,npar
+     WRITE(23,*) par_name(i), par_bnd1(i), par_bnd2(i)
+  END DO
+  CLOSE(23)
 
    ! Calculate end time
    ! Normal time
@@ -918,10 +725,8 @@ PROGRAM NESTED_FIT
    !$ stopt_omp = omp_get_wtime( )
    !$ seconds_omp =  stopt_omp - startt_omp
    
-   IF(mpi_rank.EQ.0) THEN
-      CALL PRINT_OUTPUT_RESULT()
-      DEALLOCATE(live_birth_final,live_rank_final,weight,live_like_final,live_final,weight_par)
-   ENDIF
+  CALL PRINT_OUTPUT_RESULT()
+  DEALLOCATE(live_birth_final,live_rank_final,weight,live_like_final,live_final,weight_par)
 
   ! Deallocate stuff
   DEALLOCATE(par_num,par_name,par_in,par_step,par_bnd1,par_bnd2,par_fix, &
@@ -929,24 +734,14 @@ PROGRAM NESTED_FIT
        par_median_w, &
        par_m68_w,par_p68_w,par_m95_w,par_p95_w,par_m99_w,par_p99_w)
   ! Dellocate parallel stuff
-  IF(mpi_rank.EQ.0) THEN
-      DEALLOCATE(live_like_final_try,live_birth_final_try,live_rank_final_try,weight_try,live_final_try,live_max_try, &
-            nall_try,evsum_final_try,live_like_max_try)
-  ENDIF
-
-#ifdef OPENMPI_ON
-  DEALLOCATE(live_final_try_instance)
-  DEALLOCATE(live_like_final_try_instance,live_birth_final,live_rank_final,weight_try_instance, live_max_try_instance)
-  CALL MPI_FINALIZE(mpi_ierror)
-#endif
+  DEALLOCATE(live_like_final_try,live_birth_final_try,live_rank_final_try,weight_try,live_final_try,live_max_try, &
+        nall_try,evsum_final_try,live_like_max_try)
 
 #ifdef NORNG_ON
-  IF(mpi_rank.EQ.0) THEN
-     CALL LOG_WARNING_HEADER()
-     CALL LOG_WARNING('This nested_fit output was ran with a set seed! This is intended for testing only!')
-     CALL LOG_WARNING('If you are using this as a production setting change the cmake NORNG option to OFF.')
-     CALL LOG_WARNING_HEADER()
-  ENDIF
+    CALL LOG_WARNING_HEADER()
+    CALL LOG_WARNING('This nested_fit output was ran with a set seed! This is intended for testing only!')
+    CALL LOG_WARNING('If you are using this as a production setting change the cmake NORNG option to OFF.')
+    CALL LOG_WARNING_HEADER()
 #endif
 
   ! Clean the autofunc module

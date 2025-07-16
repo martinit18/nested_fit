@@ -33,18 +33,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Global options
 option(NORNG "Uses the same set seed. Useful for testing." OFF)
 option(OPENMP "Enable/Disable OpenMP." OFF)
-option(OPENMPI "Enable/Disable OpenMPI." OFF)
-#option(AUTOTESTS "Automatically run tests after compiling." OFF)
 option(LAPACK "Enable/Disable LAPACK." OFF)
 option(LTRACE "Enable trace logging." OFF)
 option(PPROF "Enable performance counter profilling." OFF)
 option(INSTALL_SYSTEM_WIDE "Install on '/usr/local' instead of '$HOME/.local'." OFF) # Requires privileged user
 option(CREATE_AUTOCONF "Builds a 'configure' script for older systems." OFF)
-set(NF_CACHE_DIR "" CACHE STRING "Sets a custom cache directory for nested_fit.")
-
-if(OPENMPI AND WIN32)
-    message(FATAL_ERROR "Windows builds don't currently support OpenMPI.")
-endif()
 
 if(LTRACE)
     add_definitions(-DLTRACE)
@@ -57,12 +50,7 @@ set(project_name nested_fit)
 project(${project_name} VERSION ${project_version} LANGUAGES Fortran CXX)
 
 # Enforce C++14
-set(CMAKE_CXX_STANDARD 14)
-
-#if(LAPACK)
-#    find_package(BLAS REQUIRED)
-#    find_package(LAPACK REQUIRED)
-#endif()
+set(CMAKE_CXX_STANDARD 17)
 
 # Manifest writing tool
 include(cmake/write_manifest.cmake)
@@ -97,27 +85,13 @@ add_definitions("-D'PASTE(x)'='x' -D'CAT(x,y)'='PASTE(x)y'")
 
 add_definitions("-D'PROFILED(x)'=''")
 
-if(NOT INSTALL_SYSTEM_WIDE)
-    if(WIN32)
-        # On Windows, install on the user folder under 'nested_fit'
-        set(CMAKE_INSTALL_PREFIX $ENV{USERPROFILE}/nested_fit)
-    else()
-        # On Linux/MacOS install on the home/.local
-        set(CMAKE_INSTALL_PREFIX $ENV{HOME}/.local)
-    endif()
-endif()
-message(STATUS "Install prefix set to: ${CMAKE_INSTALL_PREFIX}") 
-
+# Set bin output dir
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
+# Set nested fit version strings
 set(nested_fit_version_full_str "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}.${CMAKE_PROJECT_VERSION_PATCH}")
-
 set(nested_fit_version_str "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}")
-
-string(CONCAT nested_fit_mpi_child_comm_proc_name "nf_child_proc" ${nested_fit_version_full_str})
-
 string(CONCAT nested_fit_target "nested_fit" ${nested_fit_version_full_str})
-
 string(REPLACE "." "_" nested_fit_target_ac ${nested_fit_target})
 
 set(SRC_FILES_COMM
@@ -135,7 +109,6 @@ set(SRC_FILES_COMM
     src/USERFCN_SET.f
     src/USERFCN.f
 
-    src/Mod_mpi.f90
     src/Mod_math.f90
 
     src/init_interpolation.f
@@ -166,6 +139,7 @@ set(SRC_FILES_COMM
     src/helper/strutil.f90
     src/helper/int_stack.f90
 )
+
 string(REPLACE ";" " " SRC_FILES_COMM_AC "${SRC_FILES_COMM}")
 ac_dec_obj_dep("src/Mod_cluster_analysis" "src/Mod_logger")
 ac_dec_obj_dep("src/Mod_logger" "src/Mod_timestamp")
@@ -213,20 +187,12 @@ endforeach()
 
 ac_dec_obj_dep("src/Mod_interpolate" "src/Mod_logger")
 ac_dec_obj_dep("src/functions/internal_funcs" "src/Mod_logger")
-# ac_dec_obj_dep("src/functions/internal_funcs" "src/hash")
-
-set(CHILD_SRC_FILES
-    src/helper/mpi_status_process.f90
-    src/Mod_mpi.f90
-)
 
 file(GLOB SRC_DIERCKX RELATIVE ${CMAKE_SOURCE_DIR} src/DIERCKX/*.f)
 string(REPLACE ";" " " SRC_DIERCKX_AC "${SRC_DIERCKX}")
 
 file(GLOB SRC_SLATEC  RELATIVE ${CMAKE_SOURCE_DIR} src/SLATEC/*.f)
 string(REPLACE ";" " " SRC_SLATEC_AC "${SRC_SLATEC}")
-
-#file(GLOB SRC_LAPACK  ${CMAKE_SOURCE_DIR}/src/LAPACK/*.f ${CMAKE_SOURCE_DIR}/src/LAPACK/*.F)
 
 if(OPENMP)
     find_package(OpenMP)
@@ -237,15 +203,8 @@ if(OPENMP)
     endif()
 endif()
 
-if(OPENMP AND OPENMPI)
-    message(ERROR " Compiling against OpenMP and OpenMPI at the same time is currently not supported.")
-    message(WARNING "Disabling OpenMP.")
-    message(STATUS "Please enable only one feature.")
-    set(OPENMP OFF CACHE BOOL "" FORCE)
-endif()
-
 if(OPENMP AND NORNG)
-    message(ERROR " Having a set seed while enabling OpenMP does not work.")
+    message(ERROR "Having a set seed while enabling OpenMP does not work.")
     message(WARNING "Disabling OpenMP.")
     message(STATUS "Please enable only one feature.")
     set(OPENMP OFF CACHE BOOL "" FORCE)
@@ -257,29 +216,11 @@ else()
     set(nested_fit_parallel_on ".FALSE.")
 endif()
 
-if(OPENMPI)
-    set(nested_fit_parallel_mpi_on ".TRUE.")
-else()
-    set(nested_fit_parallel_mpi_on ".FALSE.")
-endif()
-
 if(NORNG)
     set(nested_fit_static_seed ".TRUE.")
 else()
     set(nested_fit_static_seed ".FALSE.")
 endif()
-
-# Add the cache folder location (usually .nested_fit under $HOME Linux, and %appdata% for Windows)
-if(NF_CACHE_DIR STREQUAL "")
-    if(WIN32)
-        set(nested_fit_cache_folder $ENV{APPDATA}/.nested_fit/ CACHE STRING "")
-    else()
-        set(nested_fit_cache_folder $ENV{HOME}/.nested_fit/ CACHE STRING "")
-    endif()
-else()
-    set(nested_fit_cache_folder ${NF_CACHE_DIR} CACHE STRING "")
-endif()
-message(STATUS "Setting cache folder location: ${nested_fit_cache_folder}")
 
 # Create the internal functions imutable cache config
 set(Internal_CustomBuiltins "")
@@ -299,12 +240,12 @@ set(CFG_FILES
 
 set(SRC_FILES_CXX
     src/helper/console.cpp
-    src/helper/disable_stdout.cpp
+    src/helper/utils.cpp
     src/funceval/native_parser.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/latex_parser.cpp
 )
 set(SRC_FILES_CXX_AC
-    "src/helper/console.cpp src/helper/disable_stdout.cpp src/funceval/latex_parser.cpp src/funceval/native_parser.cpp"
+    "src/helper/console.cpp src/helper/utils.cpp src/funceval/latex_parser.cpp src/funceval/native_parser.cpp"
 )
 
 add_executable(${nested_fit_target}
@@ -348,8 +289,6 @@ target_compile_options(${nested_fit_target} PUBLIC
     ${SRC_FLAGS_OMP}
 )
 
-# target_compile_definitions(${nested_fit_target_func} PRIVATE -DFUNC_TARGET) # TODO What is that? 
-
 if(LAPACK)
     target_compile_definitions(${nested_fit_target}      PUBLIC -DLAPACK_ON)
     if(UNIX)
@@ -373,59 +312,20 @@ if(LAPACK)
     endif()
 endif()
 
-target_link_libraries(${nested_fit_target}      PUBLIC dl)
+target_link_libraries(${nested_fit_target} PUBLIC dl)
+target_link_libraries(${nested_fit_target} PRIVATE TracyClient)
 
-target_include_directories(${nested_fit_target}      PRIVATE ${tracy_SOURCE_DIR})
+target_include_directories(${nested_fit_target} PRIVATE ${tracy_SOURCE_DIR})
 
-target_link_libraries(${nested_fit_target}      PRIVATE TracyClient)
 
 if(OPENMP)
-    target_link_options(${nested_fit_target}      PRIVATE "-fopenmp")
+    target_link_options(${nested_fit_target} PRIVATE "-fopenmp")
 endif()
 
 if(NORNG)
     # Set the NORNG_ON flag for the preprocessor
-    target_compile_definitions(${nested_fit_target}      PUBLIC -DNORNG_ON)
+    target_compile_definitions(${nested_fit_target} PUBLIC -DNORNG_ON)
 endif()
-
-# Find MPI
-if(OPENMPI)
-    # Set the OPENMPI_ON flag for the preprocessor
-    target_compile_definitions(${nested_fit_target}      PUBLIC -DOPENMPI_ON)
-
-    # Add the required console writter (monitor) executable
-    # This runs on a separate OpenMPI COMM
-    add_executable(${nested_fit_mpi_child_comm_proc_name}
-        ${CFG_FILES}
-        ${CHILD_SRC_FILES}
-    )
-
-    find_package(MPI REQUIRED)
-    if(MPI_FOUND)
-        if(MPI_Fortran_HAVE_F90_MODULE)
-            target_link_libraries(${nested_fit_target}                   PUBLIC MPI::MPI_Fortran)
-            target_link_libraries(${nested_fit_mpi_child_comm_proc_name} PUBLIC MPI::MPI_Fortran)
-        else()
-            message(FATAL_ERROR "This project requires the MPI Fortran 90 module.")
-        endif()
-    else()
-        message(FATAL_ERROR "OpenMPI option specified, but could not find the MPI package.")
-    endif()
-endif()
-
-# Create the cache folder at build time
-add_custom_command(TARGET ${nested_fit_target}
-    PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${nested_fit_cache_folder}
-)
-add_custom_command(TARGET ${nested_fit_target}
-    PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${nested_fit_cache_folder}user/
-)
-add_custom_command(TARGET ${nested_fit_target}
-    PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${nested_fit_cache_folder}sys/
-)
 
 # Compile the object files of the internal functions the user will be able to natively use in their expressions
 #TODO(César): Use generator expression for compile flags here too
@@ -445,13 +345,13 @@ endif()
 set_source_files_properties(${SRC_EXTERNAL_FUNCS} PROPERTIES COMPILE_FLAGS "${SRC_EXTERNAL_FUNCS_OBJ_FLAGS}")
 
 add_library(internal_functions OBJECT ${SRC_EXTERNAL_FUNCS} ${SRC_DIERCKX})
-add_custom_target(copy_internal_functions ALL
-    DEPENDS internal_functions
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_OBJECTS:internal_functions> ${nested_fit_cache_folder}sys/
-    COMMAND_EXPAND_LISTS
-)
+# add_custom_target(copy_internal_functions ALL
+#     DEPENDS internal_functions
+#     COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_OBJECTS:internal_functions> ${nested_fit_cache_folder}sys/
+#     COMMAND_EXPAND_LISTS
+# )
 
-install(TARGETS ${nested_fit_target}      DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
+install(TARGETS ${nested_fit_target} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
 
 # Write a manifest file into the cache
 # This makes things easier on the python side
@@ -459,15 +359,10 @@ install(TARGETS ${nested_fit_target}      DESTINATION ${CMAKE_INSTALL_PREFIX}/bi
 # on configure time
 write_manifest()
 
-add_custom_target(manifest_install ALL
-    DEPENDS copy_internal_functions
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/manifest.txt ${nested_fit_cache_folder}
-)
-
-if(OPENMPI)
-    # Do the same for the child process in case it was compiled
-    install(TARGETS ${nested_fit_mpi_child_comm_proc_name} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
-endif()
+# add_custom_target(manifest_install ALL
+#     DEPENDS copy_internal_functions
+#     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/manifest.txt ${nested_fit_cache_folder}
+# )
 
 # configure compatibility files for autoconf / automake
 if(CREATE_AUTOCONF)

@@ -1,22 +1,119 @@
 MODULE MOD_METADATA
-  ! Module for program runtime metadata
-  IMPLICIT NONE
+    ! Module for program runtime metadata
+    USE MOD_LOGGER
 
-  ! Version static flags
-  CHARACTER(LEN=*), PARAMETER :: version_full = '@nested_fit_version_full_str@'
-  CHARACTER(LEN=*), PARAMETER :: version = '@nested_fit_version_str@'
-  CHARACTER(LEN=*), PARAMETER :: nf_child_proc_name = '@nested_fit_mpi_child_comm_proc_name@'
+    IMPLICIT NONE
 
-  ! System / Install specific flags
-  CHARACTER(LEN=*), PARAMETER :: nf_cache_folder = '@nested_fit_cache_folder@'
-  LOGICAL, PARAMETER :: parallel_on = @nested_fit_parallel_on@
-  LOGICAL, PARAMETER :: parallel_mpi_on = @nested_fit_parallel_mpi_on@
-  LOGICAL, PARAMETER :: static_seed = @nested_fit_static_seed@
+    PUBLIC :: INIT_NF_CACHE, nf_cache_folder
+
+    ! Version static flags
+    CHARACTER(LEN=*), PARAMETER :: version_full = '@nested_fit_version_full_str@'
+    CHARACTER(LEN=*), PARAMETER :: version = '@nested_fit_version_str@'
+
+    ! System / Install specific flags
+    CHARACTER(LEN=1024) :: nf_cache_folder
+    LOGICAL, PARAMETER :: parallel_on = @nested_fit_parallel_on@
+    LOGICAL, PARAMETER :: static_seed = @nested_fit_static_seed@
 
 #ifdef FUNC_TARGET
-  CHARACTER(LEN=*), PARAMETER :: exec_target_name = '@nested_fit_target_func@'
+    CHARACTER(LEN=*), PARAMETER :: exec_target_name = '@nested_fit_target_func@'
 #else
-  CHARACTER(LEN=*), PARAMETER :: exec_target_name = '@nested_fit_target@'
+    CHARACTER(LEN=*), PARAMETER :: exec_target_name = '@nested_fit_target@'
 #endif
 
+    INTERFACE
+        SUBROUTINE MAKE_DIRECTORY(path, errcode) BIND(c, name='MakeDirectory')
+            USE, INTRINSIC :: iso_c_binding
+            IMPLICIT NONE
+            CHARACTER(c_char), INTENT(IN), DIMENSION(*) :: path
+            LOGICAL(c_bool)  , INTENT(OUT)              :: errcode
+        END SUBROUTINE
+    END INTERFACE
+
+    PRIVATE
+    CONTAINS
+        SUBROUTINE F_C_STRING_ALLOC_I(f_string, c_string)
+            USE iso_c_binding
+            CHARACTER(c_char), DIMENSION(:), POINTER, INTENT(OUT) :: c_string
+            CHARACTER(LEN=*), INTENT(IN)                          :: f_string
+
+            INTEGER :: len
+
+            len = LEN_TRIM(f_string)
+            ALLOCATE(c_string(len + 1))
+            c_string = TRANSFER(TRIM(f_string), c_string)
+            c_string(len + 1) = c_null_char
+        END SUBROUTINE
+
+        SUBROUTINE F_C_STRING_DEALLOC_I(c_string)
+            USE iso_c_binding
+            CHARACTER(c_char), DIMENSION(:), POINTER, INTENT(INOUT) :: c_string
+
+            DEALLOCATE(c_string)
+        END SUBROUTINE
+
+        SUBROUTINE GET_CACHE_DIR(created)
+            USE iso_c_binding
+            IMPLICIT NONE
+
+            CHARACTER(LEN=512)   :: home
+            CHARACTER(LEN=1024)  :: cache_dir
+            LOGICAL(c_bool)      :: make_dir_err
+            INTEGER              :: hlength, hstatus
+            LOGICAL              :: exists
+            LOGICAL, INTENT(OUT) :: created
+            CHARACTER(c_char), DIMENSION(:), POINTER :: c_cache_dir
+
+            created = .FALSE.
+
+            ! Get user home dir
+#ifndef _WIN32
+            CALL GET_ENVIRONMENT_VARIABLE('HOME', home, hlength, hstatus)
+#else
+            CALL GET_ENVIRONMENT_VARIABLE('USERPROFILE', home, hlength, hstatus)
+#endif
+            IF(hstatus.NE.0) THEN
+                CALL LOG_ERROR_HEADER()
+                CALL LOG_ERROR('Failed to fetch user home directory.')
+                CALL LOG_ERROR_HEADER()
+                CALL HALT_EXECUTION()
+            ENDIF
+
+            cache_dir = TRIM(home(1:hlength)) // '/.nested_fit/'
+
+            INQUIRE(FILE=cache_dir, EXIST=exists)
+            IF(.NOT.exists) THEN
+                CALL F_C_STRING_ALLOC_I(cache_dir, c_cache_dir)
+                CALL MAKE_DIRECTORY(c_cache_dir(1), make_dir_err)
+                CALL F_C_STRING_DEALLOC_I(c_cache_dir)
+
+                IF(make_dir_err) THEN
+                    CALL LOG_ERROR_HEADER()
+                    CALL LOG_ERROR('Failed to create cache under user home directory.')
+                    CALL LOG_ERROR_HEADER()
+                    CALL HALT_EXECUTION()
+                ENDIF
+                created = .TRUE.
+            ENDIF
+
+            CALL LOG_TRACE('Found cache dir: '//TRIM(cache_dir))
+            nf_cache_folder = TRIM(cache_dir)
+        END SUBROUTINE
+
+        SUBROUTINE POPULATE_CACHE()
+            IMPLICIT NONE
+        END SUBROUTINE
+
+        SUBROUTINE INIT_NF_CACHE()
+            IMPLICIT NONE
+            LOGICAL :: cache_created
+
+            ! Create or get the cache directory
+            CALL GET_CACHE_DIR(cache_created)
+
+            ! Populate the cache if it does not exist
+            IF(cache_created) THEN
+                CALL POPULATE_CACHE()
+            ENDIF
+        END SUBROUTINE
 END MODULE MOD_METADATA

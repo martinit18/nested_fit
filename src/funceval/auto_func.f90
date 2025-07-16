@@ -144,13 +144,13 @@ MODULE MOD_AUTOFUNC
     END TYPE cache_entry_t
 
 #ifdef _WIN32
-    CHARACTER(LEN=*), PARAMETER      :: dll_name    = TRIM(nf_cache_folder)//'dynamic_calls.dll'
-    CHARACTER(LEN=*), PARAMETER      :: obj_ext     = '.obj'
+    CHARACTER(LEN=1024) :: dll_name = TRIM(nf_cache_folder)//'dynamic_calls.dll'
+    CHARACTER(LEN=*), PARAMETER :: obj_ext     = '.obj'
 #else
-    CHARACTER(LEN=*), PARAMETER      :: dll_name    = TRIM(nf_cache_folder)//'dynamic_calls.so'
-    CHARACTER(LEN=*), PARAMETER      :: obj_ext     = '.o'
+    CHARACTER(LEN=1024) :: dll_name = TRIM(nf_cache_folder)//'dynamic_calls.so'
+    CHARACTER(LEN=*), PARAMETER :: obj_ext     = '.o'
 #endif
-    CHARACTER(LEN=*), PARAMETER      :: fname_cache = TRIM(nf_cache_folder)//'func_names.dat'
+    CHARACTER(LEN=1024)              :: fname_cache = TRIM(nf_cache_folder)//'func_names.dat'
     TYPE(cache_entry_t), ALLOCATABLE :: entries(:)
     INTEGER                          :: nentries=0
     TYPE(c_ptr), ALLOCATABLE         :: loaded_addr(:)

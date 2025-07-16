@@ -259,7 +259,6 @@ MODULE MOD_INPUTPARSE
             CALL LOG_ERROR('Aborting Execution...')
             CALL LOG_ERROR_HEADER()
             STOP
-            ! NOTE(César) : This works before OpenMPI init!
         ENDIF
         RETURN
 
@@ -286,7 +285,6 @@ MODULE MOD_INPUTPARSE
             CALL LOG_ERROR('Aborting Execution...')
             CALL LOG_ERROR_HEADER()
             STOP
-            ! NOTE(César) : This works before OpenMPI init!
         ENDIF
 
         RETURN
@@ -305,7 +303,6 @@ MODULE MOD_INPUTPARSE
             CALL LOG_ERROR('Aborting Execution...')
             CALL LOG_ERROR_HEADER()
             STOP
-            ! NOTE(César) : This works before OpenMPI init!
         ENDIF
 
         RETURN

@@ -147,11 +147,9 @@ If Python is found an utility for running and analysing data using nested_fit is
 |DEBUG               | Enable debug mode.                                                   | OFF     |
 |NORNG               | Set the nested_fit to use a set seed. Internal test use mainly.      | OFF     |
 |OPENMP              | Enable/Disable OpenMP support.                                       | OFF     |
-|OPENMPI             | Enable/Disable OpenMPI support.                                      | OFF     |
 |LAPACK              | Use LAPACK library functions instead of the internal ones.           | OFF     |
 |LTRACE              | Enable trace logging output. Will hinder performance.                | OFF     |
 |PPROF               | Enable performance counter profilling.                               | OFF     |
-|INSTALL_SYSTEM_WIDE | Install for all users (differs for each OS). Requires elevated user. | OFF     |
 
 
 
@@ -221,8 +219,6 @@ You can choose which compiler to use with the `COMP` option:
 The other options for the Makefile are the same as the ones for the CMake. For an option to be set to OFF, it needs to be commented in the Makefile.
 
 ### General comments
-
-- For the moment, the options OPENMPI and OPENMP cannot be selected at the same time. If both are set to ON, OPENMP will be set to OFF.
 
 - The options NORNG and OPENMP cannot be selected at the same time. If both are set to ON, OPENMP will be set to OFF.
 

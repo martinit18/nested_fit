@@ -26,12 +26,7 @@ MODULE MOD_SEARCH_NEW_POINT
 
 CONTAINS
   
-  ! TODO(César): Remap all of these writes to the mpi_status_process
-  
   SUBROUTINE INIT_SEARCH_METHOD()
-#ifdef OPENMPI_ON
-    INTEGER(4) :: mpi_ierror
-#endif
     IF (search_method.eq.'RANDOM_WALK') THEN
        searchid = 0
     ELSE IF(search_method.EQ.'UNIFORM') THEN
