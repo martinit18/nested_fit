@@ -236,6 +236,7 @@ configure_file(src/Mod_metadata.f90.in Mod_metadata.f90 @ONLY)
 
 set(CFG_FILES
     ${CMAKE_CURRENT_BINARY_DIR}/Mod_metadata.f90
+	${CMAKE_CURRENT_BINARY_DIR}/rescache.cpp
 )
 
 set(SRC_FILES_CXX
@@ -248,7 +249,86 @@ set(SRC_FILES_CXX_AC
     "src/helper/console.cpp src/helper/utils.cpp src/funceval/latex_parser.cpp src/funceval/native_parser.cpp"
 )
 
+# Compile the object files of the internal functions the user will be able to natively use in their expressions
+#TODO(César): Use generator expression for compile flags here too
+#TODO(César): Optimize fPIC with https://www.macieira.org/blog/2012/01/sorry-state-of-dynamic-libraries-on-linux/
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(SRC_DIERCKX_OBJ_FLAGS "-fPIC -fno-semantic-interposition -static -O3 -ffree-line-length-0")
+else()
+    set(SRC_DIERCKX_OBJ_FLAGS "-fPIC -fno-semantic-interposition -static -g -O0 -ffree-line-length-0")
+endif()
+set_source_files_properties(${SRC_DIERCKX} PROPERTIES COMPILE_FLAGS "${SRC_DIERCKX_OBJ_FLAGS}")
+
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(SRC_EXTERNAL_FUNCS_OBJ_FLAGS "-fPIC -fno-semantic-interposition -static -O3 -Wall -ffree-line-length-0")
+else()
+    set(SRC_EXTERNAL_FUNCS_OBJ_FLAGS "-fPIC -fno-semantic-interposition -static -O0 -g -Wall -ffree-line-length-0")
+endif()
+set_source_files_properties(${SRC_EXTERNAL_FUNCS} PROPERTIES COMPILE_FLAGS "${SRC_EXTERNAL_FUNCS_OBJ_FLAGS}")
+
+add_library(internal_functions OBJECT ${SRC_EXTERNAL_FUNCS} ${SRC_DIERCKX})
+# add_custom_command(
+# 	OUTPUT internal_functions_obj_dump.txt
+# 	COMMAND ${CMAKE_COMMAND} -E echo "\"$<TARGET_OBJECTS:internal_functions>\"" > internal_functions_obj_dump.txt
+# 	DEPENDS $<TARGET_OBJECTS:internal_functions>
+# 	COMMENT "Dumping internal functions object files paths."
+# )
+# add_custom_target(dump_internal_functions_objects DEPENDS internal_functions_obj_dump.txt)
+
+# Now that we have all the generated internal_functions objects
+# Recreate them with the binary flag so we can access them later
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/resources)
+set(GENERATED_OBJECTS "")
+set(SRC_EXTERNAL_ALL ${SRC_EXTERNAL_FUNCS} ${SRC_DIERCKX})
+foreach(src_file IN LISTS SRC_EXTERNAL_ALL)
+	get_filename_component(src_dir ${src_file} DIRECTORY)
+	get_filename_component(base_ext ${src_file} NAME)
+
+	set(OBJ_FILE "${base_ext}.o")
+	set(BIN_FILE "${CMAKE_BINARY_DIR}/resources/res_${base_ext}.o.o")
+
+	# TODO: (César) Port this to MAC and Windows also
+	add_custom_command(
+		OUTPUT ${BIN_FILE}
+		COMMAND ld -r -b binary -o ${BIN_FILE} ${OBJ_FILE}
+		DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/internal_functions.dir/${src_dir}/${OBJ_FILE}
+		COMMENT "Generating resource object from: ${OBJ_FILE}"
+		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/internal_functions.dir/${src_dir}
+	)
+	list(APPEND GENERATED_OBJECTS ${BIN_FILE})
+endforeach()
+
+add_custom_target(generate_binary_resources ALL DEPENDS ${GENERATED_OBJECTS})
+
+# Now configure rescache.cpp.in with the appropriate names to fill when requested
+# These files go into the <cache>/sys/ folder
+set(RES_NAMES_EXT_DEFINE_EXPR_LIST "")
+set(RES_NAMES_VAR_EXPR_LIST "")
+set(RES_NAMES_LEN_EXPR_LIST "")
+set(RES_NAMES_PATH_EXPR_LIST "")
+
+foreach(res_file IN LISTS GENERATED_OBJECTS)
+	get_filename_component(name ${res_file} NAME)
+	string(REGEX REPLACE "\\.[^.]*$" "" base ${name})
+	string(REGEX REPLACE "^res_" "" sbase ${base})
+	string(REPLACE "." "_" name_identifier ${sbase})
+	list(APPEND RES_NAMES_EXT_DEFINE_EXPR_LIST "RES_EXT_DEFINE(${name_identifier})")
+	list(APPEND RES_NAMES_VAR_EXPR_LIST "RES_VAR(${name_identifier})")
+	list(APPEND RES_NAMES_LEN_EXPR_LIST "RES_LEN(${name_identifier})")
+	list(APPEND RES_NAMES_PATH_EXPR_LIST "\"sys/${sbase}\"")
+endforeach()
+string(JOIN ";\n" RES_NAMES_EXT_DEFINE_EXPR ${RES_NAMES_EXT_DEFINE_EXPR_LIST})
+string(JOIN ",\n\t\t" RES_NAMES_VAR_EXPR ${RES_NAMES_VAR_EXPR_LIST})
+string(JOIN ",\n\t\t" RES_NAMES_LEN_EXPR ${RES_NAMES_LEN_EXPR_LIST})
+string(JOIN ",\n\t\t" RES_NAMES_PATH_EXPR ${RES_NAMES_PATH_EXPR_LIST})
+
+configure_file(src/helper/rescache.cpp.in rescache.cpp @ONLY)
+
 add_executable(${nested_fit_target}
+	# Generated resource objects
+	${GENERATED_OBJECTS}
+
+	# Source files
     ${CFG_FILES}
     ${SRC_DIERCKX}
     ${SRC_SLATEC}
@@ -256,6 +336,9 @@ add_executable(${nested_fit_target}
     ${SRC_FILES_CXX}
 )
 
+# Make nested_fit depend on the internal functions object library
+# So that we can copy their content inside the binary for writing
+add_dependencies(${nested_fit_target} generate_binary_resources)
 
 # TODO(César): This assumes we are using gfortran!
 set(SRC_FLAGS_D     -cpp -O0 -Wall -g -ffree-line-length-0 -ffixed-line-length-0 -Wno-ampersand -Wno-tabs -Wno-unused-dummy-argument)
@@ -327,24 +410,9 @@ if(NORNG)
     target_compile_definitions(${nested_fit_target} PUBLIC -DNORNG_ON)
 endif()
 
-# Compile the object files of the internal functions the user will be able to natively use in their expressions
-#TODO(César): Use generator expression for compile flags here too
-#TODO(César): Optimize fPIC with https://www.macieira.org/blog/2012/01/sorry-state-of-dynamic-libraries-on-linux/
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(SRC_DIERCKX_OBJ_FLAGS "-fPIC -fno-semantic-interposition -static -O3 -ffree-line-length-0")
-else()
-    set(SRC_DIERCKX_OBJ_FLAGS "-fPIC -fno-semantic-interposition -static -g -O0 -ffree-line-length-0")
-endif()
-set_source_files_properties(${SRC_DIERCKX} PROPERTIES COMPILE_FLAGS "${SRC_DIERCKX_OBJ_FLAGS}")
-
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(SRC_EXTERNAL_FUNCS_OBJ_FLAGS "-fPIC -fno-semantic-interposition -static -O3 -Wall -ffree-line-length-0")
-else()
-    set(SRC_EXTERNAL_FUNCS_OBJ_FLAGS "-fPIC -fno-semantic-interposition -static -O0 -g -Wall -ffree-line-length-0")
-endif()
-set_source_files_properties(${SRC_EXTERNAL_FUNCS} PROPERTIES COMPILE_FLAGS "${SRC_EXTERNAL_FUNCS_OBJ_FLAGS}")
-
-add_library(internal_functions OBJECT ${SRC_EXTERNAL_FUNCS} ${SRC_DIERCKX})
+# add_custom_command(
+# 	OUTPUT internal_functions
+# )
 # add_custom_target(copy_internal_functions ALL
 #     DEPENDS internal_functions
 #     COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_OBJECTS:internal_functions> ${nested_fit_cache_folder}sys/

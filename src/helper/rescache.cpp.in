@@ -1,0 +1,68 @@
+// Brief  : This file contains the resource cache. It handles binary files present in the executable.
+//          Works simply by exposing the symbols previously linked using cmake.
+//          This works using the gcc -binary mode flag which just copies binary data to a symbol at an object file.
+//          Afterward we access it via the 'extern' keyword in C and expose it to the fortran interface.
+//          For more info visit: https://gareus.org/wiki/embedding_resources_in_executables
+// Author : César Godinho
+// Date   : 17/07/2025
+
+#include <cstdint>
+#include <fstream>
+#include <string>
+
+#ifdef __APPLE__
+#define RES_EXT_DEFINE(name) \
+	extern const unsigned char _section$__DATA__ ## name []; \
+	extern const unsigned char binary_ ## name ## _end[];
+#define RES_VAR(name) _section$__DATA__ ## name
+#define RES_LEN(name) (getsectbyname("__DATA__", "__" #name)->size)
+#elif (defined _WIN32) || (defined __WIN32__)
+#define RES_EXT_DEFINE(name) \
+	extern const unsigned char binary_ ## name ## _start[]; \
+	extern const unsigned char binary_ ## name ## _end[];
+#define RES_VAR(name) binary_ ## name ## _start
+#define RES_LEN(name) ((binary_ ## name ## _end) - (binary_ ## name ## _start))
+#else // linux
+#define RES_EXT_DEFINE(name) \
+	extern const unsigned char _binary_ ## name ## _start[]; \
+	extern const unsigned char _binary_ ## name ## _end[];
+#define RES_VAR(name) _binary_ ## name ## _start
+#define RES_LEN(name) static_cast<std::size_t>((_binary_ ## name ## _end) - (_binary_ ## name ## _start))
+#endif
+
+@RES_NAMES_EXT_DEFINE_EXPR@
+
+static bool WriteBinaryFile(const std::uint8_t* data, const std::size_t size, const std::string& path)
+{
+	std::ofstream out(path, std::ios::out | std::ios::binary);
+	if(!out.is_open())
+	{
+		return false;
+	}
+
+	out.write(reinterpret_cast<const char*>(data), size);
+	return true;
+}
+
+extern "C" bool CopyCacheData(const char* cache_root)
+{
+	const std::uint8_t* files[] = {
+		@RES_NAMES_VAR_EXPR@
+	};
+	const std::size_t sizes[] = {
+		@RES_NAMES_LEN_EXPR@
+	};
+	const std::string paths[] = {
+		@RES_NAMES_PATH_EXPR@
+	};
+
+	for(unsigned int i = 0; i < (sizeof(files) / sizeof(files[0])); i++)
+	{
+		if(!WriteBinaryFile(files[i], sizes[i], std::string(cache_root) + "/" + paths[i]))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}

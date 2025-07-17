@@ -4,7 +4,8 @@ MODULE MOD_METADATA
 
     IMPLICIT NONE
 
-    PUBLIC :: INIT_NF_CACHE, nf_cache_folder
+    PUBLIC :: INIT_NF_CACHE, nf_cache_folder, version_full, version, parallel_on,&
+              static_seed, exec_target_name
 
     ! Version static flags
     CHARACTER(LEN=*), PARAMETER :: version_full = '@nested_fit_version_full_str@'
@@ -23,17 +24,54 @@ MODULE MOD_METADATA
 
     INTERFACE
         SUBROUTINE MAKE_DIRECTORY(path, errcode) BIND(c, name='MakeDirectory')
-            USE, INTRINSIC :: iso_c_binding
+            USE, INTRINSIC :: ISO_C_BINDING
             IMPLICIT NONE
             CHARACTER(c_char), INTENT(IN), DIMENSION(*) :: path
             LOGICAL(c_bool)  , INTENT(OUT)              :: errcode
         END SUBROUTINE
+
+        FUNCTION COPY_CACHE_DATA(cache_root) RESULT(output) BIND(c, name='CopyCacheData')
+            USE, INTRINSIC :: ISO_C_BINDING
+            IMPLICIT NONE
+            CHARACTER(c_char), INTENT(IN), DIMENSION(*) :: cache_root
+            LOGICAL(c_bool) :: output
+        END FUNCTION
     END INTERFACE
 
     PRIVATE
     CONTAINS
+        SUBROUTINE MAKE_DIRECTORY_F(path)
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            CHARACTER(LEN=*) , INTENT(IN)            :: path
+            CHARACTER(c_char), DIMENSION(:), POINTER :: c_path
+            LOGICAL(c_bool)                          :: make_dir_err
+            
+            CALL F_C_STRING_ALLOC_I(path, c_path)
+            CALL MAKE_DIRECTORY(c_path(1), make_dir_err)
+            CALL F_C_STRING_DEALLOC_I(c_path)
+
+            IF(make_dir_err) THEN
+                CALL LOG_ERROR_HEADER()
+                CALL LOG_ERROR('Failed to create cache under user home directory.')
+                CALL LOG_ERROR_HEADER()
+            ENDIF
+        END SUBROUTINE
+
+        SUBROUTINE COPY_CACHE_DATA_F(cache_root, result)
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            CHARACTER(LEN=*), INTENT(IN)  :: cache_root
+            LOGICAL         , INTENT(OUT) :: result
+            CHARACTER(c_char), DIMENSION(:), POINTER :: c_path
+
+            CALL F_C_STRING_ALLOC_I(cache_root, c_path)
+            result = COPY_CACHE_DATA(c_path(1))
+            CALL F_C_STRING_DEALLOC_I(c_path)
+        END SUBROUTINE
+
         SUBROUTINE F_C_STRING_ALLOC_I(f_string, c_string)
-            USE iso_c_binding
+            USE ISO_C_BINDING
             CHARACTER(c_char), DIMENSION(:), POINTER, INTENT(OUT) :: c_string
             CHARACTER(LEN=*), INTENT(IN)                          :: f_string
 
@@ -46,23 +84,19 @@ MODULE MOD_METADATA
         END SUBROUTINE
 
         SUBROUTINE F_C_STRING_DEALLOC_I(c_string)
-            USE iso_c_binding
+            USE ISO_C_BINDING
             CHARACTER(c_char), DIMENSION(:), POINTER, INTENT(INOUT) :: c_string
 
             DEALLOCATE(c_string)
         END SUBROUTINE
 
         SUBROUTINE GET_CACHE_DIR(created)
-            USE iso_c_binding
             IMPLICIT NONE
-
             CHARACTER(LEN=512)   :: home
             CHARACTER(LEN=1024)  :: cache_dir
-            LOGICAL(c_bool)      :: make_dir_err
             INTEGER              :: hlength, hstatus
             LOGICAL              :: exists
             LOGICAL, INTENT(OUT) :: created
-            CHARACTER(c_char), DIMENSION(:), POINTER :: c_cache_dir
 
             created = .FALSE.
 
@@ -83,16 +117,9 @@ MODULE MOD_METADATA
 
             INQUIRE(FILE=cache_dir, EXIST=exists)
             IF(.NOT.exists) THEN
-                CALL F_C_STRING_ALLOC_I(cache_dir, c_cache_dir)
-                CALL MAKE_DIRECTORY(c_cache_dir(1), make_dir_err)
-                CALL F_C_STRING_DEALLOC_I(c_cache_dir)
-
-                IF(make_dir_err) THEN
-                    CALL LOG_ERROR_HEADER()
-                    CALL LOG_ERROR('Failed to create cache under user home directory.')
-                    CALL LOG_ERROR_HEADER()
-                    CALL HALT_EXECUTION()
-                ENDIF
+            CALL LOG_TRACE('Cache dir does not exist. Creating...')
+                CALL MAKE_DIRECTORY_F(TRIM(cache_dir) // 'user/')
+                CALL MAKE_DIRECTORY_F(TRIM(cache_dir) // 'sys/')
                 created = .TRUE.
             ENDIF
 
@@ -102,6 +129,15 @@ MODULE MOD_METADATA
 
         SUBROUTINE POPULATE_CACHE()
             IMPLICIT NONE
+            LOGICAL :: result
+            CALL LOG_TRACE('System cache is empty. Populating...')
+            CALL COPY_CACHE_DATA_F(nf_cache_folder, result)
+            IF(.NOT.result) THEN
+                CALL LOG_ERROR_HEADER()
+                CALL LOG_ERROR('Failed to copy nested_fit internal cache files.')
+                CALL LOG_ERROR_HEADER()
+                CALL HALT_EXECUTION()
+            ENDIF
         END SUBROUTINE
 
         SUBROUTINE INIT_NF_CACHE()

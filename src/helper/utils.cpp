@@ -9,6 +9,7 @@ extern "C" void DisableStdout()
 
 extern "C" void MakeDirectory(const char* path, bool* error)
 {
+	*error = false;
 	std::error_code ec;
 	if(!std::filesystem::create_directories(path, ec)) *error = true;
 	if(ec) *error = true;
