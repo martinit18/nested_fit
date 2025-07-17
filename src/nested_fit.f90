@@ -1347,7 +1347,7 @@ PROGRAM NESTED_FIT
    PROFILED(B_GETCACHELOC)
 
    ! We don't want this to be overriden by verbosity
-   WRITE(*, *) nf_cache_folder
+   WRITE(*, *) TRIM(nf_cache_folder)
    CALL HALT_EXECUTION()
   END SUBROUTINE
   

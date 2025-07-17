@@ -11,6 +11,7 @@
 #include <string>
 
 #ifdef __APPLE__
+#include <mach-o/getsect.h>
 #define RES_EXT_DEFINE(name) \
 	extern const unsigned char _section$__DATA__ ## name []; \
 	extern const unsigned char binary_ ## name ## _end[];

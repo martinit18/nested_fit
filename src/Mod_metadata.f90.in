@@ -117,13 +117,12 @@ MODULE MOD_METADATA
 
             INQUIRE(FILE=cache_dir, EXIST=exists)
             IF(.NOT.exists) THEN
-            CALL LOG_TRACE('Cache dir does not exist. Creating...')
+                CALL LOG_TRACE('Cache dir does not exist. Creating...')
                 CALL MAKE_DIRECTORY_F(TRIM(cache_dir) // 'user/')
                 CALL MAKE_DIRECTORY_F(TRIM(cache_dir) // 'sys/')
                 created = .TRUE.
             ENDIF
 
-            CALL LOG_TRACE('Found cache dir: '//TRIM(cache_dir))
             nf_cache_folder = TRIM(cache_dir)
         END SUBROUTINE
 

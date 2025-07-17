@@ -288,6 +288,17 @@ foreach(src_file IN LISTS SRC_EXTERNAL_ALL)
 	set(BIN_FILE "${CMAKE_BINARY_DIR}/resources/res_${base_ext}.o.o")
 
 	# TODO: (César) Port this to MAC and Windows also
+if(APPLE)
+	# Apple always got to be different...
+	string(REPLACE "." "_" name_identifier ${base_ext})
+	add_custom_command(
+		OUTPUT ${BIN_FILE}
+		COMMAND ld -r -sectcreate __DATA __${name_identifier} ${OBJ_FILE} -o ${BIN_FILE}
+		DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/internal_functions.dir/${src_dir}/${OBJ_FILE}
+		COMMENT "Generating resource object from: ${OBJ_FILE}"
+		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/internal_functions.dir/${src_dir}
+	)
+else()
 	add_custom_command(
 		OUTPUT ${BIN_FILE}
 		COMMAND ld -r -b binary -o ${BIN_FILE} ${OBJ_FILE}
@@ -295,6 +306,7 @@ foreach(src_file IN LISTS SRC_EXTERNAL_ALL)
 		COMMENT "Generating resource object from: ${OBJ_FILE}"
 		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/internal_functions.dir/${src_dir}
 	)
+endif()
 	list(APPEND GENERATED_OBJECTS ${BIN_FILE})
 endforeach()
 
