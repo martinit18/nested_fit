@@ -467,15 +467,18 @@ Examples of use of a legacy function can be found in `examples/data_analysis/aaa
 
 ## Present version and history of the past versions
 
-The present version is 5.4.3\
+The present version is 5.5\
 New features:
-- Merge of executable for data analysis and function exploration via the new calculation mode variable
-- Debug of not-yet  working feature of the version 5 compared to the version 4
-- New outputs with maxima of each cluster
-- New RANDOM_WALK function with detailed balance respected
+- Add PyPI binary distribution for multiple linux systems
+- Add PyPI source distribution as a default for other systems
+- Rename CLI command to `nested_fit` to use the latest installed version via pip
 
 
 Previous versions are:
+ - 5.4 Merge of executable for data analysis and function exploration via the new calculation mode variable \
+Debug of not-yet  working feature of the version 5 compared to the version 4 \
+New outputs with maxima of each cluster \
+New RANDOM_WALK function with detailed balance respected
  - 5.3 New jupyter notebooks running in Google Colab \
 New innterpolation functions in python library \
 Live display when sampling from python. Works in console and jupyter notebooks \
