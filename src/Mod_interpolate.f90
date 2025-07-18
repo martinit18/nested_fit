@@ -217,7 +217,7 @@ MODULE MOD_INTERPOLATE
 
         CALL MURMURHASH2_32(key, LEN_TRIM(key), hash)
 
-        index = MODULO(hash, map%capacity)
+        index = MODULO(hash, map%capacity) + 1
         pair  => map%pairs(index)
 
         IF(.NOT.pair%valid) THEN
@@ -250,7 +250,7 @@ MODULE MOD_INTERPOLATE
 
         CALL MURMURHASH2_32(key, LEN_TRIM(key), hash)
 
-        index = MODULO(hash, map%capacity)
+        index = MODULO(hash, map%capacity) + 1
         pair  => map%pairs(index)
 
         ! Insert new (without collision)

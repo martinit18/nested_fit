@@ -1181,8 +1181,10 @@ PROGRAM NESTED_FIT
             CALL HALT_EXECUTION()
          END IF
       END DO
-
    ENDIF
+
+   ! We don't need the input_config map anymore
+   CALL input_config%free()
 
   END SUBROUTINE
 
