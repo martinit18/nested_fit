@@ -569,6 +569,19 @@ PROGRAM NESTED_FIT
      itrymax = MAXLOC(live_like_max_try)
      live_like_max = live_like_max_try(itrymax(1))
      live_max = live_max_try(:,itrymax(1))
+    ELSE
+     ! Just one try, much more simple!
+     evsum_final = evsum_final_try(1)
+     evsum_err = 0.
+
+     live_like_final = live_like_final_try(:nall,1)
+     live_birth_final = live_birth_final_try(:nall,1)
+     live_rank_final = live_rank_final_try(:nall,1)
+     weight          = weight_try(:nall,1)
+     live_final      = live_final_try(:nall,:,1)
+     live_like_max   = live_like_max_try(1)
+     live_max        = live_max_try(:,1)
+  END IF
 
 
   ! ------------Calculate the final parameters, errors and data  --------------------------
@@ -647,7 +660,6 @@ PROGRAM NESTED_FIT
         par_median_w(j) = par_in(j)
      END IF
   END DO
-  ENDIF
 
    501 CONTINUE
 
