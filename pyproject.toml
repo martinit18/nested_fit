@@ -39,3 +39,19 @@ nested_fit = "pynested_fit.cliw:main"
 [project.urls]
 "Homepage" = "https://github.com/martinit18/nested_fit"
 "Bug Tracker" = "https://github.com/martinit18/nested_fit/issues"
+
+# Setup cibuildwheel
+[tool.cibuildwheel]
+
+# Only build for CPython 3.8 for now
+build = "cp38-*"
+skip = "cp39-* cp310-* cp311-* cp312-*"
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64"]
+
+[tool.cibuildwheel.windows]
+archs = ["x86_64"]
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]
