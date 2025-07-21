@@ -307,6 +307,11 @@ PROGRAM NESTED_FIT
      This is the linux equivalent of doing './nested_fitx.x.x > /dev/null'.",&
     B_SUPPRESSOUTPUT&
   ))
+
+  CALL ADD_ARGUMENT(argdef_t("thread-count", "tc", .TRUE.,&
+    "Change the number of threads OpenMP runs on. Setting to 0 will use all the available.",&
+    B_SET_OMP_THREADS&
+  ))
   
   ! Parse executable arguments !!! THIS NEEDS TO COME BEFORE THE MPI_INIT() SUBROUTINE !!!
   CALL PARSE_ARGUMENTS()
@@ -958,7 +963,6 @@ PROGRAM NESTED_FIT
 
   SUBROUTINE CHECK_FUNCTION_DEF_SIZE(func)
    CHARACTER(LEN=*), INTENT(IN) :: func 
-   WRITE(*,*) LEN_TRIM(func), LEN(func)
    IF(LEN_TRIM(func).GE.(0.9d0 * LEN(func))) THEN
       CALL LOG_ERROR_HEADER()
       CALL LOG_ERROR('Function defition size exceeds 90% of total allowed size. (max='//TRIM(ADJUSTL(INT_TO_STR_INLINE(LEN(func))))//')')
@@ -1614,6 +1618,38 @@ PROGRAM NESTED_FIT
    
    opt_lnk_cmd = TRIM(invalue)
    
+  END SUBROUTINE
+
+  SUBROUTINE B_SET_OMP_THREADS(this, invalue)
+   CLASS(argdef_t), INTENT(IN)    :: this
+   CHARACTER(LEN=512), INTENT(IN) :: invalue
+   INTEGER :: num_threads, ioerr
+
+   IF(parallel_on) THEN
+       READ(invalue, *, iostat=ioerr) num_threads
+       IF(ioerr.NE.0) THEN ! No short-circuit eval in Fortran
+           CALL LOG_WARNING_HEADER()
+           CALL LOG_WARNING('Failed to set thread count. Expected a number but got: '//TRIM(invalue))
+           CALL LOG_WARNING('Defaulting to processor count.')
+           CALL LOG_WARNING_HEADER()
+
+           num_threads = OMP_GET_NUM_PROCS()
+       ELSEIF(num_threads.EQ.0) THEN
+           num_threads = OMP_GET_NUM_PROCS()
+       ELSEIF(num_threads.LT.0) THEN
+           CALL LOG_WARNING_HEADER()
+           CALL LOG_WARNING('Failed to set thread count. Expected a number in bounds [0, inf[.')
+           CALL LOG_WARNING('Defaulting to processor count.')
+           CALL LOG_WARNING_HEADER()
+
+           num_threads = OMP_GET_NUM_PROCS()
+       ENDIF
+
+       CALL LOG_TRACE('OpenMP using '//TRIM(ADJUSTL(INT_TO_STR_INLINE(num_threads)))//' threads.')
+       CALL OMP_SET_NUM_THREADS(num_threads)
+   ENDIF
+
+   ! Silently ignore
   END SUBROUTINE
 
 END PROGRAM NESTED_FIT
