@@ -313,7 +313,7 @@ PROGRAM NESTED_FIT
     B_SET_OMP_THREADS&
   ))
   
-  ! Parse executable arguments !!! THIS NEEDS TO COME BEFORE THE MPI_INIT() SUBROUTINE !!!
+  ! Parse executable arguments
   CALL PARSE_ARGUMENTS()
 
   !!!!!!!! Initiate random generator with the same seed each time !!!!!!!!!!!
