@@ -36,7 +36,6 @@ option(OPENMP "Enable/Disable OpenMP." OFF)
 option(LAPACK "Enable/Disable LAPACK." OFF)
 option(LTRACE "Enable trace logging." OFF)
 option(PPROF "Enable performance counter profilling." OFF)
-option(INSTALL_SYSTEM_WIDE "Install on '/usr/local' instead of '$HOME/.local'." OFF) # Requires privileged user
 option(CREATE_AUTOCONF "Builds a 'configure' script for older systems." OFF)
 
 if(LTRACE)
