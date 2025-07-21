@@ -82,6 +82,11 @@ jobs:
           path: dist
           merge-multiple: true
 
+      - name: Generate attestations
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "dist/*"
+
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           # password: ${{ secrets.pypi_password }}
