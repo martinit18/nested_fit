@@ -91,4 +91,5 @@ jobs:
         with:
           # password: ${{ secrets.pypi_password }}
           repository-url: https://test.pypi.org/legacy
+          args: --verbose
 
