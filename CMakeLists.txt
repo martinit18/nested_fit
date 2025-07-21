@@ -267,13 +267,6 @@ endif()
 set_source_files_properties(${SRC_EXTERNAL_FUNCS} PROPERTIES COMPILE_FLAGS "${SRC_EXTERNAL_FUNCS_OBJ_FLAGS}")
 
 add_library(internal_functions OBJECT ${SRC_EXTERNAL_FUNCS} ${SRC_DIERCKX})
-# add_custom_command(
-# 	OUTPUT internal_functions_obj_dump.txt
-# 	COMMAND ${CMAKE_COMMAND} -E echo "\"$<TARGET_OBJECTS:internal_functions>\"" > internal_functions_obj_dump.txt
-# 	DEPENDS $<TARGET_OBJECTS:internal_functions>
-# 	COMMENT "Dumping internal functions object files paths."
-# )
-# add_custom_target(dump_internal_functions_objects DEPENDS internal_functions_obj_dump.txt)
 
 # Now that we have all the generated internal_functions objects
 # Recreate them with the binary flag so we can access them later
@@ -287,26 +280,26 @@ foreach(src_file IN LISTS SRC_EXTERNAL_ALL)
 	set(OBJ_FILE "${base_ext}.o")
 	set(BIN_FILE "${CMAKE_BINARY_DIR}/resources/res_${base_ext}.o.o")
 
-	# TODO: (César) Port this to MAC and Windows also
-if(APPLE)
-	# Apple always got to be different...
-	string(REPLACE "." "_" name_identifier ${base_ext})
-	add_custom_command(
-		OUTPUT ${BIN_FILE}
-		COMMAND ld -r -sectcreate __DATA __${name_identifier} ${OBJ_FILE} -o ${BIN_FILE}
-		DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/internal_functions.dir/${src_dir}/${OBJ_FILE}
-		COMMENT "Generating resource object from: ${OBJ_FILE}"
-		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/internal_functions.dir/${src_dir}
-	)
-else()
-	add_custom_command(
-		OUTPUT ${BIN_FILE}
-		COMMAND ld -r -b binary -o ${BIN_FILE} ${OBJ_FILE}
-		DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/internal_functions.dir/${src_dir}/${OBJ_FILE}
-		COMMENT "Generating resource object from: ${OBJ_FILE}"
-		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/internal_functions.dir/${src_dir}
-	)
-endif()
+	if(APPLE)
+		# Apple always got to be different...
+		string(REPLACE "." "_" name_identifier ${base_ext})
+		add_custom_command(
+			OUTPUT ${BIN_FILE}
+			COMMAND ld -r -sectcreate __DATA __${name_identifier} ${OBJ_FILE} -o ${BIN_FILE}
+			DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/internal_functions.dir/${src_dir}/${OBJ_FILE}
+			COMMENT "Generating resource object from: ${OBJ_FILE}"
+			WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/internal_functions.dir/${src_dir}
+		)
+	else()
+		add_custom_command(
+			OUTPUT ${BIN_FILE}
+			COMMAND ld -r -b binary -o ${BIN_FILE} ${OBJ_FILE}
+			DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/internal_functions.dir/${src_dir}/${OBJ_FILE}
+			COMMENT "Generating resource object from: ${OBJ_FILE}"
+			WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/internal_functions.dir/${src_dir}
+		)
+	endif()
+
 	list(APPEND GENERATED_OBJECTS ${BIN_FILE})
 endforeach()
 
