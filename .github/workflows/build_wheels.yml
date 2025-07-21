@@ -15,6 +15,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install build tools (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gfortran g++ cmake make
+
+      - name: Install build tools (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install mingw -y
+          echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" >> $env:GITHUB_PATH
+
+      - name: Install build tools (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install gcc
+          echo "$(brew --prefix)/bin" >> $GITHUB_PATH
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.0.1
         with:
