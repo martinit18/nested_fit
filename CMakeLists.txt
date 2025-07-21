@@ -49,7 +49,7 @@ endif()
 set(project_name nested_fit)
 project(${project_name} VERSION ${project_version} LANGUAGES Fortran CXX)
 
-# Enforce C++14
+# Enforce C++17
 set(CMAKE_CXX_STANDARD 17)
 
 # Manifest writing tool
