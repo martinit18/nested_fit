@@ -16,7 +16,7 @@
 	extern const unsigned char _section$__DATA__ ## name []; \
 	extern const unsigned char binary_ ## name ## _end[];
 #define RES_VAR(name) _section$__DATA__ ## name
-#define RES_LEN(name) (getsectbyname("__DATA__", "__" #name)->size)
+#define RES_LEN(name) (getsectbyname("__DATA", "__" #name)->size)
 #elif (defined _WIN32) || (defined __WIN32__)
 #define RES_EXT_DEFINE(name) \
 	extern const unsigned char binary_ ## name ## _start[]; \

@@ -272,6 +272,18 @@ add_library(internal_functions OBJECT ${SRC_EXTERNAL_FUNCS} ${SRC_DIERCKX})
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/resources)
 set(GENERATED_OBJECTS "")
 set(SRC_EXTERNAL_ALL ${SRC_EXTERNAL_FUNCS} ${SRC_DIERCKX})
+
+# Apple is dumb and tricky to embed a binary resource into the executable
+# So we need a small workaround
+if(APPLE)
+	message(STATUS "Producing stub object file for resources.")
+	file(TOUCH ${CMAKE_BINARY_DIR}/stub.c)
+	execute_process(
+		COMMAND gcc -o stub.o -c stub.c
+		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+	)
+endif()
+
 foreach(src_file IN LISTS SRC_EXTERNAL_ALL)
 	get_filename_component(src_dir ${src_file} DIRECTORY)
 	get_filename_component(base_ext ${src_file} NAME)
@@ -284,7 +296,7 @@ foreach(src_file IN LISTS SRC_EXTERNAL_ALL)
 		string(REPLACE "." "_" name_identifier ${base_ext})
 		add_custom_command(
 			OUTPUT ${BIN_FILE}
-			COMMAND ld -sectcreate __DATA __${name_identifier} ${OBJ_FILE} -o ${BIN_FILE} -L/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib -lSystem
+			COMMAND ld -r -sectcreate __DATA __${name_identifier} ${OBJ_FILE} ${CMAKE_BINARY_DIR}/stub.o -o ${BIN_FILE}
 			DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/internal_functions.dir/${src_dir}/${OBJ_FILE}
 			COMMENT "Generating resource object from: ${OBJ_FILE}"
 			WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/internal_functions.dir/${src_dir}
