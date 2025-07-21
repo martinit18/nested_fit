@@ -284,7 +284,7 @@ foreach(src_file IN LISTS SRC_EXTERNAL_ALL)
 		string(REPLACE "." "_" name_identifier ${base_ext})
 		add_custom_command(
 			OUTPUT ${BIN_FILE}
-			COMMAND ld -sectcreate __DATA __${name_identifier} ${OBJ_FILE} -o ${BIN_FILE} -L$(xcode-select -p)/SDKs/MacOSX.sdk/usr/lib -lSystem
+			COMMAND ld -sectcreate __DATA __${name_identifier} ${OBJ_FILE} -o ${BIN_FILE} -L/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib -lSystem
 			DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/internal_functions.dir/${src_dir}/${OBJ_FILE}
 			COMMENT "Generating resource object from: ${OBJ_FILE}"
 			WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/internal_functions.dir/${src_dir}
