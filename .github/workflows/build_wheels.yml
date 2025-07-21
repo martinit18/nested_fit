@@ -92,4 +92,5 @@ jobs:
           # password: ${{ secrets.pypi_password }}
           repository-url: https://test.pypi.org/legacy
           verbose: true
+          skip-existing: true
 
