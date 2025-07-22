@@ -1,0 +1,52 @@
+// Brief  : This file contains the resource cache. It handles binary files present in the executable.
+//          Works simply by exposing the symbols previously linked using cmake.
+//          Afterward we access it via the 'extern' keyword in C and expose it to the fortran interface.
+// Author : César Godinho
+// Date   : 22/07/2025
+
+#include <cstdint>
+#include <fstream>
+#include <string>
+
+#define RES_EXT_DEFINE(name) \
+	extern const unsigned char name[]; \
+	extern const unsigned int name##_len;
+#define RES_VAR(name) name
+#define RES_LEN(name) name##_len 
+
+@RES_DEFS@
+
+static bool WriteBinaryFile(const std::uint8_t* data, const std::size_t size, const std::string& path)
+{
+	std::ofstream out(path, std::ios::out | std::ios::binary);
+	if(!out.is_open())
+	{
+		return false;
+	}
+
+	out.write(reinterpret_cast<const char*>(data), size);
+	return true;
+}
+
+extern "C" bool CopyCacheData(const char* cache_root)
+{
+	const std::uint8_t* files[] = {
+		@RES_NAMES@
+	};
+	const std::size_t sizes[] = {
+		@RES_LENS@
+	};
+	const std::string paths[] = {
+		@RES_PATHS@
+	};
+
+	for(unsigned int i = 0; i < (sizeof(files) / sizeof(files[0])); i++)
+	{
+		if(!WriteBinaryFile(files[i], sizes[i], std::string(cache_root) + "/" + paths[i]))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}

@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
+include(cmake/resman.cmake)
 
 #####################################
 # This CMake file also generates an #
@@ -235,7 +236,6 @@ configure_file(src/Mod_metadata.f90.in Mod_metadata.f90 @ONLY)
 
 set(CFG_FILES
     ${CMAKE_CURRENT_BINARY_DIR}/Mod_metadata.f90
-	${CMAKE_CURRENT_BINARY_DIR}/rescache.cpp
 )
 
 set(SRC_FILES_CXX
@@ -265,85 +265,17 @@ else()
 endif()
 set_source_files_properties(${SRC_EXTERNAL_FUNCS} PROPERTIES COMPILE_FLAGS "${SRC_EXTERNAL_FUNCS_OBJ_FLAGS}")
 
-add_library(internal_functions OBJECT ${SRC_EXTERNAL_FUNCS} ${SRC_DIERCKX})
-
-# Now that we have all the generated internal_functions objects
-# Recreate them with the binary flag so we can access them later
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/resources)
-set(GENERATED_OBJECTS "")
 set(SRC_EXTERNAL_ALL ${SRC_EXTERNAL_FUNCS} ${SRC_DIERCKX})
+add_library(internal_functions OBJECT ${SRC_EXTERNAL_ALL})
 
-# Apple is dumb and tricky to embed a binary resource into the executable
-# So we need a small workaround
-if(APPLE)
-	message(STATUS "Producing stub object file for resources.")
-	file(TOUCH ${CMAKE_BINARY_DIR}/stub.c)
-	execute_process(
-		COMMAND gcc -o stub.o -c stub.c
-		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-	)
-endif()
-
+set(OBJ_RES_FILES "")
 foreach(src_file IN LISTS SRC_EXTERNAL_ALL)
 	get_filename_component(src_dir ${src_file} DIRECTORY)
 	get_filename_component(base_ext ${src_file} NAME)
-
-	set(OBJ_FILE "${base_ext}.o")
-	set(BIN_FILE "${CMAKE_BINARY_DIR}/resources/res_${base_ext}.o.o")
-
-	if(APPLE)
-		# Apple always got to be different...
-		string(REPLACE "." "_" name_identifier ${base_ext})
-		add_custom_command(
-			OUTPUT ${BIN_FILE}
-			COMMAND ld -r -sectcreate __DATA __${name_identifier} ${OBJ_FILE} ${CMAKE_BINARY_DIR}/stub.o -o ${BIN_FILE}
-			DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/internal_functions.dir/${src_dir}/${OBJ_FILE}
-			COMMENT "Generating resource object from: ${OBJ_FILE}"
-			WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/internal_functions.dir/${src_dir}
-		)
-	else()
-		add_custom_command(
-			OUTPUT ${BIN_FILE}
-			COMMAND ld -r -b binary -o ${BIN_FILE} ${OBJ_FILE}
-			DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/internal_functions.dir/${src_dir}/${OBJ_FILE}
-			COMMENT "Generating resource object from: ${OBJ_FILE}"
-			WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/internal_functions.dir/${src_dir}
-		)
-	endif()
-
-	list(APPEND GENERATED_OBJECTS ${BIN_FILE})
+	list(APPEND OBJ_RES_FILES ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/internal_functions.dir/${src_dir}/${base_ext}.o)
 endforeach()
-
-add_custom_target(generate_binary_resources ALL DEPENDS ${GENERATED_OBJECTS})
-
-# Now configure rescache.cpp.in with the appropriate names to fill when requested
-# These files go into the <cache>/sys/ folder
-set(RES_NAMES_EXT_DEFINE_EXPR_LIST "")
-set(RES_NAMES_VAR_EXPR_LIST "")
-set(RES_NAMES_LEN_EXPR_LIST "")
-set(RES_NAMES_PATH_EXPR_LIST "")
-
-foreach(res_file IN LISTS GENERATED_OBJECTS)
-	get_filename_component(name ${res_file} NAME)
-	string(REGEX REPLACE "\\.[^.]*$" "" base ${name})
-	string(REGEX REPLACE "^res_" "" sbase ${base})
-	string(REPLACE "." "_" name_identifier ${sbase})
-	list(APPEND RES_NAMES_EXT_DEFINE_EXPR_LIST "RES_EXT_DEFINE(${name_identifier})")
-	list(APPEND RES_NAMES_VAR_EXPR_LIST "RES_VAR(${name_identifier})")
-	list(APPEND RES_NAMES_LEN_EXPR_LIST "RES_LEN(${name_identifier})")
-	list(APPEND RES_NAMES_PATH_EXPR_LIST "\"sys/${sbase}\"")
-endforeach()
-string(JOIN ";\n" RES_NAMES_EXT_DEFINE_EXPR ${RES_NAMES_EXT_DEFINE_EXPR_LIST})
-string(JOIN ",\n\t\t" RES_NAMES_VAR_EXPR ${RES_NAMES_VAR_EXPR_LIST})
-string(JOIN ",\n\t\t" RES_NAMES_LEN_EXPR ${RES_NAMES_LEN_EXPR_LIST})
-string(JOIN ",\n\t\t" RES_NAMES_PATH_EXPR ${RES_NAMES_PATH_EXPR_LIST})
-
-configure_file(src/helper/rescache.cpp.in rescache.cpp @ONLY)
 
 add_executable(${nested_fit_target}
-	# Generated resource objects
-	${GENERATED_OBJECTS}
-
 	# Source files
     ${CFG_FILES}
     ${SRC_DIERCKX}
@@ -352,16 +284,23 @@ add_executable(${nested_fit_target}
     ${SRC_FILES_CXX}
 )
 
-# Make nested_fit depend on the internal functions object library
-# So that we can copy their content inside the binary for writing
-add_dependencies(${nested_fit_target} generate_binary_resources)
+# NOTE: (César)
+# Use resource manager to link to the built object files
+# They get aggregated into .c files via xxd and compiled
+# into object files. In turn these get linked to the bin.
+rm_link_resources(
+	TARGET ${nested_fit_target}
+	FILES ${OBJ_RES_FILES}
+	DEPENDS internal_functions
+	OUTDIR "sys"
+)
 
 # TODO(César): This assumes we are using gfortran!
 set(SRC_FLAGS_D     -cpp -O0 -Wall -g -ffree-line-length-0 -ffixed-line-length-0 -Wno-ampersand -Wno-tabs -Wno-unused-dummy-argument)
 set(SRC_FLAGS_R     -cpp -O2 -static -ffree-line-length-0 -ffixed-line-length-0)
 
-set(SRC_FLAGS_CXX_D -O0 -Wall -pedantic -g -Wno-missing-field-initializers ${CXX_SUPPRESS_STPROF})      # Be pedantic
-set(SRC_FLAGS_CXX_R -O2 -Wall -pedantic -static -Wno-missing-field-initializers ${CXX_SUPPRESS_STPROF}) # Be pedantic on release too
+set(SRC_FLAGS_CXX_D -O0 -Wall -pedantic -g -Wno-missing-field-initializers)      # Be pedantic
+set(SRC_FLAGS_CXX_R -O2 -Wall -pedantic -static -Wno-missing-field-initializers) # Be pedantic on release too
 
 # NOTE(César): Autoconf will use release only for now
 #              (this is semi ok, since it is not intended to be a used in a dev env)
