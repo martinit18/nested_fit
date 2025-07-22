@@ -21,7 +21,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y gfortran g++ cmake make xxd
+          sudo apt-get install -y gfortran g++ cmake make
 
       # - name: Install build tools (Windows)
       #   if: runner.os == 'Windows'
@@ -32,7 +32,7 @@ jobs:
       - name: Install build tools (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install gcc cmake xxd
+          brew install gcc cmake
           echo "$(brew --prefix)/bin" >> $GITHUB_PATH
 
       - name: Build wheels
