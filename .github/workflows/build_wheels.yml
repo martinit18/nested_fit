@@ -11,8 +11,8 @@ jobs:
     strategy:
       matrix:
         #os: [ubuntu-latest, windows-latest, macos-13, macos-14]
-        #os: [ubuntu-latest, macos-13, macos-14]
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-13, macos-14]
+        #os: [ubuntu-latest]
 
     steps:
       - uses: actions/checkout@v4
@@ -21,7 +21,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y gfortran g++ cmake make
+          sudo apt-get install -y gfortran g++ cmake make xxd
 
       # - name: Install build tools (Windows)
       #   if: runner.os == 'Windows'
@@ -32,7 +32,7 @@ jobs:
       - name: Install build tools (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install gcc
+          brew install gcc cmake xxd
           echo "$(brew --prefix)/bin" >> $GITHUB_PATH
 
       - name: Build wheels

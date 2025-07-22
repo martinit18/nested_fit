@@ -1,3 +1,11 @@
+# Brief  : Create resources to be attached to nested_fit at compile time
+# Author : César Godinho
+# Date   : 25/07/25
+
+add_executable(rmhex
+	src/helper/rmhex.cpp
+)
+
 function(rm_link_resources)
 	cmake_parse_arguments(
 		PARG
@@ -31,7 +39,7 @@ function(rm_link_resources)
 		add_custom_command(
 			OUTPUT ${output_file}
 			#COMMAND ${CMAKE_COMMAND} -P ${CMAKE_SOURCE_DIR}/cmake/generate_hex_header.cmake
-			COMMAND xxd -i ${res_name} ${output_file}
+			COMMAND rmhex ${res_name} ${output_file}
 			DEPENDS ${full_path}
 			COMMENT "Generating resource from: ${res_name}"
 			WORKING_DIRECTORY ${res_dir}
@@ -66,6 +74,7 @@ function(rm_link_resources)
 	add_library(_resman_lib STATIC ${LIB_SRC_FILES} ${CMAKE_BINARY_DIR}/resman.cpp)
 	if(PARG_DEPENDS)
 		add_dependencies(_resman_lib ${PARG_DEPENDS})
+		add_dependencies(_resman_lib rmhex)
 	endif()
 
 	target_link_libraries(${PARG_TARGET} PRIVATE _resman_lib)
