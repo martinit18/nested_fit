@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 3.10)
-include(cmake/resman.cmake)
 
 #####################################
 # This CMake file also generates an #
@@ -51,6 +50,9 @@ project(${project_name} VERSION ${project_version} LANGUAGES Fortran CXX)
 
 # Enforce C++17
 set(CMAKE_CXX_STANDARD 17)
+
+# Resman producer
+include(cmake/resman.cmake)
 
 # Manifest writing tool
 include(cmake/write_manifest.cmake)
