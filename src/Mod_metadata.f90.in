@@ -30,7 +30,14 @@ MODULE MOD_METADATA
             LOGICAL(c_bool)  , INTENT(OUT)              :: errcode
         END SUBROUTINE
 
-        FUNCTION COPY_CACHE_DATA(cache_root) RESULT(output) BIND(c, name='CopyCacheData')
+        FUNCTION COPY_CACHE_DATA_OBJ(cache_root) RESULT(output) BIND(c, name='CopyCacheDataObjFiles')
+            USE, INTRINSIC :: ISO_C_BINDING
+            IMPLICIT NONE
+            CHARACTER(c_char), INTENT(IN), DIMENSION(*) :: cache_root
+            LOGICAL(c_bool) :: output
+        END FUNCTION
+
+        FUNCTION COPY_CACHE_DATA_MAN(cache_root) RESULT(output) BIND(c, name='CopyCacheDataManifestFile')
             USE, INTRINSIC :: ISO_C_BINDING
             IMPLICIT NONE
             CHARACTER(c_char), INTENT(IN), DIMENSION(*) :: cache_root
@@ -63,11 +70,15 @@ MODULE MOD_METADATA
             IMPLICIT NONE
             CHARACTER(LEN=*), INTENT(IN)  :: cache_root
             LOGICAL         , INTENT(OUT) :: result
+            LOGICAL :: obj_result, man_result
             CHARACTER(c_char), DIMENSION(:), POINTER :: c_path
 
             CALL F_C_STRING_ALLOC_I(cache_root, c_path)
-            result = COPY_CACHE_DATA(c_path(1))
+            obj_result = COPY_CACHE_DATA_OBJ(c_path(1))
+            man_result = COPY_CACHE_DATA_MAN(c_path(1)) 
             CALL F_C_STRING_DEALLOC_I(c_path)
+
+            result = obj_result.AND.man_result
         END SUBROUTINE
 
         SUBROUTINE F_C_STRING_ALLOC_I(f_string, c_string)

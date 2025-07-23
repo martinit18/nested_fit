@@ -1,5 +1,5 @@
 // Brief  : This file contains a small fast executable that reads files
-// 			and outputs a c-style array file much like xdd does.
+// 			and outputs a c-style array file much like xxd does.
 // Author : César Godinho
 // Date   : 22/07/2025
 
@@ -40,7 +40,7 @@ std::vector<std::uint8_t> ReadBinaryFile(const std::string_view& path)
 	return buffer;
 }
 
-// NOTE: (Cesar) Simplify linkage by not setting const or contexpr
+// NOTE: (Cesar) Simplify linkage by not setting const or constexpr
 void ProduceOutputFile(const std::vector<std::uint8_t>& data, const std::string_view& path, const std::string_view& name)
 {
 	std::ofstream file(path.data(), std::ios::trunc);

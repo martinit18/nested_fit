@@ -290,11 +290,22 @@ add_executable(${nested_fit_target}
 # Use resource manager to link to the built object files
 # They get aggregated into .c files via xxd and compiled
 # into object files. In turn these get linked to the bin.
+# This creates C functions that are of the format:
+# 'CopyCacheData<NAME>(const char* dir)'
+# These funcitons copy the specified 'FILES' into:
+# 'dir'/<OUTDIR>
 rm_link_resources(
+	NAME "ObjFiles"
 	TARGET ${nested_fit_target}
 	FILES ${OBJ_RES_FILES}
 	DEPENDS internal_functions
 	OUTDIR "sys"
+)
+
+rm_link_resources(
+	NAME "ManifestFile"
+	TARGET ${nested_fit_target}
+	FILES ${CMAKE_BINARY_DIR}/manifest.txt
 )
 
 # TODO(César): This assumes we are using gfortran!
@@ -354,7 +365,6 @@ endif()
 
 target_link_libraries(${nested_fit_target} PUBLIC dl)
 target_link_libraries(${nested_fit_target} PRIVATE TracyClient)
-
 target_include_directories(${nested_fit_target} PRIVATE ${tracy_SOURCE_DIR})
 
 
@@ -367,15 +377,6 @@ if(NORNG)
     target_compile_definitions(${nested_fit_target} PUBLIC -DNORNG_ON)
 endif()
 
-# add_custom_command(
-# 	OUTPUT internal_functions
-# )
-# add_custom_target(copy_internal_functions ALL
-#     DEPENDS internal_functions
-#     COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_OBJECTS:internal_functions> ${nested_fit_cache_folder}sys/
-#     COMMAND_EXPAND_LISTS
-# )
-
 install(TARGETS ${nested_fit_target} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
 
 # Write a manifest file into the cache
@@ -383,11 +384,6 @@ install(TARGETS ${nested_fit_target} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
 # For now all the generated data can be generated
 # on configure time
 write_manifest()
-
-# add_custom_target(manifest_install ALL
-#     DEPENDS copy_internal_functions
-#     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/manifest.txt ${nested_fit_cache_folder}
-# )
 
 # configure compatibility files for autoconf / automake
 if(CREATE_AUTOCONF)

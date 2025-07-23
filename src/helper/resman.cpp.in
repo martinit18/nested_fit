@@ -28,7 +28,7 @@ static bool WriteBinaryFile(const std::uint8_t* data, const std::size_t size, co
 	return true;
 }
 
-extern "C" bool CopyCacheData(const char* cache_root)
+extern "C" bool CopyCacheData@RES_FNAME@(const char* cache_root)
 {
 	const std::uint8_t* files[] = {
 		@RES_NAMES@

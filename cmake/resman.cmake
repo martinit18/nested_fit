@@ -10,7 +10,7 @@ function(rm_link_resources)
 	cmake_parse_arguments(
 		PARG
 		""
-		"TARGET;OUTDIR"
+		"TARGET;OUTDIR;NAME"
 		"FILES;DEPENDS"
 		${ARGN}
 	)
@@ -65,17 +65,27 @@ function(rm_link_resources)
 		endif()
 	endforeach()
 
+	if(PARG_NAME)
+		set(tgt_name _resman_lib_${PARG_NAME})
+		set(resman_src resman_${PARG_NAME}.cpp)
+		set(RES_FNAME ${PARG_NAME})
+	else()
+		set(tgt_name _resman_lib)
+		set(resman_src resman.cpp)
+		set(RES_FNAME "")
+	endif()
+
 	string(JOIN ";\n" RES_DEFS ${RES_DEFS})
 	string(JOIN ",\n\t\t" RES_NAMES ${RES_NAMES})
 	string(JOIN ",\n\t\t" RES_LENS ${RES_LENS})
 	string(JOIN ",\n\t\t" RES_PATHS ${RES_PATHS})
-	configure_file(src/helper/resman.cpp.in resman.cpp @ONLY)
+	configure_file(src/helper/resman.cpp.in ${resman_src} @ONLY)
 
-	add_library(_resman_lib STATIC ${LIB_SRC_FILES} ${CMAKE_BINARY_DIR}/resman.cpp)
+	add_library(${tgt_name} STATIC ${LIB_SRC_FILES} ${CMAKE_BINARY_DIR}/${resman_src})
 	if(PARG_DEPENDS)
-		add_dependencies(_resman_lib ${PARG_DEPENDS})
-		add_dependencies(_resman_lib rmhex)
+		add_dependencies(${tgt_name} ${PARG_DEPENDS})
 	endif()
+	add_dependencies(${tgt_name} rmhex)
 
-	target_link_libraries(${PARG_TARGET} PRIVATE _resman_lib)
+	target_link_libraries(${PARG_TARGET} PRIVATE ${tgt_name})
 endfunction()

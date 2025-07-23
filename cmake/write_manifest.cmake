@@ -1,4 +1,4 @@
-# Brief  : Create a manifest.txt file in the cache after installing
+# Brief  : Create a manifest.txt file
 # Author : César Godinho
 # Date   : 15/07/24
 
