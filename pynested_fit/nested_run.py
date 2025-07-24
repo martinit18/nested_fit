@@ -47,7 +47,7 @@ import time
 import psutil
 import os
 import sys
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 
 class NFDashboardHeader():
@@ -728,7 +728,7 @@ class Configurator():
     def _get_last_error(self) -> Optional[str]:
         return self._last_error
 
-    def _parse_nf_stdout(self) -> Optional[str | bytes]:
+    def _parse_nf_stdout(self) -> Optional[Union[str, bytes]]:
         line = self._nf_process.stdout
 
         if not line:
