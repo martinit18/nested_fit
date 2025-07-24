@@ -49,11 +49,13 @@ jobs:
         run: |
           conda install -n buildenv -c conda-forge gfortran=11 libgfortran=5
           echo "MACOSX_DEPLOYMENT_TARGET=10.15" >> $GITHUB_ENV
+        shell: bash -l {0}
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.0.1
         env:
           MACOSX_DEPLOYMENT_TARGET: "10.15"
+        shell: bash -l {0}
         with:
           package-dir: .
           output-dir: wheelhouse
