@@ -7,7 +7,7 @@ import pathlib
 import os
 import subprocess
 import shutil
-# import platform
+import platform
 
 
 class CMakeExt(Extension):
@@ -26,6 +26,19 @@ class CMakeExt(Extension):
             '-DLTRACE=OFF',
             '-DPPROF=OFF'
         ]
+
+        # Add osx sysroot if we are on macOS
+        if platform.system() == 'Darwin':
+            try:
+                sdk_path = subprocess.check_output(
+                    ['xcrun', '--sdk', 'macosx', '--show-sdk-path'],
+                    universal_newlines=True
+                ).strip()
+                
+                # Append to cmake options
+                self.cmake_options.append(f'DCMAKE_OSX_SYSROOT=\"{sdk_path}\"')
+            except Exception as e:
+                print('DBG | Failed to determine macOS SDK path:', e)
 
 
 class NFInstallData(install_data):
