@@ -51,11 +51,20 @@ jobs:
           echo "MACOSX_DEPLOYMENT_TARGET=10.15" >> $GITHUB_ENV
         shell: bash -l {0}
 
-      - name: Build wheels
+      - name: Build wheels (macOS)
+        if: runner.os == 'macOS'
         uses: pypa/cibuildwheel@v3.0.1
         env:
           MACOSX_DEPLOYMENT_TARGET: "10.15"
           PATH: ${{ env.PATH }}:/Users/runner/miniforge3/envs/buildenv/bin # HACK: (César) : Dangerous!
+        with:
+          package-dir: .
+          output-dir: wheelhouse
+          config-file: "{package}/pyproject.toml"
+
+      - name: Build wheels (Linux)
+        if: runner.os == 'Linux'
+        uses: pypa/cibuildwheel@v3.0.1
         with:
           package-dir: .
           output-dir: wheelhouse
