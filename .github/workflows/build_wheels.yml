@@ -46,6 +46,21 @@ jobs:
           echo "/Users/runner/miniforge3/envs/buildenv/bin" >> $GITHUB_PATH
         shell: bash -l {0}
 
+      - name: Check CMake and gfortran (shell env)
+        run: |
+          which cmake
+          cmake --version
+          which gfortran
+          gfortran --version
+        shell: bash -l {0}
+
+      - name: Check CMake and gfortran
+        run: |
+          which cmake
+          cmake --version
+          which gfortran
+          gfortran --version
+
       - name: Build wheels (macOS)
         if: runner.os == 'macOS'
         uses: pypa/cibuildwheel@v3.0.1
