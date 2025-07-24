@@ -36,7 +36,7 @@ class CMakeExt(Extension):
                 ).strip()
                 
                 # Append to cmake options
-                self.cmake_options.append(f'-DCMAKE_OSX_SYSROOT=\"{sdk_path}\"')
+                self.cmake_options.append(f'-DCMAKE_OSX_SYSROOT={sdk_path}')
             except Exception as e:
                 print('DBG | Failed to determine macOS SDK path:', e)
 
