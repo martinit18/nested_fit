@@ -34,9 +34,15 @@ class CMakeExt(Extension):
                     ['xcrun', '--sdk', 'macosx', '--show-sdk-path'],
                     universal_newlines=True
                 ).strip()
+
+                # clang_path = subprocess.check_output(
+                #     ['which', 'clang++'],
+                #     universal_newlines=True
+                # ).strip()
                 
                 # Append to cmake options
                 self.cmake_options.append(f'-DCMAKE_OSX_SYSROOT={sdk_path}')
+                # self.cmake_options.append(f'-DCMAKE_CXX_COMPILER={clang_path}')
             except Exception as e:
                 print('DBG | Failed to determine macOS SDK path:', e)
 
@@ -121,7 +127,7 @@ class NFBuildExt(build_ext):
         self.spawn(['cmake', str(ext.src_dir)] + ext.cmake_options)
         if not self.dry_run: # type: ignore
             # subprocess.call(['cmake', '--build', '.', '--target', 'install'])
-            subprocess.call(['cmake', '--build', '.'])
+            subprocess.call(['cmake', '--build', '.'], env=os.environ.copy())
         os.chdir(str(cwd))
 
         bin_dir = os.path.join(build_temp, '../../bin')
