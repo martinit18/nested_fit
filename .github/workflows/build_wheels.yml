@@ -56,7 +56,7 @@ jobs:
         uses: pypa/cibuildwheel@v3.0.1
         env:
           MACOSX_DEPLOYMENT_TARGET: "10.15"
-          PATH: ${{ env.PATH }}:/Users/runner/miniforge3/envs/buildenv/bin # HACK: (César) : Dangerous!
+          PATH: ${{ github.runner_env.PATH }}:/Users/runner/miniforge3/envs/buildenv/bin # HACK: (César) : Dangerous!
         with:
           package-dir: .
           output-dir: wheelhouse
