@@ -43,15 +43,8 @@ jobs:
         run: |
           conda install -n buildenv -c conda-forge gfortran=11 libgfortran=5 cmake
           echo "MACOSX_DEPLOYMENT_TARGET=10.15" >> $GITHUB_ENV
-          echo "/Users/runner/miniforge3/envs/buildenv/bin" >> $GITHUB_PATH
-        shell: bash -l {0}
-
-      - name: Check CMake and gfortran (shell env)
-        run: |
-          which cmake
-          cmake --version
-          which gfortran
-          gfortran --version
+          echo "$CONDA_PREFIX/bin" >> $GITHUB_PATH
+          echo "LD_LIBRARY_PATH=$CONDA_PREFIX/lib:\$LD_LIBRARY_PATH" >> $GITHUB_ENV
         shell: bash -l {0}
 
       - name: Check CMake and gfortran
@@ -66,6 +59,7 @@ jobs:
         uses: pypa/cibuildwheel@v3.0.1
         env:
           MACOSX_DEPLOYMENT_TARGET: "10.15"
+          LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
         with:
           package-dir: .
           output-dir: wheelhouse
