@@ -20,6 +20,12 @@ endmacro(ac_inline_generic)
 #####################################
 #####################################
 
+# NOTE: (César) : If we are on macOS set the minimum supported version to 10.15
+#				  due to C++17 support.
+if(APPLE)
+	set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "" FORCE)
+endif()
+
 # The nested_fit version being built -> This gets copied everywhere inside the project code
 # For more info see the 'src/Mod_metadata.f90.in' file
 # Read the version from the .toml file since this is what will be pushed to the repo

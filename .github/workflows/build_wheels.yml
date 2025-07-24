@@ -37,6 +37,8 @@ jobs:
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.0.1
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "10.15"
         with:
           package-dir: .
           output-dir: wheelhouse
