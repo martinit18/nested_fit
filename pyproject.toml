@@ -42,8 +42,9 @@ nested_fit = "pynested_fit.cliw:main"
 
 # Setup cibuildwheel
 [tool.cibuildwheel]
-# Compile for all CPython available versions
-build = "cp38"
+# Our wheel does not depend on the C ABI
+# Compile only for python 3.8, fix after
+build = "cp38-*"
 
 [tool.cibuildwheel.macos]
 archs = ["x86_64"]
