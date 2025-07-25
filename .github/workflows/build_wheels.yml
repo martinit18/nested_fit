@@ -61,6 +61,8 @@ jobs:
           which make
           make --version
           echo $PATH
+          echo $PWD
+          git rev-parse HEAD
 
       - name: Build wheels (macOS)
         if: runner.os == 'macOS'
