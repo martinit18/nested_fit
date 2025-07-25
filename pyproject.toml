@@ -47,7 +47,7 @@ nested_fit = "pynested_fit.cliw:main"
 build = "cp38-*"
 
 [tool.cibuildwheel.macos]
-archs = ["x86_64"]
+archs = ["x86_64", "arm64"]
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64"]

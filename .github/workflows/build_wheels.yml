@@ -100,12 +100,12 @@ jobs:
           output-dir: wheelhouse
           config-file: "{package}/pyproject.toml"
 
-      - name: Re-tag wheels for Python3.x
-        run: |
-          pip install wheel-fix
-          for whl in wheelhouse/*.whl; do
-            wheel-fix --python-tag py3 --abi-tag none "$whl"
-          done
+      # - name: Re-tag wheels for Python3.x
+      #   run: |
+      #     pip install wheel-fix
+      #     for whl in wheelhouse/*.whl; do
+      #       wheel-fix --python-tag py3 --abi-tag none "$whl"
+      #     done
 
       - uses: actions/upload-artifact@v4
         with:
