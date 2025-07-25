@@ -66,9 +66,11 @@ jobs:
         if: runner.os == 'macOS'
         uses: pypa/cibuildwheel@v3.0.1
         env:
+          SETUPTOOLS_SCM_PRETEND_VERSION: "1.0.0"
           MACOSX_DEPLOYMENT_TARGET: "10.15"
           # LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
           #SDKROOT: $(xcrun --sdk macosx --show-sdk-path)
+          CIBW_GIT_TIMEOUT: 120
           CIBW_BEFORE_BUILD: |
             SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
             echo "SDKROOT=$SDKROOT"
