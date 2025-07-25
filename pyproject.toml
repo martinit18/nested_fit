@@ -51,3 +51,6 @@ archs = ["x86_64", "arm64"]
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64"]
+
+[tool.setuptools_scm]
+fallback_version = "1.0.0"
