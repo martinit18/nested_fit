@@ -168,7 +168,7 @@ CONTAINS
 
   SUBROUTINE RANDOM_WALK(n,itry,min_live_like,live_like,live, &
        live_like_new,live_new,icluster,ntries,too_many_tries)
-  ! SUBROUTINE LAWN_MOWER_ROBOT(min_ll,nlive,live_like,live,new_live_like,new_live)
+  ! Simple random walk search function
 
 
     USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in
@@ -326,6 +326,7 @@ CONTAINS
 
   SUBROUTINE RANDOM_WALK_NO_DB(n,itry,min_live_like,live_like,live, &
        live_like_new,live_new,icluster,ntries,too_many_tries)
+   ! Random walk search function with synthetic live point creation and recentering the search (Leo's. method)
     ! SUBROUTINE LAWN_MOWER_ROBOT(min_ll,nlive,live_like,live,new_live_like,new_live)
     
     

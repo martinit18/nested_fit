@@ -1,4 +1,4 @@
-version:    5.4              # Program version
+version:    5.5              # Program version
 calculation_mode: DATA       # Type of calculation (DATA for data, POTENTIAL for potential landscapes, INTEGRAL for function integrals)
 datafiles:  he-histo.dat
 #specstr:    x,c,ce
@@ -39,7 +39,7 @@ convergence:
   accuracy:  1.E-05
 
 clustering:
-  enabled:   false
-  method:    k
-  #parameter1:  0.5
-  #parameter2: 0.2
+  enabled:   true
+  method:    g
+  parameter1:  0.5
+  parameter2: 0.2

@@ -1,4 +1,4 @@
-version:    5.4              # Program version
+version:    5.5              # Program version
 calculation_mode: DATA       # Type of calculation (DATA for data, POTENTIAL for potential landscapes, INTEGRAL for function integrals)
 datafiles:  he-histo.dat     # Name of the data file
 specstr:    x,c              # Datafile layout

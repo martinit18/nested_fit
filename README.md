@@ -261,7 +261,7 @@ A complete selection of input files example is given in the folder `examples` wh
 It follows a complete description of `nf_input.yaml` file.
 
 ```yaml
-version: 5.4                             # Program version
+version: 5.5                             # Program version
 calculation_mode: DATA                   # Type of calculation
 ```
 The type of calculation is spefified by `calculation_mode` variable. 
