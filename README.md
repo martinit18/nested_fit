@@ -367,10 +367,10 @@ clustering:
 
 For the moment four clustering algorithms are implemented. The two parameters are specific to the method
 For the second option:
-- `f`: mean-shift with flat kernel (par. 1: distance)
+- `f`: mean-shift with flat kernel (par. 1: distance (relative to the maximum distance))
 - `g`: mean-shift with gaussian kernel (par. 1: distance, par. 2: bandwidth)
 - `d`: dbscan (par. 1: distance, par. 2 : minimum number of neighbours)
-- `s`: agglomerative clustering with single linkage (par. 1: distance limit (in percentage of the maximum distance))
+- `s`: agglomerative clustering with single linkage (par. 1: distance limit)
 - `k`: k nearest neighbours (no parameters)
 
 
