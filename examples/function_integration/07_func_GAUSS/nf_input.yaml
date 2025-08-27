@@ -1,11 +1,15 @@
-version:    5.4                  # Program version
+version:    5.5                 # Program version
 calculation_mode: INTEGRAL      # Type of calculation (DATA for data, POTENTIAL for potential landscapes, INTEGRAL for function integrals)
 
 function:
-  expression: TEST_EGGBOX  # Legacy function
-  params:                  # Parameters boundaries and co.
-    x:  { value: 0.5, step: -1, min: 0, max: 31.4159,  npar: 1 }
-    y:  { value: 0.5, step: -1, min: 0, max: 31.4159,  npar: 2 }
+  expression: TEST_GAUSS         # Legacy function
+  params:                        # Parameters boundaries and co.
+    x_1:  { value: 0.5, step: -1, min: 0, max: 1.,  npar: 1 }
+    x_2:  { value: 0.5, step: -1, min: 0, max: 1.,  npar: 2 }
+    x_3:  { value: 0.5, step: -1, min: 0, max: 1.,  npar: 3 }
+    x_4:  { value: 0.5, step: -1, min: 0, max: 1.,  npar: 4 }
+    x_5:  { value: 0.5, step: -1, min: 0, max: 1.,  npar: 5 }
+
 
 search:
   livepoints: 2000               # Number of live points
