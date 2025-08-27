@@ -52,10 +52,13 @@ Other jupyter notebook examples can be found in `examples/jupyter_notebooks`.
 
 If you have to install everything from scratch, please refer to the file *STEPBYSTEP_INSTALL.md*
 
-### Quick installation (to fully be tested)
+### Quick installation commands with PIP (not working for mac OS with ARM processor)
+???? TO ADD ????
+
+### Quick installation commands without PIP
 In the directory of your choice in the terminal execute the following commands:
-- `python -m venv <your_virtual_env_name>`  #Create a Python virtual environment
-- `source <your_virtual_env_name>/bin/activate` #Activate your virtual environment 
+- (`python -m venv <your_virtual_env_name>`)  This is optional to create a Python virtual environment
+- (`source <your_virtual_env_name>/bin/activate`) This is optional to activate your virtual environment 
 - `git clone https://github.com/martinit18/nested_fit.git`
 - `mkdir -p nested_fit/build`
 - `cd nested_fit/build`
@@ -68,9 +71,9 @@ In the directory of your choice in the terminal execute the following commands:
 
 To test if everything is working, go to the directory `examples/data_analysis/aaa_simple_example/legacy_func_input` and run `nested_fit_xxx`<br>
 **NOTE:** 
-- Always activate your Python virtual environment before using the Nested Fit:<br>
+- If needed, activate your Python virtual environment before using the Nested Fit:<br>
          `source <path_to_your_virtual_env_name>/bin/activate`
-- **This installation does not works with ANACONDA**
+- **This installation may not works with ANACONDA**
 
 
 ### Generalities for the installation
