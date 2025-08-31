@@ -133,7 +133,7 @@ cmake --build . --config Release --target install
 In this case the binary file will be installed in `$HOME/.local/bin`.
 To install in another directory run
 ```sh
-cmake -DINSTALL_SYSTEM_WIDE=ON -DCMAKE_INSTALL_PREFIX=<your_dir> ..
+cmake -DCMAKE_INSTALL_PREFIX=<your_dir> ..
 ```
 instead of `cmake ..`, where `<your_dir>/bin`. See below for more details about cmake options.
 
