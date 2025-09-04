@@ -23,11 +23,9 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   ! Module for searching new live points
   USE MOD_SEARCH_NEW_POINT, ONLY: SEARCH_NEW_POINT, MAKE_LIVE_MEAN_SD, REMAKE_LIVE_MEAN_SD, DEALLOCATE_SEARCH_NEW_POINTS
   ! Module for cluster analysis
-  USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_on
+  USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_on, DEALLOCATE_CLUSTER, MAKE_CLUSTER_ANALYSIS, REMAKE_CLUSTER_STD, GET_CLUSTER_MEAN_SD
   ! Module for covariance matrix
   USE MOD_COVARIANCE_MATRIX
-  ! Module for the metadata
-  USE MOD_METADATA
   ! Module for optionals
   USE MOD_OPTIONS
   ! Module for logging
@@ -602,10 +600,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
          !   WRITE(*,*) 'N step: ', n, 'Ev. at present: ',evsum, &
          !        'Ev. of the step: ', evstep(n), 'Diff. with the estimate total ev.: ', evtotest-evsum
 
-         !   IF(live_like(nlive).EQ.0) THEN 
-         !      WRITE(*,*) 'Problem, something is wrong!!! live_like(nlive): ', live_like(nlive) !???? debugging
-         !      STOP
-         !   END IF
+           IF(live_like(nlive).EQ.0) THEN 
+              WRITE(*,*) 'Problem, something is wrong!!! live_like(nlive): ', live_like(nlive) !???? debugging
+              STOP
+           END IF
            ! ????????????????????????????????????????????????????????????????????????????????????????????????????????
 
 
@@ -686,6 +684,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
            !$OMP& SHARED(n,itry,ntries,min_live_like,live_like,live,nth,live_like_new,live_new,icluster,too_many_tries,live_searching,live_ready)
            CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
                 live_like_new(it),live_new(it,:),icluster(it),ntries(it),too_many_tries(it))
+           ! Debugging stuff ????
+           write(*,*) 'IN NS thread ', omp_get_thread_num(), 'it: ', it, 'new live_like ', live_like_new(it), min_live_like, too_many_tries(it)
            live_ready(it) = .true.
            live_searching(it) = .false.
            !$OMP FLUSH(live_ready, live_searching, live_like_new,live_new)

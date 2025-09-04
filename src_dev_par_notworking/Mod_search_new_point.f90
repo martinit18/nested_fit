@@ -5,9 +5,15 @@ MODULE MOD_SEARCH_NEW_POINT
   ! Module for likelihood
   USE MOD_LIKELIHOOD_GEN, ONLY: LOGLIKELIHOOD
   ! Module for cluster analysis
-  USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_on
+  USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_on, GET_CLUSTER_MEAN_SD
   ! Module for perfprof
   USE MOD_PERFPROF
+  ! Module for logging
+  USE MOD_LOGGER, ONLY: LOG_ERROR, LOG_ERROR_HEADER
+
+#ifdef OPENMP_ON
+  USE OMP_LIB
+#endif
 
   IMPLICIT NONE
 
@@ -80,7 +86,7 @@ CONTAINS
 
   SUBROUTINE REMAKE_LIVE_MEAN_SD(live)  
    
-   USE MOD_PARAMETERS, ONLY: nlive
+  USE MOD_PARAMETERS, ONLY: nlive, npar, par_fix
   USE MOD_MATH, ONLY: MEANVAR
  
    REAL(8), INTENT(IN), DIMENSION(nlive,npar) :: live
@@ -208,7 +214,7 @@ CONTAINS
 
     ! Get the momenta of the live points if cluster analysis is on 
 400 IF (cluster_on) THEN
-       CALL GET_CLUSTER_MEAN_SD(istart, live_ave_s, live_sd_s)
+       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, live_ave_s, live_sd_s)
     END IF
 
 
@@ -419,7 +425,7 @@ CONTAINS
 
     ! Get the momenta of the live points if cluster analysis is on 
 600 IF (cluster_on) THEN
-       CALL GET_CLUSTER_MEAN_SD(istart, live_ave_s, live_sd_s)
+       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, live_ave_s, live_sd_s)
     END IF
 
 
@@ -655,7 +661,7 @@ SUBROUTINE SLICE_SAMPLING_TRANSF(n,itry,min_live_like,live_like,live, &
 
     ! Get the momenta of the live points if cluster analysis is on 
     IF (cluster_on) THEN
-       CALL GET_CLUSTER_MEAN_SD(istart, live_ave_s, live_sd_s)
+       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, live_ave_s, live_sd_s)
     END IF
 
     IF(cluster_on) THEN ! Get the covariance matrix and Cholesky decomposition for the correct cluster
@@ -872,7 +878,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     
     ! Get the momenta of the live points if cluster analysis is on 
     IF (cluster_on) THEN
-       CALL GET_CLUSTER_MEAN_SD(istart, live_ave_s, live_sd_s)
+       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, live_ave_s, live_sd_s)
     END IF
     
 
@@ -1007,6 +1013,10 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
            END DO 
            IF(.NOT. test_bnd) GOTO 204
            part_like=LOGLIKELIHOOD(npar, new_jump)
+
+                      ! Debugging stuff ????
+           write(*,*) 'IN SEARCH, thread ', omp_get_thread_num(), 'ntries ', ntries, 'new live_like ', LOGLIKELIHOOD(npar, new_jump), 'min live_like ', min_live_like
+
          END DO
          start_jump=new_jump
        END DO
@@ -1111,7 +1121,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
 
     ! Get the momenta of the live points if cluster analysis is on 
     IF (cluster_on) THEN
-       CALL GET_CLUSTER_MEAN_SD(istart, live_ave_s, live_sd_s)
+       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, live_ave_s, live_sd_s)
     END IF
 
     IF(cluster_on) THEN ! Get the covariance matrix and Cholesky decomposition for the correct cluster
@@ -1317,7 +1327,7 @@ END SUBROUTINE TRIANG_INV
 
 SUBROUTINE PART_LIKE_SUB(D,pt,chol,part_like) !calculates the likelihood for a point in the new space
 
-  USE MOD_PARAMETERS, ONLY: par_in
+  USE MOD_PARAMETERS, ONLY: npar, par_in, par_fix
 
   INTEGER(4), INTENT(IN) :: D
   REAL(8), DIMENSION(D), INTENT(IN) :: pt
