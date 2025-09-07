@@ -221,6 +221,9 @@ CONTAINS
     ! Get the momenta of the live points if cluster analysis is on 
 400 IF (cluster_on) THEN
        CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
+    ELSE
+       icluster = 0
+       live_sd_s = live_sd
     END IF
 
 
@@ -370,6 +373,9 @@ CONTAINS
     ! Get the momenta of the live points if cluster analysis is on 
 400 IF (cluster_on) THEN
        CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
+    ELSE
+       icluster = 0
+       live_sd_s = live_sd
     END IF
     
     
@@ -585,6 +591,9 @@ CONTAINS
     ! Get the momenta of the live points if cluster analysis is on 
 400 IF (cluster_on) THEN
        CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
+    ELSE
+       icluster = 0
+       live_sd_s = live_sd
     END IF
 
 
@@ -753,6 +762,9 @@ CONTAINS
     ! Get the momenta of the live points if cluster analysis is on 
 400 IF (cluster_on) THEN
        CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
+    ELSE
+       icluster = 0
+       live_sd_s = live_sd
     END IF
 
 
@@ -916,6 +928,9 @@ CONTAINS
     ! Get the momenta of the live points if cluster analysis is on 
 600 IF (cluster_on) THEN
        CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
+    ELSE
+       icluster = 0
+       live_sd_s = live_sd
     END IF
 
 
@@ -1145,11 +1160,6 @@ SUBROUTINE SLICE_SAMPLING_TRANSF(n,itry,min_live_like,live_like,live, &
 
     !Select only the variables that are not fixed
     start_jump=start_jump_comp(par_var)
-
-    ! Get the momenta of the live points if cluster analysis is on 
-    IF (cluster_on) THEN
-       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
-    END IF
 
     IF(cluster_on) THEN ! Get the covariance matrix and Cholesky decomposition for the correct cluster
        ! Identify cluster appartenance
@@ -1596,11 +1606,6 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     !Select only the variables that are not fixed
     start_jump=start_jump_comp(par_var)
     !live_nf=live(:,par_var)
-
-    ! Get the momenta of the live points if cluster analysis is on 
-    IF (cluster_on) THEN
-       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
-    END IF
 
     IF(cluster_on) THEN ! Get the covariance matrix and Cholesky decomposition for the correct cluster
        ! Identify cluster appartenance

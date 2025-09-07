@@ -665,8 +665,6 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
       END IF
     END DO
 
-    write(*,*) 'I am here', ncluster_new !????
-
     IF(ncluster_new>1) THEN !if more than one cluster, do the analysis for each cluster found
       icluster=1
       DO WHILE(icluster<=ncluster_new)
@@ -703,7 +701,6 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
             END DO
             !!$OMP END PARALLEL DO
             ncluster_new=ncluster_new+ncluster_temp-1 !update number of cluster
-            write(*,*) 'KNN, ncluster_new: ', ncluster_new !! debug ???
             IF (ncluster_new .GT.ncluster_max) THEN
               CALL LOG_ERROR_HEADER()
               CALL LOG_ERROR('Too many clusters more than '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ncluster_max))))
@@ -724,7 +721,6 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     ncluster=ncluster_new
 
     IF (ncluster.GT.ncluster_max) THEN
-            write(*,*) 'KNN, ncluster: ', ncluster !! debug ???
       CALL LOG_ERROR_HEADER()
       CALL LOG_ERROR('Too many clusters more than '//TRIM(ADJUSTL(INT_TO_STR_INLINE(ncluster_max))))
       CALL LOG_ERROR('Change cluster recognition parameters in KNN.')
