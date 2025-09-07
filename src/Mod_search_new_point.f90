@@ -1,21 +1,19 @@
 MODULE MOD_SEARCH_NEW_POINT
-  ! Automatic Time-stamp: <Last changed by martino on Monday 14 July 2025 at CEST 00:36:01>
+  ! Automatic Time-stamp: <Last changed by martino on Friday 15 November 2024 at CET 22:36:28>
   ! Module for search of new points
   
-  ! Module for the input parameter definition
-  USE MOD_PARAMETERS !, ONLY:  npar, par_step, par_bnd1, par_bnd2, par_fix, searchid
   ! Module for likelihood
   USE MOD_LIKELIHOOD_GEN, ONLY: LOGLIKELIHOOD
   ! Module for cluster analysis
-  USE MOD_CLUSTER_ANALYSIS
-  ! Module for math
-  USE MOD_MATH
+  USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_on, GET_CLUSTER_MEAN_SD
   ! Module for perfprof
   USE MOD_PERFPROF
-  ! Module for covariance matrix
-  USE MOD_COVARIANCE_MATRIX
+  ! Module for logging
+  USE MOD_LOGGER, ONLY: LOG_ERROR, LOG_ERROR_HEADER
   
-  !$ USE OMP_LIB
+#ifdef OPENMP_ON
+  USE OMP_LIB
+#endif
 
   IMPLICIT NONE
 
@@ -27,6 +25,9 @@ MODULE MOD_SEARCH_NEW_POINT
 CONTAINS
   
   SUBROUTINE INIT_SEARCH_METHOD()
+
+   USE MOD_PARAMETERS, ONLY: search_method, searchid, npar, par_in, par_bnd1, par_bnd2, par_fix
+
     IF (search_method.eq.'RANDOM_WALK') THEN
        searchid = 0
     ELSE IF(search_method.EQ.'UNIFORM') THEN
@@ -56,7 +57,8 @@ CONTAINS
 
   SUBROUTINE MAKE_LIVE_MEAN_SD(live)  
    
-  USE MOD_PARAMETERS, ONLY: nlive
+  USE MOD_PARAMETERS, ONLY: nlive, par_in, npar, par_fix
+  USE MOD_MATH, ONLY: MEANVAR
 
   REAL(8), INTENT(IN), DIMENSION(nlive,npar) :: live
   INTEGER(4) :: i
@@ -68,7 +70,6 @@ CONTAINS
   live_var = 0.
   live_sd  = 0.
   
-!!$OMP PARALLEL DO
   DO i=1,npar
      IF(par_fix(i).NE.1) THEN
         CALL MEANVAR(live(:,i),nlive,live_ave(i),live_var(i))
@@ -76,7 +77,6 @@ CONTAINS
         live_ave(i) = par_in(i)
      END IF
   END DO
-!!$OMP END PARALLEL DO
   live_sd = DSQRT(live_var)
    
   END SUBROUTINE MAKE_LIVE_MEAN_SD
@@ -85,7 +85,8 @@ CONTAINS
 
   SUBROUTINE REMAKE_LIVE_MEAN_SD(live)  
    
-   USE MOD_PARAMETERS, ONLY: nlive
+  USE MOD_PARAMETERS, ONLY: nlive, npar, par_fix
+  USE MOD_MATH, ONLY: MEANVAR
  
    REAL(8), INTENT(IN), DIMENSION(nlive,npar) :: live
    INTEGER(4) :: i
@@ -95,14 +96,12 @@ CONTAINS
    live_var = 0.
    live_sd  = 0.
    
- !!$OMP PARALLEL DO
    DO i=1,npar
       IF(par_fix(i).NE.1) THEN
          CALL MEANVAR(live(:,i),nlive,live_ave(i),live_var(i))
          live_sd(i) = DSQRT(live_var(i))
       END IF
    END DO
- !!$OMP END PARALLEL DO
     
    END SUBROUTINE REMAKE_LIVE_MEAN_SD
 
@@ -120,7 +119,8 @@ CONTAINS
   SUBROUTINE SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
           live_like_new,live_new,icluster,ntries,too_many_tries)
     ! Main search function
-    USE MOD_PARAMETERS, ONLY: nlive
+
+    USE MOD_PARAMETERS, ONLY: nlive, searchid, npar, par_in, par_fix, par_bnd1, par_bnd2
 
 
     INTEGER(4), INTENT(IN) :: n, itry
@@ -171,7 +171,8 @@ CONTAINS
   ! Simple random walk search function
 
 
-    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in, par_bnd1, par_bnd2, &
+          par_fix, npar, par_step
 
     ! MCMC search function from Leo's ideas and mine
     INTEGER(4), INTENT(IN) :: n, itry
@@ -192,6 +193,8 @@ CONTAINS
     REAL(8) :: sdfraction
     INTEGER(4) :: njump
     REAL(8) :: loglike
+    REAL(8), DIMENSION(npar) :: live_ave_s, live_sd_s
+
 
 
     PROFILED(RANDOM_WALK)
@@ -215,22 +218,10 @@ CONTAINS
     istart= FLOOR((nlive-1)*rn+1)
     start_jump = live(istart,:)
 
-
-    ! Calculate momenta of the live points
+    ! Get the momenta of the live points if cluster analysis is on 
 400 IF (cluster_on) THEN
-       ! Identify cluster appartenance
-       icluster = p_cluster(istart)
-       ! Get for the specific cluster if the cluster analysis is on
-       ! Standard deviation
-       live_sd(:) = cluster_std(icluster,:)
-       IF(cluster_std(icluster,1).EQ.0.) THEN
-          ! If the cluster is formed only from one point, take the standard standard deviation
-          CALL REMAKE_LIVE_MEAN_SD(live)
-       END IF
-       ! and mean
-       live_ave(:) = cluster_mean(icluster,:)
+       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
     END IF
-
 
 
     ! Make several consecutive casual jumps in the region with loglikelyhood > minlogll
@@ -242,7 +233,7 @@ CONTAINS
        DO l=1,npar
           IF (par_fix(l).NE.1) THEN
 502          CALL RANDOM_NUMBER(rn)
-             new_jump(l) = start_jump(l) + live_sd(l)*sdfraction*(2.*rn-1.)
+             new_jump(l) = start_jump(l) + live_sd_s(l)*sdfraction*(2.*rn-1.)
              IF (new_jump(l).LT.par_bnd1(l).OR.new_jump(l).GT.par_bnd2(l)) THEN
                 ntries = ntries + 1
                 GOTO 502
@@ -330,8 +321,9 @@ CONTAINS
     ! SUBROUTINE LAWN_MOWER_ROBOT(min_ll,nlive,live_like,live,new_live_like,new_live)
     
     
-    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in
-    
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in, par_bnd1, par_bnd2, &
+          par_fix, npar, par_step
+
     ! MCMC search function from Leo's ideas and mine
     INTEGER(4), INTENT(IN) :: n, itry
     REAL(8), INTENT(IN) :: min_live_like
@@ -351,7 +343,7 @@ CONTAINS
     REAL(8) :: sdfraction
     INTEGER(4) :: njump
     REAL(8) :: loglike
-    
+    REAL(8), DIMENSION(npar) :: live_ave_s, live_sd_s     
     
     PROFILED(RANDOM_WALK_NO_DB)
     
@@ -375,19 +367,9 @@ CONTAINS
     start_jump = live(istart,:)
     
     
-    ! Calculate momenta of the live points
+    ! Get the momenta of the live points if cluster analysis is on 
 400 IF (cluster_on) THEN
-       ! Identify cluster appartenance
-       icluster = p_cluster(istart)
-       ! Get for the specific cluster if the cluster analysis is on
-       ! Standard deviation
-       live_sd(:) = cluster_std(icluster,:)
-       IF(cluster_std(icluster,1).EQ.0.) THEN
-          ! If the cluster is formed only from one point, take the standard standard deviation
-          CALL REMAKE_LIVE_MEAN_SD(live)
-       END IF
-       ! and mean
-       live_ave(:) = cluster_mean(icluster,:)
+       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
     END IF
     
     
@@ -401,7 +383,7 @@ CONTAINS
        DO l=1,npar
           IF (par_fix(l).NE.1) THEN
 502          CALL RANDOM_NUMBER(rn)
-             new_jump(l) = start_jump(l) + live_sd(l)*sdfraction*(2.*rn-1.)
+             new_jump(l) = start_jump(l) + live_sd_s(l)*sdfraction*(2.*rn-1.)
              IF (new_jump(l).LT.par_bnd1(l).OR.new_jump(l).GT.par_bnd2(l)) THEN
                 ntries = ntries + 1
                 GOTO 502
@@ -462,7 +444,6 @@ CONTAINS
                 irn = FLOOR(2*rn+1)
                 IF(MOD(ntries,2).EQ.1) THEN
                    ! My new technique: mix parameter values from different sets to hope to find a good new value
-                   !!$OMP PARALLEL DO
                    DO l=1,npar
                       IF (par_fix(l).NE.1) THEN
                          CALL RANDOM_NUMBER(rn)
@@ -470,17 +451,14 @@ CONTAINS
                          new_jump(l) = live(istart,l)
                       END IF
                    END DO
-                   !!$OMP END PARALLEL DO
                 ELSE
                    ! Leo's technique, go between the average and this point
-                   !!$OMP PARALLEL DO
                    DO l=1,npar
                       IF (par_fix(l).NE.1) THEN
                          CALL RANDOM_NUMBER(rn)
-                         new_jump(l) = live_ave(l) + (new_jump(l) - live_ave(l))*rn
+                         new_jump(l) = live_ave_s(l) + (new_jump(l) - live_ave_s(l))*rn
                       END IF
                    END DO
-                   !!$OMP END PARALLEL DO
                 END IF
                 !
 
@@ -496,14 +474,12 @@ CONTAINS
              ELSE
                 ! If cluster analysis, do not mix the points!!
                 ! Leo's technique only, go between the average and this point
-                !!$OMP PARALLEL DO
                 DO l=1,npar
                    IF (par_fix(l).NE.1) THEN
                       CALL RANDOM_NUMBER(rn)
-                      new_jump(l) = live_ave(l) + (new_jump(l) - live_ave(l))*rn
+                      new_jump(l) = live_ave_s(l) + (new_jump(l) - live_ave_s(l))*rn
                    END IF
                 END DO
-                !!$OMP END PARALLEL DO
                 IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
                    start_jump = new_jump
                 ELSE
@@ -525,7 +501,7 @@ CONTAINS
 
     ! Final check of the last point for gaussian priors
     !CALL USERCONDITIONS(funcname,npar,par_fix,new_jump,par_in,par_step,par_bnd1,par_bnd2, &
-    !     live_sd,start_jump,sdfraction,outlimits)
+    !     live_sd_s,start_jump,sdfraction,outlimits)
     DO l=1,npar
        IF(par_fix(l).NE.1) THEN
           IF(par_step(l).GT.0) THEN
@@ -560,8 +536,9 @@ CONTAINS
     ! Random walk search function with synthetic live point creation
     
     
-    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in
-    
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in, par_bnd1, par_bnd2, &
+          par_fix, npar, par_step
+
     ! MCMC search function from Leo's ideas and mine
     INTEGER(4), INTENT(IN) :: n, itry
     REAL(8), INTENT(IN) :: min_live_like
@@ -581,7 +558,7 @@ CONTAINS
     REAL(8) :: sdfraction
     INTEGER(4) :: njump
     REAL(8) :: loglike
-
+    REAL(8), DIMENSION(npar) :: live_ave_s, live_sd_s
 
     PROFILED(RANDOM_WALK_SYN)
 
@@ -605,19 +582,9 @@ CONTAINS
     start_jump = live(istart,:)
 
 
-    ! Calculate momenta of the live points
+    ! Get the momenta of the live points if cluster analysis is on 
 400 IF (cluster_on) THEN
-       ! Identify cluster appartenance
-       icluster = p_cluster(istart)
-       ! Get for the specific cluster if the cluster analysis is on
-       ! Standard deviation
-       live_sd(:) = cluster_std(icluster,:)
-       IF(cluster_std(icluster,1).EQ.0.) THEN
-          ! If the cluster is formed only from one point, take the standard standard deviation
-          CALL REMAKE_LIVE_MEAN_SD(live)
-       END IF
-       ! and mean
-       live_ave(:) = cluster_mean(icluster,:)
+       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
     END IF
 
 
@@ -631,7 +598,7 @@ CONTAINS
        DO l=1,npar
           IF (par_fix(l).NE.1) THEN
 502          CALL RANDOM_NUMBER(rn)
-             new_jump(l) = start_jump(l) + live_sd(l)*sdfraction*(2.*rn-1.)
+             new_jump(l) = start_jump(l) + live_sd_s(l)*sdfraction*(2.*rn-1.)
              IF (new_jump(l).LT.par_bnd1(l).OR.new_jump(l).GT.par_bnd2(l)) THEN
                 ntries = ntries + 1
                 GOTO 502
@@ -737,8 +704,9 @@ CONTAINS
     ! Random walk search function with recentering the serarch of live points (Leo's. method)
     
     
-    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in
-    
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in, par_bnd1, par_bnd2, &
+          par_fix, npar, par_step
+          
     ! MCMC search function from Leo's ideas and mine
     INTEGER(4), INTENT(IN) :: n, itry
     REAL(8), INTENT(IN) :: min_live_like
@@ -758,7 +726,7 @@ CONTAINS
     REAL(8) :: sdfraction
     INTEGER(4) :: njump
     REAL(8) :: loglike
-
+    REAL(8), DIMENSION(npar) :: live_ave_s, live_sd_s
 
     PROFILED(RANDOM_WALK_RECENT)
 
@@ -782,19 +750,9 @@ CONTAINS
     start_jump = live(istart,:)
 
 
-    ! Calculate momenta of the live points
+    ! Get the momenta of the live points if cluster analysis is on 
 400 IF (cluster_on) THEN
-       ! Identify cluster appartenance
-       icluster = p_cluster(istart)
-       ! Get for the specific cluster if the cluster analysis is on
-       ! Standard deviation
-       live_sd(:) = cluster_std(icluster,:)
-       IF(cluster_std(icluster,1).EQ.0.) THEN
-          ! If the cluster is formed only from one point, take the standard standard deviation
-          CALL REMAKE_LIVE_MEAN_SD(live)
-       END IF
-       ! and mean
-       live_ave(:) = cluster_mean(icluster,:)
+       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
     END IF
 
 
@@ -808,7 +766,7 @@ CONTAINS
        DO l=1,npar
           IF (par_fix(l).NE.1) THEN
 502          CALL RANDOM_NUMBER(rn)
-             new_jump(l) = start_jump(l) + live_sd(l)*sdfraction*(2.*rn-1.)
+             new_jump(l) = start_jump(l) + live_sd_s(l)*sdfraction*(2.*rn-1.)
              IF (new_jump(l).LT.par_bnd1(l).OR.new_jump(l).GT.par_bnd2(l)) THEN
                 ntries = ntries + 1
                 GOTO 502
@@ -850,7 +808,7 @@ CONTAINS
              DO l=1,npar
                 IF (par_fix(l).NE.1) THEN
                    CALL RANDOM_NUMBER(rn)
-                   new_jump(l) = live_ave(l) + (new_jump(l) - live_ave(l))*rn
+                   new_jump(l) = live_ave_s(l) + (new_jump(l) - live_ave_s(l))*rn
                 END IF
              END DO
 !!$OMP END PARALLEL DO
@@ -910,7 +868,8 @@ CONTAINS
   SUBROUTINE UNIFORM(n,itry,min_live_like,live_like,live, &
        live_like_new,live_new,icluster,ntries,too_many_tries)
 
-    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in, par_step, par_bnd1, par_bnd2, &
+          par_fix, npar
 
     ! uniform search function
     INTEGER(4), INTENT(IN) :: n, itry
@@ -930,6 +889,7 @@ CONTAINS
     REAL(8) :: rn, frac
     INTEGER(4) :: nb_cube, njump
     REAL(8) :: loglike
+    REAL(8), DIMENSION(npar) :: live_ave_s, live_sd_s
 
     PROFILED(UNIFORM)
 
@@ -953,20 +913,9 @@ CONTAINS
     istart= FLOOR((nlive-1)*rn+1)
     start_jump = live(istart,:)
 
-
-    ! Calculate momenta of the live points
+    ! Get the momenta of the live points if cluster analysis is on 
 600 IF (cluster_on) THEN
-       ! Identify cluster appartenance
-       icluster = p_cluster(istart)
-       ! Get for the specific cluster if the cluster analysis is on
-       ! Standard deviation
-       live_sd(:) = cluster_std(icluster,:)
-       IF(cluster_std(icluster,1).EQ.0.) THEN
-          ! If the cluster is formed only from one point, take the standard standard deviation
-          CALL REMAKE_LIVE_MEAN_SD(live)
-       END IF
-       ! and mean
-       live_ave(:) = cluster_mean(icluster,:)
+       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
     END IF
 
 
@@ -975,11 +924,10 @@ CONTAINS
     DO i=1,njump
 701    CONTINUE
        ntries = ntries + 1
-       !!$OMP PARALLEL DO
        DO l=1,npar
           IF (par_fix(l).NE.1) THEN
 702          CALL RANDOM_NUMBER(rn)
-             rn=2*frac*live_sd(l)*rn-frac*live_sd(l)
+             rn=2*frac*live_sd_s(l)*rn-frac*live_sd_s(l)
              new_jump(l) = start_jump(l) + rn !select randomly a point in the box around the starting point
              IF (new_jump(l).LT.par_bnd1(l).OR.new_jump(l).GT.par_bnd2(l)) THEN
                 ntries = ntries + 1
@@ -987,14 +935,13 @@ CONTAINS
              END IF
           END IF
        END DO
-        !!$OMP END PARALLEL DO
 
 
        ! Check if the new point is inside the parameter volume defined by the minimum likelihood of the live points
        IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
            !$OMP SIMD REDUCTION(+:nb_cube)
            DO j=1, nlive
-              IF(ALL(ABS(new_jump-live(j,:)) .LT. frac*live_sd)) nb_cube=nb_cube+1
+              IF(ALL(ABS(new_jump-live(j,:)) .LT. frac*live_sd_s)) nb_cube=nb_cube+1
            END DO
           !$OMP END SIMD
           CALL RANDOM_NUMBER(rn)
@@ -1045,7 +992,6 @@ CONTAINS
                 irn = FLOOR(2*rn+1)
                 IF(MOD(ntries,2).EQ.1) THEN
                    ! My new technique: mix parameter values from different sets to hope to find a good new value
-                   !!$OMP PARALLEL DO
                    DO l=1,npar
                       IF (par_fix(l).NE.1) THEN
                          CALL RANDOM_NUMBER(rn)
@@ -1053,17 +999,14 @@ CONTAINS
                          new_jump(l) = live(istart,l)
                       END IF
                    END DO
-                   !!$OMP END PARALLEL DO
                 ELSE
                    ! Leo's technique, go between the average and this point
-                   !!$OMP PARALLEL DO
                    DO l=1,npar
                       IF (par_fix(l).NE.1) THEN
                          CALL RANDOM_NUMBER(rn)
-                         new_jump(l) = live_ave(l) + (new_jump(l) - live_ave(l))*rn
+                         new_jump(l) = live_ave_s(l) + (new_jump(l) - live_ave_s(l))*rn
                       END IF
                    END DO
-                   !!$OMP END PARALLEL DO
                 END IF
                 !
                  IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
@@ -1078,14 +1021,12 @@ CONTAINS
              ELSE
                 ! If cluster analysis, do not mix the points!!
                 ! Leo's technique only, go between the average and this point
-                !!$OMP PARALLEL DO
                 DO l=1,npar
                    IF (par_fix(l).NE.1) THEN
                       CALL RANDOM_NUMBER(rn)
-                      new_jump(l) = live_ave(l) + (new_jump(l) - live_ave(l))*rn
+                      new_jump(l) = live_ave_s(l) + (new_jump(l) - live_ave_s(l))*rn
                    END IF
                 END DO
-                !!$OMP END PARALLEL DO
                 IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
                    start_jump = new_jump
                 ELSE
@@ -1139,7 +1080,11 @@ SUBROUTINE SLICE_SAMPLING_TRANSF(n,itry,min_live_like,live_like,live, &
     !inspired from polychord code
     ! This is slice sampling performed in the transformed space
 
-    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in, par_step, par_in, par_bnd1, par_bnd2, &
+          par_fix, npar
+    ! Module for covariance matrix
+    USE MOD_COVARIANCE_MATRIX
+
     INTEGER(4), INTENT(IN) :: n, itry
     REAL(8), INTENT(IN) :: min_live_like
     REAL(8), INTENT(IN), DIMENSION(nlive) :: live_like
@@ -1163,6 +1108,7 @@ SUBROUTINE SLICE_SAMPLING_TRANSF(n,itry,min_live_like,live_like,live, &
     REAL(8) :: part_like, size_jump, size_jump_save, loglike
     LOGICAL :: test_bnd
     INTEGER(4) :: init_fail, njump
+    REAL(8), DIMENSION(npar) :: live_ave_s, live_sd_s
 
     PROFILED(SLICE_SAMPLING)
         
@@ -1200,22 +1146,14 @@ SUBROUTINE SLICE_SAMPLING_TRANSF(n,itry,min_live_like,live_like,live, &
     !Select only the variables that are not fixed
     start_jump=start_jump_comp(par_var)
 
-    ! Calculate momenta of the live points
+    ! Get the momenta of the live points if cluster analysis is on 
     IF (cluster_on) THEN
-       ! Identify cluster appartenance
-       icluster = p_cluster(istart)
-       ! Get for the specific cluster if the cluster analysis is on
-       ! Standard deviation
-       live_sd(:) = cluster_std(icluster,:)
-       IF(cluster_std(icluster,1).EQ.0.) THEN
-          ! If the cluster is formed only from one point, take the standard standard deviation
-          CALL REMAKE_LIVE_MEAN_SD(live)
-       END IF
-       ! and mean
-       live_ave(:) = cluster_mean(icluster,:)
+       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
     END IF
 
     IF(cluster_on) THEN ! Get the covariance matrix and Cholesky decomposition for the correct cluster
+       ! Identify cluster appartenance
+       icluster = p_cluster(istart)
        live_cov=mat_cov(:,:,icluster)
        live_chol=mat_chol(:,:,icluster)
     ELSE
@@ -1372,7 +1310,11 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     !inspired from polychord code
     ! This is slice sampling performed in the initial space
 
-    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in, par_step, par_in, par_bnd1, par_bnd2, &
+          par_fix, npar
+    ! Module for covariance matrix
+    USE MOD_COVARIANCE_MATRIX
+
     INTEGER(4), INTENT(IN) :: n, itry
     REAL(8), INTENT(IN) :: min_live_like
     REAL(8), INTENT(IN), DIMENSION(nlive) :: live_like
@@ -1394,6 +1336,8 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     REAL(8) :: part_like, size_jump, size_jump_save, loglike
     LOGICAL :: test_bnd
     INTEGER(4) :: init_fail, njump
+    REAL(8), DIMENSION(npar) :: live_ave_s, live_sd_s
+
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
     live_new = 0.
@@ -1419,23 +1363,10 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     istart= FLOOR((nlive-1)*rn+1)
     start_jump = live(istart,:)
     
-    ! Calculate momenta of the live points
-    IF (cluster_on) THEN
-       ! Identify cluster appartenance
-       icluster = p_cluster(istart)
-       ! Get for the specific cluster if the cluster analysis is on
-       ! Standard deviation
-       live_sd(:) = cluster_std(icluster,:)
-       IF(cluster_std(icluster,1).EQ.0.) THEN
-          ! If the cluster is formed only from one point, take the standard standard deviation
-          CALL REMAKE_LIVE_MEAN_SD(live)
-       END IF
-       ! and mean
-       live_ave(:) = cluster_mean(icluster,:)
-    END IF
-    
 
     IF(cluster_on) THEN ! Get the covariance matrix and Cholesky decomposition for the correct cluster
+       ! Identify cluster appartenance
+       icluster = p_cluster(istart)       
        live_cov=mat_cov(:,:,icluster)
        live_chol=mat_chol(:,:,icluster)
     ELSE
@@ -1603,7 +1534,11 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     !inspired from polychord code
     ! This is slice sampling with an adaptable size for the step
 
-    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in, par_step, par_in, par_bnd1, par_bnd2, &
+          par_fix, npar
+    ! Module for covariance matrix
+    USE MOD_COVARIANCE_MATRIX
+
     INTEGER(4), INTENT(IN) :: n, itry
     REAL(8), INTENT(IN) :: min_live_like
     REAL(8), INTENT(IN), DIMENSION(nlive) :: live_like
@@ -1626,6 +1561,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     REAL(8) :: part_like, size_jump, size_jump_save, loglike
     LOGICAL :: test_bnd
     INTEGER(4) :: init_fail, njump
+    REAL(8), DIMENSION(npar) :: live_ave_s, live_sd_s
 
     PROFILED(SLICE_SAMPLING_ADAPT)
 
@@ -1661,22 +1597,14 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     start_jump=start_jump_comp(par_var)
     !live_nf=live(:,par_var)
 
-    ! Calculate momenta of the live points
+    ! Get the momenta of the live points if cluster analysis is on 
     IF (cluster_on) THEN
-       ! Identify cluster appartenance
-       icluster = p_cluster(istart)
-       ! Get for the specific cluster if the cluster analysis is on
-       ! Standard deviation
-       live_sd(:) = cluster_std(icluster,:)
-       IF(cluster_std(icluster,1).EQ.0.) THEN
-          ! If the cluster is formed only from one point, take the standard standard deviation
-          CALL REMAKE_LIVE_MEAN_SD(live)
-       END IF
-       ! and mean
-       live_ave(:) = cluster_mean(icluster,:)
+       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
     END IF
 
     IF(cluster_on) THEN ! Get the covariance matrix and Cholesky decomposition for the correct cluster
+       ! Identify cluster appartenance
+       icluster = p_cluster(istart)
        live_cov=mat_cov(:,:,icluster)
        live_chol=mat_chol(:,:,icluster)
     ELSE
@@ -1848,6 +1776,9 @@ SUBROUTINE BASE_O_N(D,base) !generates an orthonormal basis
   END DO
 END SUBROUTINE BASE_O_N
 
+ !#####################################################################################################################
+
+
 SUBROUTINE TRIANG_INV(D,mat,mat_inv) !calculates the inverse of the cholesky decomposition
    INTEGER(4), INTENT(IN) :: D
    REAL(8), DIMENSION(D,D), INTENT(IN) :: mat
@@ -1857,16 +1788,12 @@ SUBROUTINE TRIANG_INV(D,mat,mat_inv) !calculates the inverse of the cholesky dec
    PROFILED(TRIANG_INV)
 
    mat_inv=0
-   !!$OMP SIMD
    DO i=1,D
      mat_inv(i,i)=1./mat(i,i)
    END DO
 
-   !!$OMP SIMD
    DO j=1,D-1
-     !!$OMP SIMD
      DO i=1,D-j
-       !!$OMP SIMD
        DO k=1,j
           mat_inv(i+j,i)=mat_inv(i+j,i)-mat(i+k,i)*mat_inv(i+j,i+k)
        END DO
@@ -1875,8 +1802,13 @@ SUBROUTINE TRIANG_INV(D,mat,mat_inv) !calculates the inverse of the cholesky dec
    END DO
 END SUBROUTINE TRIANG_INV
 
+ !#####################################################################################################################
+
+
 SUBROUTINE PART_LIKE_SUB(D,pt,chol,part_like) !calculates the likelihood for a point in the new space
-  USE MOD_PARAMETERS, ONLY: par_in
+
+  USE MOD_PARAMETERS, ONLY: npar, par_in, par_fix
+
   INTEGER(4), INTENT(IN) :: D
   REAL(8), DIMENSION(D), INTENT(IN) :: pt
   REAL(8), DIMENSION(D,D), INTENT(IN) :: chol
@@ -1900,8 +1832,13 @@ SUBROUTINE PART_LIKE_SUB(D,pt,chol,part_like) !calculates the likelihood for a p
   part_like=LOGLIKELIHOOD(npar, pt_comp)
 END SUBROUTINE PART_LIKE_SUB
 
+ !#####################################################################################################################
+
 
 SUBROUTINE TEST_BND_SUB(D,pt,par_var,chol,test_bnd) !checks if a point in the new space is in the sampled space
+
+  USE MOD_PARAMETERS, ONLY: par_bnd1, par_bnd2
+   
   INTEGER(4), INTENT(IN) :: D
   REAL(8), DIMENSION(D), INTENT(IN) :: pt
   INTEGER(4), DIMENSION(D), INTENT(IN) :: par_var

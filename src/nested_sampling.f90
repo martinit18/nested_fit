@@ -7,7 +7,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
 
   ! Parameter module
   USE MOD_PARAMETERS, ONLY:  npar, nlive, conv_method, evaccuracy, conv_par, &
-        search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, &
+        search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, par_name, &
         make_cluster, nth, maxtries, maxntries, searchid
   ! Module for likelihood
   USE MOD_LIKELIHOOD_GEN
