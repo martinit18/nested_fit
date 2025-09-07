@@ -7,14 +7,14 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
 
   ! Parameter module
   USE MOD_PARAMETERS, ONLY:  npar, nlive, conv_method, evaccuracy, conv_par, &
-        search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, par_name, &
+        search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, &
         make_cluster, nth, maxtries, maxntries, searchid
   ! Module for likelihood
   USE MOD_LIKELIHOOD_GEN
   ! Module for searching new live points
-  USE MOD_SEARCH_NEW_POINT, ONLY: SEARCH_NEW_POINT, MAKE_LIVE_MEAN_SD, REMAKE_LIVE_MEAN_SD, DEALLOCATE_SEARCH_NEW_POINTS
+  USE MOD_SEARCH_NEW_POINT
   ! Module for cluster analysis
-  USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_on, DEALLOCATE_CLUSTER, MAKE_CLUSTER_ANALYSIS, REMAKE_CLUSTER_STD, GET_CLUSTER_MEAN_SD, WRITE_CLUSTER_DATA
+  USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_on
   ! Module for covariance matrix
   USE MOD_COVARIANCE_MATRIX
   ! Module for the metadata
