@@ -17,8 +17,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_on, DEALLOCATE_CLUSTER, MAKE_CLUSTER_ANALYSIS, REMAKE_CLUSTER_STD, GET_CLUSTER_MEAN_SD, WRITE_CLUSTER_DATA
   ! Module for covariance matrix
   USE MOD_COVARIANCE_MATRIX
-  ! Module for the metadata
-  USE MOD_METADATA
   ! Module for optionals
   USE MOD_OPTIONS
   ! Module for logging
@@ -53,7 +51,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   REAL(8), DIMENSION(maxstep,npar) :: live_old
   REAL(8) :: evsum = 0., evrestest = 0., evtotest = 0.
   ! Search variable to monitor efficiency
-  INTEGER(4) :: ntries=0
+  INTEGER(4), ALLOCATABLE, DIMENSION(:) :: ntries
   ! Live points variables parallel
   REAL(8), ALLOCATABLE, DIMENSION(:) :: live_like_new
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_new
@@ -74,7 +72,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   ! Rest
   INTEGER(4) :: j, l, n, jlim, it
   REAL(8) :: ADDLOG, rn, gval
-  REAL(8) :: MOVING_AVG
+!   REAL(8) :: MOVING_AVG
   
   ! MPI Stuff
   REAL(8) :: moving_eff_avg = 0.
@@ -110,7 +108,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   n_mat_cov=0
   !maxtries = 50*njump ! Accept an efficiency of more than 2% for the exploration, otherwise change something
 
-  ALLOCATE(live_like_new(nth),live_new(nth,npar),too_many_tries(nth),icluster(nth))
+  ALLOCATE(ntries(nth),live_like_new(nth),live_new(nth,npar),too_many_tries(nth),icluster(nth))
+  ntries = 0
   live_new = 0.
   live_like_new = 0.
   icluster = 0
@@ -255,11 +254,11 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
       END IF
       
       it = 1
-      !$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) FIRSTPRIVATE(ntries) PRIVATE(p_cluster) &
-        !$OMP SHARED(n,itry,min_live_like,live_like,live,nth,live_like_new,live_new,icluster,too_many_tries) LASTPRIVATE(ntries)  
+      !$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) PRIVATE(p_cluster) &
+        !$OMP SHARED(n,itry,ntries,min_live_like,live_like,live,nth,live_like_new,live_new,icluster,too_many_tries)  
       DO it=1,nth
          CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
-           live_like_new(it),live_new(it,:),icluster(it),ntries,too_many_tries(it))
+           live_like_new(it),live_new(it,:),icluster(it),ntries(it),too_many_tries(it))
       END DO
       !$OMP END PARALLEL DO
       
@@ -483,19 +482,20 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
         ! Check if the estimate accuracy is reached
         IF (evtotest-evsum.LT.evaccuracy) GOTO 301
         
-        moving_eff_avg = MOVING_AVG(search_par2/ntries)
+      !   moving_eff_avg = MOVING_AVG(search_par2/ntries(it))
         IF (MOD(n,100).EQ.0) THEN
            IF(opt_suppress_output) CYCLE
+           moving_eff_avg = REAL(search_par2/ntries(it),8)
            IF(opt_compact_output) THEN
-              WRITE(info_string,22) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
+              WRITE(info_string,22) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, moving_eff_avg
 22            FORMAT('| N: ', I2, ' | S: ', I8, ' | MLL: ', F20.12, ' | E: ', F20.12, &
                    ' | Es: ', F20.12, ' | Ea: ', ES14.7, ' | Te: ', F6.4, ' |')
               WRITE(*,24) info_string
 24            FORMAT(A150)
            ELSE IF(opt_lib_output) THEN
-              WRITE(*,*) 'LO | ', itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries, npar, par_name, live(nlive, :)
+              WRITE(*,*) 'LO | ', itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, moving_eff_avg, npar, par_name, live(nlive, :)
            ELSE
-              WRITE(info_string,23) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
+              WRITE(info_string,23) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, moving_eff_avg
 23            FORMAT('| N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
                    ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES14.7, ' | Typical eff.: ', F6.4, ' |')
               WRITE(*,25) info_string
@@ -680,19 +680,19 @@ FUNCTION ADDLOG(log1,log2)
 
 END FUNCTION ADDLOG
 
-! ___________________________________________________________________________________________
+! ! ___________________________________________________________________________________________
 
-FUNCTION MOVING_AVG(val)
-   USE MOD_MATH
-   IMPLICIT NONE
-   REAL(8) :: val, MOVING_AVG
+! FUNCTION MOVING_AVG(val)
+!    USE MOD_MATH
+!    IMPLICIT NONE
+!    REAL(8) :: val, MOVING_AVG
 
-   MOVING_AVG = 0.
+!    MOVING_AVG = 0.
 
-   window_array = CSHIFT(window_array, 1)
-   window_array(moving_avg_window) = val
+!    window_array = CSHIFT(window_array, 1)
+!    window_array(moving_avg_window) = val
 
-   MOVING_AVG = SUM(window_array) / moving_avg_window
-END FUNCTION MOVING_AVG
+!    MOVING_AVG = SUM(window_array) / moving_avg_window
+! END FUNCTION MOVING_AVG
  
- ! ___________________________________________________________________________________________
+!  ! ___________________________________________________________________________________________
