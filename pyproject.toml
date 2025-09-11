@@ -45,8 +45,9 @@ nested_fit = "pynested_fit.cliw:main"
 
 # Setup cibuildwheel
 [tool.cibuildwheel]
-# Our wheel does not depend on the C ABI
-build = "py3-none-*"
+# Our wheel does not depend on the CPython ABI
+# However it is simpler to just build for each cp version
+build = "cp*"
 
 [tool.cibuildwheel.macos]
 archs = ["x86_64"]

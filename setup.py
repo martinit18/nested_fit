@@ -3,6 +3,7 @@ from setuptools.command.build_ext import build_ext
 from setuptools.command.install_lib import install_lib
 from setuptools.command.install_scripts import install_scripts
 from distutils.command.install_data import install_data
+from wheel.bdist_wheel import bdist_wheel
 import pathlib
 import os
 import subprocess
