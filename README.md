@@ -48,7 +48,22 @@ email: c.godinho AT campus.fct.unl.pt
 
 Other jupyter notebook examples can be found in `examples/jupyter_notebooks`.
 
-## Installation instructions 
+## Installation instructions
+> :warning: Windows support is deprecated. Compile at own risk.
+
+### Using PIP
+For most users if you are running on Linux or MacOS (x86_64 only!), chances are you can just install directly from pip.
+```sh
+pip install nested_fit
+```
+
+### Installing from source (automatic)
+If you are not running intel x86_64 you can install via the following script.
+```sh
+```
+
+### Installing from source (manual)
+If all else fails you will need to compile nested_fit from source.
 
 If you have to install everything from scratch, please refer to the file *STEPBYSTEP_INSTALL.md*
 

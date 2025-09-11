@@ -7,9 +7,6 @@ name = "nested_fit"
 version = "5.5.0"
 description = "The nested_fit package."
 
-[options]
-python_requires = ">=3.8"
-
 authors = [
     {name = "Martino Trassinelli"},
     {name = "Lune Maillard"},
@@ -57,3 +54,6 @@ archs = ["x86_64"]
 
 [tool.setuptools_scm]
 fallback_version = "1.0.0"
+
+[options]
+python_requires = ">=3.8"
