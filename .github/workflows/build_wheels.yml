@@ -11,8 +11,8 @@ jobs:
     strategy:
       matrix:
         #os: [ubuntu-latest, windows-latest, macos-13, macos-14]
-        os: [ubuntu-latest, macos-13, macos-14]
-        #os: [ubuntu-latest, macos-13]
+        #os: [ubuntu-latest, macos-13, macos-14]
+        os: [ubuntu-latest, macos-13] # For now build for ubuntu and mac-os x64
         #os: [ubuntu-latest]
 
     steps:
@@ -68,12 +68,9 @@ jobs:
         if: runner.os == 'macOS'
         uses: pypa/cibuildwheel@v3.0.1
         env:
-          SETUPTOOLS_SCM_PRETEND_VERSION: "1.0.0"
-          SETUPTOOLS_SCM_DISABLE_FILE_FINDER: 1
           MACOSX_DEPLOYMENT_TARGET: "10.15"
           # LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
           #SDKROOT: $(xcrun --sdk macosx --show-sdk-path)
-          CIBW_GIT_TIMEOUT: 120
           CIBW_BEFORE_BUILD: |
             SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
             echo "SDKROOT=$SDKROOT"
@@ -88,16 +85,10 @@ jobs:
             DYLD_FALLBACK_LIBRARY_PATH=${{ env.DYLD_FALLBACK_LIBRARY_PATH }}
             export DYLD_FALLBACK_LIBRARY_PATH
             echo "DYLD_FALLBACK_LIBRARY_PATH=$DYLD_FALLBACK_LIBRARY_PATH"
-            SETUPTOOLS_SCM_PRETEND_VERSION=1.0.0
-            SETUPTOOLS_SCM_DISABLE_FILE_FINDER=1
-            export SETUPTOOLS_SCM_PRETEND_VERSION
-            export SETUPTOOLS_SCM_DISABLE_FILE_FINDER
           CIBW_ENVIRONMENT: >
             PATH="/usr/bin:/usr/local/bin:$PATH"
             MACOSX_DEPLOYMENT_TARGET=10.15
             SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
-            SETUPTOOLS_SCM_PRETEND_VERSION=1.0.0
-            SETUPTOOLS_SCM_DISABLE_FILE_FINDER=1
         with:
           package-dir: .
           output-dir: wheelhouse
