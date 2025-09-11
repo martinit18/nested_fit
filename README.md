@@ -54,200 +54,81 @@ Other jupyter notebook examples can be found in `examples/jupyter_notebooks`.
 ### Using PIP
 For most users if you are running on Linux or MacOS (x86_64 only!), chances are you can just install directly from pip.
 ```sh
-pip install nested_fit
+pipx install nested_fit
 ```
 
 ### Installing from source (automatic)
-If you are not running intel x86_64 you can install via the following script.
-```sh
+If you are not running intel x86_64 you can install via the following script:
+```bash
+curl -sSL https://raw.githubusercontent.com/martinit18/nested_fit/refs/heads/master/install.sh | bash
+```
+
+Or if you wish to install the dependencies manually beforehand:
+```bash
+curl -sSL https://raw.githubusercontent.com/martinit18/nested_fit/refs/heads/master/install.sh | bash -s -- --no-deps
+```
+
+Or if you want to install a nightly version within a virtual environment:
+```bash
+curl -sSL https://raw.githubusercontent.com/martinit18/nested_fit/refs/heads/master/install.sh | bash -s -- --use-venv --nightly
 ```
 
 ### Installing from source (manual)
-If all else fails you will need to compile nested_fit from source.
-
-If you have to install everything from scratch, please refer to the file *STEPBYSTEP_INSTALL.md*
-
-### Quick installation commands with PIP (not working for mac OS with ARM processor)
-???? TO ADD ????
-
-### Quick installation commands without PIP
-In the directory of your choice in the terminal execute the following commands:
-- (`python -m venv <your_virtual_env_name>`)  This is optional to create a Python virtual environment
-- (`source <your_virtual_env_name>/bin/activate`) This is optional to activate your virtual environment 
-- `git clone https://github.com/martinit18/nested_fit.git`
-- `mkdir -p nested_fit/build`
-- `cd nested_fit/build`
-- `cmake -DOPENMP=ON -DCMAKE_BUILD_TYPE=Release ..`
-- `cmake --build . --config Release --target install`
-- `cd ..`
-- `pip install . -v`
-- and to execute the program in any terminal, add the exetuable in your path with (in your .bashrc or similar) <br>
-  `export PATH=$PATH:<your installation directory>/nested_fit/bin`
-
-To test if everything is working, go to the directory `examples/data_analysis/aaa_simple_example/legacy_func_input` and run `nested_fit_xxx`<br>
-**NOTE:** 
-- If needed, activate your Python virtual environment before using the Nested Fit:<br>
-         `source <path_to_your_virtual_env_name>/bin/activate`
-- **This installation may not works with ANACONDA**
-
-
-### Generalities for the installation
-
-1) The first step of the installation is the compilation using `cmake` or `make`commands. The detailed instructions are presented below.
-
-2) Then, to have all python tools available, you should use `pip`command locally with the commands
-```sh
-pip install . -v
-```
-or 
-```sh
-pip install -e .
-```
-for the editable installation.
-
-### From source (CMake)
-
-You will have more control on system specific optimizations.
-
-**Prerequisite**:
-- CMake
-- Fortran build toolchain (`gcc`, `g++` and `gfortran` or `ifort` or `ifx`)
-- Python 3 with numpy, scipy, matplotlib, padas, getdist (optional)
-
-For properly install these requirement, please read also `STEPBYSTEP_INSTALL.md`. This is particularly important for **the installation in Mac OS with Silicon chip**
-
-**Instruction**:
-
-1. Get nested_fit:
-```sh
-git clone git@github.com:martinit18/nested_fit.git
-```
-2. Configure cmake (with eventually some options, see below):
-```sh
-cd nested_fit
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
+If you wish to also build the python package for bindings and analysis support:
+```bash
+pipx install git+https://github.com/martinit18/nested_fit.git
+# or
+git clone https://github.com/martinit18/nested_fit.git
+pipx install ./nested_fit -v
 ```
 
-3. Install nested_fit:
+If all else fails you will need to manually compile nested_fit from source and generate the python library in pure mode.
+This 'hack' is done via the editable installation mode:
+```bash
+# Clone the repo
+git clone https://github.com/martinit18/nested_fit.git
 
-```
-make
+# Make build directory
+mkdir -p nested_fit/build
+
+# Configure
+cmake -S nested_fit -B nested_fit/build -DOPENMP=ON -DCMAKE_BUILD_TYPE=Release
+
+# Compile and install
+cmake --build nested_fit/build --config Release
+
+# Now you will have the nested_fit binary available at nested_fit/bin/nested_fit_xxx
+export PATH=$PATH:<your_clone_path>/nested_fit/bin
+
+# Now install the python library in editable mode skipping compilation
+pip install -e ./nested_fit -v
 ```
 
-and then
-```
-make install
-```
+:warning: If you have further issues please refer to the file *STEPBYSTEP_INSTALL.md*.
 
-Alternatively, you can compile and install at once via
-
-```sh
-cmake --build . --config Release --target install
-```
-In this case the binary file will be installed in `$HOME/.local/bin`.
-To install in another directory run
-```sh
-cmake -DINSTALL_SYSTEM_WIDE=ON -DCMAKE_INSTALL_PREFIX=<your_dir> ..
-```
-instead of `cmake ..`, where `<your_dir>/bin`. See below for more details about cmake options.
-
-These command will build two different executables in the bin directory: 
-- `nested_fitXXX` for likelihood function maximisation for data analysis,
-- `nested_fit_funcXXX` for functions maximisation not using data.
-
-If Python is found an utility for running and analysing data using nested_fit is also installed: the nested_py package.
+:warning: **This installation may not work with ANACONDA.**
 
 **CMake options**
 
 | Option             | Description                                                          | Default |
 |:-------------------|:---------------------------------------------------------------------|:-------:|
-|DEBUG               | Enable debug mode.                                                   | OFF     |
 |NORNG               | Set the nested_fit to use a set seed. Internal test use mainly.      | OFF     |
 |OPENMP              | Enable/Disable OpenMP support.                                       | OFF     |
 |LAPACK              | Use LAPACK library functions instead of the internal ones.           | OFF     |
 |LTRACE              | Enable trace logging output. Will hinder performance.                | OFF     |
 |PPROF               | Enable performance counter profilling.                               | OFF     |
 
+## General comments
+- After a default installation via pipx (directly via PyPI or git clone) or script `nested_fit_xxx` will be aliased as `nested_fit`.
+- Only if you installed via the manual and editable mode will you be required to use `nested_fit_xxx`.
 
-
-You can pass in options on the cmake generation step via: `cmake -D<option_name>=<ON/OFF> ..`\
-These will prevail any time you run your build tools commands.
-
-With the last option, you can also specify a defined directory with in addition the option `-DCMAKE_INSTALL_PREFIX=<your_dir>`
-
-An useful example of configuration and compilation with parallelization and verbosity:
-```sh
-cmake -DOPENMP=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DINSTALL_SYSTEM_WIDE=ON -DCMAKE_INSTALL_PREFIX=$HOME -DCMAKE_BUILD_TYPE=Release ..
-
-cmake --build . --config Release --target install 
-```
-
-### From source (GNU autotools)
-:warning: This mode is only for compatibility and supports only a few features. The `CMake` method should be preferred if available.
-1. Get nested_fit:
-```sh
-git clone git@github.com:martinit18/nested_fit.git
-```
-2. Configure:
-```sh
-cd nested_fit
-mkdir build && cd build
-../configure
-```
-3. Install nested_fit:
-```sh
-make install
-```
-
-The outcome of these commands is similar to the `CMake` source build step. Only a few option are available.
-You can check them with: `../configure --help` and take a look under `Optional Features`.
-
-NOTE for getdist function in the python library:\
-To make it work, change the file  xxx/pythonxx/site-packages/getdist/plots.py
-`matplotlib.use('Agg')` to `matplotlib.use('TkAgg')`.
-
-
-### With Makefile
-**Prerequisite**:
-- GNU Make (for Mod_metadata.f90 to be updated, GNU Make 4.0 is the minimum version required)
-- Fortran compiler (gfortran by default)
-- Python 3 with numpy, scipy, matplotlib, pandas, getdist
-
-**Instruction**:
-1. Download the latest version or clone the repository
-2. Run the commands:
-```
-cd nested_fit
-cd src
-make
-```
-These command will build two different executables in the bin directory: 
-- `nested_fitXXX` for likelihood function maximisation for data analysis,
-- `nested_fit_funcXXX` for functions maximisation not using data. 
-
-Running `make like` will only build the first executable while running `make func` will only build the second executable.
-
-**Makefile options**
-
-You can choose which compiler to use with the `COMP` option:
-- `ifort` when it is set to `i`,
-- `gfortran` when it is set to `g` .  
-
-The other options for the Makefile are the same as the ones for the CMake. For an option to be set to OFF, it needs to be commented in the Makefile.
-
-### General comments
-
-- The options NORNG and OPENMP cannot be selected at the same time. If both are set to ON, OPENMP will be set to OFF.
-
-### Comments for macOS users
-
-If you are running `gfortran` installed with homebrew, you should avoid use `gcc` and `g++` from homebrew as well and not the macOS preinstalled one. For this make sure that homebrew/bin has a priority on the other bin directories (for put something like `export PATH=/opt/homebrew/bin:<other stuff of you>:$PATH` in your .bashrc) and make sure your `g++` is pointing the homebrew `g++-XX`. Eventually create the link:
-```sh
-cd  /opt/homebrew/bin
-ln -s g++-XX g++ 
-```
-The use of the following cmake option can help too:
+## Comments for macOS users
+- If you are running `gfortran` installed with homebrew, you should use `gcc` and `g++` from homebrew as well and not the macOS preinstalled one.
+For this make sure that homebrew/bin has a priority on the other bin directories
+(e.g. something like `export PATH=/opt/homebrew/bin:<other stuff of you>:$PATH` in your .bashrc)
+making sure your `g++` is pointing the homebrew `g++-XX`.
+Eventually creating the `ln -s /opt/homebrew/bin/g++-XX g++` link if required.
+- The use of the following cmake option can help too:
 ``-DCMAKE_Fortran_COMPILER=`which gfortran` -DCMAKE_C_COMPILER=`which gcc` -DCMAKE_CXX_COMPILER=`which g++``
 
 ## File descriptions
