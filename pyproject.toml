@@ -7,6 +7,9 @@ name = "nested_fit"
 version = "5.5.0"
 description = "The nested_fit package."
 
+[options]
+python_requires = ">=3.8"
+
 authors = [
     {name = "Martino Trassinelli"},
     {name = "Lune Maillard"},
@@ -43,11 +46,10 @@ nested_fit = "pynested_fit.cliw:main"
 # Setup cibuildwheel
 [tool.cibuildwheel]
 # Our wheel does not depend on the C ABI
-# Compile only for python 3.8, fix after
-build = "cp38-*"
+build = "py3-none-*"
 
 [tool.cibuildwheel.macos]
-archs = ["x86_64", "arm64"]
+archs = ["x86_64"]
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64"]
