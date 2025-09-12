@@ -376,8 +376,9 @@ Examples of use of a legacy function can be found in `examples/data_analysis/aaa
 
 ## Present version and history of the past versions
 
-The present version is 5.5\
+The present version is 5.5.2\
 New features:
+- Add PyPI binary distribution for x86_64 macOS
 - Add PyPI binary distribution for multiple linux systems
 - Add PyPI source distribution as a default for other systems
 - Rename CLI command to `nested_fit` to use the latest installed version via pip

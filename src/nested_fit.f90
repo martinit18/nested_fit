@@ -3,7 +3,8 @@ PROGRAM NESTED_FIT
   !
   ! Please read README and LICENSE files for more information
   !
-  ! 5.5  Add PyPI binary distribution for multiple linux systems
+  ! 5.5  Add PyPI binary distribution for x86_64 macOS
+  !      Add PyPI binary distribution for multiple linux systems
   !      Add PyPI source distribution as a default for other systems
   !      Rename CLI command to `nested_fit` to use the latest installed version via pip
   ! 5.4  Merge of executable for data analysis and function exploration
