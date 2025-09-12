@@ -2,7 +2,7 @@ name: Python Build Wheels
 
 on:
   push:
-    branches: ["master", "dev"] # TODO: (Cesar) To remove dev after a check
+    branches: ["master"]
 
 jobs:
   build_wheels:

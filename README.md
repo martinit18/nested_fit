@@ -74,6 +74,16 @@ curl -sSL https://raw.githubusercontent.com/martinit18/nested_fit/refs/heads/mas
 ```
 
 ### Installing from source (manual)
+
+To manually install from source the following dependencies are required:
+- cmake ( >= 3.10 )
+- make
+- gcc
+- g++
+- gfortran
+- python3 ( >= 3.8 )
+- pipx
+
 If you wish to also build the python package for bindings and analysis support:
 ```bash
 pipx install git+https://github.com/martinit18/nested_fit.git
