@@ -1,6 +1,6 @@
 SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_birth_final,live_rank_final,&
    weight,live_final,live_like_max,live_max,mpi_rank,mpi_cluster_size)
-  ! Time-stamp: <Last changed by martino on Thursday 10 July 2025 at CEST 11:29:19>
+  ! Time-stamp: <Last changed by martino on Monday 15 September 2025 at CEST 14:55:48>
 
   ! Additional math module
   USE MOD_MATH
@@ -57,6 +57,9 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_new
   LOGICAL, ALLOCATABLE, DIMENSION(:) :: too_many_tries
   INTEGER(4), ALLOCATABLE, DIMENSION(:) :: icluster
+  LOGICAL, ALLOCATABLE :: live_searching(:), live_ready(:)
+  LOGICAL :: early_exit = .false.
+  LOGICAL :: normal_exit = .false.
   ! Live points variables
   REAL(8) :: min_live_like = 0.
   REAL(8), DIMENSION(nlive,npar) :: live
@@ -80,7 +83,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   CHARACTER :: fparname_fmt*32
   CHARACTER :: fparval_fmt*32
 
-  LOGICAL :: make_cluster_internal, need_cluster
+  LOGICAL :: make_cluster_internal
   INTEGER(4) :: n_call_cluster, n_call_cluster_it, n_mat_cov
   INTEGER(4), PARAMETER :: n_call_cluster_it_max=10, n_call_cluster_max=100
 
@@ -115,7 +118,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   icluster = 0
   too_many_tries = .false.
   make_cluster_internal=.false.
-  need_cluster=.false.
 
   ! If using lo output set the fmt for params and param names
   IF(opt_lib_output) THEN
@@ -226,23 +228,66 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   
   ! Create covariance matrix and Cholesky decomposition
   CALL ALLOCATE_PAR_VAR()
-
   CALL CREATE_MAT_COV(live(:,par_var))
-  DO WHILE (n.LE.nstep)
+
+  main_loop: DO WHILE ((.NOT. normal_exit) .AND. (.NOT. early_exit))
      ! ##########################################################################
-     ! Find a new live point
+
+     ! Initial checks and operations
+     
+     ! Check if too many tries to find a new point  
+     IF(ANY(too_many_tries)) THEN
+        !If all searches failed to find a new point, a cluster analysis will be performed. Otherwise, the run will end.
+#ifdef OPENMPI_ON
+        ! Signal final data MAXED_OUT
+        CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_DONE_MANY_TRIES, mpi_child_writter_comm, mpi_ierror)
+#endif
+        IF (make_cluster) THEN
+           ! Check if too many cluster analysis for an iteration or in total
+           IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
+              CALL LOG_ERROR_HEADER()
+              CALL LOG_ERROR('Too many cluster analysis for an iteration.')
+              CALL LOG_ERROR('Change cluster recognition parameters.')
+              CALL LOG_ERROR_HEADER()
+              CALL HALT_EXECUTION()
+           END IF
+           ! .... or in total
+           IF(n_call_cluster>=n_call_cluster_max) THEN
+              CALL LOG_ERROR_HEADER()
+              CALL LOG_ERROR('Too many cluster analysis.')
+              CALL LOG_ERROR('Change cluster recognition parameters.')
+              CALL LOG_ERROR_HEADER()
+              CALL HALT_EXECUTION()
+           END IF
+           ! Force clustering if slide sampling is selected
+           SELECT CASE (searchid)
+           CASE (2,3,4)
+              IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
+                 make_cluster_internal=.true.
+              END IF
+           END SELECT
+           make_cluster_internal=.true.
+        ELSE
+           CALL LOG_WARNING_HEADER()
+           CALL LOG_WARNING('Too many tries to find new live points for try n.: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(itry))))
+           CALL LOG_WARNING('More than '//TRIM(ADJUSTL(INT_TO_STR_INLINE(maxtries))))
+           CALL LOG_WARNING('We take the data as they are :-~')
+           CALL LOG_WARNING_HEADER()
+           early_exit = .true.
+           nstep_final = n - 1
+        END IF
+     END IF
+     
+     IF (normal_exit .OR. early_exit) EXIT main_loop
+
       
 901   IF(make_cluster_internal) THEN
          CALL LOG_MESSAGE('Performing cluster analysis. Number of analyses = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(n_call_cluster+1))))
          CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
          cluster_on = .true.
-         make_cluster_internal=.false.
-         IF(need_cluster) THEN
-            n_call_cluster_it=n_call_cluster_it+1
-            n_call_cluster=n_call_cluster+1
-            need_cluster=.false.
-         END IF
-    	 ! n_ntries = 0
+         make_cluster_internal = .false.
+         n_call_cluster_it = n_call_cluster_it+1
+         n_call_cluster = n_call_cluster+1
          CALL REALLOCATE_MAT_COV() ! Adapt the covariance matrix and Cholesky decomposition to the number of clusters
          CALL FILL_MAT_COV(live(:,par_var)) ! Fill the covariance matrix and Cholesky decomposition
          n_mat_cov=0
@@ -254,7 +299,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
       END IF
       
       it = 1
-      !$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) PRIVATE(p_cluster) &
+      !$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) PRIVATE(it) &
         !$OMP SHARED(n,itry,ntries,min_live_like,live_like,live,nth,live_like_new,live_new,icluster,too_many_tries)  
       DO it=1,nth
          CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
@@ -262,79 +307,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
       END DO
       !$OMP END PARALLEL DO
       
-      !IF(MOD(n,100)==0) WRITE(*,*) too_many_tries, ANY(too_many_tries)
-
-     !IF (ANY(too_many_tries)) THEN
-     !   nstep_final = n - 1
-      !   GOTO 601
-      !END IF
-      
-      IF(ALL(too_many_tries)) THEN
-         !If all searches failed to find a new point, a cluster analysis will be performed immediately if clustering is used. Otherwise, the run will end.
-         IF (make_cluster) THEN
-            IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
-               CALL LOG_WARNING_HEADER()
-               CALL LOG_WARNING('Too many cluster analysis for an iteration.')
-               CALL LOG_WARNING('Change cluster recognition parameters.')
-               CALL LOG_WARNING('We take the data as they are :-~')
-               CALL LOG_WARNING_HEADER()
-               nstep_final = n - 1
-               GOTO 601
-            END IF
-            IF(n_call_cluster>=n_call_cluster_max) THEN
-               CALL LOG_WARNING_HEADER()
-               CALL LOG_WARNING('Too many cluster analysis.')
-               CALL LOG_WARNING('Change cluster recognition parameters.')
-               CALL LOG_WARNING('We take the data as they are :-~')
-               CALL LOG_WARNING_HEADER()
-               nstep_final = n - 1
-               GOTO 601
-            END IF
-            make_cluster_internal=.true.
-            need_cluster=.true.
-            GOTO 901
-         ELSE
-            CALL LOG_WARNING_HEADER()
-            CALL LOG_WARNING('Too many tries to find new live points for try n.: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(itry))))
-            CALL LOG_WARNING('More than '//TRIM(ADJUSTL(INT_TO_STR_INLINE(maxtries))))
-            CALL LOG_WARNING('We take the data as they are :-~')
-            CALL LOG_WARNING_HEADER()
-            nstep_final = n - 1
-            GOTO 601
-         END IF
-      ELSE IF(ANY(too_many_tries)) THEN ! TODO Redo it to work with MPI
-         !If at least one search failed to find a new point, a cluster analysis will be performed after adding the points from the successful searches if clustering is used. Otherwise, the run will end.
-         IF (make_cluster) THEN
-            IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
-               CALL LOG_WARNING_HEADER()
-               CALL LOG_WARNING('Too many cluster analysis for an iteration.')
-               CALL LOG_WARNING('Change cluster recognition parameters.')
-               CALL LOG_WARNING('We take the data as they are :-~')
-               CALL LOG_WARNING_HEADER()
-               nstep_final = n - 1
-               GOTO 601
-            END IF
-            IF(n_call_cluster>=n_call_cluster_max) THEN
-               CALL LOG_WARNING_HEADER()
-               CALL LOG_WARNING('Too many cluster analysis.')
-               CALL LOG_WARNING('Change cluster recognition parameters.')
-               CALL LOG_WARNING('We take the data as they are :-~')
-               CALL LOG_WARNING_HEADER()
-               nstep_final = n - 1
-               GOTO 601
-            END IF
-            make_cluster_internal=.true.
-            need_cluster=.true.
-         ELSE
-            CALL LOG_WARNING_HEADER()
-            CALL LOG_WARNING('Too many tries to find new live points for try n.: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(itry))))
-            CALL LOG_WARNING('More than '//TRIM(ADJUSTL(INT_TO_STR_INLINE(maxtries*maxntries))))
-            CALL LOG_WARNING('We take the data as they are :-~')
-            CALL LOG_WARNING_HEADER()
-            nstep_final = n - 1
-            GOTO 601
-         END IF
-      END IF
+         
+        
       ! -------------------------------------!
       !     Subloop for threads starts       !
       ! -------------------------------------!      
@@ -416,16 +390,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
         ! Present minimal value of the likelihood
         min_live_like = live_like(1)
 
-
-        SELECT CASE (searchid)
-        CASE (2,3,4)
-           IF(make_cluster) THEN
-              IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
-                 make_cluster_internal=.true.
-              END IF
-           END IF
-        END SELECT
-
         ! Assign to the new point, the same cluster number of the start point
         IF (cluster_on) THEN
            ! Instert new point
@@ -502,10 +466,28 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
 25            FORMAT(A220)
            ENDIF
         ENDIF
+
+        ! If the number of steps is reached, we stop the loop
+        IF (n.GE.nstep) THEN
+           CALL LOG_MESSAGE('Maximum number of iteraction reached  = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(nstep))))
+           CALL LOG_MESSAGE('Exiting from the main nested sampling loop  = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(nstep))))
+           normal_exit = .true.
+           nstep_final = n
+           EXIT main_loop
+        END IF
+
      END DO
+
+     ! Final operations
+
      ! Remake calculation of mean and standard deviation live points
-     IF (.NOT.cluster_on) CALL REMAKE_LIVE_MEAN_SD(live) 
-  END DO
+     IF (.NOT.cluster_on) CALL REMAKE_LIVE_MEAN_SD(live)
+
+     
+     ! Reset the number of tries for this iteration
+     ntries = 0
+
+  END DO main_loop
   
   ! ---------------------------------------------------------------------------------------!
   !                                                                                        !

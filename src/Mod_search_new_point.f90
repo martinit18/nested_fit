@@ -26,7 +26,7 @@ CONTAINS
   
   SUBROUTINE INIT_SEARCH_METHOD()
 
-   USE MOD_PARAMETERS, ONLY: search_method, searchid, npar, par_in, par_bnd1, par_bnd2, par_fix
+   USE MOD_PARAMETERS, ONLY: search_method, searchid
 
     IF (search_method.eq.'RANDOM_WALK') THEN
        searchid = 0
