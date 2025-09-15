@@ -238,10 +238,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
      ! Check if too many tries to find a new point  
      IF(ANY(too_many_tries)) THEN
         !If all searches failed to find a new point, a cluster analysis will be performed. Otherwise, the run will end.
-#ifdef OPENMPI_ON
-        ! Signal final data MAXED_OUT
-        CALL MPI_Send(info_string, 256, MPI_CHARACTER, 0, MPI_TAG_SEARCH_DONE_MANY_TRIES, mpi_child_writter_comm, mpi_ierror)
-#endif
         IF (make_cluster) THEN
            ! Check if too many cluster analysis for an iteration or in total
            IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
@@ -278,6 +274,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
         END IF
      END IF
      
+     ! Exit already now from the main loop if needed
      IF (normal_exit .OR. early_exit) EXIT main_loop
 
       
