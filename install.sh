@@ -54,7 +54,7 @@ if [[ "$PLATFORM" == "macos" ]]; then
 		echo ":: $(gct) :: Installing required packages..."
 
 		if command -v brew > /dev/null; then
-			brew install gcc g++ gfortran git cmake make python3 pipx
+			brew install gcc gfortran git cmake make python3 pipx
 
 			# Make sure we have brew on path
 			export PATH=/opt/homebrew/bin:/opt/homebrew/make/libexec/gnubin:$PATH
