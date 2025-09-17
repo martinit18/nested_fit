@@ -8,7 +8,7 @@ MODULE MOD_CLUSTER_ANALYSIS
 
   IMPLICIT NONE
   
-  LOGICAL :: cluster_on = .false.
+  LOGICAL :: cluster_on = .false., make_cluster_internal = .false.
   INTEGER(4) :: np=0, ndim=0, ncluster=1 
   INTEGER(4), PARAMETER :: ncluster_max=500 ! maximum number of clusters allowed in the analysis
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: cluster_std, cluster_mean ! standard deviation, mean of the cluster

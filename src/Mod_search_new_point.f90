@@ -1,5 +1,5 @@
 MODULE MOD_SEARCH_NEW_POINT
-  ! Automatic Time-stamp: <Last changed by martino on Friday 15 November 2024 at CET 22:36:28>
+  ! Automatic Time-stamp: <Last changed by martino on Tuesday 16 September 2025 at CEST 22:57:29>
   ! Module for search of new points
   
   ! Module for likelihood
@@ -53,9 +53,63 @@ CONTAINS
     END IF
   END SUBROUTINE INIT_SEARCH_METHOD
   
-   
+  !#####################################################################################################################
+  
+  SUBROUTINE MAKE_PRELIM_CALC(live)
+    ! Subroutine to update the calculation of standard deviation, mean, covariance and Cholesky decomposition
+    USE MOD_PARAMETERS, ONLY: npar, nlive, searchid
+    USE MOD_COVARIANCE_MATRIX, ONLY: CREATE_MAT_COV, ALLOCATE_PAR_VAR, par_var
+    IMPLICIT NONE
+    REAL(8), DIMENSION(nlive,npar), INTENT(IN) :: live
+    
+    SELECT CASE (searchid)
+       ! For Slice sampling methods, recalculate the covariance matrix at each step
+    CASE (2,3,4)
+       ! Create covariance matrix and Cholesky decomposition
+       CALL ALLOCATE_PAR_VAR()
+       CALL CREATE_MAT_COV(live(:,par_var))
+    CASE DEFAULT
+       ! For the other methods, just recalculate the mean and standard deviation
+       CALL MAKE_LIVE_MEAN_SD(live) 
+    END SELECT
+    
+  END SUBROUTINE MAKE_PRELIM_CALC
 
-  SUBROUTINE MAKE_LIVE_MEAN_SD(live)  
+    !#####################################################################################################################
+  
+  SUBROUTINE REMAKE_CALC(live)
+    ! Subroutine to update the calculation of standard deviation, mean, covariance and Cholesky decomposition
+    USE MOD_PARAMETERS, ONLY: npar, nlive, searchid
+    USE MOD_COVARIANCE_MATRIX, ONLY: CREATE_MAT_COV, ALLOCATE_PAR_VAR, REALLOCATE_MAT_COV, FILL_MAT_COV, par_var
+    USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_on, make_cluster_internal, ncluster, MAKE_CLUSTER_STD
+    IMPLICIT NONE
+    REAL(8), DIMENSION(nlive,npar), INTENT(IN) :: live
+    INTEGER(4) :: i
+    
+    SELECT CASE (searchid)
+       ! For Slice sampling methods, recalculate the covariance matrix at each step
+    CASE (2,3,4)
+       ! Create covariance matrix and Cholesky decomposition
+         IF(make_cluster_internal) CALL REALLOCATE_MAT_COV() ! Adapt the covariance matrix and Cholesky decomposition to the number of clusters
+         CALL FILL_MAT_COV(live(:,par_var)) ! Fill the covariance matrix and Cholesky decomposition
+    CASE DEFAULT
+      ! For the other methods, just recalculate the mean and standard deviation
+      IF (.NOT.cluster_on) THEN
+         CALL REMAKE_LIVE_MEAN_SD(live) 
+      ELSE
+         ! If cluster analysis, recalculate the standard deviation of all clusters
+         DO i=1,ncluster
+            CALL MAKE_CLUSTER_STD(live,i)
+         END DO
+      END IF
+    END SELECT
+    
+  END SUBROUTINE REMAKE_CALC
+  
+  !#####################################################################################################################
+
+  SUBROUTINE MAKE_LIVE_MEAN_SD(live)
+   ! Subroutine to calculate the mean and standard deviation of the live points
    
   USE MOD_PARAMETERS, ONLY: nlive, par_in, npar, par_fix
   USE MOD_MATH, ONLY: MEANVAR
@@ -108,9 +162,17 @@ CONTAINS
    !#####################################################################################################################
 
    SUBROUTINE DEALLOCATE_SEARCH_NEW_POINTS 
+      USE MOD_PARAMETERS, ONLY: searchid
+      USE MOD_COVARIANCE_MATRIX, ONLY: mat_cov, mat_chol
+
       ! Close allocated memory
-    
-      DEALLOCATE(live_ave,live_sd)
+      SELECT CASE (searchid)
+       ! For Slice sampling methods, recalculate the covariance matrix at each step
+      CASE (2,3,4)
+         DEALLOCATE(mat_cov,mat_chol)
+      CASE DEFAULT
+         DEALLOCATE(live_ave,live_sd)
+      END SELECT
    
    END SUBROUTINE DEALLOCATE_SEARCH_NEW_POINTS
   
@@ -1123,7 +1185,6 @@ SUBROUTINE SLICE_SAMPLING_TRANSF(n,itry,min_live_like,live_like,live, &
     REAL(8) :: part_like, size_jump, size_jump_save, loglike
     LOGICAL :: test_bnd
     INTEGER(4) :: init_fail, njump
-    REAL(8), DIMENSION(npar) :: live_ave_s, live_sd_s
 
     PROFILED(SLICE_SAMPLING)
         
@@ -1346,7 +1407,6 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     REAL(8) :: part_like, size_jump, size_jump_save, loglike
     LOGICAL :: test_bnd
     INTEGER(4) :: init_fail, njump
-    REAL(8), DIMENSION(npar) :: live_ave_s, live_sd_s
 
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
@@ -1571,7 +1631,6 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     REAL(8) :: part_like, size_jump, size_jump_save, loglike
     LOGICAL :: test_bnd
     INTEGER(4) :: init_fail, njump
-    REAL(8), DIMENSION(npar) :: live_ave_s, live_sd_s
 
     PROFILED(SLICE_SAMPLING_ADAPT)
 
@@ -1760,6 +1819,8 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
 400 ntries=ntries/dim_eff
 END SUBROUTINE SLICE_SAMPLING_ADAPT
 
+ !#####################################################################################################################
+
 SUBROUTINE BASE_O_N(D,base) !generates an orthonormal basis
   INTEGER(4), INTENT(IN) :: D
   REAL(8), DIMENSION(D,D), INTENT(INOUT) :: base
@@ -1782,7 +1843,6 @@ SUBROUTINE BASE_O_N(D,base) !generates an orthonormal basis
 END SUBROUTINE BASE_O_N
 
  !#####################################################################################################################
-
 
 SUBROUTINE TRIANG_INV(D,mat,mat_inv) !calculates the inverse of the cholesky decomposition
    INTEGER(4), INTENT(IN) :: D

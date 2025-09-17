@@ -1,6 +1,6 @@
 SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_birth_final,live_rank_final,&
    weight,live_final,live_like_max,live_max,mpi_rank,mpi_cluster_size)
-  ! Time-stamp: <Last changed by martino on Monday 15 September 2025 at CEST 14:55:48>
+  ! Time-stamp: <Last changed by martino on Tuesday 16 September 2025 at CEST 23:59:09>
 
   ! Additional math module
   USE MOD_MATH
@@ -12,11 +12,9 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   ! Module for likelihood
   USE MOD_LIKELIHOOD_GEN
   ! Module for searching new live points
-  USE MOD_SEARCH_NEW_POINT, ONLY: SEARCH_NEW_POINT, MAKE_LIVE_MEAN_SD, REMAKE_LIVE_MEAN_SD, DEALLOCATE_SEARCH_NEW_POINTS
+  USE MOD_SEARCH_NEW_POINT, ONLY: SEARCH_NEW_POINT, MAKE_PRELIM_CALC, REMAKE_CALC, DEALLOCATE_SEARCH_NEW_POINTS
   ! Module for cluster analysis
-  USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_on, DEALLOCATE_CLUSTER, MAKE_CLUSTER_ANALYSIS, REMAKE_CLUSTER_STD, GET_CLUSTER_MEAN_SD, WRITE_CLUSTER_DATA
-  ! Module for covariance matrix
-  USE MOD_COVARIANCE_MATRIX
+  USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_on, make_cluster_internal, p_cluster, cluster_np, DEALLOCATE_CLUSTER, MAKE_CLUSTER_ANALYSIS, GET_CLUSTER_MEAN_SD, WRITE_CLUSTER_DATA
   ! Module for optionals
   USE MOD_OPTIONS
   ! Module for logging
@@ -75,16 +73,11 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   ! Rest
   INTEGER(4) :: j, l, n, jlim, it
   REAL(8) :: ADDLOG, rn, gval
-!   REAL(8) :: MOVING_AVG
-  
-  ! MPI Stuff
   REAL(8) :: moving_eff_avg = 0.
   CHARACTER :: info_string*4096
   CHARACTER :: fparname_fmt*32
   CHARACTER :: fparval_fmt*32
-
-  LOGICAL :: make_cluster_internal
-  INTEGER(4) :: n_call_cluster, n_call_cluster_it, n_mat_cov
+  INTEGER(4) :: n_call_cluster, n_call_cluster_it, n_calc
   INTEGER(4), PARAMETER :: n_call_cluster_it_max=10, n_call_cluster_max=100
 
   PROFILED(NESTED_SAMPLING)
@@ -108,7 +101,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   nstep = maxstep - nlive + 1
   n_call_cluster=0
   n_call_cluster_it=0
-  n_mat_cov=0
+  n_calc=0
   !maxtries = 50*njump ! Accept an efficiency of more than 2% for the exploration, otherwise change something
 
   ALLOCATE(ntries(nth),live_like_new(nth),live_new(nth,npar),too_many_tries(nth),icluster(nth))
@@ -117,7 +110,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   live_like_new = 0.
   icluster = 0
   too_many_tries = .false.
-  make_cluster_internal=.false.
 
   ! If using lo output set the fmt for params and param names
   IF(opt_lib_output) THEN
@@ -157,8 +149,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   END DO
   live_birth = MINVAL(live_like) - 10.d0
 
-  ! Calculate average and standard deviation of the parameters
-  CALL MAKE_LIVE_MEAN_SD(live)
+  ! Calculate average and standard deviation, covariance, etc. of the parameters
+  CALL MAKE_PRELIM_CALC(live)
 
   ! Order livepoints
   CALL SORTN(nlive,npar,live_like,live)
@@ -226,19 +218,27 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   !----------------------------------------------------------------------------------------!
   n = 1
   
-  ! Create covariance matrix and Cholesky decomposition
-  CALL ALLOCATE_PAR_VAR()
-  CALL CREATE_MAT_COV(live(:,par_var))
 
   main_loop: DO WHILE ((.NOT. normal_exit) .AND. (.NOT. early_exit))
      ! ##########################################################################
-
+     
      ! Initial checks and operations
+
+     ! Force clustering if slide sampling is selected
+     IF (make_cluster) THEN
+        SELECT CASE (searchid)
+        CASE (2,3,4)
+           IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
+              make_cluster_internal=.true.
+           END IF
+        END SELECT
+     END IF
      
      ! Check if too many tries to find a new point  
      IF(ANY(too_many_tries)) THEN
         !If all searches failed to find a new point, a cluster analysis will be performed. Otherwise, the run will end.
         IF (make_cluster) THEN
+           make_cluster_internal=.true.
            ! Check if too many cluster analysis for an iteration or in total
            IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
               CALL LOG_ERROR_HEADER()
@@ -255,14 +255,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
               CALL LOG_ERROR_HEADER()
               CALL HALT_EXECUTION()
            END IF
-           ! Force clustering if slide sampling is selected
-           SELECT CASE (searchid)
-           CASE (2,3,4)
-              IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
-                 make_cluster_internal=.true.
-              END IF
-           END SELECT
-           make_cluster_internal=.true.
         ELSE
            CALL LOG_WARNING_HEADER()
            CALL LOG_WARNING('Too many tries to find new live points for try n.: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(itry))))
@@ -282,17 +274,18 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
          CALL LOG_MESSAGE('Performing cluster analysis. Number of analyses = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(n_call_cluster+1))))
          CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
          cluster_on = .true.
+         CALL REMAKE_CALC(live)
          make_cluster_internal = .false.
          n_call_cluster_it = n_call_cluster_it+1
          n_call_cluster = n_call_cluster+1
-         CALL REALLOCATE_MAT_COV() ! Adapt the covariance matrix and Cholesky decomposition to the number of clusters
-         CALL FILL_MAT_COV(live(:,par_var)) ! Fill the covariance matrix and Cholesky decomposition
-         n_mat_cov=0
+         n_calc=0
       END IF
       
-      IF(n_mat_cov .GT. 0.05*nlive) THEN ! If more than 5% of the points have changed, calculate the covariance matrix and Cholesky decomposition again
-         CALL FILL_MAT_COV(live(:,par_var))
-         n_mat_cov=0
+      ! If more than 5% of the points have changed, calculate 
+      ! the standard deviations, the covariance matrix and Cholesky decomposition again
+      IF(n_calc .GT. 0.05*nlive) THEN 
+         CALL REMAKE_CALC(live)
+         n_calc=0
       END IF
       
       it = 1
@@ -318,7 +311,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
          IF ((live_like_new(it).GT.min_live_like)) THEN
             n = n + 1
             n_call_cluster_it=0
-            n_mat_cov=n_mat_cov+1
+            n_calc=n_calc+1
          ELSE
             CYCLE
          ENDIF
@@ -396,8 +389,18 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
            ! Take out old point
            icluster_old = p_cluster(1)
            cluster_np(icluster_old) = cluster_np(icluster_old) - 1
-           ! Call cluster module to recalculate the std of the considered cluster and the cluster of the discarted point
-           CALL REMAKE_CLUSTER_STD(live,icluster(it),icluster_old)
+         !   ! If the old cluster is now empty, we need to do a cluster analysis NOT WORKING!!
+         !   IF (cluster_np(icluster_old).EQ.0) THEN
+         !      CALL LOG_MESSAGE('Performing cluster analysis. Number of analyses = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(n_call_cluster+1))))
+         !      CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
+         !      CALL REMAKE_CALC(live)
+         !      make_cluster_internal = .false.
+         !      n_call_cluster_it = n_call_cluster_it+1
+         !      n_call_cluster = n_call_cluster+1
+         !      n_calc=0
+         !   END IF
+         !   ! Call cluster module to recalculate the std of the considered cluster and the cluster of the discarted point
+         !   CALL REMAKE_CLUSTER_STD(live,icluster(it),icluster_old)
         END IF
         
         IF(conv_method .EQ. 'LIKE_ACC') THEN
@@ -478,7 +481,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
      ! Final operations
 
      ! Remake calculation of mean and standard deviation live points
-     IF (.NOT.cluster_on) CALL REMAKE_LIVE_MEAN_SD(live)
+     CALL REMAKE_CALC(live)
 
      
      ! Reset the number of tries for this iteration
