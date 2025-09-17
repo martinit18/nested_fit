@@ -5,7 +5,7 @@ MODULE MOD_COVARIANCE_MATRIX
   ! Module for the input parameter definition
   USE MOD_PARAMETERS, ONLY:  npar, par_fix, cluster_method, nlive
   ! Module for cluster analysis
-  USE MOD_CLUSTER_ANALYSIS
+  USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_on, p_cluster, ncluster, cluster_np
   
   !$ USE OMP_LIB
 

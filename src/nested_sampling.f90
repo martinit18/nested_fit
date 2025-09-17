@@ -1,24 +1,20 @@
 SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_birth_final,live_rank_final,&
    weight,live_final,live_like_max,live_max,mpi_rank,mpi_cluster_size)
-  ! Time-stamp: <Last changed by martino on Thursday 10 July 2025 at CEST 11:29:19>
+  ! Time-stamp: <Last changed by martino on Tuesday 16 September 2025 at CEST 23:59:09>
 
   ! Additional math module
   USE MOD_MATH
 
   ! Parameter module
   USE MOD_PARAMETERS, ONLY:  npar, nlive, conv_method, evaccuracy, conv_par, &
-        search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, &
+        search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, par_name, &
         make_cluster, nth, maxtries, maxntries, searchid
   ! Module for likelihood
   USE MOD_LIKELIHOOD_GEN
   ! Module for searching new live points
-  USE MOD_SEARCH_NEW_POINT
+  USE MOD_SEARCH_NEW_POINT, ONLY: SEARCH_NEW_POINT, MAKE_PRELIM_CALC, REMAKE_CALC, DEALLOCATE_SEARCH_NEW_POINTS
   ! Module for cluster analysis
-  USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_on
-  ! Module for covariance matrix
-  USE MOD_COVARIANCE_MATRIX
-  ! Module for the metadata
-  USE MOD_METADATA
+  USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_on, make_cluster_internal, p_cluster, cluster_np, DEALLOCATE_CLUSTER, MAKE_CLUSTER_ANALYSIS, GET_CLUSTER_MEAN_SD, WRITE_CLUSTER_DATA
   ! Module for optionals
   USE MOD_OPTIONS
   ! Module for logging
@@ -53,12 +49,15 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   REAL(8), DIMENSION(maxstep,npar) :: live_old
   REAL(8) :: evsum = 0., evrestest = 0., evtotest = 0.
   ! Search variable to monitor efficiency
-  INTEGER(4) :: ntries=0
+  INTEGER(4), ALLOCATABLE, DIMENSION(:) :: ntries
   ! Live points variables parallel
   REAL(8), ALLOCATABLE, DIMENSION(:) :: live_like_new
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_new
   LOGICAL, ALLOCATABLE, DIMENSION(:) :: too_many_tries
   INTEGER(4), ALLOCATABLE, DIMENSION(:) :: icluster
+  LOGICAL, ALLOCATABLE :: live_searching(:), live_ready(:)
+  LOGICAL :: early_exit = .false.
+  LOGICAL :: normal_exit = .false.
   ! Live points variables
   REAL(8) :: min_live_like = 0.
   REAL(8), DIMENSION(nlive,npar) :: live
@@ -74,16 +73,11 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   ! Rest
   INTEGER(4) :: j, l, n, jlim, it
   REAL(8) :: ADDLOG, rn, gval
-  REAL(8) :: MOVING_AVG
-  
-  ! MPI Stuff
   REAL(8) :: moving_eff_avg = 0.
   CHARACTER :: info_string*4096
   CHARACTER :: fparname_fmt*32
   CHARACTER :: fparval_fmt*32
-
-  LOGICAL :: make_cluster_internal, need_cluster
-  INTEGER(4) :: n_call_cluster, n_call_cluster_it, n_mat_cov
+  INTEGER(4) :: n_call_cluster, n_call_cluster_it, n_calc
   INTEGER(4), PARAMETER :: n_call_cluster_it_max=10, n_call_cluster_max=100
 
   PROFILED(NESTED_SAMPLING)
@@ -107,16 +101,15 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   nstep = maxstep - nlive + 1
   n_call_cluster=0
   n_call_cluster_it=0
-  n_mat_cov=0
+  n_calc=0
   !maxtries = 50*njump ! Accept an efficiency of more than 2% for the exploration, otherwise change something
 
-  ALLOCATE(live_like_new(nth),live_new(nth,npar),too_many_tries(nth),icluster(nth))
+  ALLOCATE(ntries(nth),live_like_new(nth),live_new(nth,npar),too_many_tries(nth),icluster(nth))
+  ntries = 0
   live_new = 0.
   live_like_new = 0.
   icluster = 0
   too_many_tries = .false.
-  make_cluster_internal=.false.
-  need_cluster=.false.
 
   ! If using lo output set the fmt for params and param names
   IF(opt_lib_output) THEN
@@ -156,8 +149,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   END DO
   live_birth = MINVAL(live_like) - 10.d0
 
-  ! Calculate average and standard deviation of the parameters
-  CALL MAKE_LIVE_MEAN_SD(live)
+  ! Calculate average and standard deviation, covariance, etc. of the parameters
+  CALL MAKE_PRELIM_CALC(live)
 
   ! Order livepoints
   CALL SORTN(nlive,npar,live_like,live)
@@ -225,117 +218,87 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   !----------------------------------------------------------------------------------------!
   n = 1
   
-  ! Create covariance matrix and Cholesky decomposition
-  CALL ALLOCATE_PAR_VAR()
 
-  CALL CREATE_MAT_COV(live(:,par_var))
-  DO WHILE (n.LE.nstep)
+  main_loop: DO WHILE ((.NOT. normal_exit) .AND. (.NOT. early_exit))
      ! ##########################################################################
-     ! Find a new live point
+     
+     ! Initial checks and operations
+
+     ! Force clustering if slide sampling is selected
+     IF (make_cluster) THEN
+        SELECT CASE (searchid)
+        CASE (2,3,4)
+           IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
+              make_cluster_internal=.true.
+           END IF
+        END SELECT
+     END IF
+     
+     ! Check if too many tries to find a new point  
+     IF(ANY(too_many_tries)) THEN
+        !If all searches failed to find a new point, a cluster analysis will be performed. Otherwise, the run will end.
+        IF (make_cluster) THEN
+           make_cluster_internal=.true.
+           ! Check if too many cluster analysis for an iteration or in total
+           IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
+              CALL LOG_ERROR_HEADER()
+              CALL LOG_ERROR('Too many cluster analysis for an iteration.')
+              CALL LOG_ERROR('Change cluster recognition parameters.')
+              CALL LOG_ERROR_HEADER()
+              CALL HALT_EXECUTION()
+           END IF
+           ! .... or in total
+           IF(n_call_cluster>=n_call_cluster_max) THEN
+              CALL LOG_ERROR_HEADER()
+              CALL LOG_ERROR('Too many cluster analysis.')
+              CALL LOG_ERROR('Change cluster recognition parameters.')
+              CALL LOG_ERROR_HEADER()
+              CALL HALT_EXECUTION()
+           END IF
+        ELSE
+           CALL LOG_WARNING_HEADER()
+           CALL LOG_WARNING('Too many tries to find new live points for try n.: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(itry))))
+           CALL LOG_WARNING('More than '//TRIM(ADJUSTL(INT_TO_STR_INLINE(maxtries))))
+           CALL LOG_WARNING('We take the data as they are :-~')
+           CALL LOG_WARNING_HEADER()
+           early_exit = .true.
+           nstep_final = n - 1
+        END IF
+     END IF
+     
+     ! Exit already now from the main loop if needed
+     IF (normal_exit .OR. early_exit) EXIT main_loop
+
       
 901   IF(make_cluster_internal) THEN
          CALL LOG_MESSAGE('Performing cluster analysis. Number of analyses = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(n_call_cluster+1))))
          CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
          cluster_on = .true.
-         make_cluster_internal=.false.
-         IF(need_cluster) THEN
-            n_call_cluster_it=n_call_cluster_it+1
-            n_call_cluster=n_call_cluster+1
-            need_cluster=.false.
-         END IF
-    	 ! n_ntries = 0
-         CALL REALLOCATE_MAT_COV() ! Adapt the covariance matrix and Cholesky decomposition to the number of clusters
-         CALL FILL_MAT_COV(live(:,par_var)) ! Fill the covariance matrix and Cholesky decomposition
-         n_mat_cov=0
+         CALL REMAKE_CALC(live)
+         make_cluster_internal = .false.
+         n_call_cluster_it = n_call_cluster_it+1
+         n_call_cluster = n_call_cluster+1
+         n_calc=0
       END IF
       
-      IF(n_mat_cov .GT. 0.05*nlive) THEN ! If more than 5% of the points have changed, calculate the covariance matrix and Cholesky decomposition again
-         CALL FILL_MAT_COV(live(:,par_var))
-         n_mat_cov=0
+      ! If more than 5% of the points have changed, calculate 
+      ! the standard deviations, the covariance matrix and Cholesky decomposition again
+      IF(n_calc .GT. 0.05*nlive) THEN 
+         CALL REMAKE_CALC(live)
+         n_calc=0
       END IF
       
       it = 1
-      !$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) FIRSTPRIVATE(ntries) PRIVATE(p_cluster) &
-        !$OMP SHARED(n,itry,min_live_like,live_like,live,nth,live_like_new,live_new,icluster,too_many_tries) LASTPRIVATE(ntries)  
+      !$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) PRIVATE(it) &
+        !$OMP SHARED(n,itry,ntries,min_live_like,live_like,live,nth,live_like_new,live_new,icluster,too_many_tries)  
       DO it=1,nth
          CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
-           live_like_new(it),live_new(it,:),icluster(it),ntries,too_many_tries(it))
+           live_like_new(it),live_new(it,:),icluster(it),ntries(it),too_many_tries(it))
       END DO
       !$OMP END PARALLEL DO
       
-      !IF(MOD(n,100)==0) WRITE(*,*) too_many_tries, ANY(too_many_tries)
-
-     !IF (ANY(too_many_tries)) THEN
-     !   nstep_final = n - 1
-      !   GOTO 601
-      !END IF
-      
-      IF(ALL(too_many_tries)) THEN
-         !If all searches failed to find a new point, a cluster analysis will be performed immediately if clustering is used. Otherwise, the run will end.
-         IF (make_cluster) THEN
-            IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
-               CALL LOG_WARNING_HEADER()
-               CALL LOG_WARNING('Too many cluster analysis for an iteration.')
-               CALL LOG_WARNING('Change cluster recognition parameters.')
-               CALL LOG_WARNING('We take the data as they are :-~')
-               CALL LOG_WARNING_HEADER()
-               nstep_final = n - 1
-               GOTO 601
-            END IF
-            IF(n_call_cluster>=n_call_cluster_max) THEN
-               CALL LOG_WARNING_HEADER()
-               CALL LOG_WARNING('Too many cluster analysis.')
-               CALL LOG_WARNING('Change cluster recognition parameters.')
-               CALL LOG_WARNING('We take the data as they are :-~')
-               CALL LOG_WARNING_HEADER()
-               nstep_final = n - 1
-               GOTO 601
-            END IF
-            make_cluster_internal=.true.
-            need_cluster=.true.
-            GOTO 901
-         ELSE
-            CALL LOG_WARNING_HEADER()
-            CALL LOG_WARNING('Too many tries to find new live points for try n.: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(itry))))
-            CALL LOG_WARNING('More than '//TRIM(ADJUSTL(INT_TO_STR_INLINE(maxtries))))
-            CALL LOG_WARNING('We take the data as they are :-~')
-            CALL LOG_WARNING_HEADER()
-            nstep_final = n - 1
-            GOTO 601
-         END IF
-      ELSE IF(ANY(too_many_tries)) THEN ! TODO Redo it to work with MPI
-         !If at least one search failed to find a new point, a cluster analysis will be performed after adding the points from the successful searches if clustering is used. Otherwise, the run will end.
-         IF (make_cluster) THEN
-            IF(n_call_cluster_it>=n_call_cluster_it_max) THEN
-               CALL LOG_WARNING_HEADER()
-               CALL LOG_WARNING('Too many cluster analysis for an iteration.')
-               CALL LOG_WARNING('Change cluster recognition parameters.')
-               CALL LOG_WARNING('We take the data as they are :-~')
-               CALL LOG_WARNING_HEADER()
-               nstep_final = n - 1
-               GOTO 601
-            END IF
-            IF(n_call_cluster>=n_call_cluster_max) THEN
-               CALL LOG_WARNING_HEADER()
-               CALL LOG_WARNING('Too many cluster analysis.')
-               CALL LOG_WARNING('Change cluster recognition parameters.')
-               CALL LOG_WARNING('We take the data as they are :-~')
-               CALL LOG_WARNING_HEADER()
-               nstep_final = n - 1
-               GOTO 601
-            END IF
-            make_cluster_internal=.true.
-            need_cluster=.true.
-         ELSE
-            CALL LOG_WARNING_HEADER()
-            CALL LOG_WARNING('Too many tries to find new live points for try n.: '//TRIM(ADJUSTL(INT_TO_STR_INLINE(itry))))
-            CALL LOG_WARNING('More than '//TRIM(ADJUSTL(INT_TO_STR_INLINE(maxtries*maxntries))))
-            CALL LOG_WARNING('We take the data as they are :-~')
-            CALL LOG_WARNING_HEADER()
-            nstep_final = n - 1
-            GOTO 601
-         END IF
-      END IF
+         
+        
       ! -------------------------------------!
       !     Subloop for threads starts       !
       ! -------------------------------------!      
@@ -348,7 +311,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
          IF ((live_like_new(it).GT.min_live_like)) THEN
             n = n + 1
             n_call_cluster_it=0
-            n_mat_cov=n_mat_cov+1
+            n_calc=n_calc+1
          ELSE
             CYCLE
          ENDIF
@@ -417,16 +380,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
         ! Present minimal value of the likelihood
         min_live_like = live_like(1)
 
-
-        SELECT CASE (searchid)
-        CASE (2,3,4)
-           IF(make_cluster) THEN
-              IF(MOD(n,10*nlive).EQ.0 .AND. n .NE. 0) THEN
-                 make_cluster_internal=.true.
-              END IF
-           END IF
-        END SELECT
-
         ! Assign to the new point, the same cluster number of the start point
         IF (cluster_on) THEN
            ! Instert new point
@@ -436,8 +389,18 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
            ! Take out old point
            icluster_old = p_cluster(1)
            cluster_np(icluster_old) = cluster_np(icluster_old) - 1
-           ! Call cluster module to recalculate the std of the considered cluster and the cluster of the discarted point
-           CALL REMAKE_CLUSTER_STD(live,icluster(it),icluster_old)
+         !   ! If the old cluster is now empty, we need to do a cluster analysis NOT WORKING!!
+         !   IF (cluster_np(icluster_old).EQ.0) THEN
+         !      CALL LOG_MESSAGE('Performing cluster analysis. Number of analyses = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(n_call_cluster+1))))
+         !      CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
+         !      CALL REMAKE_CALC(live)
+         !      make_cluster_internal = .false.
+         !      n_call_cluster_it = n_call_cluster_it+1
+         !      n_call_cluster = n_call_cluster+1
+         !      n_calc=0
+         !   END IF
+         !   ! Call cluster module to recalculate the std of the considered cluster and the cluster of the discarted point
+         !   CALL REMAKE_CLUSTER_STD(live,icluster(it),icluster_old)
         END IF
         
         IF(conv_method .EQ. 'LIKE_ACC') THEN
@@ -483,29 +446,48 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
         ! Check if the estimate accuracy is reached
         IF (evtotest-evsum.LT.evaccuracy) GOTO 301
         
-        moving_eff_avg = MOVING_AVG(search_par2/ntries)
+      !   moving_eff_avg = MOVING_AVG(search_par2/ntries(it))
         IF (MOD(n,100).EQ.0) THEN
            IF(opt_suppress_output) CYCLE
+           moving_eff_avg = REAL(search_par2/ntries(it),8)
            IF(opt_compact_output) THEN
-              WRITE(info_string,22) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
+              WRITE(info_string,22) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, moving_eff_avg
 22            FORMAT('| N: ', I2, ' | S: ', I8, ' | MLL: ', F20.12, ' | E: ', F20.12, &
                    ' | Es: ', F20.12, ' | Ea: ', ES14.7, ' | Te: ', F6.4, ' |')
               WRITE(*,24) info_string
 24            FORMAT(A150)
            ELSE IF(opt_lib_output) THEN
-              WRITE(*,*) 'LO | ', itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries, npar, par_name, live(nlive, :)
+              WRITE(*,*) 'LO | ', itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, moving_eff_avg, npar, par_name, live(nlive, :)
            ELSE
-              WRITE(info_string,23) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, search_par2/ntries
+              WRITE(info_string,23) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, moving_eff_avg
 23            FORMAT('| N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
                    ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES14.7, ' | Typical eff.: ', F6.4, ' |')
               WRITE(*,25) info_string
 25            FORMAT(A220)
            ENDIF
         ENDIF
+
+        ! If the number of steps is reached, we stop the loop
+        IF (n.GE.nstep) THEN
+           CALL LOG_MESSAGE('Maximum number of iteraction reached  = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(nstep))))
+           CALL LOG_MESSAGE('Exiting from the main nested sampling loop  = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(nstep))))
+           normal_exit = .true.
+           nstep_final = n
+           EXIT main_loop
+        END IF
+
      END DO
+
+     ! Final operations
+
      ! Remake calculation of mean and standard deviation live points
-     IF (.NOT.cluster_on) CALL REMAKE_LIVE_MEAN_SD(live) 
-  END DO
+     CALL REMAKE_CALC(live)
+
+     
+     ! Reset the number of tries for this iteration
+     ntries = 0
+
+  END DO main_loop
   
   ! ---------------------------------------------------------------------------------------!
   !                                                                                        !
@@ -680,19 +662,19 @@ FUNCTION ADDLOG(log1,log2)
 
 END FUNCTION ADDLOG
 
-! ___________________________________________________________________________________________
+! ! ___________________________________________________________________________________________
 
-FUNCTION MOVING_AVG(val)
-   USE MOD_MATH
-   IMPLICIT NONE
-   REAL(8) :: val, MOVING_AVG
+! FUNCTION MOVING_AVG(val)
+!    USE MOD_MATH
+!    IMPLICIT NONE
+!    REAL(8) :: val, MOVING_AVG
 
-   MOVING_AVG = 0.
+!    MOVING_AVG = 0.
 
-   window_array = CSHIFT(window_array, 1)
-   window_array(moving_avg_window) = val
+!    window_array = CSHIFT(window_array, 1)
+!    window_array(moving_avg_window) = val
 
-   MOVING_AVG = SUM(window_array) / moving_avg_window
-END FUNCTION MOVING_AVG
+!    MOVING_AVG = SUM(window_array) / moving_avg_window
+! END FUNCTION MOVING_AVG
  
- ! ___________________________________________________________________________________________
+!  ! ___________________________________________________________________________________________

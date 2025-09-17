@@ -1,5 +1,5 @@
 MODULE MOD_CLUSTER_ANALYSIS
-  ! Automatic Time-stamp: <Last changed by martino on Friday 11 July 2025 at CEST 15:35:10>
+  ! Automatic Time-stamp: <Last changed by martino on Sunday 31 August 2025 at CEST 21:51:51>
   ! Module for cluster analysis for point in n dimensions
   !
   ! To eventually change to select and add other cluster analyses (eventually to be selected in the input file)
@@ -8,7 +8,7 @@ MODULE MOD_CLUSTER_ANALYSIS
 
   IMPLICIT NONE
   
-  LOGICAL :: cluster_on = .false.
+  LOGICAL :: cluster_on = .false., make_cluster_internal = .false.
   INTEGER(4) :: np=0, ndim=0, ncluster=1 
   INTEGER(4), PARAMETER :: ncluster_max=500 ! maximum number of clusters allowed in the analysis
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: cluster_std, cluster_mean ! standard deviation, mean of the cluster
@@ -971,8 +971,34 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     
     
   END SUBROUTINE WRITE_CLUSTER_DATA
-
-
+  
+  !--------------------------------------------------------------------------------------------------------------
+  
+  SUBROUTINE GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
+    ! Get the mean and standard deviation of the cluster
+    
+    INTEGER(4), INTENT(IN) :: istart
+    INTEGER(4), INTENT(OUT) :: icluster
+    REAL(8), DIMENSION(ndim), INTENT(IN) :: live_sd
+    REAL(8), DIMENSION(ndim), INTENT(OUT) :: live_ave_s, live_sd_s
+    
+    ! Identify cluster appartenance
+    icluster = p_cluster(istart)
+    ! Get for the specific cluster if the cluster analysis is on
+    ! Mean
+    live_ave_s(:) = cluster_mean(icluster,:)
+    ! Standard deviation
+    IF(cluster_std(icluster,1).GT.0.) THEN
+       live_sd_s(:) = cluster_std(icluster,:)
+    ELSE
+       ! If the cluster is formed only from one point, take the standard standard deviation
+       live_sd_s = live_sd
+    END IF
+    ! and mean
+    live_ave_s(:) = cluster_mean(icluster,:)
+    
+  END SUBROUTINE GET_CLUSTER_MEAN_SD
+  
   !--------------------------------------------------------------------------------------------------------------
 
 
@@ -984,22 +1010,6 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     GAUSSIAN_KERNEL = 1/(2*pi*sigma)*DEXP(-(x**2)/(2*sigma**2))
 
   END FUNCTION GAUSSIAN_KERNEL
-
-
-
-!!$  ! ####################### OTHER USEFULL FUNCTIONS ##########################################################
-!!$
-!!$
-!!$  FUNCTION GET_CLUSTER_STD(icluster)
-!!$    ! Get the standar deviation of the selected cluster
-!!$
-!!$  END FUNCTION GET_CLUSTER_STD
-!!$
-!!$
-!!$
-!!$
-!--------------------------------------------------------------------------------------------------------------
-
 
 
 
