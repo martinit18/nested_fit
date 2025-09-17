@@ -33,7 +33,7 @@ __pycache__/
 # Python dist build
 dist/
 
-# Python virtual environments
+# Python virtual environment
 .venv/
 
 # Python wheel building toolkit house
@@ -47,17 +47,6 @@ wheelhouse/
 
 # Perfprof dotfiles
 *.dot
-
-# Ignore autoconf/automake stuff
-autom4te.cache/
-build-aux/
-configure.ac
-Makefile.am
-Makefile.in
-aclocal.m4
-
-# Apparently autoconf generates a back configure (???)
-configure~
 
 # FBuild config file
 .fbuild.lua

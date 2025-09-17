@@ -1,25 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
 
-#####################################
-# This CMake file also generates an #
-# autoconf file alongside an auto   #
-# make one. This is done to support #
-# backwards compatibility for older #
-# systems.                          #
-#####################################
-set(AUTO_MAKE_INLINE_CODE "")
-set(AUTO_MAKE_INLINE_CODE_PRE "")
-
-macro(ac_dec_obj_dep name deps)
-    string(APPEND AUTO_MAKE_INLINE_CODE "${name}.o: ${deps}.o\n")
-endmacro(ac_dec_obj_dep)
-
-macro(ac_inline_generic code)
-    string(APPEND AUTO_MAKE_INLINE_CODE_PRE "${code}\n")
-endmacro(ac_inline_generic)
-#####################################
-#####################################
-
 # NOTE: (César) : If we are on macOS set the minimum supported version to 10.15
 #				  due to C++17 support.
 if(APPLE)
@@ -42,7 +22,6 @@ option(OPENMP "Enable/Disable OpenMP." OFF)
 option(LAPACK "Enable/Disable LAPACK." OFF)
 option(LTRACE "Enable trace logging." OFF)
 option(PPROF "Enable performance counter profilling." OFF)
-option(CREATE_AUTOCONF "Builds a 'configure' script for older systems." OFF)
 
 if(LTRACE)
     add_definitions(-DLTRACE)
@@ -148,27 +127,6 @@ set(SRC_FILES_COMM
     src/helper/int_stack.f90
 )
 
-string(REPLACE ";" " " SRC_FILES_COMM_AC "${SRC_FILES_COMM}")
-ac_dec_obj_dep("src/Mod_cluster_analysis" "src/Mod_logger")
-ac_dec_obj_dep("src/Mod_logger" "src/Mod_timestamp")
-ac_dec_obj_dep("src/Mod_cluster_analysis" "src/Mod_parameters")
-ac_dec_obj_dep("src/Mod_search_new_point" "src/Mod_likelihood_gen")
-ac_dec_obj_dep("src/Mod_search_new_point" "src/Mod_perfprof") # Performance profilling is not compatible with autoconf
-ac_dec_obj_dep("src/Mod_likelihood" "src/Mod_userfcn")
-ac_dec_obj_dep("src/Mod_likelihood_gen" "src/Mod_likelihood")
-ac_dec_obj_dep("src/Mod_likelihood_gen" "src/Mod_integrated_func")
-ac_dec_obj_dep("src/Mod_likelihood_gen" "src/Mod_potentials")
-ac_dec_obj_dep("src/Mod_userfcn" "src/funceval/auto_func")
-ac_dec_obj_dep("src/funceval/auto_func" "src/Mod_metadata")
-ac_dec_obj_dep("src/funceval/auto_func" "src/helper/strutil")
-ac_dec_obj_dep("src/funceval/auto_func" "src/Mod_options")
-ac_dec_obj_dep("src/Mod_likelihood" "src/Mod_math")
-ac_dec_obj_dep("src/nested_fit" "src/Mod_input_parse")
-ac_dec_obj_dep("src/Mod_input_parse" "src/helper/int_stack")
-ac_dec_obj_dep("src/Mod_jsonio" "src/Mod_logger")
-ac_dec_obj_dep("src/nested_fit" "src/cli/argparse")
-ac_dec_obj_dep("src/nested_fit" "src/Mod_jsonio")
-
 set(SRC_EXTERNAL_FUNCS
     src/helper/hash.f90
     src/Mod_interpolate.f90
@@ -177,30 +135,9 @@ set(SRC_EXTERNAL_FUNCS
     src/Mod_timestamp.f90   # NOTE :(César) Required for logging from the shared lib
     src/functions/WOFZ.f
 )
-set(SRC_EXTERNAL_FUNCS_AC_F90 "")
-set(SRC_EXTERNAL_FUNCS_AC_F77 "")
-
-foreach(file ${SRC_EXTERNAL_FUNCS})
-    get_filename_component(file_ext ${file} EXT)
-    string(REGEX REPLACE "\\.[^.]*$" "" file_noext ${file})
-
-    if(${file_ext} STREQUAL ".f")
-        set(SRC_EXTERNAL_FUNCS_AC_F77 "${SRC_EXTERNAL_FUNCS_AC_F77} ${file_noext}.o")
-    else()
-        set(SRC_EXTERNAL_FUNCS_AC_F90 "${SRC_EXTERNAL_FUNCS_AC_F90} ${file_noext}.o")
-    endif()
-
-    message(STATUS "file -> ${file} | ${file_noext}.o")
-endforeach()
-
-ac_dec_obj_dep("src/Mod_interpolate" "src/Mod_logger")
-ac_dec_obj_dep("src/functions/internal_funcs" "src/Mod_logger")
 
 file(GLOB SRC_DIERCKX RELATIVE ${CMAKE_SOURCE_DIR} src/DIERCKX/*.f)
-string(REPLACE ";" " " SRC_DIERCKX_AC "${SRC_DIERCKX}")
-
 file(GLOB SRC_SLATEC  RELATIVE ${CMAKE_SOURCE_DIR} src/SLATEC/*.f)
-string(REPLACE ";" " " SRC_SLATEC_AC "${SRC_SLATEC}")
 
 if(OPENMP)
     find_package(OpenMP)
@@ -321,19 +258,6 @@ set(SRC_FLAGS_R     -cpp -O2 -static -ffree-line-length-0 -ffixed-line-length-0)
 set(SRC_FLAGS_CXX_D -O0 -Wall -pedantic -g -Wno-missing-field-initializers)      # Be pedantic
 set(SRC_FLAGS_CXX_R -O2 -Wall -pedantic -static -Wno-missing-field-initializers) # Be pedantic on release too
 
-# NOTE(César): Autoconf will use release only for now
-#              (this is semi ok, since it is not intended to be a used in a dev env)
-#              This behaviour is basically just inside configure.ac.in
-string(REPLACE ";" " " AC_FLAGS_CXX "${SRC_FLAGS_CXX_R}")
-string(REPLACE ";" " " AC_FLAGS_CF  "${SRC_FLAGS_R}")
-ac_inline_generic("CPPFLAGS = ${AC_FLAGS_CXX}")
-ac_inline_generic("FCFLAGS = ${AC_FLAGS_CF}")
-ac_inline_generic("FFLAGS = ${AC_FLAGS_CF}")
-
-# NOTE: (César) This approach does not work for windows (but autoconf does not either)
-#               Also assuming gfortran here
-ac_inline_generic("LIBS = -lgfortran -ldl")
-
 # NOTE(César): This is required to preprocessor the OpenMP comments
 set(SRC_FLAGS_OMP "")
 if(OPENMP)
@@ -390,34 +314,6 @@ install(TARGETS ${nested_fit_target} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
 # For now all the generated data can be generated
 # on configure time
 write_manifest()
-
-# configure compatibility files for autoconf / automake
-if(CREATE_AUTOCONF)
-    message(STATUS "Generated the following dependecies:")
-    message(STATUS "\n${AUTO_MAKE_INLINE_CODE}")
-    configure_file(configure.ac.in ${CMAKE_SOURCE_DIR}/configure.ac @ONLY)
-    configure_file(Makefile.am.in ${CMAKE_SOURCE_DIR}/Makefile.am @ONLY)
-
-    file(WRITE ${CMAKE_SOURCE_DIR}/NEWS "")
-    file(WRITE ${CMAKE_SOURCE_DIR}/COPYING "")
-    file(WRITE ${CMAKE_SOURCE_DIR}/ChangeLog "")
-    file(WRITE ${CMAKE_SOURCE_DIR}/README "")
-    file(WRITE ${CMAKE_SOURCE_DIR}/AUTHORS "")
-    
-    execute_process(COMMAND autoreconf --verbose --install --force WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-    
-    file(REMOVE ${CMAKE_SOURCE_DIR}/INSTALL)
-    file(REMOVE ${CMAKE_SOURCE_DIR}/NEWS)
-    file(REMOVE ${CMAKE_SOURCE_DIR}/COPYING)
-    file(REMOVE ${CMAKE_SOURCE_DIR}/ChangeLog)
-    file(REMOVE ${CMAKE_SOURCE_DIR}/README)
-    file(REMOVE ${CMAKE_SOURCE_DIR}/AUTHORS)
-
-    # Remove autoconf stuff from src tree
-    file(REMOVE ${CMAKE_SOURCE_DIR}/aclocal.m4)
-    # file(REMOVE ${CMAKE_SOURCE_DIR}/configure.ac)
-    # file(REMOVE ${CMAKE_SOURCE_DIR}/Makefile.am)
-endif()
 
 include(CTest)
 
