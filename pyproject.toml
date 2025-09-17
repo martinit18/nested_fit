@@ -46,6 +46,17 @@ nested_fit = "pynested_fit.cliw:main"
 # However it is simpler to just build for each cp version
 build = "cp*"
 
+# Force old toolchain (we don't use anything that requires glibc >= 2.17 dynamically)
+manylinux-x86_64-image = "manylinux2014"
+
+# Now statically link to libgcc / stdlib / libgfortran
+environment = "CFLAGS='-static-libgcc -static-libstdc++' CXXFLAGS='-static-libgcc -static-libstdc++' FFLAGS='-static-libgfortran'"
+
+# repair-wheel-command = [
+# 	'auditwheel show {wheel}',
+# 	'auditwheel repair -w {dest_dir} {wheel}'
+# ]
+
 [tool.cibuildwheel.macos]
 archs = ["x86_64"]
 
