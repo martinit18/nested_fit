@@ -1,6 +1,6 @@
 SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_birth_final,live_rank_final,&
    weight,live_final,live_like_max,live_max,mpi_rank,mpi_cluster_size)
-  ! Time-stamp: <Last changed by martino on Tuesday 16 September 2025 at CEST 23:59:09>
+  ! Time-stamp: <Last changed by martino on Thursday 18 September 2025 at CEST 10:03:48>
 
   ! Additional math module
   USE MOD_MATH
@@ -21,6 +21,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   USE MOD_LOGGER
   ! Module for proffiling
   USE MOD_PERFPROF
+
+!#ifdef OPENMP
+  USE OMP_LIB
+!#endif
 
   !
   IMPLICIT NONE
@@ -80,6 +84,12 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   INTEGER(4) :: n_call_cluster, n_call_cluster_it, n_calc
   INTEGER(4), PARAMETER :: n_call_cluster_it_max=10, n_call_cluster_max=100
 
+  ! OPENMP stuff
+#ifdef OPENMP_ON
+  INTEGER(4) :: nthreads=1
+  nthreads = omp_get_max_threads()
+#endif
+
   PROFILED(NESTED_SAMPLING)
 
   ! Initialize variables (with different seeds for different processors)
@@ -104,12 +114,14 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   n_calc=0
   !maxtries = 50*njump ! Accept an efficiency of more than 2% for the exploration, otherwise change something
 
-  ALLOCATE(ntries(nth),live_like_new(nth),live_new(nth,npar),too_many_tries(nth),icluster(nth))
+  ALLOCATE(ntries(nth),live_like_new(nth),live_new(nth,npar),too_many_tries(nth),icluster(nth),live_searching(nth),live_ready(nth))
   ntries = 0
   live_new = 0.
   live_like_new = 0.
   icluster = 0
   too_many_tries = .false.
+  live_searching = .false.
+  live_ready = .false.
 
   ! If using lo output set the fmt for params and param names
   IF(opt_lib_output) THEN
@@ -210,6 +222,18 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
 
   ! Present minimal value of the likelihood
   min_live_like = live_like(1)
+  ! Degugging ???
+  print *, "Max threads:", omp_get_max_threads()
+  print *, "Num threads in parallel region:"
+  !$omp parallel
+  print *, "Thread", omp_get_thread_num(), "active in parallel region"
+  !$omp end parallel
+
+  ! Main parallel region
+  !#########################################################################################################################################################  
+  !!!$OMP PARALLEL  num_threads(nthreads)
+  !!!$OMP SINGLE
+  
 
   ! ---------------------------------------------------------------------------------------!
   !                                                                                        !
@@ -217,12 +241,13 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   !                                                                                        !
   !----------------------------------------------------------------------------------------!
   n = 1
-  
 
   main_loop: DO WHILE ((.NOT. normal_exit) .AND. (.NOT. early_exit))
      ! ##########################################################################
+
+   !write(*,*) live_ready, 'at the start of the main loop'  ! Debugging ???
      
-     ! Initial checks and operations
+     ! Initial checks and operations -------------------------------------------------------------------------------------------
 
      ! Force clustering if slide sampling is selected
      IF (make_cluster) THEN
@@ -270,7 +295,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
      IF (normal_exit .OR. early_exit) EXIT main_loop
 
       
-901   IF(make_cluster_internal) THEN
+      IF(make_cluster_internal) THEN
          CALL LOG_MESSAGE('Performing cluster analysis. Number of analyses = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(n_call_cluster+1))))
          CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
          cluster_on = .true.
@@ -287,213 +312,234 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
          CALL REMAKE_CALC(live)
          n_calc=0
       END IF
+      ! --------------------------------------------------------------------------------------------------------------------------------------
+
+
       
+      ! Start live points search in parallel -------------------------------------------------------------------------------------------------
       it = 1
       !$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) PRIVATE(it) &
-        !$OMP SHARED(n,itry,ntries,min_live_like,live_like,live,nth,live_like_new,live_new,icluster,too_many_tries)  
+      !$OMP SHARED(live_searching,live_ready,n,itry,ntries,min_live_like,live_like,live,nth,live_like_new,live_new,icluster,too_many_tries)  
       DO it=1,nth
-         CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
-           live_like_new(it),live_new(it,:),icluster(it),ntries(it),too_many_tries(it))
+         IF(.NOT.live_ready(it).AND..NOT.live_searching(it)) THEN
+         !write(*,*) 'it: ', it,  'live_ready(it): ', live_ready(it), 'in search loop'  ! Debugging ???
+            live_searching(it) = .true.
+            CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
+            live_like_new(it),live_new(it,:),icluster(it),ntries(it),too_many_tries(it))
+            live_searching(it) = .false.
+            live_ready(it) = .true.
+         END IF
       END DO
       !$OMP END PARALLEL DO
-      
-         
+      ! --------------------------------------------------------------------------------------------------------------------------------------
         
       ! -------------------------------------!
       !     Subloop for threads starts       !
       ! -------------------------------------!      
       
       
-      DO it = 1, nth
-         
-         ! If the parallely computed live point is still good, take it for loop calculation.
-         ! Otherwise skip it
-         IF ((live_like_new(it).GT.min_live_like)) THEN
-            n = n + 1
-            n_call_cluster_it=0
-            n_calc=n_calc+1
-         ELSE
-            CYCLE
-         ENDIF
-         
-         
-        ! Calculate steps, mass and rest each time
-        ! trapezoidal rule applied here (Skilling Entropy 2006)
-        !tlnmass(n) = DLOG(-(tstep(n+1)-tstep(n-1))/2.d0)
-        !tlnrest(n) = DLOG((tstep(n+1)+tstep(n-1))/2.d0)
-        ! Alternative calculation
-        lntmass = - (n-1.d0)/nlive + constm
-        lntrest = - (n-1.d0)/nlive + constp
-        ! Check
-        !write(*,*) n, tlnrest(n), lntrest, tlnrest(n) - lntrest
-        !write(*,*) n, tlnmass(n), lntmass, tlnmass(n) - lntmass
-        !pause
+      subloop: DO it = 1, nth ! Start of the main nested sampling loop -----------------------------------------------------------------------
 
-        ! Reorder found point (no parallel here) and make the required calculation for the evidence
-        ! Reorder point
-        ! Order and exclude last point
-        jlim=0
-        IF (live_like_new(it).GT.live_like(nlive)) THEN
-            jlim = nlive
-        ELSE
-            DO j=1,nlive-1
-              IF (live_like_new(it).GT.live_like(j).AND.live_like_new(it).LE.live_like(j+1)) THEN
-                 jlim = j
-                 EXIT
-              END IF
-            END DO
-         END IF
-         
-        ! Store old values
-        live_like_old(n) = live_like(1)
-        live_old(n,:) = live(1,:)
-        live_birth_old(n) = live_birth(1)
-        live_rank_old(n) = live_rank(1)
+          ! Check first if the thread has finished and if it is good candidate
+         IF (live_ready(it)) THEN
+            
+            ! If the parallely computed live point is still good, take it for loop calculation.
+            ! Otherwise skip it
+            IF ((live_like_new(it).GT.min_live_like)) THEN
+               n = n + 1
+               n_call_cluster_it=0
+               n_calc=n_calc+1
+            ELSE
+               GOTO 800
+            ENDIF
+            
+            ! Calculate steps, mass and rest each time
+            ! trapezoidal rule applied here (Skilling Entropy 2006)
+            !tlnmass(n) = DLOG(-(tstep(n+1)-tstep(n-1))/2.d0)
+            !tlnrest(n) = DLOG((tstep(n+1)+tstep(n-1))/2.d0)
+            ! Alternative calculation
+            lntmass = - (n-1.d0)/nlive + constm
+            lntrest = - (n-1.d0)/nlive + constp
+            ! Check
+            !write(*,*) n, tlnrest(n), lntrest, tlnrest(n) - lntrest
+            !write(*,*) n, tlnmass(n), lntmass, tlnmass(n) - lntmass
+            !pause
+            
+            ! Reorder found point (no parallel here) and make the required calculation for the evidence
+            ! Reorder point
+            ! Order and exclude last point
+            jlim=0
+            IF (live_like_new(it).GT.live_like(nlive)) THEN
+               jlim = nlive
+            ELSE
+               search_loop: DO j=1,nlive-1
+                  IF (live_like_new(it).GT.live_like(j).AND.live_like_new(it).LE.live_like(j+1)) THEN
+                     jlim = j
+                     EXIT search_loop
+                  END IF
+               END DO search_loop
+            END IF
+            
+            ! Store old values
+            live_like_old(n) = live_like(1)
+            live_old(n,:) = live(1,:)
+            live_birth_old(n) = live_birth(1)
+            live_rank_old(n) = live_rank(1)
+            
+            ! Insert the new one
+            IF (jlim.LT.1.OR.jlim.GT.nlive) THEN
+               CALL LOG_ERROR_HEADER()
+               CALL LOG_ERROR('Problem in the search method, or in the calculations...')
+               CALL LOG_ERROR('No improvement in the likelihood value after finding the new point...')
+               CALL LOG_ERROR('j = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(jlim)))//'old min like = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(min_live_like)))//'new min like = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(live_like_new(it)))))
+               CALL LOG_ERROR_HEADER()
+               CALL HALT_EXECUTION()
+            ELSE IF (jlim.EQ.1) THEN
+               live_like(1) = live_like_new(it)
+               live(1,:) = live_new(it,:)
+               live_birth(1) = live_like_old(n)
+               live_rank(1) = 1
+            ELSE
+               ! Shift values
+               live_like(1:jlim-1) =  live_like(2:jlim)
+               live(1:jlim-1,:) =  live(2:jlim,:)
+               live_birth(1:jlim-1) =  live_birth(2:jlim)
+               live_rank(1:jlim-1) =  live_rank(2:jlim)
+               ! Insert new value
+               live_like(jlim) =  live_like_new(it)
+               live(jlim,:) =  live_new(it,:)
+               live_birth(jlim) = live_like_old(n)
+               live_rank(jlim) = jlim
+               ! The rest stay as it is
+            END IF
+            
+            ! Present minimal value of the likelihood
+            min_live_like = live_like(1)
+            
+            ! Assign to the new point, the same cluster number of the start point
+            IF (cluster_on) THEN
+               ! Instert new point
+               p_cluster(1:jlim-1) =  p_cluster(2:jlim)
+               p_cluster(jlim) = icluster(it)
+               cluster_np(icluster(it)) = cluster_np(icluster(it)) + 1
+               ! Take out old point
+               icluster_old = p_cluster(1)
+               cluster_np(icluster_old) = cluster_np(icluster_old) - 1
+               !   ! If the old cluster is now empty, we need to do a cluster analysis NOT WORKING!!
+               !   IF (cluster_np(icluster_old).EQ.0) THEN
+               !      CALL LOG_MESSAGE('Performing cluster analysis. Number of analyses = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(n_call_cluster+1))))
+               !      CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
+               !      CALL REMAKE_CALC(live)
+               !      make_cluster_internal = .false.
+               !      n_call_cluster_it = n_call_cluster_it+1
+               !      n_call_cluster = n_call_cluster+1
+               !      n_calc=0
+               !   END IF
+               !   ! Call cluster module to recalculate the std of the considered cluster and the cluster of the discarted point
+               !   CALL REMAKE_CLUSTER_STD(live,icluster(it),icluster_old)
+            END IF
+            
+            IF(conv_method .EQ. 'LIKE_ACC') THEN
+               ! Calculate the evidence for this step
+               evstep(n) = live_like_old(n) + lntmass
+               
+               ! Sum the evidences
+               evsum = ADDLOG(evsum,evstep(n))
+               
+               ! Check if the estimate accuracy is reached
+               evrestest = live_like(nlive) + lntrest
+               evtotest = ADDLOG(evsum,evrestest)
+            ELSE IF(conv_method .EQ. 'ENERGY_ACC') THEN
+               ! Calculate the contribution to the partition function at that temperature for this step
+               evstep(n) = 1./conv_par*live_like_old(n) + lntmass
+               
+               ! Sum the contribution with the previous contributions
+               evsum = ADDLOG(evsum,evstep(n))
+               
+               ! Check if the estimate accuracy is reached
+               evrestest = 1./conv_par*live_like(nlive) + lntrest
+               evtotest = ADDLOG(evsum,evrestest)
+            ELSE IF(conv_method .EQ. 'ENERGY_MAX') THEN
+               ! Calculate the contribution to the partition function at that temperature for this step
+               evstep(n) = 1./conv_par*live_like_old(n) + lntmass
+               
+               ! Max between the present contribution and previous ones
+               evsum = MAX(evsum,evstep(n))
+               
+               ! Check if the estimate accuracy is reached
+               evtotest = evstep(n)
+            ELSE
+               CALL LOG_ERROR_HEADER()
+               CALL LOG_ERROR('Invalid convergence method.')
+               CALL LOG_ERROR('Available options: [LIKE_ACC, ENERGY_ACC, ENERGY_MAX].')
+               CALL LOG_ERROR_HEADER()
+            END IF
+            
+            ! Write status
+            !write(*,*) 'N step : ', n, 'Evidence at present : ', evsum ! ???? Debugging
+            !write(*,*) n, live_like_old(n), live_birth_old(n), live_rank_old(n) !????
+            
+            ! Check if the estimate accuracy is reached
+            IF (evtotest-evsum.LT.evaccuracy) normal_exit = .true.
+            
+            !   moving_eff_avg = MOVING_AVG(search_par2/ntries(it))
+            IF (MOD(n,100).EQ.0) THEN
+               IF(opt_suppress_output) CYCLE
+               moving_eff_avg = REAL(search_par2/ntries(it),8)
+               IF(opt_compact_output) THEN
+                  WRITE(info_string,22) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, moving_eff_avg
+22                FORMAT('| N: ', I2, ' | S: ', I8, ' | MLL: ', F20.12, ' | E: ', F20.12, &
+                       ' | Es: ', F20.12, ' | Ea: ', ES14.7, ' | Te: ', F6.4, ' |')
+                  WRITE(*,24) info_string
+24                FORMAT(A150)
+               ELSE IF(opt_lib_output) THEN
+                  WRITE(*,*) 'LO | ', itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, moving_eff_avg, npar, par_name, live(nlive, :)
+               ELSE
+                  WRITE(info_string,23) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, moving_eff_avg
+23                FORMAT('| N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
+                       ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES14.7, ' | Typical eff.: ', F6.4, ' |')
+                  WRITE(*,25) info_string
+25                FORMAT(A220)
+               ENDIF
+            ENDIF
+            
+            ! If the number of steps is reached, we stop the loop
+            IF (n.GE.nstep) THEN
+               CALL LOG_MESSAGE('Maximum number of iteraction reached  = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(nstep))))
+               CALL LOG_MESSAGE('Exiting from the main nested sampling loop  = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(nstep))))
+               normal_exit = .true.
+               nstep_final = n
+            END IF
+            
+         END IF 
 
-        ! Insert the new one
-        IF (jlim.LT.1.OR.jlim.GT.nlive) THEN
-           CALL LOG_ERROR_HEADER()
-           CALL LOG_ERROR('Problem in the search method, or in the calculations...')
-           CALL LOG_ERROR('No improvement in the likelihood value after finding the new point...')
-           CALL LOG_ERROR('j = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(jlim)))//'old min like = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(min_live_like)))//'new min like = '//TRIM(ADJUSTL(REAL_TO_STR_INLINE(live_like_new(it)))))
-           CALL LOG_ERROR_HEADER()
-           CALL HALT_EXECUTION()
-        ELSE IF (jlim.EQ.1) THEN
-           live_like(1) = live_like_new(it)
-           live(1,:) = live_new(it,:)
-           live_birth(1) = live_like_old(n)
-           live_rank(1) = 1
-        ELSE
-           ! Shift values
-           live_like(1:jlim-1) =  live_like(2:jlim)
-           live(1:jlim-1,:) =  live(2:jlim,:)
-           live_birth(1:jlim-1) =  live_birth(2:jlim)
-           live_rank(1:jlim-1) =  live_rank(2:jlim)
-           ! Insert new value
-           live_like(jlim) =  live_like_new(it)
-           live(jlim,:) =  live_new(it,:)
-           live_birth(jlim) = live_like_old(n)
-           live_rank(jlim) = jlim
-           ! The rest stay as it is
-        END IF
+         ! Make the live point ready for a new search
+   800   live_ready(it) = .false.
+         !write(*,*) 'it: ', it,  'live_ready(it): ', live_ready(it), 'end of subloop'  ! Debugging ???
 
-        ! Present minimal value of the likelihood
-        min_live_like = live_like(1)
-
-        ! Assign to the new point, the same cluster number of the start point
-        IF (cluster_on) THEN
-           ! Instert new point
-           p_cluster(1:jlim-1) =  p_cluster(2:jlim)
-           p_cluster(jlim) = icluster(it)
-           cluster_np(icluster(it)) = cluster_np(icluster(it)) + 1
-           ! Take out old point
-           icluster_old = p_cluster(1)
-           cluster_np(icluster_old) = cluster_np(icluster_old) - 1
-         !   ! If the old cluster is now empty, we need to do a cluster analysis NOT WORKING!!
-         !   IF (cluster_np(icluster_old).EQ.0) THEN
-         !      CALL LOG_MESSAGE('Performing cluster analysis. Number of analyses = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(n_call_cluster+1))))
-         !      CALL MAKE_CLUSTER_ANALYSIS(nlive,npar,live)
-         !      CALL REMAKE_CALC(live)
-         !      make_cluster_internal = .false.
-         !      n_call_cluster_it = n_call_cluster_it+1
-         !      n_call_cluster = n_call_cluster+1
-         !      n_calc=0
-         !   END IF
-         !   ! Call cluster module to recalculate the std of the considered cluster and the cluster of the discarted point
-         !   CALL REMAKE_CLUSTER_STD(live,icluster(it),icluster_old)
-        END IF
-        
-        IF(conv_method .EQ. 'LIKE_ACC') THEN
-           ! Calculate the evidence for this step
-           evstep(n) = live_like_old(n) + lntmass
-           
-           ! Sum the evidences
-           evsum = ADDLOG(evsum,evstep(n))
-           
-           ! Check if the estimate accuracy is reached
-           evrestest = live_like(nlive) + lntrest
-           evtotest = ADDLOG(evsum,evrestest)
-        ELSE IF(conv_method .EQ. 'ENERGY_ACC') THEN
-           ! Calculate the contribution to the partition function at that temperature for this step
-           evstep(n) = 1./conv_par*live_like_old(n) + lntmass
-           
-           ! Sum the contribution with the previous contributions
-           evsum = ADDLOG(evsum,evstep(n))
-           
-           ! Check if the estimate accuracy is reached
-           evrestest = 1./conv_par*live_like(nlive) + lntrest
-           evtotest = ADDLOG(evsum,evrestest)
-        ELSE IF(conv_method .EQ. 'ENERGY_MAX') THEN
-           ! Calculate the contribution to the partition function at that temperature for this step
-           evstep(n) = 1./conv_par*live_like_old(n) + lntmass
-           
-           ! Max between the present contribution and previous ones
-           evsum = MAX(evsum,evstep(n))
-           
-           ! Check if the estimate accuracy is reached
-           evtotest = evstep(n)
-        ELSE
-           CALL LOG_ERROR_HEADER()
-           CALL LOG_ERROR('Invalid convergence method.')
-           CALL LOG_ERROR('Available options: [LIKE_ACC, ENERGY_ACC, ENERGY_MAX].')
-           CALL LOG_ERROR_HEADER()
-        END IF
-        
-        ! Write status
-        !write(*,*) 'N step : ', n, 'Evidence at present : ', evsum ! ???? Debugging
-        !write(*,*) n, live_like_old(n), live_birth_old(n), live_rank_old(n) !????
-        
-        ! Check if the estimate accuracy is reached
-        IF (evtotest-evsum.LT.evaccuracy) GOTO 301
-        
-      !   moving_eff_avg = MOVING_AVG(search_par2/ntries(it))
-        IF (MOD(n,100).EQ.0) THEN
-           IF(opt_suppress_output) CYCLE
-           moving_eff_avg = REAL(search_par2/ntries(it),8)
-           IF(opt_compact_output) THEN
-              WRITE(info_string,22) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, moving_eff_avg
-22            FORMAT('| N: ', I2, ' | S: ', I8, ' | MLL: ', F20.12, ' | E: ', F20.12, &
-                   ' | Es: ', F20.12, ' | Ea: ', ES14.7, ' | Te: ', F6.4, ' |')
-              WRITE(*,24) info_string
-24            FORMAT(A150)
-           ELSE IF(opt_lib_output) THEN
-              WRITE(*,*) 'LO | ', itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, moving_eff_avg, npar, par_name, live(nlive, :)
-           ELSE
-              WRITE(info_string,23) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, moving_eff_avg
-23            FORMAT('| N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
-                   ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES14.7, ' | Typical eff.: ', F6.4, ' |')
-              WRITE(*,25) info_string
-25            FORMAT(A220)
-           ENDIF
-        ENDIF
-
-        ! If the number of steps is reached, we stop the loop
-        IF (n.GE.nstep) THEN
-           CALL LOG_MESSAGE('Maximum number of iteraction reached  = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(nstep))))
-           CALL LOG_MESSAGE('Exiting from the main nested sampling loop  = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(nstep))))
-           normal_exit = .true.
-           nstep_final = n
-           EXIT main_loop
-        END IF
-
-     END DO
-
-     ! Final operations
-
-     ! Remake calculation of mean and standard deviation live points
-     CALL REMAKE_CALC(live)
-
-     
-     ! Reset the number of tries for this iteration
-     ntries = 0
-
-  END DO main_loop
+      END DO subloop ! End of the main nested sampling loop
+      
+      ! Final operations
+      
+      ! Remake calculation of mean and standard deviation live points
+      CALL REMAKE_CALC(live)
+      
+      
+      ! Reset the number of tries for this iteration
+      ntries = 0
+      
   
+   END DO main_loop ! End of the main loop
   ! ---------------------------------------------------------------------------------------!
   !                                                                                        !
   !                                 STOP THE MAIN LOOP                                     !
   !                                                                                        !
   !----------------------------------------------------------------------------------------!
+
+  !!!$OMP END SINGLE
+  !!!$OMP END PARALLEL
+  !#########################################################################################################################################################
+
 301 CONTINUE
 
   ! Store the number of steps
