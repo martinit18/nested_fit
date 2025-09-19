@@ -116,6 +116,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   too_many_tries = .false.
   live_searching = .false.
   live_ready = .false.
+  normal_exit = .false. 
+  early_exit = .false.
 
   ! If using lo output set the fmt for params and param names
   IF(opt_lib_output) THEN
@@ -219,11 +221,11 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   min_live_like = live_like(1)
 
   ! Degugging ???
-  !$ print *, "Max threads:", nth 
-  !$ print *, "Num threads in parallel region:"
-  !$omp parallel
-  !$ print *, "Thread", omp_get_thread_num(), "active in parallel region"
-  !$omp end parallel
+  !!$ print *, "Max threads:", nth 
+  !!$ print *, "Num threads in parallel region:"
+  !!$omp parallel
+  !!$ print *, "Thread", omp_get_thread_num(), "active in parallel region"
+  !!$omp end parallel
 
   ! Main parallel region
   !#########################################################################################################################################################  
@@ -264,12 +266,14 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
       !!$OMP END PARALLEL DO
       ! --------------------------------------------------------------------------------------------------------------------------------------
 
-
+      !$OMP TASK PRIVATE(it) &
+      !$OMP SHARED(live_searching,live_ready,n,itry,ntries,min_live_like,live_like,live,nth,live_like_new,live_new,icluster,too_many_tries) 
+      
 
 
      !write(*,*) live_ready, 'at the start of the main loop'  ! Debugging ???
      
-     ! Initial checks and operations --------------------------------------------------------------------------------------------------------
+     ! Initial checks and operations 
 
      ! Force clustering if slide sampling is selected
      IF (make_cluster) THEN
@@ -314,7 +318,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
      END IF
      
      ! Exit already now from the main loop if needed
-     IF (normal_exit .OR. early_exit) EXIT main_loop
+     !IF (normal_exit .OR. early_exit) EXIT main_loop
 
       
       IF(make_cluster_internal) THEN
@@ -532,6 +536,9 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
       
       ! Reset the number of tries for this iteration
       ntries = 0
+
+      !$OMP END TASK ! ------------------------------------------------------------------------------------------------------------------------------------
+
       
   
    END DO main_loop ! End of the main loop
