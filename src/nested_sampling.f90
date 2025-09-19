@@ -227,8 +227,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
 
   ! Main parallel region
   !#########################################################################################################################################################  
-  !!!$OMP PARALLEL  num_threads(nthreads)
-  !!!$OMP SINGLE
+  !$OMP PARALLEL  num_threads(nth)
+  !$OMP SINGLE
   
 
   ! ---------------------------------------------------------------------------------------!
@@ -243,19 +243,25 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
 
       ! Start live points search in parallel -------------------------------------------------------------------------------------------------
       it = 1
-      !$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) PRIVATE(it) &
-      !$OMP SHARED(live_searching,live_ready,n,itry,ntries,min_live_like,live_like,live,nth,live_like_new,live_new,icluster,too_many_tries)  
+      !!$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) PRIVATE(it) &
+      !!$OMP SHARED(live_searching,live_ready,n,itry,ntries,min_live_like,live_like,live,nth,live_like_new,live_new,icluster,too_many_tries)  
       DO it=1,nth
          IF(.NOT.live_ready(it).AND..NOT.live_searching(it)) THEN
-         !write(*,*) 'it: ', it,  'live_ready(it): ', live_ready(it), 'in search loop'  ! Debugging ???
             live_searching(it) = .true.
+            !$OMP TASK DEFAULT(NONE) FIRSTPRIVATE(it) &
+            !$OMP SHARED(live_searching,live_ready,n,itry,ntries,min_live_like,live_like,live,nth,live_like_new,live_new,icluster,too_many_tries) 
+            !write(*,*) 'Thread: ', omp_get_thread_num(), 'it: ', it,  'live_ready(it): ', live_ready(it), 'in search loop'  ! Debugging ???
             CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
             live_like_new(it),live_new(it,:),icluster(it),ntries(it),too_many_tries(it))
             live_searching(it) = .false.
             live_ready(it) = .true.
-         END IF
+            !$OMP FLUSH(live_ready, live_searching, live_like_new,live_new, icluster, too_many_tries)
+            !$OMP END TASK
+            END IF
       END DO
-      !$OMP END PARALLEL DO
+      !$OMP TASKWAIT
+
+      !!$OMP END PARALLEL DO
       ! --------------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -535,8 +541,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   !                                                                                        !
   !----------------------------------------------------------------------------------------!
 
-  !!!$OMP END SINGLE
-  !!!$OMP END PARALLEL
+  !$OMP END SINGLE
+  !$OMP END PARALLEL
   !#########################################################################################################################################################
 
 301 CONTINUE
