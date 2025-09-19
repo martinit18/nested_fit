@@ -261,13 +261,13 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
             !$OMP END TASK
             END IF
       END DO
-      !$OMP TASKWAIT
+      !!$OMP TASKWAIT
 
       !!$OMP END PARALLEL DO
       ! --------------------------------------------------------------------------------------------------------------------------------------
 
-      !$OMP TASK PRIVATE(it) &
-      !$OMP SHARED(live_searching,live_ready,n,itry,ntries,min_live_like,live_like,live,nth,live_like_new,live_new,icluster,too_many_tries) 
+      !!$OMP TASK PRIVATE(it) &
+      !!$OMP SHARED(live_searching,live_ready,n,itry,ntries,min_live_like,live_like,live,nth,live_like_new,live_new,icluster,too_many_tries) 
       
 
 
@@ -537,9 +537,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
       ! Reset the number of tries for this iteration
       ntries = 0
 
-      !$OMP END TASK ! ------------------------------------------------------------------------------------------------------------------------------------
+      !!$OMP END TASK ! ------------------------------------------------------------------------------------------------------------------------------------
 
       
+      !!$OMP TASKWAIT
   
    END DO main_loop ! End of the main loop
   ! ---------------------------------------------------------------------------------------!
