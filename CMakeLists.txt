@@ -346,6 +346,7 @@ target_compile_options(${nested_fit_target} PUBLIC
     ${SRC_FLAGS_OMP}
 )
 
+
 if(LAPACK)
     target_compile_definitions(${nested_fit_target}      PUBLIC -DLAPACK_ON)
     if(UNIX)
@@ -376,6 +377,8 @@ target_include_directories(${nested_fit_target} PRIVATE ${tracy_SOURCE_DIR})
 
 if(OPENMP)
     target_link_options(${nested_fit_target} PRIVATE "-fopenmp")
+    # Set the OPENMP_ON flag for the preprocessor
+    target_compile_definitions(${nested_fit_target} PUBLIC -DOPENMP_ON)
 endif()
 
 if(NORNG)

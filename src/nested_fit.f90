@@ -133,7 +133,9 @@ PROGRAM NESTED_FIT
    ! Module for performance profiling
    USE MOD_PERFPROF
    ! Parallelization library !!!CAREFULL to the table dimension in this case!!
+#ifdef OPENMP_ON
    USE OMP_LIB
+#endif
 
   !USE RNG
   !
@@ -308,10 +310,10 @@ PROGRAM NESTED_FIT
     B_SUPPRESSOUTPUT&
   ))
 
-  CALL ADD_ARGUMENT(argdef_t("thread-count", "tc", .TRUE.,&
-    "Change the number of threads OpenMP runs on. Setting to 0 will use all the available.",&
-    B_SET_OMP_THREADS&
-  ))
+!   CALL ADD_ARGUMENT(argdef_t("thread-count", "tc", .TRUE.,&
+!     "Change the number of threads OpenMP runs on. Setting to 0 will use all the available.",&
+!     B_SET_OMP_THREADS&
+!   ))
   
   ! Parse executable arguments
   CALL PARSE_ARGUMENTS()
@@ -329,12 +331,14 @@ PROGRAM NESTED_FIT
 
   ! Calculate time elapsed !!!!!!!!!!!!!!!!!!!!
   ! Parallel real time (and number of threads)  
-  !$ seconds = omp_get_wtime( )
-  !$ nth = omp_get_max_threads()
+  !$ seconds = OMP_GET_WTIME( )
+
+  ! Get the number of threads 
+  !$ nth = OMP_GET_MAX_THREADS()
 
   ! Absolute time
   CALL CPU_TIME(startt)
-  !$ startt_omp = omp_get_wtime( )
+  !$ startt_omp = OMP_GET_WTIME( )
 
   ! Initialize values --------------------------------------------------------------------------------------------------------------
   filename = ' '
@@ -742,7 +746,7 @@ PROGRAM NESTED_FIT
    seconds  = stopt - startt
    ! Parallel time
    seconds_omp = seconds
-   !$ stopt_omp = omp_get_wtime( )
+   !$ stopt_omp = OMP_GET_WTIME( )
    !$ seconds_omp =  stopt_omp - startt_omp
    
   CALL PRINT_OUTPUT_RESULT()
@@ -1620,36 +1624,36 @@ PROGRAM NESTED_FIT
    
   END SUBROUTINE
 
-  SUBROUTINE B_SET_OMP_THREADS(this, invalue)
-   CLASS(argdef_t), INTENT(IN)    :: this
-   CHARACTER(LEN=512), INTENT(IN) :: invalue
-   INTEGER :: num_threads, ioerr
+!   SUBROUTINE B_SET_OMP_THREADS(this, invalue)
+!    CLASS(argdef_t), INTENT(IN)    :: this
+!    CHARACTER(LEN=512), INTENT(IN) :: invalue
+!    INTEGER :: num_threads, ioerr
 
-   IF(parallel_on) THEN
-       READ(invalue, *, iostat=ioerr) num_threads
-       IF(ioerr.NE.0) THEN ! No short-circuit eval in Fortran
-           CALL LOG_WARNING_HEADER()
-           CALL LOG_WARNING('Failed to set thread count. Expected a number but got: '//TRIM(invalue))
-           CALL LOG_WARNING('Defaulting to processor count.')
-           CALL LOG_WARNING_HEADER()
+!    IF(parallel_on) THEN
+!        READ(invalue, *, iostat=ioerr) num_threads
+!        IF(ioerr.NE.0) THEN ! No short-circuit eval in Fortran
+!            CALL LOG_WARNING_HEADER()
+!            CALL LOG_WARNING('Failed to set thread count. Expected a number but got: '//TRIM(invalue))
+!            CALL LOG_WARNING('Defaulting to processor count.')
+!            CALL LOG_WARNING_HEADER()
 
-           num_threads = OMP_GET_NUM_PROCS()
-       ELSEIF(num_threads.EQ.0) THEN
-           num_threads = OMP_GET_NUM_PROCS()
-       ELSEIF(num_threads.LT.0) THEN
-           CALL LOG_WARNING_HEADER()
-           CALL LOG_WARNING('Failed to set thread count. Expected a number in bounds [0, inf[.')
-           CALL LOG_WARNING('Defaulting to processor count.')
-           CALL LOG_WARNING_HEADER()
+!            num_threads = OMP_GET_NUM_PROCS()
+!        ELSEIF(num_threads.EQ.0) THEN
+!            num_threads = OMP_GET_NUM_PROCS()
+!        ELSEIF(num_threads.LT.0) THEN
+!            CALL LOG_WARNING_HEADER()
+!            CALL LOG_WARNING('Failed to set thread count. Expected a number in bounds [0, inf[.')
+!            CALL LOG_WARNING('Defaulting to processor count.')
+!            CALL LOG_WARNING_HEADER()
 
-           num_threads = OMP_GET_NUM_PROCS()
-       ENDIF
+!            num_threads = OMP_GET_NUM_PROCS()
+!        ENDIF
 
-       CALL LOG_TRACE('OpenMP using '//TRIM(ADJUSTL(INT_TO_STR_INLINE(num_threads)))//' threads.')
-       CALL OMP_SET_NUM_THREADS(num_threads)
-   ENDIF
+!        CALL LOG_TRACE('OpenMP using '//TRIM(ADJUSTL(INT_TO_STR_INLINE(num_threads)))//' threads.')
+!        CALL OMP_SET_NUM_THREADS(num_threads)
+!    ENDIF
 
-   ! Silently ignore
-  END SUBROUTINE
+!    ! Silently ignore
+!   END SUBROUTINE
 
 END PROGRAM NESTED_FIT

@@ -22,7 +22,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   ! Module for proffiling
   USE MOD_PERFPROF
 
-!#ifdef OPENMP
+!#ifdef OPENMP_ON
   USE OMP_LIB
 !#endif
 
@@ -83,12 +83,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   CHARACTER :: fparval_fmt*32
   INTEGER(4) :: n_call_cluster, n_call_cluster_it, n_calc
   INTEGER(4), PARAMETER :: n_call_cluster_it_max=10, n_call_cluster_max=100
-
-  ! OPENMP stuff
-#ifdef OPENMP_ON
-  INTEGER(4) :: nthreads=1
-  nthreads = omp_get_max_threads()
-#endif
 
   PROFILED(NESTED_SAMPLING)
 
@@ -220,13 +214,15 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
     CALL LOG_ERROR_HEADER()
   END IF
 
+
   ! Present minimal value of the likelihood
   min_live_like = live_like(1)
+
   ! Degugging ???
-  print *, "Max threads:", omp_get_max_threads()
-  print *, "Num threads in parallel region:"
+  !$ print *, "Max threads:", nth 
+  !$ print *, "Num threads in parallel region:"
   !$omp parallel
-  print *, "Thread", omp_get_thread_num(), "active in parallel region"
+  !$ print *, "Thread", omp_get_thread_num(), "active in parallel region"
   !$omp end parallel
 
   ! Main parallel region
@@ -243,11 +239,31 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   n = 1
 
   main_loop: DO WHILE ((.NOT. normal_exit) .AND. (.NOT. early_exit))
-     ! ##########################################################################
 
-   !write(*,*) live_ready, 'at the start of the main loop'  ! Debugging ???
+
+      ! Start live points search in parallel -------------------------------------------------------------------------------------------------
+      it = 1
+      !$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) PRIVATE(it) &
+      !$OMP SHARED(live_searching,live_ready,n,itry,ntries,min_live_like,live_like,live,nth,live_like_new,live_new,icluster,too_many_tries)  
+      DO it=1,nth
+         IF(.NOT.live_ready(it).AND..NOT.live_searching(it)) THEN
+         !write(*,*) 'it: ', it,  'live_ready(it): ', live_ready(it), 'in search loop'  ! Debugging ???
+            live_searching(it) = .true.
+            CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
+            live_like_new(it),live_new(it,:),icluster(it),ntries(it),too_many_tries(it))
+            live_searching(it) = .false.
+            live_ready(it) = .true.
+         END IF
+      END DO
+      !$OMP END PARALLEL DO
+      ! --------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+     !write(*,*) live_ready, 'at the start of the main loop'  ! Debugging ???
      
-     ! Initial checks and operations -------------------------------------------------------------------------------------------
+     ! Initial checks and operations --------------------------------------------------------------------------------------------------------
 
      ! Force clustering if slide sampling is selected
      IF (make_cluster) THEN
@@ -315,23 +331,6 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
       ! --------------------------------------------------------------------------------------------------------------------------------------
 
 
-      
-      ! Start live points search in parallel -------------------------------------------------------------------------------------------------
-      it = 1
-      !$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) PRIVATE(it) &
-      !$OMP SHARED(live_searching,live_ready,n,itry,ntries,min_live_like,live_like,live,nth,live_like_new,live_new,icluster,too_many_tries)  
-      DO it=1,nth
-         IF(.NOT.live_ready(it).AND..NOT.live_searching(it)) THEN
-         !write(*,*) 'it: ', it,  'live_ready(it): ', live_ready(it), 'in search loop'  ! Debugging ???
-            live_searching(it) = .true.
-            CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
-            live_like_new(it),live_new(it,:),icluster(it),ntries(it),too_many_tries(it))
-            live_searching(it) = .false.
-            live_ready(it) = .true.
-         END IF
-      END DO
-      !$OMP END PARALLEL DO
-      ! --------------------------------------------------------------------------------------------------------------------------------------
         
       ! -------------------------------------!
       !     Subloop for threads starts       !
