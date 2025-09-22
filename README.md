@@ -97,14 +97,17 @@ git clone https://github.com/martinit18/nested_fit.git
 # Make build directory
 mkdir -p nested_fit/build
 
-# Configure
-cmake -S nested_fit -B nested_fit/build -DOPENMP=ON -DCMAKE_BUILD_TYPE=Release
+# Configure (and specify install prefix if required)
+cmake -S nested_fit -B nested_fit/build -DOPENMP=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=<install_path>
 
 # Compile and install
 cmake --build nested_fit/build --config Release
 
 # Now you will have the nested_fit binary available at nested_fit/bin/nested_fit_xxx
 export PATH=$PATH:<your_clone_path>/nested_fit/bin
+
+# Or alternatively install from within your build tool
+cmake --build nested_fit/build --target install
 
 # Now install the python library in editable mode skipping compilation
 pip install -e ./nested_fit -v
