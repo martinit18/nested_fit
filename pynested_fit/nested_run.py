@@ -566,14 +566,14 @@ class Configurator():
         - output_mode='live': live output on screen
         - output_mode='full': full output with graphs (not working on mac yet)
         '''
-        version = imp_version('nested_fit')
+        nf_bin = self._get_nf_realpath()
 
         self._write_yaml_file(path)
 
         if output_mode == 'full':
 
             self._nf_process = subprocess.Popen(
-                [f'nested_fit{version}', '-lo', '-v', 'error'],
+                [nf_bin, '-lo', '-v', 'error'],
                 stdout=subprocess.PIPE,
                 cwd=pathlib.Path(path).resolve(),
                 encoding='utf-8',
@@ -596,7 +596,7 @@ class Configurator():
         elif output_mode == 'none':
 
             self._nf_process = subprocess.Popen(
-                [f'nested_fit{version}'],
+                [nf_bin],
                 stdout=subprocess.PIPE, # NOTE: (Cesar) PIPE for errors
                 cwd=pathlib.Path(path).resolve()
             )
@@ -611,7 +611,7 @@ class Configurator():
         elif output_mode == 'live':
 
             self._nf_process = subprocess.Popen(
-                [f'nested_fit{version}'],
+                [nf_bin],
                 stdout=subprocess.PIPE,
                 cwd=pathlib.Path(path).resolve(),
                 encoding='utf-8',
@@ -664,6 +664,9 @@ class Configurator():
             self.logger.error('Could not load nested_fit\'s output result.')
             self.logger.error(f'I/O exception {e}')
             return None
+
+    def _get_nf_realpath(self):
+        return os.path.abspath(os.path.dirname(os.path.realpath(__file__))) + '/nested_fit' + imp_version('nested_fit')
 
     def _assign_kwargs(self, kwargs):
         for kw, vw in kwargs.items():
