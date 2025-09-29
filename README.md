@@ -39,201 +39,105 @@ email: c.godinho AT campus.fct.unl.pt
 ## Quick start examples
 
 **Quick start with google colab:** 
-[Download](https://github.com/martinit18/nested_fit/blob/master/examples/jupyter_notebooks/quick_start_with_google_colab.ipynb)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/martinit18/nested_fit/blob/master/examples/jupyter_notebooks/quick_start_with_google_colab.ipynb)
-
-**ICFO tutorial 2024:**
-[Download](https://github.com/martinit18/nested_fit/blob/master/exercises/exercices_ICFO/ICFO2024_nested_fit_tutorial.ipynb)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/martinit18/nested_fit/blob/master/exercises/exercices_ICFO/ICFO2024_nested_fit_tutorial.ipynb)
+[Download](https://github.com/martinit18/nested_fit/blob/dev/examples/jupyter_notebooks/quick_start_with_google_colab.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/martinit18/nested_fit/blob/dev/examples/jupyter_notebooks/quick_start_with_google_colab.ipynb)
 
 Other jupyter notebook examples can be found in `examples/jupyter_notebooks`.
 
-## Installation instructions 
+## Installation instructions
+> :warning: Windows support is deprecated. Compile at own risk.
 
-If you have to install everything from scratch, please refer to the file *STEPBYSTEP_INSTALL.md*
-
-### Quick installation (to fully be tested)
-In the directory of your choice in the terminal execute the following commands:
-- (`python -m venv <your_virtual_env_name>`)  This is optional to create a Python virtual environment
-- (`source <your_virtual_env_name>/bin/activate`) This is optional to activate your virtual environment 
-- `git clone https://github.com/martinit18/nested_fit.git`
-- `mkdir -p nested_fit/build`
-- `cd nested_fit/build`
-- `cmake -DOPENMP=ON -DCMAKE_BUILD_TYPE=Release ..`
-- `cmake --build . --config Release --target install`
-- `cd ..`
-- `pip install . -v`
-- and to execute the program in any terminal, add the exetuable in your path with (in your .bashrc or similar) <br>
-  `export PATH=$PATH:<your installation directory>/nested_fit/bin`
-
-To test if everything is working, go to the directory `examples/data_analysis/aaa_simple_example/legacy_func_input` and run `nested_fit_xxx`<br>
-**NOTE:** 
-- If needed, activate your Python virtual environment before using the Nested Fit:<br>
-         `source <path_to_your_virtual_env_name>/bin/activate`
-- **This installation may not works with ANACONDA**
-
-
-### Generalities for the installation
-
-1) The first step of the installation is the compilation using `cmake` or `make`commands. The detailed instructions are presented below.
-
-2) Then, to have all python tools available, you should use `pip`command locally with the commands
+### Using PIP
+For most users if you are running on Linux or MacOS (x86_64 only!), chances are you can just install directly from pip.
 ```sh
-pip install . -v
-```
-or 
-```sh
-pip install -e .
-```
-for the editable installation.
-
-### From source (CMake)
-
-You will have more control on system specific optimizations.
-
-**Prerequisite**:
-- CMake
-- Fortran build toolchain (`gcc`, `g++` and `gfortran` or `ifort` or `ifx`)
-- Python 3 with numpy, scipy, matplotlib, padas, getdist (optional)
-
-For properly install these requirement, please read also `STEPBYSTEP_INSTALL.md`. This is particularly important for **the installation in Mac OS with Silicon chip**
-
-**Instruction**:
-
-1. Get nested_fit:
-```sh
-git clone git@github.com:martinit18/nested_fit.git
-```
-2. Configure cmake (with eventually some options, see below):
-```sh
-cd nested_fit
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
+pipx install nested_fit
 ```
 
-3. Install nested_fit:
-
-```
-make
-```
-
-and then
-```
-make install
+### Installing from source (automatic)
+If you are not running intel x86_64 you can install via the following script:
+```bash
+curl -sSL https://raw.githubusercontent.com/martinit18/nested_fit/refs/heads/master/install.sh | bash
 ```
 
-Alternatively, you can compile and install at once via
-
-```sh
-cmake --build . --config Release --target install
+Or if you wish to install the dependencies manually beforehand:
+```bash
+curl -sSL https://raw.githubusercontent.com/martinit18/nested_fit/refs/heads/master/install.sh | bash -s -- --no-deps
 ```
-In this case the binary file will be installed in `$HOME/.local/bin`.
-To install in another directory run
-```sh
-cmake -DINSTALL_SYSTEM_WIDE=ON -DCMAKE_INSTALL_PREFIX=<your_dir> ..
+
+Or if you want to install a nightly version within a virtual environment:
+```bash
+curl -sSL https://raw.githubusercontent.com/martinit18/nested_fit/refs/heads/master/install.sh | bash -s -- --use-venv --nightly
 ```
-instead of `cmake ..`, where `<your_dir>/bin`. See below for more details about cmake options.
 
-These command will build two different executables in the bin directory: 
-- `nested_fitXXX` for likelihood function maximisation for data analysis,
-- `nested_fit_funcXXX` for functions maximisation not using data.
+### Installing from source (manual)
 
-If Python is found an utility for running and analysing data using nested_fit is also installed: the nested_py package.
+To manually install from source the following dependencies are required:
+- cmake ( >= 3.10 )
+- make
+- gcc
+- g++
+- gfortran
+- python3 ( >= 3.8 )
+- pipx
+
+If you wish to also build the python package for bindings and analysis support:
+```bash
+pipx install git+https://github.com/martinit18/nested_fit.git
+# or
+git clone https://github.com/martinit18/nested_fit.git
+pipx install ./nested_fit -v
+```
+
+If all else fails you will need to manually compile nested_fit from source and generate the python library in pure mode.
+This 'hack' is done via the editable installation mode:
+```bash
+# Clone the repo
+git clone https://github.com/martinit18/nested_fit.git
+
+# Make build directory
+mkdir -p nested_fit/build
+
+# Configure (and specify install prefix if required)
+cmake -S nested_fit -B nested_fit/build -DOPENMP=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=<install_path>
+
+# Compile and install
+cmake --build nested_fit/build --config Release
+
+# Now you will have the nested_fit binary available at nested_fit/bin/nested_fit_xxx
+export PATH=$PATH:<your_clone_path>/nested_fit/bin
+
+# Or alternatively install from within your build tool
+cmake --build nested_fit/build --target install
+
+# Now install the python library in editable mode skipping compilation
+pip install -e ./nested_fit -v
+```
+
+:warning: If you have further issues please refer to the file *STEPBYSTEP_INSTALL.md*.
+
+:warning: **This installation may not work with ANACONDA.**
 
 **CMake options**
 
 | Option             | Description                                                          | Default |
 |:-------------------|:---------------------------------------------------------------------|:-------:|
-|DEBUG               | Enable debug mode.                                                   | OFF     |
 |NORNG               | Set the nested_fit to use a set seed. Internal test use mainly.      | OFF     |
 |OPENMP              | Enable/Disable OpenMP support.                                       | OFF     |
-|OPENMPI             | Enable/Disable OpenMPI support.                                      | OFF     |
 |LAPACK              | Use LAPACK library functions instead of the internal ones.           | OFF     |
 |LTRACE              | Enable trace logging output. Will hinder performance.                | OFF     |
 |PPROF               | Enable performance counter profilling.                               | OFF     |
-|INSTALL_SYSTEM_WIDE | Install for all users (differs for each OS). Requires elevated user. | OFF     |
 
+## General comments
+- After a default installation via pipx (directly via PyPI or git clone) or script `nested_fit_xxx` will be aliased as `nested_fit`.
+- Only if you installed via the manual and editable mode will you be required to use `nested_fit_xxx`.
 
-
-You can pass in options on the cmake generation step via: `cmake -D<option_name>=<ON/OFF> ..`\
-These will prevail any time you run your build tools commands.
-
-With the last option, you can also specify a defined directory with in addition the option `-DCMAKE_INSTALL_PREFIX=<your_dir>`
-
-An useful example of configuration and compilation with parallelization and verbosity:
-```sh
-cmake -DOPENMP=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DINSTALL_SYSTEM_WIDE=ON -DCMAKE_INSTALL_PREFIX=$HOME -DCMAKE_BUILD_TYPE=Release ..
-
-cmake --build . --config Release --target install 
-```
-
-### From source (GNU autotools)
-:warning: This mode is only for compatibility and supports only a few features. The `CMake` method should be preferred if available.
-1. Get nested_fit:
-```sh
-git clone git@github.com:martinit18/nested_fit.git
-```
-2. Configure:
-```sh
-cd nested_fit
-mkdir build && cd build
-../configure
-```
-3. Install nested_fit:
-```sh
-make install
-```
-
-The outcome of these commands is similar to the `CMake` source build step. Only a few option are available.
-You can check them with: `../configure --help` and take a look under `Optional Features`.
-
-NOTE for getdist function in the python library:\
-To make it work, change the file  xxx/pythonxx/site-packages/getdist/plots.py
-`matplotlib.use('Agg')` to `matplotlib.use('TkAgg')`.
-
-
-### With Makefile
-**Prerequisite**:
-- GNU Make (for Mod_metadata.f90 to be updated, GNU Make 4.0 is the minimum version required)
-- Fortran compiler (gfortran by default)
-- Python 3 with numpy, scipy, matplotlib, pandas, getdist
-
-**Instruction**:
-1. Download the latest version or clone the repository
-2. Run the commands:
-```
-cd nested_fit
-cd src
-make
-```
-These command will build two different executables in the bin directory: 
-- `nested_fitXXX` for likelihood function maximisation for data analysis,
-- `nested_fit_funcXXX` for functions maximisation not using data. 
-
-Running `make like` will only build the first executable while running `make func` will only build the second executable.
-
-**Makefile options**
-
-You can choose which compiler to use with the `COMP` option:
-- `ifort` when it is set to `i`,
-- `gfortran` when it is set to `g` .  
-
-The other options for the Makefile are the same as the ones for the CMake. For an option to be set to OFF, it needs to be commented in the Makefile.
-
-### General comments
-
-- For the moment, the options OPENMPI and OPENMP cannot be selected at the same time. If both are set to ON, OPENMP will be set to OFF.
-
-- The options NORNG and OPENMP cannot be selected at the same time. If both are set to ON, OPENMP will be set to OFF.
-
-### Comments for macOS users
-
-If you are running `gfortran` installed with homebrew, you should avoid use `gcc` and `g++` from homebrew as well and not the macOS preinstalled one. For this make sure that homebrew/bin has a priority on the other bin directories (for put something like `export PATH=/opt/homebrew/bin:<other stuff of you>:$PATH` in your .bashrc) and make sure your `g++` is pointing the homebrew `g++-XX`. Eventually create the link:
-```sh
-cd  /opt/homebrew/bin
-ln -s g++-XX g++ 
-```
-The use of the following cmake option can help too:
+## Comments for macOS users
+- If you are running `gfortran` installed with homebrew, you should use `gcc` and `g++` from homebrew as well and not the macOS preinstalled one.
+For this make sure that homebrew/bin has a priority on the other bin directories
+(e.g. something like `export PATH=/opt/homebrew/bin:<other stuff of you>:$PATH` in your .bashrc)
+making sure your `g++` is pointing the homebrew `g++-XX`.
+Eventually creating the `ln -s /opt/homebrew/bin/g++-XX g++` link if required.
+- The use of the following cmake option can help too:
 ``-DCMAKE_Fortran_COMPILER=`which gfortran` -DCMAKE_C_COMPILER=`which gcc` -DCMAKE_CXX_COMPILER=`which g++``
 
 ## File descriptions
@@ -255,6 +159,8 @@ The corresponding information gain and the Bayesian complexity are also provided
 - `nf_output_diag.dat`: contains likelihood values corresponding to the birth of the discarded and final live points, and the rank of the new live point once inserted in the enemble. These values are used for statistics of the evidence (with the help of Anesthetic library) and for diagnostics.
 For this purpose, the python module `nested_py` can be used also for compressed `nf_output_points.txt` files (using gzip with the name `nf_output_points.txt.gz`).
 Together with this file, also the files `nf_output_points.paramnames` and `nf_output_points.ranges` are created for the use of GetDist and Anesthetic python libraries.
+- `nf_output_cluster_mean_std.dat`: contains the number of clusters, number of point per clusters, and mean and standard deviations for each cluster (if the clustering option is activated).
+- `nf_output_cluster_max.dat`: contains the number of clusters, the maximum value of the likelihood and the corresponding parameter values (if the clustering option is activated).
 
 **Details of the input file line by line**
 
@@ -263,7 +169,7 @@ A complete selection of input files example is given in the folder `examples` wh
 It follows a complete description of `nf_input.yaml` file.
 
 ```yaml
-version: 5.4                             # Program version
+version: 5.5                             # Program version
 calculation_mode: DATA                   # Type of calculation
 ```
 The type of calculation is spefified by `calculation_mode` variable. 
@@ -317,7 +223,6 @@ More details on the function definitions are presented below [here](#Function-De
 - LaTeX specification [here](#LaTeX-Specification).
 - C++/Fortran API specification [here](#C++/Fortran-Specification).
 
-
 ```yaml
 search:
     livepoints: 200     # Number of live points
@@ -328,7 +233,21 @@ search:
     tries_mult: 100     # Max tries multiplier
     num_tries: 1        # Number of runs
     max_steps: 100000   # Max number of steps before stop
+```
 
+For the moment there are, 
+- four random walks: `RANDOM_WALK`, `RANDOM_WALK_SYN`, `RANDOM_WALK_RECENT`,`RANDOM_WALK_NO_DB`. 
+For `RANDOM_WALK_NO_DB` (where two alternative methods are implemented, see Ref. [C]) or just one:  `RANDOM_WALK_SYN` (where only the synthetic live point creation is implemented) and `RANDOM_WALK_RECENT` where we recenter with respect to the mean value of the live point. 
+Except for the simplest researche, the detailed balance is maybe not respected but it can be more efficient for finding the minima for certain cases.
+- A uniform search around each live point `UNIFORM`, 
+- Three versions of slice sampling: `SLICE_SAMPLING`, `SLICE_SAMPLING_TRANSF`,`SLICE_SAMPLING_ADAPT`.  The first two correspond, respectively, to the search being done in two different spaces (transformed and real) with the first one faster than the second one. `SLICE_SAMPLING_ADAPT` an adaptable step but the detailed balance is maybe not respected. 
+
+The first two parameters of the above line are specific to the search algorithm:
+- `RANDOM_WALK`,  `RANDOM_WALK_NO_DB` par. 1: fraction of standard deviation for each jump, par. 2: number of jumps. Suggested values: 0.1-0.2, 10-40. 
+-  `SLICE_SAMPLING`, `SLICE_SAMPLING_TRANSF`, and `SLICE_SAMPLING_ADAPT` par. 1: fraction of standard deviation for segment exploration, par. 2: number of jumps. Suggested values: ~1, 3-5. 
+- `UNIFORM` par. 1: fraction of standard deviation for the box size, par. 2: number of jumps. Suggested values: 0.1-1, 1.
+
+```yaml
 convergence:
     method:    LIKE_ACC  # Method used for convergence 
     accuracy:  1.E-05    # Evidence final accuracy (in this case)
@@ -343,14 +262,7 @@ For the moment, there are three convergence methods:
 After convergence is reached, all remaining live points are assigned: 
 - the logarithm of the likelihoods averaged over the live points (`LIKE_ACC` case),
 - the opposite of the energies averaged over the live points (`ENERGY_ACC` and `ENERGY_MAX` cases).
-```
-RANDOM_WALK         # Type of search of live points
-0.1  20   100  10   # Param. search algo.(2), max n. tries, max of max tries
-```
-For the moment, a random walk (`RANDOM_WALK`), a uniform search around each live point (`UNIFORM`), two versions of slice sampling (`SLICE_SAMPLING_TRANSF` and `SLICE_SAMPLING`), corresponding to the search being done in two different spaces (transformed and real), and slice sampling with an adaptable step (`SLICE_SAMPLING_ADAPT`) are implemented. The first two parameters of the above line are specific to the search algorithm:
-- `RANDOM_WALK` par. 1: fraction of standard deviation for each jump, par. 2: number of jumps. Suggested values: 0.1-0.2, 10-40.
-- `SLICE_SAMPLING_TRANSF`, `SLICE_SAMPLING` and `SLICE_SAMPLING_ADAPT` par. 1: fraction of standard deviation for segment exploration, par. 2: number of jumps. Suggested values: ~1, 3-5.
-- `UNIFORM` par. 1: fraction of standard deviation for the box size, par. 2: number of jumps. Suggested values: 0.1-1, 1.
+
 
 
 ```yaml
@@ -363,10 +275,10 @@ clustering:
 
 For the moment four clustering algorithms are implemented. The two parameters are specific to the method
 For the second option:
-- `f`: mean-shift with flat kernel (par. 1: distance)
+- `f`: mean-shift with flat kernel (par. 1: distance (relative to the maximum distance))
 - `g`: mean-shift with gaussian kernel (par. 1: distance, par. 2: bandwidth)
 - `d`: dbscan (par. 1: distance, par. 2 : minimum number of neighbours)
-- `s`: agglomerative clustering with single linkage (par. 1: distance limit (in percentage of the maximum distance))
+- `s`: agglomerative clustering with single linkage (par. 1: distance limit)
 - `k`: k nearest neighbours (no parameters)
 
 
@@ -463,13 +375,19 @@ Examples of use of a legacy function can be found in `examples/data_analysis/aaa
 
 ## Present version and history of the past versions
 
-The present version is 5.4.1\
+The present version is 5.5.4\
 New features:
-- Merge of executable for data analysis and function exploration via the new calculation mode variable
-- Debug of not-yet  working feature of the version 5 compared to the version 4
+- Add PyPI binary distribution for x86_64 macOS
+- Add PyPI binary distribution for multiple linux systems
+- Add PyPI source distribution as a default for other systems
+- Rename CLI command to `nested_fit` to use the latest installed version via pip
 
 
 Previous versions are:
+ - 5.4 Merge of executable for data analysis and function exploration via the new calculation mode variable \
+Debug of not-yet  working feature of the version 5 compared to the version 4 \
+New outputs with maxima of each cluster \
+New RANDOM_WALK function with detailed balance respected
  - 5.3 New jupyter notebooks running in Google Colab \
 New innterpolation functions in python library \
 Live display when sampling from python. Works in console and jupyter notebooks \

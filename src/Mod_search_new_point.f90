@@ -1,39 +1,33 @@
 MODULE MOD_SEARCH_NEW_POINT
-  ! Automatic Time-stamp: <Last changed by martino on Friday 15 November 2024 at CET 22:36:28>
+  ! Automatic Time-stamp: <Last changed by martino on Tuesday 16 September 2025 at CEST 22:57:29>
   ! Module for search of new points
-
-  ! Module for the input parameter definition
-  USE MOD_PARAMETERS !, ONLY:  npar, par_step, par_bnd1, par_bnd2, par_fix, searchid
+  
   ! Module for likelihood
   USE MOD_LIKELIHOOD_GEN, ONLY: LOGLIKELIHOOD
   ! Module for cluster analysis
-  USE MOD_CLUSTER_ANALYSIS
-  ! Module for math
-  USE MOD_MATH
+  USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_on, GET_CLUSTER_MEAN_SD
   ! Module for perfprof
   USE MOD_PERFPROF
-  ! Module for covariance matrix
-  USE MOD_COVARIANCE_MATRIX
+  ! Module for logging
+  USE MOD_LOGGER, ONLY: LOG_ERROR, LOG_ERROR_HEADER
   
-  !$ USE OMP_LIB
+#ifdef OPENMP_ON
+  USE OMP_LIB
+#endif
 
   IMPLICIT NONE
 
   REAL(8), DIMENSION(:), ALLOCATABLE :: live_ave, live_sd
-  INTEGER(4) :: n_call_clusterj=0
-  INTEGER(4), PARAMETER :: n_call_cluster_it_maxj=3, n_call_cluster_maxj=10
 !#ifdef LAPACK_ON
 !  EXTERNAL :: dpotrf, dtrtri, dtrmv
 !#endif
 
 CONTAINS
   
-  ! TODO(César): Remap all of these writes to the mpi_status_process
-  
   SUBROUTINE INIT_SEARCH_METHOD()
-#ifdef OPENMPI_ON
-    INTEGER(4) :: mpi_ierror
-#endif
+
+   USE MOD_PARAMETERS, ONLY: search_method, searchid
+
     IF (search_method.eq.'RANDOM_WALK') THEN
        searchid = 0
     ELSE IF(search_method.EQ.'UNIFORM') THEN
@@ -44,6 +38,12 @@ CONTAINS
        searchid = 3
     ELSE IF(search_method.EQ.'SLICE_SAMPLING_ADAPT') THEN
        searchid = 4
+    ELSE IF(search_method.EQ.'RANDOM_WALK_SYN') THEN
+       searchid = 5
+    ELSE IF(search_method.EQ.'RANDOM_WALK_RECENT') THEN
+       searchid = 6
+    ELSE IF(search_method.EQ.'RANDOM_WALK_NO_DB') THEN
+       searchid = 7
     ELSE
        CALL LOG_ERROR_HEADER()
        CALL LOG_ERROR('Error of the search type name in Mod_search_new_point module.')
@@ -53,11 +53,66 @@ CONTAINS
     END IF
   END SUBROUTINE INIT_SEARCH_METHOD
   
-   
+  !#####################################################################################################################
+  
+  SUBROUTINE MAKE_PRELIM_CALC(live)
+    ! Subroutine to update the calculation of standard deviation, mean, covariance and Cholesky decomposition
+    USE MOD_PARAMETERS, ONLY: npar, nlive, searchid
+    USE MOD_COVARIANCE_MATRIX, ONLY: CREATE_MAT_COV, ALLOCATE_PAR_VAR, par_var
+    IMPLICIT NONE
+    REAL(8), DIMENSION(nlive,npar), INTENT(IN) :: live
+    
+    SELECT CASE (searchid)
+       ! For Slice sampling methods, recalculate the covariance matrix at each step
+    CASE (2,3,4)
+       ! Create covariance matrix and Cholesky decomposition
+       CALL ALLOCATE_PAR_VAR()
+       CALL CREATE_MAT_COV(live(:,par_var))
+    CASE DEFAULT
+       ! For the other methods, just recalculate the mean and standard deviation
+       CALL MAKE_LIVE_MEAN_SD(live) 
+    END SELECT
+    
+  END SUBROUTINE MAKE_PRELIM_CALC
 
-  SUBROUTINE MAKE_LIVE_MEAN_SD(live)  
+    !#####################################################################################################################
+  
+  SUBROUTINE REMAKE_CALC(live)
+    ! Subroutine to update the calculation of standard deviation, mean, covariance and Cholesky decomposition
+    USE MOD_PARAMETERS, ONLY: npar, nlive, searchid
+    USE MOD_COVARIANCE_MATRIX, ONLY: CREATE_MAT_COV, ALLOCATE_PAR_VAR, REALLOCATE_MAT_COV, FILL_MAT_COV, par_var
+    USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_on, make_cluster_internal, ncluster, MAKE_CLUSTER_STD
+    IMPLICIT NONE
+    REAL(8), DIMENSION(nlive,npar), INTENT(IN) :: live
+    INTEGER(4) :: i
+    
+    SELECT CASE (searchid)
+       ! For Slice sampling methods, recalculate the covariance matrix at each step
+    CASE (2,3,4)
+       ! Create covariance matrix and Cholesky decomposition
+         IF(make_cluster_internal) CALL REALLOCATE_MAT_COV() ! Adapt the covariance matrix and Cholesky decomposition to the number of clusters
+         CALL FILL_MAT_COV(live(:,par_var)) ! Fill the covariance matrix and Cholesky decomposition
+    CASE DEFAULT
+      ! For the other methods, just recalculate the mean and standard deviation
+      IF (.NOT.cluster_on) THEN
+         CALL REMAKE_LIVE_MEAN_SD(live) 
+      ELSE
+         ! If cluster analysis, recalculate the standard deviation of all clusters
+         DO i=1,ncluster
+            CALL MAKE_CLUSTER_STD(live,i)
+         END DO
+      END IF
+    END SELECT
+    
+  END SUBROUTINE REMAKE_CALC
+  
+  !#####################################################################################################################
+
+  SUBROUTINE MAKE_LIVE_MEAN_SD(live)
+   ! Subroutine to calculate the mean and standard deviation of the live points
    
-  USE MOD_PARAMETERS, ONLY: nlive
+  USE MOD_PARAMETERS, ONLY: nlive, par_in, npar, par_fix
+  USE MOD_MATH, ONLY: MEANVAR
 
   REAL(8), INTENT(IN), DIMENSION(nlive,npar) :: live
   INTEGER(4) :: i
@@ -69,7 +124,6 @@ CONTAINS
   live_var = 0.
   live_sd  = 0.
   
-!!$OMP PARALLEL DO
   DO i=1,npar
      IF(par_fix(i).NE.1) THEN
         CALL MEANVAR(live(:,i),nlive,live_ave(i),live_var(i))
@@ -77,7 +131,6 @@ CONTAINS
         live_ave(i) = par_in(i)
      END IF
   END DO
-!!$OMP END PARALLEL DO
   live_sd = DSQRT(live_var)
    
   END SUBROUTINE MAKE_LIVE_MEAN_SD
@@ -86,7 +139,8 @@ CONTAINS
 
   SUBROUTINE REMAKE_LIVE_MEAN_SD(live)  
    
-   USE MOD_PARAMETERS, ONLY: nlive
+  USE MOD_PARAMETERS, ONLY: nlive, npar, par_fix
+  USE MOD_MATH, ONLY: MEANVAR
  
    REAL(8), INTENT(IN), DIMENSION(nlive,npar) :: live
    INTEGER(4) :: i
@@ -96,23 +150,29 @@ CONTAINS
    live_var = 0.
    live_sd  = 0.
    
- !!$OMP PARALLEL DO
    DO i=1,npar
       IF(par_fix(i).NE.1) THEN
          CALL MEANVAR(live(:,i),nlive,live_ave(i),live_var(i))
          live_sd(i) = DSQRT(live_var(i))
       END IF
    END DO
- !!$OMP END PARALLEL DO
     
    END SUBROUTINE REMAKE_LIVE_MEAN_SD
 
    !#####################################################################################################################
 
    SUBROUTINE DEALLOCATE_SEARCH_NEW_POINTS 
+      USE MOD_PARAMETERS, ONLY: searchid
+      USE MOD_COVARIANCE_MATRIX, ONLY: mat_cov, mat_chol
+
       ! Close allocated memory
-    
-      DEALLOCATE(live_ave,live_sd)
+      SELECT CASE (searchid)
+       ! For Slice sampling methods, recalculate the covariance matrix at each step
+      CASE (2,3,4)
+         DEALLOCATE(mat_cov,mat_chol)
+      CASE DEFAULT
+         DEALLOCATE(live_ave,live_sd)
+      END SELECT
    
    END SUBROUTINE DEALLOCATE_SEARCH_NEW_POINTS
   
@@ -121,7 +181,8 @@ CONTAINS
   SUBROUTINE SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
           live_like_new,live_new,icluster,ntries,too_many_tries)
     ! Main search function
-    USE MOD_PARAMETERS, ONLY: nlive
+
+    USE MOD_PARAMETERS, ONLY: nlive, searchid, npar, par_in, par_fix, par_bnd1, par_bnd2
 
 
     INTEGER(4), INTENT(IN) :: n, itry
@@ -152,6 +213,15 @@ CONTAINS
       CASE (4)
          CALL SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
           live_like_new,live_new,icluster,ntries,too_many_tries)
+      CASE (5)
+         CALL RANDOM_WALK_SYN(n,itry,min_live_like,live_like,live, &
+          live_like_new,live_new,icluster,ntries,too_many_tries)
+      CASE (6)
+         CALL RANDOM_WALK_RECENT(n,itry,min_live_like,live_like,live, &
+          live_like_new,live_new,icluster,ntries,too_many_tries)
+      CASE (7)
+         CALL RANDOM_WALK_NO_DB(n,itry,min_live_like,live_like,live, &
+          live_like_new,live_new,icluster,ntries,too_many_tries)
     END SELECT
 
   END SUBROUTINE SEARCH_NEW_POINT
@@ -160,10 +230,11 @@ CONTAINS
 
   SUBROUTINE RANDOM_WALK(n,itry,min_live_like,live_like,live, &
        live_like_new,live_new,icluster,ntries,too_many_tries)
-  ! SUBROUTINE LAWN_MOWER_ROBOT(min_ll,nlive,live_like,live,new_live_like,new_live)
+  ! Simple random walk search function
 
 
-    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in, par_bnd1, par_bnd2, &
+          par_fix, npar, par_step
 
     ! MCMC search function from Leo's ideas and mine
     INTEGER(4), INTENT(IN) :: n, itry
@@ -181,10 +252,11 @@ CONTAINS
     ! Other variables
     INTEGER(4) :: i, l, irn
     REAL(8) :: rn
-    INTEGER(4) :: n_call_cluster_itj
     REAL(8) :: sdfraction
     INTEGER(4) :: njump
     REAL(8) :: loglike
+    REAL(8), DIMENSION(npar) :: live_ave_s, live_sd_s
+
 
 
     PROFILED(RANDOM_WALK)
@@ -200,7 +272,6 @@ CONTAINS
     too_many_tries = .false.
     gval = 0.
 
-    n_call_cluster_itj=0
     sdfraction=search_par1
     njump=INT(search_par2)
 
@@ -209,22 +280,13 @@ CONTAINS
     istart= FLOOR((nlive-1)*rn+1)
     start_jump = live(istart,:)
 
-
-    ! Calculate momenta of the live points
+    ! Get the momenta of the live points if cluster analysis is on 
 400 IF (cluster_on) THEN
-       ! Identify cluster appartenance
-       icluster = p_cluster(istart)
-       ! Get for the specific cluster if the cluster analysis is on
-       ! Standard deviation
-       live_sd(:) = cluster_std(icluster,:)
-       IF(cluster_std(icluster,1).EQ.0.) THEN
-          ! If the cluster is formed only from one point, take the standard standard deviation
-          CALL REMAKE_LIVE_MEAN_SD(live)
-       END IF
-       ! and mean
-       live_ave(:) = cluster_mean(icluster,:)
+       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
+    ELSE
+       icluster = 0
+       live_sd_s = live_sd
     END IF
-
 
 
     ! Make several consecutive casual jumps in the region with loglikelyhood > minlogll
@@ -236,7 +298,7 @@ CONTAINS
        DO l=1,npar
           IF (par_fix(l).NE.1) THEN
 502          CALL RANDOM_NUMBER(rn)
-             new_jump(l) = start_jump(l) + live_sd(l)*sdfraction*(2.*rn-1.)
+             new_jump(l) = start_jump(l) + live_sd_s(l)*sdfraction*(2.*rn-1.)
              IF (new_jump(l).LT.par_bnd1(l).OR.new_jump(l).GT.par_bnd2(l)) THEN
                 ntries = ntries + 1
                 GOTO 502
@@ -272,91 +334,19 @@ CONTAINS
                 live_new = live(1,:)
                 GOTO 600
              END IF
-             ! Some test for desesperate seeking (for presence of several maxima)
-
-
-             ! DO CLUSTER ANALYSIS if selected, or use other randomizations
-             ! For all live points, assign a cluster number, which is used to calculate specific standard deviation
-             ! for the search of the new point
-
-             IF(.not.cluster_on) THEN
-                ! Store the present live points as they are
-                !OPEN(99,FILE='nf_intermediate_live_points.dat',STATUS= 'UNKNOWN')
-                !WRITE(99,*) '# n step =',  n-1
-                !WRITE(99,*) '# n tries =', n_ntries
-                !WRITE(99,*) '# Evidence of the step =', evstep(n-1)
-                !WRITE(99,*) '# Evidence accuracy =',  ADDLOG(evsum,live_like(nlive) + tlnrest(n-1)) - evsum
-                !WRITE(99,*) '# n     lnlikelihood     parameters'
-                !DO j=1,nlive
-                !   WRITE(99,*) j, live_like(j), live(j,:)
-                !END DO
-                !CLOSE(99)
-
-                ! Alternate the two techniques to find a new life point
-                CALL RANDOM_NUMBER(rn)
-                irn = FLOOR(2*rn+1)
-                IF(MOD(ntries,2).EQ.1) THEN
-                   ! My new technique: mix parameter values from different sets to hope to find a good new value
-                   !!$OMP PARALLEL DO
-                   DO l=1,npar
-                      IF (par_fix(l).NE.1) THEN
-                         CALL RANDOM_NUMBER(rn)
-                         istart= FLOOR((nlive-1)*rn+1)
-                         new_jump(l) = live(istart,l)
-                      END IF
-                   END DO
-                   !!$OMP END PARALLEL DO
-                ELSE
-                   ! Leo's technique, go between the average and this point
-                   !!$OMP PARALLEL DO
-                   DO l=1,npar
-                      IF (par_fix(l).NE.1) THEN
-                         CALL RANDOM_NUMBER(rn)
-                         new_jump(l) = live_ave(l) + (new_jump(l) - live_ave(l))*rn
-                      END IF
-                   END DO
-                   !!$OMP END PARALLEL DO
-                END IF
-                !
-
-                IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
-                   start_jump = new_jump
-                ELSE
-                   ! Choose a new random live point and restart all
-                   CALL RANDOM_NUMBER(rn)
-                   istart= FLOOR((nlive-1)*rn+1)
-                   start_jump = live(istart,:)
-                END IF
-                GOTO 500
-             ELSE
-                ! If cluster analysis, do not mix the points!!
-                ! Leo's technique only, go between the average and this point
-                !!$OMP PARALLEL DO
-                DO l=1,npar
-                   IF (par_fix(l).NE.1) THEN
-                      CALL RANDOM_NUMBER(rn)
-                      new_jump(l) = live_ave(l) + (new_jump(l) - live_ave(l))*rn
-                   END IF
-                END DO
-                !!$OMP END PARALLEL DO
-                IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
-                   start_jump = new_jump
-                ELSE
-                   ! Choose a new random live point and restart all
-                   CALL RANDOM_NUMBER(rn)
-                   istart= FLOOR((nlive-1)*rn+1)
-                   start_jump = live(istart,:)
-                END IF
-                GOTO 400
-             END IF
-
+             
+             ! Select a live point as starting point
+             CALL RANDOM_NUMBER(rn)
+             istart= FLOOR((nlive-1)*rn+1)
+             start_jump = live(istart,:)
+             
           END IF    ! End loop for ntries > maxtries
-
-          GOTO 501  ! Restart looking for new points without changing the starting point
- 
+          
+          GOTO 501  ! Restart looking for new points changing the starting point
+          
        END IF  ! End of loop with failure for likelihood value
     END DO
-
+    
 
     ! Final check of the last point for gaussian priors
     !CALL USERCONDITIONS(funcname,npar,par_fix,new_jump,par_in,par_step,par_bnd1,par_bnd2, &
@@ -384,15 +374,576 @@ CONTAINS
 600 CONTINUE
 
     RETURN
-    ! ------------------------------------------------------------------------------------
-
 
   END SUBROUTINE RANDOM_WALK
+  
+  ! ------------------------------------------------------------------------------------
+
+
+  SUBROUTINE RANDOM_WALK_NO_DB(n,itry,min_live_like,live_like,live, &
+       live_like_new,live_new,icluster,ntries,too_many_tries)
+   ! Random walk search function with synthetic live point creation and recentering the search (Leo's. method)
+    ! SUBROUTINE LAWN_MOWER_ROBOT(min_ll,nlive,live_like,live,new_live_like,new_live)
+    
+    
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in, par_bnd1, par_bnd2, &
+          par_fix, npar, par_step
+
+    ! MCMC search function from Leo's ideas and mine
+    INTEGER(4), INTENT(IN) :: n, itry
+    REAL(8), INTENT(IN) :: min_live_like
+    REAL(8), INTENT(IN), DIMENSION(nlive) :: live_like
+    REAL(8), INTENT(IN), DIMENSION(nlive,npar) :: live
+    REAL(8), INTENT(OUT) :: live_like_new
+    REAL(8), DIMENSION(npar), INTENT(OUT) :: live_new
+    INTEGER(4), INTENT(OUT) :: icluster, ntries
+    LOGICAL, INTENT(OUT) :: too_many_tries
+    ! MCMC new point search variables
+    REAL(8) :: gval
+    REAL(8), DIMENSION(npar) :: start_jump, new_jump
+    INTEGER(4) :: istart, n_ntries
+    ! Other variables
+    INTEGER(4) :: i, l, irn
+    REAL(8) :: rn
+    REAL(8) :: sdfraction
+    INTEGER(4) :: njump
+    REAL(8) :: loglike
+    REAL(8), DIMENSION(npar) :: live_ave_s, live_sd_s     
+    
+    PROFILED(RANDOM_WALK_NO_DB)
+    
+    ! Find new live points
+    ! ----------------------------------FIND_POINT_MCMC------------------------------------
+    new_jump = par_in
+    live_new = 0.
+    live_like_new = 0.
+    ntries   = 1
+    istart   = 0
+    n_ntries = 0
+    too_many_tries = .false.
+    gval = 0.
+    
+    sdfraction=search_par1
+    njump=INT(search_par2)
+    
+    ! Select a live point as starting point
+    CALL RANDOM_NUMBER(rn)
+    istart= FLOOR((nlive-1)*rn+1)
+    start_jump = live(istart,:)
+    
+    
+    ! Get the momenta of the live points if cluster analysis is on 
+400 IF (cluster_on) THEN
+       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
+    ELSE
+       icluster = 0
+       live_sd_s = live_sd
+    END IF
+    
+    
+
+    ! Make several consecutive casual jumps in the region with loglikelyhood > minlogll
+500 CONTINUE
+    ntries = 0
+    DO i=1,njump
+501    CONTINUE
+       ntries = ntries + 1
+       DO l=1,npar
+          IF (par_fix(l).NE.1) THEN
+502          CALL RANDOM_NUMBER(rn)
+             new_jump(l) = start_jump(l) + live_sd_s(l)*sdfraction*(2.*rn-1.)
+             IF (new_jump(l).LT.par_bnd1(l).OR.new_jump(l).GT.par_bnd2(l)) THEN
+                ntries = ntries + 1
+                GOTO 502
+             END IF
+          END IF
+       END DO
+       !!$OMP END PARALLEL DO
+
+       ! Check if the new point is inside the parameter volume defined by the minimum likelihood of the live points
+       IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
+          start_jump = new_jump
+       ELSE
+          ! Check failures
+          ! message of too many failures
+          ! Choose another point determinated with a specific method (at present mine)
+          
+          !
+          ! But before, if you already tried many times, do something different or eventually gave up
+          IF (ntries.GT.maxtries) THEN   ! Loop for ntries > maxtries
+             n_ntries = n_ntries + 1
+             ! If nothing is found, restart from a livepoint
+             ntries = 1
+             
+             !
+             !  WRITE(*,*) 'Too many tries to find new live points for try n.', &
+             !  itry,'!!!! More than',maxtries,&
+             !  'n_ntries =',n_ntries,' over ', maxntries, 'n. step =', n
+             
+             ! If you already did too much tries, gave up or start a cluster analysis
+             IF (n_ntries.GE.maxntries) THEN
+                too_many_tries=.true.
+                live_like_new=min_live_like
+                live_new = live(1,:)
+                GOTO 600
+             END IF
+             ! Some test for desesperate seeking (for presence of several maxima)
+
+
+             ! DO CLUSTER ANALYSIS if selected, or use other randomizations
+             ! For all live points, assign a cluster number, which is used to calculate specific standard deviation
+             ! for the search of the new point
+
+             IF(.not.cluster_on) THEN
+                ! Store the present live points as they are
+                !OPEN(99,FILE='nf_intermediate_live_points.dat',STATUS= 'UNKNOWN')
+                !WRITE(99,*) '# n step =',  n-1
+                !WRITE(99,*) '# n tries =', n_ntries
+                !WRITE(99,*) '# Evidence of the step =', evstep(n-1)
+                !WRITE(99,*) '# Evidence accuracy =',  ADDLOG(evsum,live_like(nlive) + tlnrest(n-1)) - evsum
+                !WRITE(99,*) '# n     lnlikelihood     parameters'
+                !DO j=1,nlive
+                !   WRITE(99,*) j, live_like(j), live(j,:)
+                !END DO
+                !CLOSE(99)
+
+                ! Alternate the two techniques to find a new life point
+                CALL RANDOM_NUMBER(rn)
+                irn = FLOOR(2*rn+1)
+                IF(MOD(ntries,2).EQ.1) THEN
+                   ! My new technique: mix parameter values from different sets to hope to find a good new value
+                   DO l=1,npar
+                      IF (par_fix(l).NE.1) THEN
+                         CALL RANDOM_NUMBER(rn)
+                         istart= FLOOR((nlive-1)*rn+1)
+                         new_jump(l) = live(istart,l)
+                      END IF
+                   END DO
+                ELSE
+                   ! Leo's technique, go between the average and this point
+                   DO l=1,npar
+                      IF (par_fix(l).NE.1) THEN
+                         CALL RANDOM_NUMBER(rn)
+                         new_jump(l) = live_ave_s(l) + (new_jump(l) - live_ave_s(l))*rn
+                      END IF
+                   END DO
+                END IF
+                !
+
+                IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
+                   start_jump = new_jump
+                ELSE
+                   ! Choose a new random live point and restart all
+                   CALL RANDOM_NUMBER(rn)
+                   istart= FLOOR((nlive-1)*rn+1)
+                   start_jump = live(istart,:)
+                END IF
+                GOTO 500
+             ELSE
+                ! If cluster analysis, do not mix the points!!
+                ! Leo's technique only, go between the average and this point
+                DO l=1,npar
+                   IF (par_fix(l).NE.1) THEN
+                      CALL RANDOM_NUMBER(rn)
+                      new_jump(l) = live_ave_s(l) + (new_jump(l) - live_ave_s(l))*rn
+                   END IF
+                END DO
+                IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
+                   start_jump = new_jump
+                ELSE
+                   ! Choose a new random live point and restart all
+                   CALL RANDOM_NUMBER(rn)
+                   istart= FLOOR((nlive-1)*rn+1)
+                   start_jump = live(istart,:)
+                END IF
+                GOTO 400
+             END IF
+
+          END IF    ! End loop for ntries > maxtries
+
+          GOTO 501  ! Restart looking for new points without changing the starting point
+ 
+       END IF  ! End of loop with failure for likelihood value
+    END DO
+
+
+    ! Final check of the last point for gaussian priors
+    !CALL USERCONDITIONS(funcname,npar,par_fix,new_jump,par_in,par_step,par_bnd1,par_bnd2, &
+    !     live_sd_s,start_jump,sdfraction,outlimits)
+    DO l=1,npar
+       IF(par_fix(l).NE.1) THEN
+          IF(par_step(l).GT.0) THEN
+             ! maximum of the distribution is 1 (and is not normalized to 1 as the previous line)
+             gval = dexp(-(new_jump(l)-par_in(l))**2/(2*par_step(l)**2))
+             CALL RANDOM_NUMBER(rn)
+             IF (rn.GT.gval) GOTO 500
+          END IF
+       END IF
+    END DO
+
+
+    ! Last(maybe useless) check
+    loglike = LOGLIKELIHOOD(npar, new_jump)
+    IF (loglike.LT.min_live_like) GOTO 500
+
+    ! Take the last point after jumps as new livepoint
+    live_new = new_jump
+    live_like_new = loglike
+
+600 CONTINUE
+
+    RETURN
+
+
+  END SUBROUTINE RANDOM_WALK_NO_DB
+
+  ! ------------------------------------------------------------------------------------
+
+  SUBROUTINE RANDOM_WALK_SYN(n,itry,min_live_like,live_like,live, &
+       live_like_new,live_new,icluster,ntries,too_many_tries)
+    ! Random walk search function with synthetic live point creation
+    
+    
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in, par_bnd1, par_bnd2, &
+          par_fix, npar, par_step
+
+    ! MCMC search function from Leo's ideas and mine
+    INTEGER(4), INTENT(IN) :: n, itry
+    REAL(8), INTENT(IN) :: min_live_like
+    REAL(8), INTENT(IN), DIMENSION(nlive) :: live_like
+    REAL(8), INTENT(IN), DIMENSION(nlive,npar) :: live
+    REAL(8), INTENT(OUT) :: live_like_new
+    REAL(8), DIMENSION(npar), INTENT(OUT) :: live_new
+    INTEGER(4), INTENT(OUT) :: icluster, ntries
+    LOGICAL, INTENT(OUT) :: too_many_tries
+    ! MCMC new point search variables
+    REAL(8) :: gval
+    REAL(8), DIMENSION(npar) :: start_jump, new_jump
+    INTEGER(4) :: istart, n_ntries
+    ! Other variables
+    INTEGER(4) :: i, l, irn
+    REAL(8) :: rn
+    REAL(8) :: sdfraction
+    INTEGER(4) :: njump
+    REAL(8) :: loglike
+    REAL(8), DIMENSION(npar) :: live_ave_s, live_sd_s
+
+    PROFILED(RANDOM_WALK_SYN)
+
+    ! Find new live points
+    ! ----------------------------------FIND_POINT_MCMC------------------------------------
+    new_jump = par_in
+    live_new = 0.
+    live_like_new = 0.
+    ntries   = 1
+    istart   = 0
+    n_ntries = 0
+    too_many_tries = .false.
+    gval = 0.
+
+    sdfraction=search_par1
+    njump=INT(search_par2)
+
+    ! Select a live point as starting point
+    CALL RANDOM_NUMBER(rn)
+    istart= FLOOR((nlive-1)*rn+1)
+    start_jump = live(istart,:)
+
+
+    ! Get the momenta of the live points if cluster analysis is on 
+400 IF (cluster_on) THEN
+       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
+    ELSE
+       icluster = 0
+       live_sd_s = live_sd
+    END IF
+
+
+
+    ! Make several consecutive casual jumps in the region with loglikelyhood > minlogll
+500 CONTINUE
+    ntries = 0
+    DO i=1,njump
+501    CONTINUE
+       ntries = ntries + 1
+       DO l=1,npar
+          IF (par_fix(l).NE.1) THEN
+502          CALL RANDOM_NUMBER(rn)
+             new_jump(l) = start_jump(l) + live_sd_s(l)*sdfraction*(2.*rn-1.)
+             IF (new_jump(l).LT.par_bnd1(l).OR.new_jump(l).GT.par_bnd2(l)) THEN
+                ntries = ntries + 1
+                GOTO 502
+             END IF
+          END IF
+       END DO
+       !!$OMP END PARALLEL DO
+
+       ! Check if the new point is inside the parameter volume defined by the minimum likelihood of the live points
+       IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
+          start_jump = new_jump
+       ELSE
+          ! Check failures
+          ! message of too many failures
+          ! Choose another point determinated with a specific method (at present mine)
+          
+          !
+          ! But before, if you already tried many times, do something different or eventually gave up
+          IF (ntries.GT.maxtries) THEN   ! Loop for ntries > maxtries
+             n_ntries = n_ntries + 1
+             ! If nothing is found, restart from a livepoint
+             ntries = 1
+             
+             !
+             !  WRITE(*,*) 'Too many tries to find new live points for try n.', &
+             !  itry,'!!!! More than',maxtries,&
+             !  'n_ntries =',n_ntries,' over ', maxntries, 'n. step =', n
+             
+             ! If you already did too much tries, gave up or start a cluster analysis
+             IF (n_ntries.GE.maxntries) THEN
+                too_many_tries=.true.
+                live_like_new=min_live_like
+                live_new = live(1,:)
+                GOTO 600
+             END IF
+             ! Some test for desesperate seeking (for presence of several maxima)
+
+
+             ! DO CLUSTER ANALYSIS if selected, or use other randomizations
+             ! For all live points, assign a cluster number, which is used to calculate specific standard deviation
+             ! for the search of the new point
+             
+             IF(.not.cluster_on) THEN
+                
+                ! My new technique: mix parameter values from different sets to hope to find a good new value
+!!$OMP PARALLEL DO
+                DO l=1,npar
+                   IF (par_fix(l).NE.1) THEN
+                      CALL RANDOM_NUMBER(rn)
+                      istart= FLOOR((nlive-1)*rn+1)
+                      new_jump(l) = live(istart,l)
+                   END IF
+                END DO
+!!$OMP END PARALLEL DO
+                !
+                
+                IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
+                   start_jump = new_jump
+                ELSE
+                   ! Choose a new random live point and restart all
+                   CALL RANDOM_NUMBER(rn)
+                   istart= FLOOR((nlive-1)*rn+1)
+                   start_jump = live(istart,:)
+                END IF
+                GOTO 500
+             ELSE
+                ! Choose a new random live point and restart all
+                CALL RANDOM_NUMBER(rn)
+                istart= FLOOR((nlive-1)*rn+1)
+                start_jump = live(istart,:)
+             END IF
+             GOTO 400
+             
+          END IF    ! End loop for ntries > maxtries
+          
+          GOTO 501  ! Restart looking for new points without changing the starting point
+          
+       END IF  ! End of loop with failure for likelihood value
+    END DO
+
+
+    ! Last(maybe useless) check
+    loglike = LOGLIKELIHOOD(npar, new_jump)
+    IF (loglike.LT.min_live_like) GOTO 500
+
+    ! Take the last point after jumps as new livepoint
+    live_new = new_jump
+    live_like_new = loglike
+
+600 CONTINUE
+
+    RETURN
+
+
+  END SUBROUTINE RANDOM_WALK_SYN 
+
+  ! ------------------------------------------------------------------------------------
+
+! ------------------------------------------------------------------------------------
+
+  SUBROUTINE RANDOM_WALK_RECENT(n,itry,min_live_like,live_like,live, &
+       live_like_new,live_new,icluster,ntries,too_many_tries)
+    ! Random walk search function with recentering the serarch of live points (Leo's. method)
+    
+    
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in, par_bnd1, par_bnd2, &
+          par_fix, npar, par_step
+          
+    ! MCMC search function from Leo's ideas and mine
+    INTEGER(4), INTENT(IN) :: n, itry
+    REAL(8), INTENT(IN) :: min_live_like
+    REAL(8), INTENT(IN), DIMENSION(nlive) :: live_like
+    REAL(8), INTENT(IN), DIMENSION(nlive,npar) :: live
+    REAL(8), INTENT(OUT) :: live_like_new
+    REAL(8), DIMENSION(npar), INTENT(OUT) :: live_new
+    INTEGER(4), INTENT(OUT) :: icluster, ntries
+    LOGICAL, INTENT(OUT) :: too_many_tries
+    ! MCMC new point search variables
+    REAL(8) :: gval
+    REAL(8), DIMENSION(npar) :: start_jump, new_jump
+    INTEGER(4) :: istart, n_ntries
+    ! Other variables
+    INTEGER(4) :: i, l, irn
+    REAL(8) :: rn
+    REAL(8) :: sdfraction
+    INTEGER(4) :: njump
+    REAL(8) :: loglike
+    REAL(8), DIMENSION(npar) :: live_ave_s, live_sd_s
+
+    PROFILED(RANDOM_WALK_RECENT)
+
+    ! Find new live points
+    ! ----------------------------------FIND_POINT_MCMC------------------------------------
+    new_jump = par_in
+    live_new = 0.
+    live_like_new = 0.
+    ntries   = 1
+    istart   = 0
+    n_ntries = 0
+    too_many_tries = .false.
+    gval = 0.
+
+    sdfraction=search_par1
+    njump=INT(search_par2)
+
+    ! Select a live point as starting point
+    CALL RANDOM_NUMBER(rn)
+    istart= FLOOR((nlive-1)*rn+1)
+    start_jump = live(istart,:)
+
+
+    ! Get the momenta of the live points if cluster analysis is on 
+400 IF (cluster_on) THEN
+       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
+    ELSE
+       icluster = 0
+       live_sd_s = live_sd
+    END IF
+
+
+
+    ! Make several consecutive casual jumps in the region with loglikelyhood > minlogll
+500 CONTINUE
+    ntries = 0
+    DO i=1,njump
+501    CONTINUE
+       ntries = ntries + 1
+       DO l=1,npar
+          IF (par_fix(l).NE.1) THEN
+502          CALL RANDOM_NUMBER(rn)
+             new_jump(l) = start_jump(l) + live_sd_s(l)*sdfraction*(2.*rn-1.)
+             IF (new_jump(l).LT.par_bnd1(l).OR.new_jump(l).GT.par_bnd2(l)) THEN
+                ntries = ntries + 1
+                GOTO 502
+             END IF
+          END IF
+       END DO
+       !!$OMP END PARALLEL DO
+
+       ! Check if the new point is inside the parameter volume defined by the minimum likelihood of the live points
+       IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
+          start_jump = new_jump
+       ELSE
+          ! Check failures
+          ! message of too many failures
+          ! Choose another point determinated with a specific method (at present mine)
+          
+          !
+          ! But before, if you already tried many times, do something different or eventually gave up
+          IF (ntries.GT.maxtries) THEN   ! Loop for ntries > maxtries
+             n_ntries = n_ntries + 1
+             ! If nothing is found, restart from a livepoint
+             ntries = 1
+             
+             !
+             !  WRITE(*,*) 'Too many tries to find new live points for try n.', &
+             !  itry,'!!!! More than',maxtries,&
+             !  'n_ntries =',n_ntries,' over ', maxntries, 'n. step =', n
+             
+             ! If you already did too much tries, gave up or start a cluster analysis
+             IF (n_ntries.GE.maxntries) THEN
+                too_many_tries=.true.
+                live_like_new=min_live_like
+                live_new = live(1,:)
+                GOTO 600
+             END IF
+             
+             ! Leo's technique, go between the average and this point
+!!$OMP PARALLEL DO
+             DO l=1,npar
+                IF (par_fix(l).NE.1) THEN
+                   CALL RANDOM_NUMBER(rn)
+                   new_jump(l) = live_ave_s(l) + (new_jump(l) - live_ave_s(l))*rn
+                END IF
+             END DO
+!!$OMP END PARALLEL DO
+             !
+             
+             IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
+                start_jump = new_jump
+             ELSE
+                ! Choose a new random live point and restart all
+                CALL RANDOM_NUMBER(rn)
+                istart= FLOOR((nlive-1)*rn+1)
+                start_jump = live(istart,:)
+             END IF
+             GOTO 400
+             
+          END IF    ! End loop for ntries > maxtries
+          
+          GOTO 501  ! Restart looking for new points without changing the starting point
+       
+       END IF  ! End of loop with failure for likelihood value
+    END DO
+    
+    ! Final check of the last point for gaussian priors
+    !CALL USERCONDITIONS(funcname,npar,par_fix,new_jump,par_in,par_step,par_bnd1,par_bnd2, &
+    !     live_sd,start_jump,sdfraction,outlimits)
+    DO l=1,npar
+       IF(par_fix(l).NE.1) THEN
+          IF(par_step(l).GT.0) THEN
+             ! maximum of the distribution is 1 (and is not normalized to 1 as the previous line)
+             gval = dexp(-(new_jump(l)-par_in(l))**2/(2*par_step(l)**2))
+             CALL RANDOM_NUMBER(rn)
+             IF (rn.GT.gval) GOTO 500
+          END IF
+       END IF
+    END DO
+
+
+    ! Last(maybe useless) check
+    loglike = LOGLIKELIHOOD(npar, new_jump)
+    IF (loglike.LT.min_live_like) GOTO 500
+
+    ! Take the last point after jumps as new livepoint
+    live_new = new_jump
+    live_like_new = loglike
+
+600 CONTINUE
+
+    RETURN
+
+
+  END SUBROUTINE RANDOM_WALK_RECENT 
+
+  ! ------------------------------------------------------------------------------------
+
+
 
   SUBROUTINE UNIFORM(n,itry,min_live_like,live_like,live, &
        live_like_new,live_new,icluster,ntries,too_many_tries)
 
-    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in, par_step, par_bnd1, par_bnd2, &
+          par_fix, npar
 
     ! uniform search function
     INTEGER(4), INTENT(IN) :: n, itry
@@ -410,9 +961,9 @@ CONTAINS
     ! Other variables
     INTEGER(4) :: i, l, irn, j
     REAL(8) :: rn, frac
-    INTEGER(4) :: n_call_cluster_itj
     INTEGER(4) :: nb_cube, njump
     REAL(8) :: loglike
+    REAL(8), DIMENSION(npar) :: live_ave_s, live_sd_s
 
     PROFILED(UNIFORM)
 
@@ -427,7 +978,6 @@ CONTAINS
     too_many_tries = .false.
     gval = 0.
     frac=search_par1
-    n_call_cluster_itj=0
     nb_cube=0
     njump=INT(search_par2)
 
@@ -437,20 +987,12 @@ CONTAINS
     istart= FLOOR((nlive-1)*rn+1)
     start_jump = live(istart,:)
 
-
-    ! Calculate momenta of the live points
+    ! Get the momenta of the live points if cluster analysis is on 
 600 IF (cluster_on) THEN
-       ! Identify cluster appartenance
-       icluster = p_cluster(istart)
-       ! Get for the specific cluster if the cluster analysis is on
-       ! Standard deviation
-       live_sd(:) = cluster_std(icluster,:)
-       IF(cluster_std(icluster,1).EQ.0.) THEN
-          ! If the cluster is formed only from one point, take the standard standard deviation
-          CALL REMAKE_LIVE_MEAN_SD(live)
-       END IF
-       ! and mean
-       live_ave(:) = cluster_mean(icluster,:)
+       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
+    ELSE
+       icluster = 0
+       live_sd_s = live_sd
     END IF
 
 
@@ -459,11 +1001,10 @@ CONTAINS
     DO i=1,njump
 701    CONTINUE
        ntries = ntries + 1
-       !!$OMP PARALLEL DO
        DO l=1,npar
           IF (par_fix(l).NE.1) THEN
 702          CALL RANDOM_NUMBER(rn)
-             rn=2*frac*live_sd(l)*rn-frac*live_sd(l)
+             rn=2*frac*live_sd_s(l)*rn-frac*live_sd_s(l)
              new_jump(l) = start_jump(l) + rn !select randomly a point in the box around the starting point
              IF (new_jump(l).LT.par_bnd1(l).OR.new_jump(l).GT.par_bnd2(l)) THEN
                 ntries = ntries + 1
@@ -471,14 +1012,13 @@ CONTAINS
              END IF
           END IF
        END DO
-        !!$OMP END PARALLEL DO
 
 
        ! Check if the new point is inside the parameter volume defined by the minimum likelihood of the live points
        IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
            !$OMP SIMD REDUCTION(+:nb_cube)
            DO j=1, nlive
-              IF(ALL(ABS(new_jump-live(j,:)) .LT. frac*live_sd)) nb_cube=nb_cube+1
+              IF(ALL(ABS(new_jump-live(j,:)) .LT. frac*live_sd_s)) nb_cube=nb_cube+1
            END DO
           !$OMP END SIMD
           CALL RANDOM_NUMBER(rn)
@@ -529,7 +1069,6 @@ CONTAINS
                 irn = FLOOR(2*rn+1)
                 IF(MOD(ntries,2).EQ.1) THEN
                    ! My new technique: mix parameter values from different sets to hope to find a good new value
-                   !!$OMP PARALLEL DO
                    DO l=1,npar
                       IF (par_fix(l).NE.1) THEN
                          CALL RANDOM_NUMBER(rn)
@@ -537,17 +1076,14 @@ CONTAINS
                          new_jump(l) = live(istart,l)
                       END IF
                    END DO
-                   !!$OMP END PARALLEL DO
                 ELSE
                    ! Leo's technique, go between the average and this point
-                   !!$OMP PARALLEL DO
                    DO l=1,npar
                       IF (par_fix(l).NE.1) THEN
                          CALL RANDOM_NUMBER(rn)
-                         new_jump(l) = live_ave(l) + (new_jump(l) - live_ave(l))*rn
+                         new_jump(l) = live_ave_s(l) + (new_jump(l) - live_ave_s(l))*rn
                       END IF
                    END DO
-                   !!$OMP END PARALLEL DO
                 END IF
                 !
                  IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
@@ -562,14 +1098,12 @@ CONTAINS
              ELSE
                 ! If cluster analysis, do not mix the points!!
                 ! Leo's technique only, go between the average and this point
-                !!$OMP PARALLEL DO
                 DO l=1,npar
                    IF (par_fix(l).NE.1) THEN
                       CALL RANDOM_NUMBER(rn)
-                      new_jump(l) = live_ave(l) + (new_jump(l) - live_ave(l))*rn
+                      new_jump(l) = live_ave_s(l) + (new_jump(l) - live_ave_s(l))*rn
                    END IF
                 END DO
-                !!$OMP END PARALLEL DO
                 IF (LOGLIKELIHOOD(npar, new_jump).GT.min_live_like) THEN
                    start_jump = new_jump
                 ELSE
@@ -611,7 +1145,6 @@ CONTAINS
 400 CONTINUE
 
     RETURN
-    ! ------------------------------------------------------------------------------------
 
 
   END SUBROUTINE UNIFORM
@@ -624,7 +1157,11 @@ SUBROUTINE SLICE_SAMPLING_TRANSF(n,itry,min_live_like,live_like,live, &
     !inspired from polychord code
     ! This is slice sampling performed in the transformed space
 
-    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in, par_step, par_in, par_bnd1, par_bnd2, &
+          par_fix, npar
+    ! Module for covariance matrix
+    USE MOD_COVARIANCE_MATRIX
+
     INTEGER(4), INTENT(IN) :: n, itry
     REAL(8), INTENT(IN) :: min_live_like
     REAL(8), INTENT(IN), DIMENSION(nlive) :: live_like
@@ -640,7 +1177,6 @@ SUBROUTINE SLICE_SAMPLING_TRANSF(n,itry,min_live_like,live_like,live, &
     ! Other variables
     INTEGER(4) :: i, l, j, kr, kl
     REAL(8) :: rn
-    INTEGER(4) :: n_call_cluster_itj
     !INTEGER(4) :: dim_eff
     REAL(8), DIMENSION(:,:),ALLOCATABLE :: basis
     REAL(8), DIMENSION(:), ALLOCATABLE :: left, right, left_prov,right_prov
@@ -660,7 +1196,6 @@ SUBROUTINE SLICE_SAMPLING_TRANSF(n,itry,min_live_like,live_like,live, &
     istart   = 0
     n_ntries = 0
     too_many_tries = .false.
-    n_call_cluster_itj=0
     gval = 0.
     size_jump=search_par1
     init_fail=0
@@ -687,22 +1222,9 @@ SUBROUTINE SLICE_SAMPLING_TRANSF(n,itry,min_live_like,live_like,live, &
     !Select only the variables that are not fixed
     start_jump=start_jump_comp(par_var)
 
-    ! Calculate momenta of the live points
-    IF (cluster_on) THEN
+    IF(cluster_on) THEN ! Get the covariance matrix and Cholesky decomposition for the correct cluster
        ! Identify cluster appartenance
        icluster = p_cluster(istart)
-       ! Get for the specific cluster if the cluster analysis is on
-       ! Standard deviation
-       live_sd(:) = cluster_std(icluster,:)
-       IF(cluster_std(icluster,1).EQ.0.) THEN
-          ! If the cluster is formed only from one point, take the standard standard deviation
-          CALL REMAKE_LIVE_MEAN_SD(live)
-       END IF
-       ! and mean
-       live_ave(:) = cluster_mean(icluster,:)
-    END IF
-
-    IF(cluster_on) THEN ! Get the covariance matrix and Cholesky decomposition for the correct cluster
        live_cov=mat_cov(:,:,icluster)
        live_chol=mat_chol(:,:,icluster)
     ELSE
@@ -859,7 +1381,11 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     !inspired from polychord code
     ! This is slice sampling performed in the initial space
 
-    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in, par_step, par_in, par_bnd1, par_bnd2, &
+          par_fix, npar
+    ! Module for covariance matrix
+    USE MOD_COVARIANCE_MATRIX
+
     INTEGER(4), INTENT(IN) :: n, itry
     REAL(8), INTENT(IN) :: min_live_like
     REAL(8), INTENT(IN), DIMENSION(nlive) :: live_like
@@ -875,13 +1401,13 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     ! Other variables
     INTEGER(4) :: i, l, j, kr, kl, m
     REAL(8) :: rn
-    INTEGER(4) :: n_call_cluster_itj
     REAL(8), DIMENSION(:,:),ALLOCATABLE :: basis_eff, basis
     REAL(8), DIMENSION(npar) :: left, right
     REAL(8), DIMENSION(:,:), ALLOCATABLE  :: live_cov, live_chol
     REAL(8) :: part_like, size_jump, size_jump_save, loglike
     LOGICAL :: test_bnd
     INTEGER(4) :: init_fail, njump
+
     ! Find new live points
     ! ----------------------------------FIND_POINT_MCMC------------------------------------
     live_new = 0.
@@ -890,7 +1416,6 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     istart   = 0
     n_ntries = 0
     too_many_tries = .false.
-    n_call_cluster_itj=0
     gval = 0.
     !dim_eff=npar-SUM(par_fix) !number of parameters not fixed
     size_jump=search_par1
@@ -908,23 +1433,10 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     istart= FLOOR((nlive-1)*rn+1)
     start_jump = live(istart,:)
     
-    ! Calculate momenta of the live points
-    IF (cluster_on) THEN
-       ! Identify cluster appartenance
-       icluster = p_cluster(istart)
-       ! Get for the specific cluster if the cluster analysis is on
-       ! Standard deviation
-       live_sd(:) = cluster_std(icluster,:)
-       IF(cluster_std(icluster,1).EQ.0.) THEN
-          ! If the cluster is formed only from one point, take the standard standard deviation
-          CALL REMAKE_LIVE_MEAN_SD(live)
-       END IF
-       ! and mean
-       live_ave(:) = cluster_mean(icluster,:)
-    END IF
-    
 
     IF(cluster_on) THEN ! Get the covariance matrix and Cholesky decomposition for the correct cluster
+       ! Identify cluster appartenance
+       icluster = p_cluster(istart)       
        live_cov=mat_cov(:,:,icluster)
        live_chol=mat_chol(:,:,icluster)
     ELSE
@@ -1092,7 +1604,11 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     !inspired from polychord code
     ! This is slice sampling with an adaptable size for the step
 
-    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in
+    USE MOD_PARAMETERS, ONLY: nlive, search_par1, search_par2, maxtries, maxntries, par_in, par_step, par_in, par_bnd1, par_bnd2, &
+          par_fix, npar
+    ! Module for covariance matrix
+    USE MOD_COVARIANCE_MATRIX
+
     INTEGER(4), INTENT(IN) :: n, itry
     REAL(8), INTENT(IN) :: min_live_like
     REAL(8), INTENT(IN), DIMENSION(nlive) :: live_like
@@ -1108,7 +1624,6 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     ! Other variables
     INTEGER(4) :: i, l, j, k
     REAL(8) :: rn
-    INTEGER(4) :: n_call_cluster_itj
     REAL(8), DIMENSION(:,:),ALLOCATABLE :: basis
     REAL(8), DIMENSION(:), ALLOCATABLE :: left, right, left_prov,right_prov
     REAL(8), DIMENSION(:,:), ALLOCATABLE  :: live_cov, live_chol, inv_chol
@@ -1127,7 +1642,6 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     istart   = 0
     n_ntries = 0
     too_many_tries = .false.
-    n_call_cluster_itj=0
     gval = 0.
     size_jump=search_par1
     init_fail=0
@@ -1152,22 +1666,9 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     start_jump=start_jump_comp(par_var)
     !live_nf=live(:,par_var)
 
-    ! Calculate momenta of the live points
-    IF (cluster_on) THEN
+    IF(cluster_on) THEN ! Get the covariance matrix and Cholesky decomposition for the correct cluster
        ! Identify cluster appartenance
        icluster = p_cluster(istart)
-       ! Get for the specific cluster if the cluster analysis is on
-       ! Standard deviation
-       live_sd(:) = cluster_std(icluster,:)
-       IF(cluster_std(icluster,1).EQ.0.) THEN
-          ! If the cluster is formed only from one point, take the standard standard deviation
-          CALL REMAKE_LIVE_MEAN_SD(live)
-       END IF
-       ! and mean
-       live_ave(:) = cluster_mean(icluster,:)
-    END IF
-
-    IF(cluster_on) THEN ! Get the covariance matrix and Cholesky decomposition for the correct cluster
        live_cov=mat_cov(:,:,icluster)
        live_chol=mat_chol(:,:,icluster)
     ELSE
@@ -1318,6 +1819,8 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
 400 ntries=ntries/dim_eff
 END SUBROUTINE SLICE_SAMPLING_ADAPT
 
+ !#####################################################################################################################
+
 SUBROUTINE BASE_O_N(D,base) !generates an orthonormal basis
   INTEGER(4), INTENT(IN) :: D
   REAL(8), DIMENSION(D,D), INTENT(INOUT) :: base
@@ -1339,6 +1842,8 @@ SUBROUTINE BASE_O_N(D,base) !generates an orthonormal basis
   END DO
 END SUBROUTINE BASE_O_N
 
+ !#####################################################################################################################
+
 SUBROUTINE TRIANG_INV(D,mat,mat_inv) !calculates the inverse of the cholesky decomposition
    INTEGER(4), INTENT(IN) :: D
    REAL(8), DIMENSION(D,D), INTENT(IN) :: mat
@@ -1348,16 +1853,12 @@ SUBROUTINE TRIANG_INV(D,mat,mat_inv) !calculates the inverse of the cholesky dec
    PROFILED(TRIANG_INV)
 
    mat_inv=0
-   !!$OMP SIMD
    DO i=1,D
      mat_inv(i,i)=1./mat(i,i)
    END DO
 
-   !!$OMP SIMD
    DO j=1,D-1
-     !!$OMP SIMD
      DO i=1,D-j
-       !!$OMP SIMD
        DO k=1,j
           mat_inv(i+j,i)=mat_inv(i+j,i)-mat(i+k,i)*mat_inv(i+j,i+k)
        END DO
@@ -1366,8 +1867,13 @@ SUBROUTINE TRIANG_INV(D,mat,mat_inv) !calculates the inverse of the cholesky dec
    END DO
 END SUBROUTINE TRIANG_INV
 
+ !#####################################################################################################################
+
+
 SUBROUTINE PART_LIKE_SUB(D,pt,chol,part_like) !calculates the likelihood for a point in the new space
-  USE MOD_PARAMETERS, ONLY: par_in
+
+  USE MOD_PARAMETERS, ONLY: npar, par_in, par_fix
+
   INTEGER(4), INTENT(IN) :: D
   REAL(8), DIMENSION(D), INTENT(IN) :: pt
   REAL(8), DIMENSION(D,D), INTENT(IN) :: chol
@@ -1391,8 +1897,13 @@ SUBROUTINE PART_LIKE_SUB(D,pt,chol,part_like) !calculates the likelihood for a p
   part_like=LOGLIKELIHOOD(npar, pt_comp)
 END SUBROUTINE PART_LIKE_SUB
 
+ !#####################################################################################################################
+
 
 SUBROUTINE TEST_BND_SUB(D,pt,par_var,chol,test_bnd) !checks if a point in the new space is in the sampled space
+
+  USE MOD_PARAMETERS, ONLY: par_bnd1, par_bnd2
+   
   INTEGER(4), INTENT(IN) :: D
   REAL(8), DIMENSION(D), INTENT(IN) :: pt
   INTEGER(4), DIMENSION(D), INTENT(IN) :: par_var

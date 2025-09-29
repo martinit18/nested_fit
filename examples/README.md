@@ -16,3 +16,5 @@ Examples of nested fit input files for potential exploration and analysis of the
 Examples of use of the python library `nested_res.py` are presented in two jupyter notebooks
 - `simple_analysis_visu.ipynb` for a simple visualization of `nested_fit` outputs for a single analysis
 - `pandas_extended_analysis.ipynb` for a more **complex analysis** for different choice of model, conditions or data set. Here, the output results are collected in a unique pandas dataframe to be easily compared and visualized 
+
+Numbered folders are referring to reference test benchmarks used to develop the code.

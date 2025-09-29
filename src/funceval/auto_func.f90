@@ -143,14 +143,13 @@ MODULE MOD_AUTOFUNC
         INTEGER            :: argc
     END TYPE cache_entry_t
 
+    CHARACTER(LEN=1024) :: dll_name
 #ifdef _WIN32
-    CHARACTER(LEN=*), PARAMETER      :: dll_name    = TRIM(nf_cache_folder)//'dynamic_calls.dll'
-    CHARACTER(LEN=*), PARAMETER      :: obj_ext     = '.obj'
+    CHARACTER(LEN=*), PARAMETER :: obj_ext     = '.obj'
 #else
-    CHARACTER(LEN=*), PARAMETER      :: dll_name    = TRIM(nf_cache_folder)//'dynamic_calls.so'
-    CHARACTER(LEN=*), PARAMETER      :: obj_ext     = '.o'
+    CHARACTER(LEN=*), PARAMETER :: obj_ext     = '.o'
 #endif
-    CHARACTER(LEN=*), PARAMETER      :: fname_cache = TRIM(nf_cache_folder)//'func_names.dat'
+    CHARACTER(LEN=1024)              :: fname_cache
     TYPE(cache_entry_t), ALLOCATABLE :: entries(:)
     INTEGER                          :: nentries=0
     TYPE(c_ptr), ALLOCATABLE         :: loaded_addr(:)
@@ -488,6 +487,15 @@ MODULE MOD_AUTOFUNC
             END DO
             DEALLOCATE(loaded_addr)
         ENDIF
+    END SUBROUTINE
+
+    SUBROUTINE INIT_CACHE()
+#ifdef _WIN32
+        dll_name = TRIM(nf_cache_folder)//'dynamic_calls.dll'
+#else
+        dll_name = TRIM(nf_cache_folder)//'dynamic_calls.so'
+#endif
+        fname_cache = TRIM(nf_cache_folder)//'func_names.dat'
     END SUBROUTINE
     
     SUBROUTINE READ_CACHE()
@@ -907,6 +915,7 @@ MODULE MOD_AUTOFUNC
     END SUBROUTINE
 
     SUBROUTINE INIT_AUTOFUNC()
+        CALL INIT_CACHE()
         CALL READ_CACHE()
     END SUBROUTINE
 

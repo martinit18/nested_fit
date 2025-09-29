@@ -20,11 +20,7 @@ MODULE MOD_LIKELIHOOD
   ! String manipulation
   USE MOD_STRUTIL
 
-#ifdef OPENMPI_ON
-   USE MPI
-#endif
-
-   !$ USE OMP_LIB
+  !$ USE OMP_LIB
 
   IMPLICIT NONE
 
@@ -111,7 +107,7 @@ CONTAINS
 
       CALL MURMURHASH2_32(key, LEN_TRIM(key), hash)
 
-      index = MODULO(hash, map%capacity)
+      index = MODULO(hash, map%capacity) + 1
       pair  => map%pairs(index)
 
       IF(.NOT.pair%valid) THEN
@@ -144,7 +140,7 @@ CONTAINS
 
       CALL MURMURHASH2_32(key, LEN_TRIM(key), hash)
 
-      index = MODULO(hash, map%capacity)
+      index = MODULO(hash, map%capacity) + 1
       pair  => map%pairs(index)
 
       ! Insert new (without collision)
@@ -365,9 +361,6 @@ CONTAINS
   !#####################################################################################################################
 
 !   SUBROUTINE INIT_SEARCH_METHOD()
-! #ifdef OPENMPI_ON
-!    INTEGER(4) :: mpi_ierror
-! #endif
 
 !     IF (search_method.eq.'RANDOM_WALK') THEN
 !       searchid = 0
@@ -390,10 +383,6 @@ CONTAINS
 !   END SUBROUTINE INIT_SEARCH_METHOD
 
   SUBROUTINE INIT_LIKELIHOOD_FUNC()
-#ifdef OPENMPI_ON
-      INTEGER(4) :: mpi_ierror
-#endif
-
       IF(TRIM(likelihood_funcname).eq.'GAUSSIAN') THEN
          loglikefuncid = 0
       ELSE IF(TRIM(likelihood_funcname).eq.'MOD_JEFFREYS') THEN

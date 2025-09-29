@@ -259,7 +259,6 @@ MODULE MOD_INPUTPARSE
             CALL LOG_ERROR('Aborting Execution...')
             CALL LOG_ERROR_HEADER()
             STOP
-            ! NOTE(César) : This works before OpenMPI init!
         ENDIF
         RETURN
 
@@ -286,7 +285,6 @@ MODULE MOD_INPUTPARSE
             CALL LOG_ERROR('Aborting Execution...')
             CALL LOG_ERROR_HEADER()
             STOP
-            ! NOTE(César) : This works before OpenMPI init!
         ENDIF
 
         RETURN
@@ -305,7 +303,6 @@ MODULE MOD_INPUTPARSE
             CALL LOG_ERROR('Aborting Execution...')
             CALL LOG_ERROR_HEADER()
             STOP
-            ! NOTE(César) : This works before OpenMPI init!
         ENDIF
 
         RETURN
@@ -361,7 +358,7 @@ MODULE MOD_INPUTPARSE
 
         CALL MURMURHASH2_32(key, LEN_TRIM(key), hash)
 
-        index = MODULO(hash, map%capacity)
+        index = MODULO(hash, map%capacity) + 1
         pair  => map%pairs(index)
 
         IF(.NOT.pair%valid) THEN
@@ -394,7 +391,7 @@ MODULE MOD_INPUTPARSE
 
         CALL MURMURHASH2_32(key, LEN_TRIM(key), hash)
 
-        index = MODULO(hash, map%capacity)
+        index = MODULO(hash, map%capacity) + 1
         pair  => map%pairs(index)
 
         ! Insert new (without collision)

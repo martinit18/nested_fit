@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nested_fit"
-version = "5.4.2"
+version = "5.5.4"
 description = "The nested_fit package."
 
 authors = [
@@ -17,7 +17,6 @@ classifiers = [
     "Programming Language :: Fortran",
     "Programming Language :: C++",
     "Programming Language :: Python :: 3",
-    "License :: Free To Use But Restricted",
     "Operating System :: OS Independent"
 ]
 
@@ -34,6 +33,38 @@ dependencies = [
 	"plotext"
 ]
 
+[project.scripts]
+nested_fit = "pynested_fit.cliw:main"
+
 [project.urls]
 "Homepage" = "https://github.com/martinit18/nested_fit"
 "Bug Tracker" = "https://github.com/martinit18/nested_fit/issues"
+
+# Setup cibuildwheel
+[tool.cibuildwheel]
+# Our wheel does not depend on the CPython ABI
+# However it is simpler to just build for each cp version
+build = "cp*"
+
+# Force old toolchain (we don't use anything that requires glibc >= 2.17 dynamically)
+manylinux-x86_64-image = "manylinux2014"
+
+# Now statically link to libgcc / stdlib / libgfortran
+environment = "CFLAGS='-static-libgcc -static-libstdc++' CXXFLAGS='-static-libgcc -static-libstdc++' FFLAGS='-static-libgfortran'"
+
+# repair-wheel-command = [
+# 	'auditwheel show {wheel}',
+# 	'auditwheel repair -w {dest_dir} {wheel}'
+# ]
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64"]
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]
+
+[tool.setuptools_scm]
+fallback_version = "1.0.0"
+
+[options]
+python_requires = ">=3.8"

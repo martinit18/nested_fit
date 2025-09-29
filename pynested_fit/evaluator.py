@@ -5,6 +5,7 @@
 # Date   : 09/08/2024
 
 from ctypes import cdll, c_double, c_int, POINTER, RTLD_GLOBAL, CDLL, byref
+from typing import Union
 import numpy as np # We need numpy for other parts of pynested_fit anyways
 import numpy.typing as npt
 import platform
@@ -50,12 +51,12 @@ class NFEvaluator():
         # if the current functions is a legacy function or not.
         return self._f is not None
 
-    def at(self, x: float, params: npt.NDArray[np.float64]) -> np.float64 | None:
+    def at(self, x: float, params: npt.NDArray[np.float64]) -> Union[np.float64, None]:
         if self._f:
             return np.float64(self._f(byref(c_double(x)), byref(c_int(params.size)), params))
         return None
 
-    def atv(self, X: npt.NDArray[np.float64], params: npt.NDArray[np.float64]) -> npt.NDArray[np.float64] | None:
+    def atv(self, X: npt.NDArray[np.float64], params: npt.NDArray[np.float64]) -> Union[npt.NDArray[np.float64], None]:
         if self._f:
             return np.array([np.float64(self._f(byref(c_double(x)), byref(c_int(params.size)), params)) for x in X], dtype=np.float64)
         return None
