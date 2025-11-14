@@ -62,6 +62,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   LOGICAL, ALLOCATABLE :: live_searching(:), live_ready(:)
   LOGICAL :: early_exit = .false.
   LOGICAL :: normal_exit = .false.
+  REAL(8) :: live_like_new_tmp
+  REAL(8), DIMENSION(npar) :: live_new_tmp
+  INTEGER(4) :: icluster_tmp, ntries_tmp
+  LOGICAL :: too_many_tries_tmp
   ! Live points variables
   REAL(8) :: min_live_like = 0.
   REAL(8), DIMENSION(nlive,npar) :: live
@@ -249,15 +253,24 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
       !!$OMP SHARED(live_searching,live_ready,n,itry,ntries,min_live_like,live_like,live,nth,live_like_new,live_new,icluster,too_many_tries)  
       DO it=1,nth
          IF(.NOT.live_ready(it).AND..NOT.live_searching(it)) THEN
+
+            !$OMP ATOMIC WRITE
             live_searching(it) = .true.
-            !$OMP TASK DEFAULT(NONE) FIRSTPRIVATE(it) &
+
+            !$OMP TASK DEFAULT(NONE) FIRSTPRIVATE(it) & 
+            !$OMP& PRIVATE(live_like_new_tmp,live_new_tmp,icluster_tmp,ntries_tmp,too_many_tries_tmp)&
             !$OMP SHARED(live_searching,live_ready,n,itry,ntries,min_live_like,live_like,live,nth,live_like_new,live_new,icluster,too_many_tries) 
             !write(*,*) 'Thread: ', omp_get_thread_num(), 'it: ', it,  'live_ready(it): ', live_ready(it), 'in search loop'  ! Debugging ???
             CALL SEARCH_NEW_POINT(n,itry,min_live_like,live_like,live, &
-            live_like_new(it),live_new(it,:),icluster(it),ntries(it),too_many_tries(it))
+            live_like_new_tmp,live_new_tmp,icluster_tmp,ntries_tmp,too_many_tries_tmp)
+            !$OMP CRITICAL
+            live_like_new(it) = live_like_new_tmp
+            live_new(it,:) = live_new_tmp(:)
+            icluster(it) = icluster_tmp
+            ntries(it) = ntries_tmp
             live_searching(it) = .false.
             live_ready(it) = .true.
-            !$OMP FLUSH(live_ready, live_searching, live_like_new,live_new, icluster, too_many_tries)
+            !$OMP END CRITICAL
             !$OMP END TASK
             END IF
       END DO
