@@ -3,7 +3,7 @@
 ## For Mac OS
 1) If you do not have a fortran compiler installed, install homebrew from [https://brew.sh/](https://brew.sh/)\
 Then in a terminal install with homebrew the required components:\
- `brew install gcc g++ gfortran make cmake`
+ `brew install gcc gfortran make cmake`
 
 If you did not do it yet, add homebrew binary directory in the shell variable `PATH` by adding **IN THIS ORDER** in `.bashrc`: 
 ```sh
