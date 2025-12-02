@@ -8,24 +8,43 @@ convergence:
   accuracy: 1.0e-05
   method: LIKE_ACC
   parameter: 0.01
-data:
+data_1:
   xmax: 650
   xmin: 250
-datafiles: he-histo.dat
+data_2:
+  xmax: 650
+  xmin: 250
+datafiles: gauss_bg-x0_300-sigma_20-A_300-p_to_bg_20-bin_1.dat, gauss_bg-x0_310-sigma_20-A_150-p_to_bg_10-bin_1.dat
 filefmt: .tsv
 function:
-  expression: gauss_bg(x, A_1, x_1, s, b_g) = \texttt{GAUSS_IF}(x, x_1, A_1, s) + b_g
+  expression_1: gauss_1(x, A_1, x_1, s, b_g) = \texttt{GAUSS_IF}(x, x_1, A_1, s) + b_1
+  expression_2: gauss_2(x, A_1, x_1, s, b_g) = \texttt{GAUSS_IF}(x, x_1+d, A_2, s) + b_2
   params:
     A_1:
       max: 500
       min: 0
       step: -1
       value: 300
-    b_g:
+    A_2:
+      max: 500
+      min: 0
+      step: -1
+      value: 300
+    b_1:
       max: 0.3
       min: 0
       step: -1
       value: 0.01
+    b_2:
+      max: 0.3
+      min: 0
+      step: -1
+      value: 0.01
+    d:
+      max: 30
+      min: -10
+      step: -1
+      value: 0.2
     s:
       max: 30
       min: 10
