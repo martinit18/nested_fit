@@ -49,17 +49,30 @@ CONTAINS
     INTEGER*4 SELECT_LIKELIHOODFCN
     CHARACTER*64 funcname
 
-    IF(funcname.eq.'ENERGY_HARM_3D') THEN
-      SELECT_LIKELIHOODFCN = 0
-    ELSE IF(funcname.eq.'ENERGY_LJ_3D_PBC') THEN
-      SELECT_LIKELIHOODFCN = 1
-    ELSE
-      ! SELECT_LIKELIHOODFCN = -1
-      CALL LOG_ERROR_HEADER()
-      CALL LOG_ERROR('You selected the calculation mode`'//TRIM(calc_mode)//'`.')
-      CALL LOG_ERROR('Select a valid potential to be explored.')
-      CALL LOG_ERROR('Aborting Execution...')
-      CALL LOG_ERROR_HEADER()
+    IF(calc_mode.EQ.'POTENTIAL') THEN
+      IF(funcname.eq.'ENERGY_HARM_3D') THEN
+        SELECT_LIKELIHOODFCN = 0
+      ELSE IF(funcname.eq.'ENERGY_LJ_3D_PBC') THEN
+        SELECT_LIKELIHOODFCN = 1
+      ELSE
+        ! SELECT_LIKELIHOODFCN = -1
+        CALL LOG_ERROR_HEADER()
+        CALL LOG_ERROR('You selected the calculation mode`'//TRIM(calc_mode)//'`.')
+        CALL LOG_ERROR('Select a valid potential to be explored.')
+        CALL LOG_ERROR('Aborting Execution...')
+        CALL LOG_ERROR_HEADER()
+      END IF
+    ELSE IF(calc_mode.EQ.'Q_POTENTIAL') THEN
+      IF(funcname.eq.'Q_ENERGY_HARM_3D') THEN
+        SELECT_LIKELIHOODFCN = 2
+      ELSE
+        ! SELECT_LIKELIHOODFCN = -1
+        CALL LOG_ERROR_HEADER()
+        CALL LOG_ERROR('You selected the calculation mode`'//TRIM(calc_mode)//'`.')
+        CALL LOG_ERROR('Select a valid potential to be explored.')
+        CALL LOG_ERROR('Aborting Execution...')
+        CALL LOG_ERROR_HEADER()
+      END IF
     END IF
 
     RETURN
@@ -70,6 +83,7 @@ CONTAINS
 
     INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
+    REAL(8), DIMENSION(4) :: en_decomp ! To use with quantum potential that output the decomposition of the energy into averaged potential and replica interaction as well as the temperature
 
     !$OMP CRITICAL
     ncall = ncall + 1
@@ -85,10 +99,34 @@ CONTAINS
        LOGLIKELIHOOD_POT = ENERGY_HARM_3D(npar, par)
     CASE (1)
        LOGLIKELIHOOD_POT = ENERGY_LJ_3D_PBC(npar, par)
+    CASE (2)
+       en_decomp = Q_ENERGY_HARM_3D(npar, par)
+       LOGLIKELIHOOD_POT = -en_decomp(1)
     END SELECT
 
 
   END FUNCTION LOGLIKELIHOOD_POT
+
+
+  FUNCTION LOGLIKELIHOOD_POT_WRITE(npar, par)
+    ! Likelihood function for writing
+
+    INTEGER, INTENT(IN) :: npar
+    REAL(8), DIMENSION(npar), INTENT(IN) :: par
+    REAL(8), DIMENSION(4) :: LOGLIKELIHOOD_POT_WRITE ! When not quantum, vector completed with 0 and sign need to be changed
+
+    ! Select the test function
+    SELECT CASE (funcid)
+    CASE (0)
+       LOGLIKELIHOOD_POT_WRITE = (/-ENERGY_HARM_3D(npar, par), 0.d0, 0.d0, 0.d0/)
+    CASE (1)
+       LOGLIKELIHOOD_POT_WRITE = (/-ENERGY_LJ_3D_PBC(npar, par), 0.d0, 0.d0, 0.d0/)
+    CASE (2)
+       LOGLIKELIHOOD_POT_WRITE = Q_ENERGY_HARM_3D(npar, par)
+    END SELECT
+
+
+  END FUNCTION LOGLIKELIHOOD_POT_WRITE
 
 
   !#####################################################################################################################
@@ -180,6 +218,44 @@ CONTAINS
   END FUNCTION ENERGY_LJ_3D_PBC
   
   !##################################################################################################################### 
+  FUNCTION Q_ENERGY_HARM_3D(npar, par)
+    !> First parameters N (number of atoms), P (number of replicas), tau (temperature), m (mass of atoms), omega (harmonic potential parameters) 
+    !> Parameters are in the order (x_11,y_11,z_11,...,x_1N,y_1N,z_1N,...,x_ij,y_ij,z_ij,...,x_P1,y_P1,z_P1,...,x_PN,y_PN,z_PN)
+    !> with 1<=i<=P, 1<=j<=N
+    !> hbar=1, k_b=1
+
+    INTEGER, INTENT(IN) :: npar
+    REAL(8), DIMENSION(:), INTENT(IN) :: par
+    REAL(8), DIMENSION(4) :: Q_ENERGY_HARM_3D
+    REAL(8), PARAMETER :: pi=3.141592653589793d0
+    REAL(8) ::  eps
+    REAL(8), DIMENSION(SIZE(par)-5+3*INT(par(1))) :: x     
+    INTEGER(4) :: N, i, j, P, k, ind_xi, ind_xj
+    REAL(8) :: rij, ener, omega, tau, m, rharm, harm, V
+
+    N=INT(par(1))
+    P=INT(par(2))
+    tau=par(3)
+    m=par(4)
+    omega=par(5)
+    eps=0.5*m*omega**2
+    x(:3*N*P) = par(6:)
+    x((3*N*P+1):) = par(6:(5+3*N)) !Replica P+1 is replica 1
+    ener=0.
+    harm=0.
+    V=0.
+    DO k=1,P
+      DO i=1,N
+        ind_xi=(k-1)*3*N+(i-1)*3 !starting index for i
+        rharm=(x(ind_xi+1)-x(ind_xi+3*N+1))**2+(x(ind_xi+2)-x(ind_xi+3*N+2))**2+(x(ind_xi+3)-x(ind_xi+3*N+3))**2 !harmonic interaction between neighbouring replicas
+        harm=harm+0.5*P*tau**2*m*rharm
+        rij=(x(ind_xi+1))**2+(x(ind_xi+2))**2+(x(ind_xi+3))**2
+        V=V+eps*(rij)/P
+      END DO
+    END DO
+    ener = V + harm
+    Q_ENERGY_HARM_3D=(/ener,V,harm,tau/)
+  END FUNCTION Q_ENERGY_HARM_3D
 
 
 END MODULE MOD_POTENTIALS

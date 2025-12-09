@@ -130,6 +130,7 @@ class Analysis(object):
         parameters = []
         i = 1
         
+        
         for k, v in input_data['function']['params'].items():
             parameters.append([
                 k,
@@ -205,37 +206,49 @@ class Analysis(object):
 
         # Max parameter set
         output_data['max'] = [float(lines[11+index].split()[1]) for index in range(npar)]
-
-        # Average and standard deviation of parameters
-        #output_data['mean']= [[float(lines[10+npar+index].split()[1]),float(lines[10+npar+index].split()[3])] for index in range(npar)]
-        output_data['mean'] = [float(lines[13+npar+index].split()[1]) for index in range(npar)]
-        output_data['sd']   = [float(lines[13+npar+index].split()[3]) for index in range(npar)]
-
-        # Name of parameters
-        output_data['par_name'] = [lines[15+2*npar+index].split()[0] for index in range(npar)]
-
-        # Confidence levels of parameters
-        #output_data['conf_level'] = [[float(lines[12+2*npar+index].split()[1]),float(lines[12+2*npar+index].split()[2]),float(lines[12+2*npar+index].split()[3]),float(lines[12+2*npar+index].split()[5]),float(lines[12+2*npar+index].split()[6]),float(lines[12+2*npar+index].split()[7])] for index in range(npar)]
-        output_data['conf_level_m99'] = [float(lines[15+2*npar+index].split()[1]) for index in range(npar)]
-        output_data['conf_level_m95'] = [float(lines[15+2*npar+index].split()[2]) for index in range(npar)]
-        output_data['conf_level_m68'] = [float(lines[15+2*npar+index].split()[3]) for index in range(npar)]
-        output_data['conf_level_p68'] = [float(lines[15+2*npar+index].split()[5]) for index in range(npar)]
-        output_data['conf_level_p95'] = [float(lines[15+2*npar+index].split()[6]) for index in range(npar)]
-        output_data['conf_level_p99'] = [float(lines[15+2*npar+index].split()[7]) for index in range(npar)]
-
-        # Median of parameters
-        output_data['median'] = [float(lines[15+2*npar+index].split()[4]) for index in range(npar)]
-
-        # Information
-        output_data['information'] =  float(lines[17+3*npar].split()[1])
-
-        # Complexity
-        output_data['complexity'] =  float(lines[19+3*npar].split()[1])
-
-        # Calculation information
-        output_data['n_cores'] =  int(lines[21+3*npar].split()[1])
-        output_data['cpu_computation_time'] =  float(lines[22+3*npar].split()[1])
-        output_data['real_computation_time'] =  float(lines[22+3*npar].split()[2])
+        
+        if input_data['writing']['statistics'] and ((not input_data['search']['hard_writing']) or input_data['writing']['all_parameters']):
+            # Average and standard deviation of parameters
+            #output_data['mean']= [[float(lines[10+npar+index].split()[1]),float(lines[10+npar+index].split()[3])] for index in range(npar)]
+            output_data['mean'] = [float(lines[13+npar+index].split()[1]) for index in range(npar)]
+            output_data['sd']   = [float(lines[13+npar+index].split()[3]) for index in range(npar)]
+            
+            # Name of parameters
+            output_data['par_name'] = [lines[15+2*npar+index].split()[0] for index in range(npar)]
+            
+            # Confidence levels of parameters
+            #output_data['conf_level'] = [[float(lines[12+2*npar+index].split()[1]),float(lines[12+2*npar+index].split()[2]),float(lines[12+2*npar+index].split()[3]),float(lines[12+2*npar+index].split()[5]),float(lines[12+2*npar+index].split()[6]),float(lines[12+2*npar+index].split()[7])] for index in range(npar)]
+            output_data['conf_level_m99'] = [float(lines[15+2*npar+index].split()[1]) for index in range(npar)]
+            output_data['conf_level_m95'] = [float(lines[15+2*npar+index].split()[2]) for index in range(npar)]
+            output_data['conf_level_m68'] = [float(lines[15+2*npar+index].split()[3]) for index in range(npar)]
+            output_data['conf_level_p68'] = [float(lines[15+2*npar+index].split()[5]) for index in range(npar)]
+            output_data['conf_level_p95'] = [float(lines[15+2*npar+index].split()[6]) for index in range(npar)]
+            output_data['conf_level_p99'] = [float(lines[15+2*npar+index].split()[7]) for index in range(npar)]
+            
+            # Median of parameters
+            output_data['median'] = [float(lines[15+2*npar+index].split()[4]) for index in range(npar)]
+            
+            # Information
+            output_data['information'] =  float(lines[17+3*npar].split()[1])
+            
+            # Complexity
+            output_data['complexity'] =  float(lines[19+3*npar].split()[1])
+            
+            # Calculation information
+            output_data['n_cores'] =  int(lines[21+3*npar].split()[1])
+            output_data['cpu_computation_time'] =  float(lines[22+3*npar].split()[1])
+            output_data['real_computation_time'] =  float(lines[22+3*npar].split()[2])
+        else:
+            # Information
+            output_data['information'] =  float(lines[13+npar].split()[1])
+            
+            # Complexity
+            output_data['complexity'] =  float(lines[15+npar].split()[1])
+            
+            # Calculation information
+            output_data['n_cores'] =  int(lines[17+npar].split()[1])
+            output_data['cpu_computation_time'] =  float(lines[18+npar].split()[1])
+            output_data['real_computation_time'] =  float(lines[18+npar].split()[2])
 
         return output_data
 

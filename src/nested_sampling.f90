@@ -1,16 +1,20 @@
-SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_birth_final,live_rank_final,&
-   weight,live_final,live_like_max,live_max,mpi_rank,mpi_cluster_size)
-  ! Time-stamp: <Last changed by martino on Tuesday 16 September 2025 at CEST 23:59:09>
-
+SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_max,live_max,mpi_rank,mpi_cluster_size)
+   ! Time-stamp: <Last changed by martino on Tuesday 16 September 2025 at CEST 23:59:09>
+   !NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_birth_final,live_rank_final,&
+   !weight,live_final,live_like_max,live_max,mpi_rank,mpi_cluster_size)
+  
   ! Additional math module
   USE MOD_MATH
 
   ! Parameter module
   USE MOD_PARAMETERS, ONLY:  npar, nlive, conv_method, evaccuracy, conv_par, &
         search_par2, par_in, par_step, par_bnd1, par_bnd2, par_fix, par_name, &
-        make_cluster, nth, maxtries, maxntries, searchid
+        make_cluster, nth, maxtries, maxntries, searchid, hard_writing_parameters, &
+        calc_mode, write_all_parameters
   ! Module for likelihood
   USE MOD_LIKELIHOOD_GEN
+  ! Module for likelihood
+  USE MOD_POTENTIALS, ONLY: LOGLIKELIHOOD_POT_WRITE
   ! Module for searching new live points
   USE MOD_SEARCH_NEW_POINT, ONLY: SEARCH_NEW_POINT, MAKE_PRELIM_CALC, REMAKE_CALC, DEALLOCATE_SEARCH_NEW_POINTS
   ! Module for cluster analysis
@@ -21,6 +25,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   USE MOD_LOGGER
   ! Module for proffiling
   USE MOD_PERFPROF
+  ! Module for arrays for tries
+  USE MOD_ARRAY_TRIES
 
   !
   IMPLICIT NONE
@@ -28,11 +34,11 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   INTEGER(4), INTENT(OUT) :: nall
   REAL(8), INTENT(OUT) :: evsum_final, live_like_max
   REAL(8), INTENT(OUT), DIMENSION(npar) :: live_max
-  REAL(8), INTENT(OUT), DIMENSION(maxstep) :: weight
-  REAL(8), INTENT(OUT), DIMENSION(maxstep) :: live_like_final
-  REAL(8), INTENT(OUT), DIMENSION(maxstep,npar) :: live_final
-  REAL(8), INTENT(OUT), DIMENSION(maxstep) :: live_birth_final
-  INTEGER(4), INTENT(OUT), DIMENSION(maxstep) :: live_rank_final
+  !REAL(8), INTENT(OUT), DIMENSION(:) :: weight
+  !REAL(8), INTENT(OUT), DIMENSION(:) :: live_like_final
+  !REAL(8), INTENT(OUT), DIMENSION(:,:) :: live_final
+  !REAL(8), INTENT(OUT), DIMENSION(:) :: live_birth_final
+  !INTEGER(4), INTENT(OUT), DIMENSION(:) :: live_rank_final
   INTEGER(4), INTENT(IN) :: mpi_rank, mpi_cluster_size
   ! Random number variables
   !INTEGER, INTENT(IN) :: irnmax
@@ -42,11 +48,11 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   ! Loop variables
   INTEGER(4) :: nstep = 2
   REAL(8) :: lntstep=1., lntrest=0., lntmass =0., constm = 0., constp = 0.
-  REAL(8), DIMENSION(maxstep) :: evstep
-  REAL(8), DIMENSION(maxstep) :: live_like_old        ! End values
-  REAL(8), DIMENSION(maxstep) :: live_birth_old       ! Birth values
-  INTEGER(4), DIMENSION(maxstep) :: live_rank_old     ! Likelihood sort rank at the birth
-  REAL(8), DIMENSION(maxstep,npar) :: live_old
+  REAL(8), ALLOCATABLE, DIMENSION(:) :: evstep
+  REAL(8), ALLOCATABLE, DIMENSION(:) :: live_like_old        ! End values
+  REAL(8), ALLOCATABLE, DIMENSION(:) :: live_birth_old       ! Birth values
+  INTEGER(4), ALLOCATABLE, DIMENSION(:) :: live_rank_old     ! Likelihood sort rank at the birth
+  REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_old
   REAL(8) :: evsum = 0., evrestest = 0., evtotest = 0.
   ! Search variable to monitor efficiency
   INTEGER(4), ALLOCATABLE, DIMENSION(:) :: ntries
@@ -69,9 +75,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   INTEGER(4) :: nstep_final
   REAL(8) :: last_likes, live_like_last, evrest_last, evlast              
   REAL(8), DIMENSION(nlive) :: live_birth_last               
-  INTEGER(4), DIMENSION(nlive) :: live_rank_last  
+  INTEGER(4), DIMENSION(nlive) :: live_rank_last
+  REAL(8), DIMENSION(4) :: en_write                   ! Vector for writing in energy file  
   ! Rest
-  INTEGER(4) :: j, l, n, jlim, it
+  INTEGER(4) :: i, j, l, n, jlim, it
   REAL(8) :: ADDLOG, rn, gval
   REAL(8) :: moving_eff_avg = 0.
   CHARACTER :: info_string*4096
@@ -81,7 +88,15 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   INTEGER(4), PARAMETER :: n_call_cluster_it_max=10, n_call_cluster_max=100
 
   PROFILED(NESTED_SAMPLING)
-
+  !WRITE(*,*) ALLOCATED(weight), ALLOCATED(live_like_final), ALLOCATED(live_final), ALLOCATED(live_birth_final), ALLOCATED(live_rank_final)
+  !WRITE(*,*) SIZE(weight), SIZE(live_like_final), SIZE(live_final), SIZE(live_birth_final), SIZE(live_rank_final)
+  IF(hard_writing_parameters) THEN ! if hard_writing_parameters is true, only keep in memory the current information
+     ALLOCATE(evstep(1), live_like_old(1), live_birth_old(1), live_rank_old(1), live_old(1,npar))
+     !ALLOCATE(weight(1), live_like_final(1), live_final(1,npar), live_birth_final(1), live_rank_final(1))
+  ELSE ! if hard_writing_parameters is false, keep al information in memory
+     ALLOCATE(evstep(maxstep), live_like_old(maxstep), live_birth_old(maxstep), live_rank_old(maxstep), live_old(maxstep,npar))
+     !ALLOCATE(weight(maxstep), live_like_final(maxstep), live_final(maxstep,npar), live_birth_final(maxstep), live_rank_final(maxstep))
+  END IF
   ! Initialize variables (with different seeds for different processors)
   gval = 0.
   par_prior = 0.
@@ -93,10 +108,10 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   live_like_old = 0.
   live_birth_old = 0.
   live_rank_old = 0
-  live_final = 0.
-  live_like_final = 0.
-  live_birth_final = 0.
-  live_rank_final = 0
+  !live_final = 0.
+  !live_like_final = 0.
+  !live_birth_final = 0.
+  !live_rank_final = 0
   evstep = 0.
   nstep = maxstep - nlive + 1
   n_call_cluster=0
@@ -207,6 +222,18 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
     CALL LOG_ERROR('Available options: [LIKE_ACC, ENERGY_ACC, ENERGY_MAX].')
     CALL LOG_ERROR_HEADER()
   END IF
+  
+  IF(hard_writing_parameters .AND. write_all_parameters) WRITE(30) evstep(1), LOGLIKELIHOOD(npar, live(1,:)), live(1,:), live_birth(1), live_rank(1)
+  IF(hard_writing_parameters .AND. (.NOT. write_all_parameters)) WRITE(23, *) live_birth(1), live_rank(1)
+  IF(calc_mode.EQ.'POTENTIAL') THEN
+    en_write = LOGLIKELIHOOD_POT_WRITE(npar, live(1,:))
+    WRITE(31, *) lntmass, en_write(1)
+  ELSE IF(calc_mode.EQ.'Q_POTENTIAL') THEN
+    en_write = LOGLIKELIHOOD_POT_WRITE(npar, live(1,:))
+    WRITE(31, *) lntmass, en_write
+  END IF
+  !IF(hard_writing_parameters) weight = evstep(1)
+  
 
   ! Present minimal value of the likelihood
   min_live_like = live_like(1)
@@ -345,11 +372,26 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
          END IF
          
         ! Store old values
-        live_like_old(n) = live_like(1)
-        live_old(n,:) = live(1,:)
-        live_birth_old(n) = live_birth(1)
-        live_rank_old(n) = live_rank(1)
-
+        IF(hard_writing_parameters) THEN !array are not the same size
+           live_like_old(1) = live_like(1)
+           live_old(1,:) = live(1,:)
+           live_birth_old(1) = live_birth(1)
+           live_rank_old(1) = live_rank(1)
+        ELSE
+           live_like_old(n) = live_like(1)
+           live_old(n,:) = live(1,:)
+           live_birth_old(n) = live_birth(1)
+           live_rank_old(n) = live_rank(1)
+        END IF
+        
+        IF(calc_mode.EQ.'POTENTIAL') THEN
+          en_write = LOGLIKELIHOOD_POT_WRITE(npar, live(1,:))
+          WRITE(31, *) lntmass, en_write(1)
+        ELSE IF(calc_mode.EQ.'Q_POTENTIAL') THEN
+          en_write = LOGLIKELIHOOD_POT_WRITE(npar, live(1,:))
+          WRITE(31, *) lntmass, en_write
+        END IF
+        
         ! Insert the new one
         IF (jlim.LT.1.OR.jlim.GT.nlive) THEN
            CALL LOG_ERROR_HEADER()
@@ -361,7 +403,11 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
         ELSE IF (jlim.EQ.1) THEN
            live_like(1) = live_like_new(it)
            live(1,:) = live_new(it,:)
-           live_birth(1) = live_like_old(n)
+           IF(hard_writing_parameters) THEN !array are not the same size
+              live_birth(1) = live_like_old(1)
+           ELSE
+              live_birth(1) = live_like_old(n) 
+           END IF
            live_rank(1) = 1
         ELSE
            ! Shift values
@@ -372,7 +418,11 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
            ! Insert new value
            live_like(jlim) =  live_like_new(it)
            live(jlim,:) =  live_new(it,:)
-           live_birth(jlim) = live_like_old(n)
+           IF(hard_writing_parameters) THEN !array are not the same size
+              live_birth(jlim) = live_like_old(1)
+           ELSE
+              live_birth(jlim) = live_like_old(n) 
+           END IF
            live_rank(jlim) = jlim
            ! The rest stay as it is
         END IF
@@ -403,42 +453,84 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
          !   CALL REMAKE_CLUSTER_STD(live,icluster(it),icluster_old)
         END IF
         
-        IF(conv_method .EQ. 'LIKE_ACC') THEN
-           ! Calculate the evidence for this step
-           evstep(n) = live_like_old(n) + lntmass
+        IF(hard_writing_parameters) THEN !array are not the same size
+           IF(conv_method .EQ. 'LIKE_ACC') THEN
+              ! Calculate the evidence for this step
+              evstep(1) = live_like_old(1) + lntmass
            
-           ! Sum the evidences
-           evsum = ADDLOG(evsum,evstep(n))
+              ! Sum the evidences
+              evsum = ADDLOG(evsum,evstep(1))
            
-           ! Check if the estimate accuracy is reached
-           evrestest = live_like(nlive) + lntrest
-           evtotest = ADDLOG(evsum,evrestest)
-        ELSE IF(conv_method .EQ. 'ENERGY_ACC') THEN
-           ! Calculate the contribution to the partition function at that temperature for this step
-           evstep(n) = 1./conv_par*live_like_old(n) + lntmass
+              ! Check if the estimate accuracy is reached
+              evrestest = live_like(nlive) + lntrest
+              evtotest = ADDLOG(evsum,evrestest)
+           ELSE IF(conv_method .EQ. 'ENERGY_ACC') THEN
+              ! Calculate the contribution to the partition function at that temperature for this step
+              evstep(1) = 1./conv_par*live_like_old(1) + lntmass
            
-           ! Sum the contribution with the previous contributions
-           evsum = ADDLOG(evsum,evstep(n))
+              ! Sum the contribution with the previous contributions
+              evsum = ADDLOG(evsum,evstep(1))
            
-           ! Check if the estimate accuracy is reached
-           evrestest = 1./conv_par*live_like(nlive) + lntrest
-           evtotest = ADDLOG(evsum,evrestest)
-        ELSE IF(conv_method .EQ. 'ENERGY_MAX') THEN
-           ! Calculate the contribution to the partition function at that temperature for this step
-           evstep(n) = 1./conv_par*live_like_old(n) + lntmass
+              ! Check if the estimate accuracy is reached
+              evrestest = 1./conv_par*live_like(nlive) + lntrest
+              evtotest = ADDLOG(evsum,evrestest)
+           ELSE IF(conv_method .EQ. 'ENERGY_MAX') THEN
+              ! Calculate the contribution to the partition function at that temperature for this step
+              evstep(1) = 1./conv_par*live_like_old(1) + lntmass
            
-           ! Max between the present contribution and previous ones
-           evsum = MAX(evsum,evstep(n))
+              ! Max between the present contribution and previous ones
+              evsum = MAX(evsum,evstep(1))
            
-           ! Check if the estimate accuracy is reached
-           evtotest = evstep(n)
+              ! Check if the estimate accuracy is reached
+              evtotest = evstep(1)
+           ELSE
+              CALL LOG_ERROR_HEADER()
+              CALL LOG_ERROR('Invalid convergence method.')
+              CALL LOG_ERROR('Available options: [LIKE_ACC, ENERGY_ACC, ENERGY_MAX].')
+              CALL LOG_ERROR_HEADER()
+           END IF
         ELSE
-           CALL LOG_ERROR_HEADER()
-           CALL LOG_ERROR('Invalid convergence method.')
-           CALL LOG_ERROR('Available options: [LIKE_ACC, ENERGY_ACC, ENERGY_MAX].')
-           CALL LOG_ERROR_HEADER()
+           IF(conv_method .EQ. 'LIKE_ACC') THEN
+              ! Calculate the evidence for this step
+              evstep(n) = live_like_old(n) + lntmass
+           
+              ! Sum the evidences
+              evsum = ADDLOG(evsum,evstep(n))
+           
+              ! Check if the estimate accuracy is reached
+              evrestest = live_like(nlive) + lntrest
+              evtotest = ADDLOG(evsum,evrestest)
+           ELSE IF(conv_method .EQ. 'ENERGY_ACC') THEN
+              ! Calculate the contribution to the partition function at that temperature for this step
+              evstep(n) = 1./conv_par*live_like_old(n) + lntmass
+           
+              ! Sum the contribution with the previous contributions
+              evsum = ADDLOG(evsum,evstep(n))
+           
+              ! Check if the estimate accuracy is reached
+              evrestest = 1./conv_par*live_like(nlive) + lntrest
+              evtotest = ADDLOG(evsum,evrestest)
+           ELSE IF(conv_method .EQ. 'ENERGY_MAX') THEN
+              ! Calculate the contribution to the partition function at that temperature for this step
+              evstep(n) = 1./conv_par*live_like_old(n) + lntmass
+           
+              ! Max between the present contribution and previous ones
+              evsum = MAX(evsum,evstep(n))
+           
+              ! Check if the estimate accuracy is reached
+              evtotest = evstep(n)
+           ELSE
+              CALL LOG_ERROR_HEADER()
+              CALL LOG_ERROR('Invalid convergence method.')
+              CALL LOG_ERROR('Available options: [LIKE_ACC, ENERGY_ACC, ENERGY_MAX].')
+              CALL LOG_ERROR_HEADER()
+           END IF 
         END IF
-        
+           
+        !IF(hard_writing_parameters) weight(1) = ADDLOG(weight(1),evstep(1))
+
+        IF(hard_writing_parameters .AND. write_all_parameters) WRITE(30) evstep(1), LOGLIKELIHOOD(npar, live_old(1,:)), live(1,:), live_birth(1), live_rank(1)
+        IF(hard_writing_parameters .AND. (.NOT. write_all_parameters)) WRITE(23, *) live_birth(1), live_rank(1)
         ! Write status
         !write(*,*) 'N step : ', n, 'Evidence at present : ', evsum ! ???? Debugging
         !write(*,*) n, live_like_old(n), live_birth_old(n), live_rank_old(n) !????
@@ -448,34 +540,55 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
         
       !   moving_eff_avg = MOVING_AVG(search_par2/ntries(it))
         IF (MOD(n,100).EQ.0) THEN
-           IF(opt_suppress_output) CYCLE
-           moving_eff_avg = REAL(search_par2/ntries(it),8)
-           IF(opt_compact_output) THEN
-              WRITE(info_string,22) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, moving_eff_avg
-22            FORMAT('| N: ', I2, ' | S: ', I8, ' | MLL: ', F20.12, ' | E: ', F20.12, &
+           IF(hard_writing_parameters) THEN !array are not the same size
+              IF(opt_suppress_output) CYCLE
+              moving_eff_avg = REAL(search_par2/ntries(it),8)
+              IF(opt_compact_output) THEN
+                 WRITE(info_string,22) itry, n, min_live_like, evsum, evstep(1), evtotest-evsum, moving_eff_avg
+22               FORMAT('| N: ', I2, ' | S: ', I8, ' | MLL: ', F20.12, ' | E: ', F20.12, &
                    ' | Es: ', F20.12, ' | Ea: ', ES14.7, ' | Te: ', F6.4, ' |')
-              WRITE(*,24) info_string
-24            FORMAT(A150)
-           ELSE IF(opt_lib_output) THEN
-              WRITE(*,*) 'LO | ', itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, moving_eff_avg, npar, par_name, live(nlive, :)
+                 WRITE(*,24) info_string
+24               FORMAT(A150)
+              ELSE IF(opt_lib_output) THEN
+                 WRITE(*,*) 'LO | ', itry, n, min_live_like, evsum, evstep(1), evtotest-evsum, moving_eff_avg, npar, par_name, live(nlive, :)
+              ELSE
+                 WRITE(info_string,23) itry, n, min_live_like, evsum, evstep(1), evtotest-evsum, moving_eff_avg
+23               FORMAT('| N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
+                      ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES14.7, ' | Typical eff.: ', F6.4, ' |')
+                 WRITE(*,25) info_string
+25               FORMAT(A220)
+              ENDIF
            ELSE
-              WRITE(info_string,23) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, moving_eff_avg
-23            FORMAT('| N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
-                   ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES14.7, ' | Typical eff.: ', F6.4, ' |')
-              WRITE(*,25) info_string
-25            FORMAT(A220)
-           ENDIF
+              IF(opt_suppress_output) CYCLE
+              moving_eff_avg = REAL(search_par2/ntries(it),8)
+              IF(opt_compact_output) THEN
+                 WRITE(info_string,26) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, moving_eff_avg
+26               FORMAT('| N: ', I2, ' | S: ', I8, ' | MLL: ', F20.12, ' | E: ', F20.12, &
+                   ' | Es: ', F20.12, ' | Ea: ', ES14.7, ' | Te: ', F6.4, ' |')
+                 WRITE(*,28) info_string
+28               FORMAT(A150)
+              ELSE IF(opt_lib_output) THEN
+                 WRITE(*,*) 'LO | ', itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, moving_eff_avg, npar, par_name, live(nlive, :)
+              ELSE
+                 WRITE(info_string,27) itry, n, min_live_like, evsum, evstep(n), evtotest-evsum, moving_eff_avg
+27               FORMAT('| N. try: ', I2, ' | N. step: ', I10, ' | Min. loglike: ', F23.15, ' | Evidence: ', F23.15, &
+                      ' | Ev. step: ', F23.15, ' | Ev. pres. acc.: ', ES14.7, ' | Typical eff.: ', F6.4, ' |')
+                 WRITE(*,29) info_string
+29               FORMAT(A220)
+              ENDIF
+           END IF 
         ENDIF
 
-        ! If the number of steps is reached, we stop the loop
-        IF (n.GE.nstep) THEN
-           CALL LOG_MESSAGE('Maximum number of iteraction reached  = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(nstep))))
-           CALL LOG_MESSAGE('Exiting from the main nested sampling loop  = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(nstep))))
-           normal_exit = .true.
-           nstep_final = n
-           EXIT main_loop
+        ! If the number of steps is reached, we stop the loop. Only if hard_writing_parameters is false
+        IF(.NOT. hard_writing_parameters) THEN
+           IF (n.GE.nstep) THEN
+              CALL LOG_MESSAGE('Maximum number of iteraction reached  = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(nstep))))
+              CALL LOG_MESSAGE('Exiting from the main nested sampling loop  = '//TRIM(ADJUSTL(INT_TO_STR_INLINE(nstep))))
+              normal_exit = .true.
+              nstep_final = n
+              EXIT main_loop
+           END IF
         END IF
-
      END DO
 
      ! Final operations
@@ -509,7 +622,11 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   ! Store the last live points
   OPEN(99,FILE='nf_output_last_live_points.dat',STATUS= 'UNKNOWN')
   WRITE(99,*) '# n step =',  n-1
-  WRITE(99,*) '# Evidence of the step =', evstep(n-1)
+  IF(hard_writing_parameters) THEN ! evstep has different sizes
+      WRITE(99,*) '# Evidence of the step =', evstep(1)
+  ELSE
+      WRITE(99,*) '# Evidence of the step =', evstep(n-1)
+  END IF
   IF(conv_method .EQ. 'LIKE_ACC') THEN
     WRITE(99,*) '# Evidence accuracy =',  ADDLOG(evsum,live_like(nlive) + lntrest) - evsum
   ELSE IF(conv_method .EQ. 'ENERGY_ACC') THEN
@@ -524,7 +641,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   END IF
   WRITE(99,*) '# n     lnlikelihood     parameters    birth_lnlike   rank'
   DO j=1,nlive
-     WRITE(99,*) j, live_like(j), live(j,:), live_birth(j), live_rank(j)
+      WRITE(99,*) j, live_like(j), live(j,:), live_birth(j), live_rank(j)
   END DO
   CLOSE(99)
 
@@ -580,20 +697,42 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
    CALL LOG_ERROR('Available options: [LIKE_ACC, ENERGY_ACC, ENERGY_MAX].')
    CALL LOG_ERROR_HEADER()
   END IF
-  
-  ! Insert the last live points in the ensemble
-  live_old(nstep_final+1:nstep_final+nlive,:) = live(:,:)
-  live_like_old(nstep_final+1:nstep_final+nlive) = live_like_last
-  live_birth_old(nstep_final+1:nstep_final+nlive) = live_birth(:)
-  live_rank_old(nstep_final+1:nstep_final+nlive) = live_rank(:)
-  evstep(nstep_final+1:nstep_final+nlive) = evlast
 
-  ! Total output of the routine (plis evsum_final)
-  live_final = live_old
-  live_like_final = live_like_old
-  live_birth_final = live_birth_old
-  live_rank_final = live_rank_old
-
+  ! Insert the last live points in the ensemble if hard_writing_parametrs is false. Otherwise, save them in the file
+  IF(.NOT. hard_writing_parameters) THEN
+     live_old(nstep_final+1:nstep_final+nlive,:) = live(:,:)
+     live_like_old(nstep_final+1:nstep_final+nlive) = live_like_last
+     live_birth_old(nstep_final+1:nstep_final+nlive) = live_birth(:)
+     live_rank_old(nstep_final+1:nstep_final+nlive) = live_rank(:)
+     evstep(nstep_final+1:nstep_final+nlive) = evlast
+     
+     ! Total output of the routine (plis evsum_final)
+     live_final_try(:,:,itry) = live_old
+     live_like_final_try(:,itry) = live_like_old
+     live_birth_final_try(:,itry) = live_birth_old
+     live_rank_final_try(:,itry) = live_rank_old
+  ELSE IF (hard_writing_parameters .AND. write_all_parameters) THEN
+     DO i=1,nlive
+        WRITE(30) evlast, LOGLIKELIHOOD(npar, live(i,:)), live(i,:), live_birth(i), live_rank(i)
+        !weight(1) = ADDLOG(weight(1),evlast)
+     END DO
+  ELSE IF (hard_writing_parameters .AND. (.NOT. write_all_parameters)) THEN
+     DO i=1,nlive
+        WRITE(23, *) live_birth(i), live_rank(i)
+        !weight(1) = ADDLOG(weight(1),evlast)
+     END DO
+  END IF
+  IF(calc_mode.EQ.'POTENTIAL') THEN
+     DO i=1,nlive
+        en_write = LOGLIKELIHOOD_POT_WRITE(npar, live(i,:))
+        WRITE(31, *) lntmass, en_write(1)
+     END DO
+  ELSE IF(calc_mode.EQ.'Q_POTENTIAL') THEN
+     DO i=1,nlive
+        en_write = LOGLIKELIHOOD_POT_WRITE(npar, live(i,:))
+        WRITE(31, *) lntmass, en_write
+     END DO
+  END IF
   nall = nstep_final + nlive
 
   ! Make last calculations and deallocate variables for cluster analysis
@@ -619,11 +758,13 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_final,live_bi
   live_max = live(nlive,:)
   live_like_max = live_like(nlive)
 
-  ! Calculate the weights with test of overflow
-  weight = 0.d0
-  DO n=1,nstep_final
-     IF(DABS(evstep(n) - evsum_final).LT.700) weight(n) = DEXP(evstep(n) - evsum_final)
-  END DO
+  ! Calculate the weights with test of overflow. Only if hard_writing_parameters is false
+  IF(.NOT. hard_writing_parameters) THEN
+     weight_try = 0.d0
+     DO n=1,nstep_final
+        IF(DABS(evstep(n) - evsum_final).LT.700) weight_try(n,itry) = DEXP(evstep(n) - evsum_final)
+     END DO
+  END IF
 
 !1000 FORMAT (A12,I1,A4)
 !2000 FORMAT (A7,I1,A4)

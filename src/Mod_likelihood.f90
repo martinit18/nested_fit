@@ -1138,30 +1138,32 @@ CONTAINS
           END IF
        END DO
        CLOSE(20)
-       ! mean values ------------------------------------------------------------------------
-       OPEN (UNIT=20, FILE='nf_output_data_mean.dat', STATUS='unknown')
-       WRITE(20,*)'# x    y data    y theory      y diff    y err'
-       DO i=1, ndata
-          enc = USERFCN(x(i,k),npar,par_mean)
-          IF (data_type.EQ.'1e') THEN
-             WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)
-          ELSE IF (data_type.EQ.'1c') THEN
-             WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', SQRT(nc(i,k))
-          END IF
-       END DO
-       CLOSE(20)
-       ! median values ----------------------------------------------------------------------
-       OPEN (UNIT=20, FILE='nf_output_data_median.dat', STATUS='unknown')
-       WRITE(20,*)'# x    y data    y theory      y diff    y err'
-       DO i=1, ndata
-          enc = USERFCN(x(i,k),npar,par_median_w)
-          IF (data_type.EQ.'1e') THEN
-             WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)
-          ELSE IF (data_type.EQ.'1c') THEN
-             WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', SQRT(nc(i,k))
-          END IF
-       END DO
-       CLOSE(20)
+       IF(write_statistics) THEN
+          ! mean values ------------------------------------------------------------------------
+          OPEN (UNIT=20, FILE='nf_output_data_mean.dat', STATUS='unknown')
+          WRITE(20,*)'# x    y data    y theory      y diff    y err'
+          DO i=1, ndata
+             enc = USERFCN(x(i,k),npar,par_mean)
+             IF (data_type.EQ.'1e') THEN
+                WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)
+             ELSE IF (data_type.EQ.'1c') THEN
+                WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', SQRT(nc(i,k))
+             END IF
+          END DO
+          CLOSE(20)
+          ! median values ----------------------------------------------------------------------
+          OPEN (UNIT=20, FILE='nf_output_data_median.dat', STATUS='unknown')
+          WRITE(20,*)'# x    y data    y theory      y diff    y err'
+          DO i=1, ndata
+             enc = USERFCN(x(i,k),npar,par_median_w)
+             IF (data_type.EQ.'1e') THEN
+                WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', nc_err(i,k)
+             ELSE IF (data_type.EQ.'1c') THEN
+                WRITE(20,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', SQRT(nc(i,k))
+             END IF
+          END DO
+          CLOSE(20)
+       END IF
        ! -------------------------------------------------------------------------------------
     ELSE
        DO k=1, nset
@@ -1179,32 +1181,34 @@ CONTAINS
              END IF
           END DO
           CLOSE(30)
-          ! mean values ----------------------------------------------------------------------
-          WRITE(out_filename,2000) 'nf_output_data_mean_',k,'.dat'
-          OPEN (UNIT=30, FILE=out_filename, STATUS='unknown')
-          WRITE(30,*)'# x    y data    y theory      y diff    y err'
-          DO i=1, ndata_set(k)
-             enc = USERFCN_SET(x(i,k),npar,live_max,k)
-             IF (data_type.EQ.'1e') THEN
-                WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ',  nc_err(i,k)
-             ELSE IF (data_type.EQ.'1c') THEN
-                WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', SQRT(nc(i,k))
-             END IF
-          END DO
-          CLOSE(30)
-          ! median values ---------------------------------------------------------------------
-          WRITE(out_filename,3000) 'nf_output_data_median_',k,'.dat'
-          OPEN (UNIT=30, FILE=out_filename, STATUS='unknown')
-          WRITE(30,*)'# x    y data    y theory      y diff    y err'
-          DO i=1, ndata_set(k)
-             enc = USERFCN_SET(x(i,k),npar,live_max,k)
-             IF (data_type.EQ.'1e') THEN
-                WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ',  nc_err(i,k)
-             ELSE IF (data_type.EQ.'1c') THEN
-                WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', SQRT(nc(i,k))
-             END IF
-          END DO
-          CLOSE(30)
+          IF(write_statistics) THEN
+             ! mean values ----------------------------------------------------------------------
+             WRITE(out_filename,2000) 'nf_output_data_mean_',k,'.dat'
+             OPEN (UNIT=30, FILE=out_filename, STATUS='unknown')
+             WRITE(30,*)'# x    y data    y theory      y diff    y err'
+             DO i=1, ndata_set(k)
+                enc = USERFCN_SET(x(i,k),npar,live_max,k)
+                IF (data_type.EQ.'1e') THEN
+                   WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ',  nc_err(i,k)
+                ELSE IF (data_type.EQ.'1c') THEN
+                   WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', SQRT(nc(i,k))
+                END IF
+             END DO
+             CLOSE(30)
+             ! median values ---------------------------------------------------------------------
+             WRITE(out_filename,3000) 'nf_output_data_median_',k,'.dat'
+             OPEN (UNIT=30, FILE=out_filename, STATUS='unknown')
+             WRITE(30,*)'# x    y data    y theory      y diff    y err'
+             DO i=1, ndata_set(k)
+                enc = USERFCN_SET(x(i,k),npar,live_max,k)
+                IF (data_type.EQ.'1e') THEN
+                   WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ',  nc_err(i,k)
+                ELSE IF (data_type.EQ.'1c') THEN
+                   WRITE(30,*) x(i,k), ' ',nc(i,k), ' ',enc, ' ',nc(i,k)-enc, ' ', SQRT(nc(i,k))
+                END IF
+             END DO
+             CLOSE(30)
+          END IF
           ! ----------------------------------------------------------------------------------
        END DO
     END IF
@@ -1227,23 +1231,25 @@ CONTAINS
        ENDDO
        CLOSE(40)
 
-       ! mean values
-       OPEN (UNIT=40, FILE='nf_output_fit_mean.dat', STATUS='unknown')
-       WRITE(40,*)'# x    y fit'
-       DO i=1, maxfit
-          xfit = minx + (i-1)*dx
-          yfit = USERFCN(xfit,npar,par_mean)
-       ENDDO
-       CLOSE(40)
+       IF(write_statistics) THEN
+          ! mean values
+          OPEN (UNIT=40, FILE='nf_output_fit_mean.dat', STATUS='unknown')
+          WRITE(40,*)'# x    y fit'
+          DO i=1, maxfit
+             xfit = minx + (i-1)*dx
+             yfit = USERFCN(xfit,npar,par_mean)
+          ENDDO
+          CLOSE(40)
 
-       ! mean values
-       OPEN (UNIT=40, FILE='nf_output_fit_median.dat', STATUS='unknown')
-       WRITE(40,*)'# x    y fit'
-       DO i=1, maxfit
-          xfit = minx + (i-1)*dx
-          yfit = USERFCN(xfit,npar,par_median_w)
-       ENDDO
-       CLOSE(40)
+          ! median values
+          OPEN (UNIT=40, FILE='nf_output_fit_median.dat', STATUS='unknown')
+          WRITE(40,*)'# x    y fit'
+          DO i=1, maxfit
+             xfit = minx + (i-1)*dx
+             yfit = USERFCN(xfit,npar,par_median_w)
+          ENDDO
+          CLOSE(40)
+       END IF
     ELSE
        DO k=1, nset
           maxx = xmax(k)
@@ -1263,25 +1269,29 @@ CONTAINS
           ENDDO
           CLOSE(40)
 
-          WRITE(out_filename,2001) 'nf_output_fit_mean_',k,'.dat'
-          OPEN (UNIT=40, FILE=out_filename, STATUS='unknown')
-          WRITE(40,*)'# x    y fit'
-          DO i=1, maxfit
-             xfit = minx + (i-1)*dx
-             !WRITE(30, *) xfit, USERFCN_SET(xfit,npar,live_max,funcname,k)
-             yfit = USERFCN_SET(xfit,npar,par_mean,k)
-          ENDDO
-          CLOSE(40)
+          IF(write_statistics) THEN
+             ! mean likelihood values
+             WRITE(out_filename,2001) 'nf_output_fit_mean_',k,'.dat'
+             OPEN (UNIT=40, FILE=out_filename, STATUS='unknown')
+             WRITE(40,*)'# x    y fit'
+             DO i=1, maxfit
+                xfit = minx + (i-1)*dx
+                !WRITE(30, *) xfit, USERFCN_SET(xfit,npar,live_max,funcname,k)
+                yfit = USERFCN_SET(xfit,npar,par_mean,k)
+             ENDDO
+             CLOSE(40)
 
-          WRITE(out_filename,3001) 'nf_output_fit_median_',k,'.dat'
-          OPEN (UNIT=40, FILE=out_filename, STATUS='unknown')
-          WRITE(40,*)'# x    y fit'
-          DO i=1, maxfit
-             xfit = minx + (i-1)*dx
-             !WRITE(30, *) xfit, USERFCN_SET(xfit,npar,live_max,funcname,k)
-             yfit = USERFCN_SET(xfit,npar,par_median_w,k)
-          ENDDO
-          CLOSE(40)
+             ! median likelihood values
+             WRITE(out_filename,3001) 'nf_output_fit_median_',k,'.dat'
+             OPEN (UNIT=40, FILE=out_filename, STATUS='unknown')
+             WRITE(40,*)'# x    y fit'
+             DO i=1, maxfit
+                xfit = minx + (i-1)*dx
+                !WRITE(30, *) xfit, USERFCN_SET(xfit,npar,live_max,funcname,k)
+                yfit = USERFCN_SET(xfit,npar,par_median_w,k)
+             ENDDO
+             CLOSE(40)
+          END IF
        END DO
     END IF
 

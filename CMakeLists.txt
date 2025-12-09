@@ -91,6 +91,7 @@ set(SRC_FILES_COMM
     src/Mod_likelihood.f90   
     src/Mod_potentials.f90
     src/Mod_integrated_func.f90
+    src/Mod_array_tries.f90
 
     src/USERFCN_2D.f90
     src/USERFCN_SET.f

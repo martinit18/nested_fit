@@ -161,6 +161,7 @@ For this purpose, the python module `nested_py` can be used also for compressed 
 Together with this file, also the files `nf_output_points.paramnames` and `nf_output_points.ranges` are created for the use of GetDist and Anesthetic python libraries.
 - `nf_output_cluster_mean_std.dat`: contains the number of clusters, number of point per clusters, and mean and standard deviations for each cluster (if the clustering option is activated).
 - `nf_output_cluster_max.dat`: contains the number of clusters, the maximum value of the likelihood and the corresponding parameter values (if the clustering option is activated).
+- `nf_energy.txt`: contains the volume and energy associated to the discarded and final live points. For a quantum potential, the decomposition of the energy between the avergaed potential and the replicas interaction is also given, as well as the temperature. Only created when exploring potentials.
 
 **Details of the input file line by line**
 
@@ -176,7 +177,8 @@ The type of calculation is spefified by `calculation_mode` variable.
 Available options are:
 - `DATA`: for data analysis. A likelihood function is explored the Bayesian evidence is evaluated. It  requires a data file to read and thus the inputs `datafiles, specstr, likelihood`.
 - `INTEGRAL`: for the calculation of the integral of a given function.
-- `POTENTIAL`: for exploration of a potential energy and for building the partition function. 
+- `POTENTIAL`: for exploration of a classical potential energy and for building the partition function.
+- `Q_POTENTIAL`: for exploration of a quantum potential energy and for building the partition function. 
 
 ```yaml
 datafiles: file1.csv [, file2.csv, ...]  # Name of the data file(s)
@@ -232,6 +234,7 @@ search:
     max_tries: 1000     # Maximum tries before stop (max_tries * tries_mult)
     tries_mult: 100     # Max tries multiplier
     num_tries: 1        # Number of runs
+    hard_writing: true  # True by default (if ommited)
     max_steps: 100000   # Max number of steps before stop
 ```
 
@@ -242,10 +245,13 @@ Except for the simplest researche, the detailed balance is maybe not respected b
 - A uniform search around each live point `UNIFORM`, 
 - Three versions of slice sampling: `SLICE_SAMPLING`, `SLICE_SAMPLING_TRANSF`,`SLICE_SAMPLING_ADAPT`.  The first two correspond, respectively, to the search being done in two different spaces (transformed and real) with the first one faster than the second one. `SLICE_SAMPLING_ADAPT` an adaptable step but the detailed balance is maybe not respected. 
 
-The first two parameters of the above line are specific to the search algorithm:
+`param1` and `param2` are specific to the search algorithm:
 - `RANDOM_WALK`,  `RANDOM_WALK_NO_DB` par. 1: fraction of standard deviation for each jump, par. 2: number of jumps. Suggested values: 0.1-0.2, 10-40. 
 -  `SLICE_SAMPLING`, `SLICE_SAMPLING_TRANSF`, and `SLICE_SAMPLING_ADAPT` par. 1: fraction of standard deviation for segment exploration, par. 2: number of jumps. Suggested values: ~1, 3-5. 
 - `UNIFORM` par. 1: fraction of standard deviation for the box size, par. 2: number of jumps. Suggested values: 0.1-1, 1.
+
+If `hard_writing` is true, the dead points are saved in the unformatted file `nf_dead_points_information.txt` during the run. The number of iterations is not limited and the content of the file is erased at the end of the run. Otherwise, the dead points are kept in memory during the run. In that case, the maximum number of iterations is given by `max_steps`. ATTENTION, if `writing: statistics` is false, the file  `nf_dead_points_information.txt` will not be written even if `search: hard_writing` is true.
+
 
 ```yaml
 convergence:
@@ -280,6 +286,16 @@ For the second option:
 - `d`: dbscan (par. 1: distance, par. 2 : minimum number of neighbours)
 - `s`: agglomerative clustering with single linkage (par. 1: distance limit)
 - `k`: k nearest neighbours (no parameters)
+
+```yaml
+writing:
+    statistics:     true # True by default (if ommited)
+    all_parameters: true # True by default (if ommited)
+```
+
+These options allows to choose what is written in the ouput files:
+- `statistics`: if true, the mean, standard deviation, median and confidence levels of the parameters are computed and written in the `nf_output_res` files. ATTENTION, in that case, an array is created with all the points found during the run. ATTENTION, if `writing: all_parameters` is false and `search: hard_writing` is true, `writing: statistics` will be force set to FALSE if it is not.
+- `all_parameters`: if true, the `nf_output_points` files are written. ATTENTION, if false, the file  `nf_dead_points_information.txt` will not be written even if `search: hard_writing` is true.
 
 
 ## Function definition

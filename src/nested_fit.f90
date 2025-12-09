@@ -133,14 +133,16 @@ PROGRAM NESTED_FIT
    USE MOD_LOGGER
    ! Module for performance profiling
    USE MOD_PERFPROF
+   ! Module for arrays for tries
+   USE MOD_ARRAY_TRIES
    ! Parallelization library !!!CAREFULL to the table dimension in this case!!
    USE OMP_LIB
-
+   
   !USE RNG
   !
   IMPLICIT NONE
   ! Data
-  INTEGER(4) :: i=0, j=0, k=0
+  INTEGER(4) :: i=0, j=0, k=0, ind=0
 
   ! Parameters values and co.
   CHARACTER :: string*2048
@@ -160,7 +162,7 @@ PROGRAM NESTED_FIT
   REAL(8), ALLOCATABLE, DIMENSION(:)   :: par_median_w, par_m68_w, par_p68_w, par_m95_w
   REAL(8), ALLOCATABLE, DIMENSION(:)   :: par_p95_w, par_m99_w, par_p99_w
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: weight_par
-  REAL(8)                              :: mean_tmp=0., mean2_tmp=0., weight_tot=0., weight_int=0., weight_int_next=0.
+  REAL(8)                              :: mean_tmp=0., mean2_tmp=0., weight_tot=0., weight_int=0., weight_int_next=0., weight_read=0.
   REAL(8)                              :: evsum_err=0.
   REAL(8)                              :: evsum_err_est=0.
   REAL(8)                              :: live_like_mean=0., info=0., comp=0.
@@ -171,10 +173,10 @@ PROGRAM NESTED_FIT
   INTEGER(4), DIMENSION(1)               :: itrymax
   INTEGER(4), ALLOCATABLE, DIMENSION(:)  :: nall_try
   REAL(8), ALLOCATABLE, DIMENSION(:)     :: evsum_final_try, live_like_max_try
-  REAL(8), ALLOCATABLE, DIMENSION(:,:,:) :: live_final_try
-  REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_like_final_try, weight_try, live_max_try
-  REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_birth_final_try
-  INTEGER(4), ALLOCATABLE, DIMENSION(:,:) :: live_rank_final_try
+  !REAL(8), ALLOCATABLE, DIMENSION(:,:,:) :: live_final_try
+  REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_max_try !live_like_final_try, weight_try, 
+  !REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_birth_final_try
+  !INTEGER(4), ALLOCATABLE, DIMENSION(:,:) :: live_rank_final_try
 
   ! Parallelization variables for each mpi instance
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: live_final_try_instance
@@ -388,18 +390,19 @@ PROGRAM NESTED_FIT
   CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.max_tries' , maxtries     , MANDATORY=.TRUE. )
   CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.tries_mult', maxntries    , MANDATORY=.TRUE. )
   CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.num_tries' , ntry         , MANDATORY=.FALSE.) !      1 by default
+  CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'search.hard_writing'  , hard_writing_parameters  , MANDATORY=.FALSE.) ! True by default
   CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.max_steps' , maxstep_try  , MANDATORY=.FALSE.) ! 100000 by default
   
   ! Convergence configuration
   CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'convergence.method'   , conv_method, MANDATORY=.TRUE.)
   ! Check compatibility between calculation method and convergence method
-  IF(calc_mode.NE.'POTENTIAL'.AND.conv_method.NE.'LIKE_ACC') THEN
+  IF(calc_mode.NE.'POTENTIAL' .AND. calc_mode.NE.'Q_POTENTIAL'.AND.conv_method.NE.'LIKE_ACC') THEN
      CALL LOG_ERROR_HEADER()
-     CALL LOG_ERROR('Use "LIKE_ACC" convergence mode for "DATA" and "INTEGRA:" calculation modes')
+     CALL LOG_ERROR('Use "LIKE_ACC" convergence mode for "DATA" and "INTEGRAL" calculation modes')
      CALL LOG_ERROR('Aborting Execution...')
      CALL LOG_ERROR_HEADER()
      CALL HALT_EXECUTION()
-  ELSE IF(calc_mode.EQ.'POTENTIAL'.AND.conv_method.EQ.'LIKE_ACC') THEN
+  ELSE IF((calc_mode.EQ.'POTENTIAL' .OR. calc_mode.EQ.'Q_POTENTIAL').AND.conv_method.EQ.'LIKE_ACC') THEN
      CALL LOG_ERROR_HEADER()
      CALL LOG_ERROR('Use "ENERGY_ACC" or "ENERGY_MAX" convergence mode for "POTENTIAL" calculation mode')
      CALL LOG_ERROR('Aborting Execution...')
@@ -432,7 +435,17 @@ PROGRAM NESTED_FIT
      CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.ymin', ymin(1), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
      CALL FIELD_FROM_INPUT_REAL     (input_config, 'data.ymax', ymax(1), MANDATORY=.FALSE.) ! 0 by default (i.e. whole data)
   ENDIF
-
+  
+  ! Writing option configuration
+  CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'writing.statistics'  , write_statistics  , MANDATORY=.FALSE.) ! True by default
+  CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'writing.all_parameters'  , write_all_parameters  , MANDATORY=.FALSE.) ! True by default 
+  IF((.NOT. write_all_parameters) .AND. hard_writing_parameters .AND. write_statistics) THEN
+     CALL LOG_ERROR_HEADER()
+     CALL LOG_ERROR('hard_writing_parameters and write_statistics are set to "True" while write_all_parameters is set to "False". This is not possible.')
+     CALL LOG_ERROR('Setting write_statistics to "False"...')
+     CALL LOG_ERROR_HEADER()
+     write_statistics = .False.
+  END IF
   ! Legacy stuff required
   ! TODO(César): Deprecate this (whenever we implement the convolution function)
   CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'lr'    , lr    , MANDATORY=.FALSE.) ! r by default
@@ -483,10 +496,21 @@ PROGRAM NESTED_FIT
   END IF
 
     ! Allocate parallel stuff ---------------------------------------------------------------------------------------------------------
-    ALLOCATE(live_like_final_try(maxstep_try,ntry),weight_try(maxstep_try,ntry),&
-      live_final_try(maxstep_try,npar,ntry),live_max_try(npar,ntry),&
-      nall_try(ntry),evsum_final_try(ntry),live_like_max_try(ntry),&
-      live_birth_final_try(maxstep_try,ntry),live_rank_final_try(maxstep_try,ntry))
+    IF(hard_writing_parameters) THEN ! if hard_writing_parameters is true, the dead points are saved in a file not in variables. If unused, allocated respecting number of dimensions
+       !ALLOCATE(live_like_final_try(nlive,ntry),weight_try(nlive,ntry),&
+       !  live_final_try(nlive,npar,ntry),live_max_try(npar,ntry),&
+       !  nall_try(ntry),evsum_final_try(ntry),live_like_max_try(ntry),&
+       !  live_birth_final_try(nlive,ntry),live_rank_final_try(nlive,ntry))
+       ALLOCATE(live_like_final_try(1,1),weight_try(1,1),&
+          live_final_try(1,npar,1),live_max_try(npar,ntry),&
+          nall_try(ntry),evsum_final_try(ntry),live_like_max_try(ntry),&
+          live_birth_final_try(1,1),live_rank_final_try(1,1))
+    ELSE ! if hard_writing_parameters is false, keep all points in memory (max. maxstep_try) for all tries
+       ALLOCATE(live_like_final_try(maxstep_try,ntry),weight_try(maxstep_try,ntry),&
+         live_final_try(maxstep_try,npar,ntry),live_max_try(npar,ntry),&
+         nall_try(ntry),evsum_final_try(ntry),live_like_max_try(ntry),&
+         live_birth_final_try(maxstep_try,ntry),live_rank_final_try(maxstep_try,ntry))
+    END IF
     live_like_final_try = 0.
     live_birth_final_try = 0.
     live_rank_final_try = 0
@@ -511,28 +535,67 @@ PROGRAM NESTED_FIT
      GOTO 501
   END IF
 
+  ! If hard_writing_parameters is true, create file to save dead points
+  IF(hard_writing_parameters .AND. write_all_parameters) OPEN(30,FILE='nf_dead_points_information.txt',FORM='unformatted',STATUS= 'UNKNOWN')
+  ! If not writing all parameters, create file for additional diagnostic stuff directly
+  IF(hard_writing_parameters .AND. (.NOT. write_all_parameters)) THEN
+    OPEN(23,FILE='nf_output_diag.dat',STATUS= 'UNKNOWN')
+    WRITE(23,*) '# birth_lnlike   rank'
+  END IF
+  ! If exploring a potential energy, create files to save weights and energy
+  IF(calc_mode.EQ.'POTENTIAL' .OR. calc_mode.EQ.'Q_POTENTIAL') OPEN(31,FILE='nf_energy.txt',STATUS= 'UNKNOWN')
+  IF(calc_mode.EQ.'POTENTIAL') WRITE(31,*) '# log(deltaX)  E'
+  IF(calc_mode.EQ.'Q_POTENTIAL') WRITE(31,*) '# log(deltaX)  E   V(averaged potential)   Q(replicas interaction)   T'
   !
   ! Run the Nested sampling
    DO itry=1,ntry
-      CALL NESTED_SAMPLING(itry,maxstep_try,nall_try(itry),evsum_final_try(itry), &
-            live_like_final_try(:,itry),live_birth_final_try(:,itry),live_rank_final_try(:,itry),weight_try(:,itry),&
-            live_final_try(:,:,itry),live_like_max_try(itry),live_max_try(:,itry), 0, 0)
+      IF(hard_writing_parameters) THEN 
+         !CALL NESTED_SAMPLING(itry,maxstep_try,nall_try(itry),evsum_final_try(1), &
+         !   live_like_final_try(:,1),live_birth_final_try(:,1),live_rank_final_try(:,1),weight_try(:,1),&
+         !   live_final_try(:,:,1),live_like_max_try(itry),live_max_try(:,itry), 0, 0)
+         CALL NESTED_SAMPLING(itry,maxstep_try,nall_try(itry),evsum_final_try(1), &
+            live_like_max_try(itry),live_max_try(:,itry), 0, 0)
+      ELSE
+         !CALL NESTED_SAMPLING(itry,maxstep_try,nall_try(itry),evsum_final_try(itry), &
+         !   live_like_final_try(:,itry), live_birth_final_try(:,itry), live_rank_final_try(:,itry), weight_try(:,itry),&
+         !   live_final_try(:,:,itry),live_like_max_try(itry),live_max_try(:,itry), 0, 0)
+         CALL NESTED_SAMPLING(itry,maxstep_try,nall_try(itry),evsum_final_try(itry), &
+            live_like_max_try(itry),live_max_try(:,itry), 0, 0)
             ! write(*,*) 'there', '     1', live_like_final_try(1,itry), live_birth_final_try(1,itry) 
             ! write(*,*) 'there', nall_try(itry), live_like_final_try(nall_try(itry),itry), live_birth_final_try(nall_try(itry),itry)!????
             ! pause
+      END IF
    END DO
-
+   
+  IF(hard_writing_parameters .AND. write_all_parameters) REWIND(UNIT=30)
+  IF(hard_writing_parameters .AND. (.NOT. write_all_parameters)) CLOSE(23)
+  IF(calc_mode.EQ.'POTENTIAL' .OR. calc_mode.EQ.'Q_POTENTIAL') CLOSE(31)
+  
   ! Re-assemble the points ---------------------------------------------------------------
   ! Final number of points
   nall = SUM(nall_try)
-  ALLOCATE(weight(nall),live_like_final(nall),live_birth_final(nall),live_rank_final(nall),&
-  live_final(nall,npar),weight_par(nall,2))
+  ! if hard_writing_parameters is true, do not keep in memory all the points
+  IF(hard_writing_parameters) THEN
+     ALLOCATE(live_like_final(1),live_birth_final(1),live_rank_final(1))
+     IF(write_statistics) THEN ! allocate array for computing mean, median ...
+        ALLOCATE(weight(nall), live_final(nall,npar), weight_par(nall,2))
+        weight_par = 0.
+     ELSE
+        ALLOCATE(weight(1), live_final(1,npar))
+     END IF
+  ELSE
+     ALLOCATE(weight(nall),live_like_final(nall),live_birth_final(nall),live_rank_final(nall),&
+  live_final(nall,npar))
+     IF(write_statistics) THEN ! allocate array for computing mean, median ...
+        ALLOCATE(weight_par(nall,2))
+        weight_par = 0.
+     END IF
+  END IF
   weight = 0.
   live_final = 0.
   live_like_final = 0.
   live_birth_final = 0.
   live_rank_final = 0
-  weight_par = 0.
 
   ! Final evidence and dispersion
   !evsum_final = SUM(evsum_final_try)/ntry
@@ -561,19 +624,6 @@ PROGRAM NESTED_FIT
      END DO
      CLOSE(23)
 
-     ! Assemble all points and weights
-     DO itry=1,ntry
-        !WRITE(*,*) 'Sum from', SUM(nall_try(:itry-1))+1, 'to', SUM(nall_try(:itry))
-        live_like_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = live_like_final_try(:nall_try(itry),itry)
-        live_birth_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = live_birth_final_try(:nall_try(itry),itry)
-        live_rank_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = live_rank_final_try(:nall_try(itry),itry)
-        weight(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = weight_try(:nall_try(itry),itry)*nall_try(itry)/nall
-        live_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry)),:) = live_final_try(:nall_try(itry),:,itry)
-     END DO
-     ! Reorder them (not necessary maybe, but finally yes for plotting)
-     !CALL SORTN2(nall,npar,1,live_like_final(:nall),live_final(:nall,:),weight(:nall))
-
-
      !Take the maximum of the maximum
      itrymax = MAXLOC(live_like_max_try)
      live_like_max = live_like_max_try(itrymax(1))
@@ -583,108 +633,226 @@ PROGRAM NESTED_FIT
      evsum_final = evsum_final_try(1)
      evsum_err = 0.
 
-     live_like_final = live_like_final_try(:nall,1)
-     live_birth_final = live_birth_final_try(:nall,1)
-     live_rank_final = live_rank_final_try(:nall,1)
-     weight          = weight_try(:nall,1)
-     live_final      = live_final_try(:nall,:,1)
      live_like_max   = live_like_max_try(1)
      live_max        = live_max_try(:,1)
   END IF
-
-
+  ! Assemble all points and weights if necessary. Normalize the weights
+  IF(hard_writing_parameters .AND. write_all_parameters) THEN
+     weight_tot=0.
+     IF(write_statistics) THEN ! Arrays do not have the same size. The points and weights have to be saved
+        DO i=1,ntry
+           DO j=1,nall_try(i)
+              ind=SUM(nall_try(:i-1))+j !index of the current points amongst all sampled points
+              READ(30) weight(ind), live_like_final, live_final(ind,:), &
+                       live_birth_final,live_rank_final
+              IF (j.LE.(nall_try(i)-nlive)) THEN
+                 IF(DABS(weight(ind) - evsum_final_try(i)).LT.700) THEN
+                     weight(ind) = DEXP(weight(ind) - evsum_final_try(i))
+                 ELSE
+                     weight(ind) = 0
+                 END IF
+              ELSE
+                 weight(ind)=0
+              END IF
+              weight_tot = weight_tot + weight(ind)
+           END DO
+        END DO
+        weight = weight/weight_tot
+     ELSE
+        DO i=1,ntry
+           DO j=1,nall_try(i)
+              READ(30) weight, live_like_final, live_final, live_birth_final,live_rank_final
+              IF (j.LE.(nall_try(i)-nlive)) THEN
+                 IF(DABS(weight(1) - evsum_final_try(i)).LT.700) THEN
+                     weight_tot = weight_tot + DEXP(weight(1) - evsum_final_try(i))
+                 ELSE
+                     weight_tot = weight_tot + 0
+                 END IF
+              ELSE
+                 weight_tot = weight_tot + 0
+              END IF
+           END DO
+        END DO
+     END IF
+  ELSE IF (.NOT. hard_writing_parameters) THEN
+     IF(ntry.GT.1) THEN
+        DO itry=1,ntry
+           !WRITE(*,*) 'Sum from', SUM(nall_try(:itry-1))+1, 'to', SUM(nall_try(:itry))
+           live_like_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = live_like_final_try(:nall_try(itry),itry)
+           live_birth_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = live_birth_final_try(:nall_try(itry),itry)
+           live_rank_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = live_rank_final_try(:nall_try(itry),itry)
+           weight(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry))) = weight_try(:nall_try(itry),itry)*nall_try(itry)/nall
+           live_final(SUM(nall_try(:itry-1))+1:SUM(nall_try(:itry)),:) = live_final_try(:nall_try(itry),:,itry)
+        END DO
+     ELSE
+        live_like_final = live_like_final_try(:nall,1)
+        live_birth_final = live_birth_final_try(:nall,1)
+        live_rank_final = live_rank_final_try(:nall,1)
+        weight          = weight_try(:nall,1)
+        live_final      = live_final_try(:nall,:,1)
+     END IF
+     weight_tot = 0.
+     DO i=1,nall
+        weight_tot = weight_tot + weight(i)
+     END DO
+     weight = weight/weight_tot
+  END IF  
+  
+  IF(hard_writing_parameters .AND. write_all_parameters) REWIND(UNIT=30)
   ! ------------Calculate the final parameters, errors and data  --------------------------
 
 
   ! Calculate the mean and the standard deviation for each parameter
 
-  ! Normalize the weights
-  weight_tot = 0.
-  DO i=1,nall
-     weight_tot = weight_tot + weight(i)
-  END DO
-  weight = weight/weight_tot
+  IF(write_statistics) THEN !If write_statistics is true, compute mean, median ... of the parameters
+     DO j=1,npar
+        IF (par_fix(j).NE.1) THEN
+           mean_tmp = 0.
+           mean2_tmp = 0.
 
-  DO j=1,npar
-     IF (par_fix(j).NE.1) THEN
-        mean_tmp = 0.
-        mean2_tmp = 0.
+           ! Mean calculation
+           DO i=1,nall
+              mean_tmp = mean_tmp + live_final(i,j)*weight(i)
+           END DO
+           par_mean(j) = mean_tmp
 
-        ! Mean calculation
-        DO i=1,nall
-           mean_tmp = mean_tmp + live_final(i,j)*weight(i)
-        END DO
-        par_mean(j) = mean_tmp
-
-        !! Standard deviation calculation
-        DO i=1,nall
-           mean2_tmp = mean2_tmp + (live_final(i,j)-par_mean(j))**2*weight(i)
-        END DO
-        par_sd(j) = DSQRT(mean2_tmp)
+           !! Standard deviation calculation
+           DO i=1,nall
+              mean2_tmp = mean2_tmp + (live_final(i,j)-par_mean(j))**2*weight(i)
+           END DO
+           par_sd(j) = DSQRT(mean2_tmp)
 
 
-        ! Median and confidence levels
-        ! Order a defined parameter with his weight
-        weight_par(:,1) = weight
-        weight_par(:,2) = live_final(:,j)
-        CALL SORTN(nall,2,weight_par(:,2),weight_par)
-        ! Look for confidential levels and median
-        weight_int = 0.
-        DO i=1,nall-1
-           weight_int = weight_int + weight_par(i,1)
-           weight_int_next = weight_int + weight_par(i+1,1)
-           !write(*,*) j, i, nall, weight_int, weight_int_next, weight_par(i,2)
-           ! Low limit 99%
-           IF(weight_int.LT.0.005d0.AND.weight_int_next.GT.0.005) THEN
-              par_m99_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
-              !write(*,*) 'par_m99_w found', j, i, par_m99_w(j)
-              ! Low limit 95%
-           ELSE IF(weight_int.LT.0.025d0.AND.weight_int_next.GT.0.025) THEN
-              par_m95_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
-              !write(*,*) 'par_m95_w found', j, i, par_m95_w(j)
-              ! Low limit 68%
-           ELSE IF(weight_int.LT.0.16d0.AND.weight_int_next.GT.0.16) THEN
-              par_m68_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
-              !write(*,*) 'par_m68_w found', j, i, par_m68_w(j)
-              ! Median
-           ELSE IF(weight_int.LT.0.5d0.AND.weight_int_next.GT.0.5) THEN
-              par_median_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
-              !write(*,*) 'median found', j, i, par_median_w(j)
-              ! High limit 68%
-           ELSE IF(weight_int.LT.0.84d0.AND.weight_int_next.GT.0.84) THEN
-              par_p68_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
-              !write(*,*) 'par_p68_w found', j, i, par_p68_w(j)
-              ! High limit 95%
-           ELSE IF(weight_int.LT.0.975d0.AND.weight_int_next.GT.0.975) THEN
-              par_p95_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
-              !write(*,*) 'par_p95_w found', j, i, par_p95_w(j)
-              ! High limit 99%
-           ELSE IF(weight_int.LT.0.995d0.AND.weight_int_next.GT.0.995) THEN
-              par_p99_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
-              !write(*,*) 'par_p99_w found', j, i, par_p99_w(j)
-           END IF
-        END DO
-     ELSE
-        par_mean(j) =  par_in(j)
-        par_median_w(j) = par_in(j)
-     END IF
-  END DO
-
+           ! Median and confidence levels
+           ! Order a defined parameter with his weight
+           weight_par(:,1) = weight
+           weight_par(:,2) = live_final(:,j)
+           CALL SORTN(nall,2,weight_par(:,2),weight_par)
+           ! Look for confidential levels and median
+           weight_int = 0.
+           DO i=1,nall-1
+              weight_int = weight_int + weight_par(i,1)
+              weight_int_next = weight_int + weight_par(i+1,1)
+              !write(*,*) j, i, nall, weight_int, weight_int_next, weight_par(i,2)
+              ! Low limit 99%
+              IF(weight_int.LT.0.005d0.AND.weight_int_next.GT.0.005) THEN
+                 par_m99_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
+                 !write(*,*) 'par_m99_w found', j, i, par_m99_w(j)
+                 ! Low limit 95%
+              ELSE IF(weight_int.LT.0.025d0.AND.weight_int_next.GT.0.025) THEN
+                 par_m95_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
+                 !write(*,*) 'par_m95_w found', j, i, par_m95_w(j)
+                 ! Low limit 68%
+              ELSE IF(weight_int.LT.0.16d0.AND.weight_int_next.GT.0.16) THEN
+                 par_m68_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
+                 !write(*,*) 'par_m68_w found', j, i, par_m68_w(j)
+                 ! Median
+              ELSE IF(weight_int.LT.0.5d0.AND.weight_int_next.GT.0.5) THEN
+                 par_median_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
+                 !write(*,*) 'median found', j, i, par_median_w(j)
+                 ! High limit 68%
+              ELSE IF(weight_int.LT.0.84d0.AND.weight_int_next.GT.0.84) THEN
+                 par_p68_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
+                 !write(*,*) 'par_p68_w found', j, i, par_p68_w(j)
+                 ! High limit 95%
+              ELSE IF(weight_int.LT.0.975d0.AND.weight_int_next.GT.0.975) THEN
+                 par_p95_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
+                 !write(*,*) 'par_p95_w found', j, i, par_p95_w(j)
+                 ! High limit 99%
+              ELSE IF(weight_int.LT.0.995d0.AND.weight_int_next.GT.0.995) THEN
+                 par_p99_w(j) = (weight_par(i,2) + weight_par(i+1,2))/2
+                 !write(*,*) 'par_p99_w found', j, i, par_p99_w(j)
+              END IF
+           END DO
+        ELSE
+           par_mean(j) =  par_in(j)
+           par_median_w(j) = par_in(j)
+        END IF
+     END DO
+  END IF
+  
    501 CONTINUE
 
   ! Final actions for the likelihood function
   CALL FINAL_LIKELIHOOD(live_max,par_mean,par_median_w)
 
+  ! Write files in the format for GetDist and calculation of the mean loglikelihood
+  live_like_mean=0.
+  IF(hard_writing_parameters .AND. write_all_parameters) THEN
+     OPEN(23,FILE='nf_output_points.txt',STATUS= 'UNKNOWN')
+     WRITE(23,*) '# weight   lnlikelihood      parameters'
+     OPEN(24,FILE='nf_output_diag.dat',STATUS= 'UNKNOWN')
+     WRITE(24,*) '# birth_lnlike   rank'
+     DO i=1,ntry
+        DO j=1,nall_try(i)
+           IF(write_statistics) THEN ! Arrays do not have the same size
+              ind=SUM(nall_try(:i-1))+j !index of the current points amongst all sampled points
+              READ(30) weight_read, live_like_final, live_final(ind,:), &
+                       live_birth_final,live_rank_final ! the unormalised weights are read
+              
+              live_like_mean = live_like_mean + weight(ind)*live_like_final(1) !the normalised weights are used
+              ! Data
+              WRITE(23,*) weight(ind), live_like_final, live_final(ind,:)
+              ! Diagnostic additional stuff
+              WRITE(24,*) live_birth_final, live_rank_final
+           ELSE
+              READ(30) weight, live_like_final, live_final, live_birth_final,live_rank_final
+              !Normalise the weight
+              IF (j.LE.(nall_try(i)-nlive)) THEN
+                 IF(DABS(weight(1) - evsum_final_try(i)).LT.700) THEN
+                    weight(1) = DEXP(weight(1) - evsum_final_try(i))/weight_tot
+                 ELSE
+                    weight(1) = 0
+                 END IF
+              ELSE
+                 weight=0
+              END IF
+              live_like_mean = live_like_mean + weight(ind)*live_like_final(1)
+              ! Data
+              WRITE(23,*) weight, live_like_final, live_final
+              ! Diagnostic additional stuff
+              WRITE(24,*) live_birth_final, live_rank_final
+           END IF
+        END DO
+     END DO
+     CLOSE(23)
+     CLOSE(24) 
+     CLOSE(30)
+     OPEN(30,FILE='nf_dead_points_information.txt',FORM='unformatted',STATUS= 'UNKNOWN')
+     WRITE(30) 'DONE'
+     CLOSE(30)
+  ELSE IF(.NOT. hard_writing_parameters .AND. write_all_parameters) THEN
+     ! Data
+     OPEN(23,FILE='nf_output_points.txt',STATUS= 'UNKNOWN')
+     WRITE(23,*) '# weight   lnlikelihood      parameters'
+     DO j=1,nall
+        WRITE(23,*) weight(j), live_like_final(j), live_final(j,:)
+        live_like_mean = live_like_mean + weight(j)*live_like_final(j)
+     END DO
+     CLOSE(23)
+     ! Diagnostic additional stuff
+     OPEN(23,FILE='nf_output_diag.dat',STATUS= 'UNKNOWN')
+     WRITE(23,*) '# birth_lnlike   rank'
+     DO j=1,nall
+        WRITE(23,*) live_birth_final(j), live_rank_final(j)
+     END DO
+     CLOSE(23)
+  END IF
+  !IF (write_all_parameters) THEN! Names of parameters
+     OPEN(23,FILE='nf_output_points.paramnames',STATUS= 'UNKNOWN')
+     DO i=1,npar
+        WRITE(23,*) par_name(i)
+     END DO
+     CLOSE(23)
+     ! Range of parameters
+     OPEN(23,FILE='nf_output_points.ranges',STATUS= 'UNKNOWN')
+     DO i=1,npar
+        WRITE(23,*) par_name(i), par_bnd1(i), par_bnd2(i)
+     END DO
+     CLOSE(23)
+  !END IF
+  
   !-----------------Calculate information and bayesian complexity --------------------------
-  ! Calculation of the mean loglikelihood
-  live_like_mean = 0.
-  weight_tot = 0.
-  DO i=1,nall
-     live_like_mean = live_like_mean + weight(i)*live_like_final(i)
-  END DO
-  live_like_mean = live_like_mean
-
-
   ! Calculation of the information (see Sivia page 186)
   info = live_like_mean - evsum_final
   ! Calculation of the complexity (Trotta 06 + Sivia)
@@ -708,35 +876,7 @@ PROGRAM NESTED_FIT
   ! Empirical
   ! evsum_err_est = DSQRT(DBLE(nall)/ntry)/(nlive)
 
-  ! ---------------- Write results on screen and files -------------------------------------
-  ! Write files in the format for GetDist
-  ! Data
-  OPEN(23,FILE='nf_output_points.txt',STATUS= 'UNKNOWN')
-  WRITE(23,*) '# weight   lnlikelihood      parameters'
-  DO j=1,nall
-     WRITE(23,*) weight(j), live_like_final(j), live_final(j,:)
-  END DO
-  CLOSE(23)
-  ! Diagnostic additional stuff
-  OPEN(23,FILE='nf_output_diag.dat',STATUS= 'UNKNOWN')
-  WRITE(23,*) '# birth_lnlike   rank'
-  DO j=1,nall
-     WRITE(23,*) live_birth_final(j), live_rank_final(j)
-  END DO
-  CLOSE(23)
-  ! Names of parameters
-  OPEN(23,FILE='nf_output_points.paramnames',STATUS= 'UNKNOWN')
-  DO i=1,npar
-     WRITE(23,*) par_name(i)
-  END DO
-  CLOSE(23)
-  ! Range of parameters
-  OPEN(23,FILE='nf_output_points.ranges',STATUS= 'UNKNOWN')
-  DO i=1,npar
-     WRITE(23,*) par_name(i), par_bnd1(i), par_bnd2(i)
-  END DO
-  CLOSE(23)
-
+   ! ---------------- Write results on screen and files -------------------------------------
    ! Calculate end time
    ! Normal time
    CALL CPU_TIME(stopt)
@@ -747,7 +887,8 @@ PROGRAM NESTED_FIT
    !$ seconds_omp =  stopt_omp - startt_omp
    
   CALL PRINT_OUTPUT_RESULT()
-  DEALLOCATE(live_birth_final,live_rank_final,weight,live_like_final,live_final,weight_par)
+  DEALLOCATE(live_birth_final,live_rank_final,weight,live_like_final,live_final)
+  IF(ALLOCATED(weight_par)) DEALLOCATE(weight_par)
 
   ! Deallocate stuff
   DEALLOCATE(par_num,par_name,par_in,par_step,par_bnd1,par_bnd2,par_fix, &
@@ -791,15 +932,17 @@ PROGRAM NESTED_FIT
 
    DO i = 1, npar
       CALL json%push('params.'//TRIM(par_name(i))//'.max', live_max(i))
-      CALL json%push('params.'//TRIM(par_name(i))//'.mean', par_mean(i))
-      CALL json%push('params.'//TRIM(par_name(i))//'.std', par_sd(i))
-      CALL json%push('params.'//TRIM(par_name(i))//'.median', par_median_w(i))
-      CALL json%push('params.'//TRIM(par_name(i))//'.ci_l99', par_m99_w(i))
-      CALL json%push('params.'//TRIM(par_name(i))//'.ci_l95', par_m95_w(i))
-      CALL json%push('params.'//TRIM(par_name(i))//'.ci_l68', par_m68_w(i))
-      CALL json%push('params.'//TRIM(par_name(i))//'.ci_h68', par_p68_w(i))
-      CALL json%push('params.'//TRIM(par_name(i))//'.ci_h95', par_p95_w(i))
-      CALL json%push('params.'//TRIM(par_name(i))//'.ci_h99', par_p99_w(i))
+      IF(write_statistics) THEN !If write_statistics is true, write mean, median ... of the parameters
+         CALL json%push('params.'//TRIM(par_name(i))//'.mean', par_mean(i))
+         CALL json%push('params.'//TRIM(par_name(i))//'.std', par_sd(i))
+         CALL json%push('params.'//TRIM(par_name(i))//'.median', par_median_w(i))
+         CALL json%push('params.'//TRIM(par_name(i))//'.ci_l99', par_m99_w(i))
+         CALL json%push('params.'//TRIM(par_name(i))//'.ci_l95', par_m95_w(i))
+         CALL json%push('params.'//TRIM(par_name(i))//'.ci_l68', par_m68_w(i))
+         CALL json%push('params.'//TRIM(par_name(i))//'.ci_h68', par_p68_w(i))
+         CALL json%push('params.'//TRIM(par_name(i))//'.ci_h95', par_p95_w(i))
+         CALL json%push('params.'//TRIM(par_name(i))//'.ci_h99', par_p99_w(i))
+      END IF
    END DO
 
    ! Metadata
@@ -870,17 +1013,19 @@ PROGRAM NESTED_FIT
       WRITE(22,*) par_name(i), live_max(i)
    END DO
    WRITE(22,*) '-------------------------------------------------------------------------------------------------------------------'
-   WRITE(22,*) 'Mean_value_and_standard_deviation_of_the_parameters'
-   DO i=1,npar
-      WRITE(22,*) par_name(i), par_mean(i), '+/-', par_sd(i)
-   END DO
-   WRITE(22,*) '-------------------------------------------------------------------------------------------------------------------'
-   WRITE(22,*) 'Median_and_confidence_levels: low_99%,     low_95%,     low_68%,     median,     high_68%,    high_95%,   high_99%'
-   DO i=1,npar
-      WRITE(22,*) par_name(i), par_m99_w(i),par_m95_w(i),par_m68_w(i),par_median_w(i),&
-            par_p68_w(i),par_p95_w(i),par_p99_w(i)
-   END DO
-   WRITE(22,*) '-------------------------------------------------------------------------------------------------------------------'
+   IF(write_statistics) THEN !If write_statistics is true, write mean, median ... of the parameters
+      WRITE(22,*) 'Mean_value_and_standard_deviation_of_the_parameters'
+      DO i=1,npar
+         WRITE(22,*) par_name(i), par_mean(i), '+/-', par_sd(i)
+      END DO
+      WRITE(22,*) '-------------------------------------------------------------------------------------------------------------------'
+      WRITE(22,*) 'Median_and_confidence_levels: low_99%,     low_95%,     low_68%,     median,     high_68%,    high_95%,   high_99%'
+      DO i=1,npar
+         WRITE(22,*) par_name(i), par_m99_w(i),par_m95_w(i),par_m68_w(i),par_median_w(i),&
+               par_p68_w(i),par_p95_w(i),par_p99_w(i)
+      END DO
+      WRITE(22,*) '-------------------------------------------------------------------------------------------------------------------'
+   END IF
    WRITE(22,*) 'Additional_information'
    WRITE(22,*) 'Information:                                ', info
    WRITE(22,*) 'Minimal_required_iteration_(ntry*exp[info]):', nexp
@@ -908,17 +1053,19 @@ PROGRAM NESTED_FIT
       WRITE(*,*) par_name(i), ':', live_max(i)
    END DO
    WRITE(*,*) '-------------------------------------------------------------------------------------------------------------------'
-   WRITE(*,*) 'Mean value and standard deviation of the parameters'
-   DO i=1,npar
-      WRITE(*,*) par_name(i), ':', par_mean(i), '+/-', par_sd(i)
-   END DO
-   WRITE(*,*) '--------------------------------------------------------------------------------------------------------------------'
-   WRITE(*,*) 'Median and confidence levels: low 99%,     low 95%,     low68%,     median,     high 68%,     high 95%,     high 99%'
-   DO i=1,npar
-      WRITE(*,*) par_name(i), ':', par_m99_w(i),par_m95_w(i),par_m68_w(i),par_median_w(i),&
-            par_p68_w(i),par_p95_w(i),par_p99_w(i)
-   END DO
-   WRITE(*,*) '-------------------------------------------------------------------------------------------------------------------'
+   IF(write_statistics) THEN !If write_statistics is true, write mean, median ... of the parameters
+      WRITE(*,*) 'Mean value and standard deviation of the parameters'
+      DO i=1,npar
+         WRITE(*,*) par_name(i), ':', par_mean(i), '+/-', par_sd(i)
+      END DO
+      WRITE(*,*) '--------------------------------------------------------------------------------------------------------------------'
+      WRITE(*,*) 'Median and confidence levels: low 99%,     low 95%,     low68%,     median,     high 68%,     high 95%,     high 99%'
+      DO i=1,npar
+         WRITE(*,*) par_name(i), ':', par_m99_w(i),par_m95_w(i),par_m68_w(i),par_median_w(i),&
+               par_p68_w(i),par_p95_w(i),par_p99_w(i)
+      END DO
+      WRITE(*,*) '-------------------------------------------------------------------------------------------------------------------'
+   END IF
    WRITE(*,*) 'Additional information'
    WRITE(*,*) 'Information:                                ', info
    WRITE(*,*) 'Minimal required iteration (ntry*exp[info]):', nexp

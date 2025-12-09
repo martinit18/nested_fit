@@ -25,6 +25,7 @@ MODULE MOD_PARAMETERS
   CHARACTER  :: conv_method*64
   INTEGER(4) :: maxtries=1000, maxntries=10
   INTEGER(4) :: ntry=1, maxstep_try = 100000
+  LOGICAL :: hard_writing_parameters=.TRUE.
 
   ! Clustering
   LOGICAL    :: make_cluster=.FALSE.
@@ -51,6 +52,10 @@ MODULE MOD_PARAMETERS
   INTEGER(4) :: searchid=0
   INTEGER(8) :: ncall=0, ncall9=0
   LOGICAL    :: LEGACY_USERFCN=.FALSE.
+  
+  ! Writing options
+  LOGICAL :: write_statistics=.TRUE.
+  LOGICAL :: write_all_parameters=.TRUE.
 
   COMMON /func_exp/ lr
   COMMON /func_conv/ npoint, nwidth
