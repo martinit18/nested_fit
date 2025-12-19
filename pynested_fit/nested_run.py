@@ -666,7 +666,12 @@ class Configurator():
             return None
 
     def _get_nf_realpath(self):
-        return os.path.abspath(os.path.dirname(os.path.realpath(__file__))) + '/nested_fit' + imp_version('nested_fit')
+        # Try and find nested_fit on the package path
+        path = os.path.abspath(os.path.dirname(os.path.realpath(__file__))) + '/nested_fit' + imp_version('nested_fit')
+        if os.path.exists(path):
+            return path
+        else:
+            return 'nested_fit' + imp_version('nested_fit')
 
     def _assign_kwargs(self, kwargs):
         for kw, vw in kwargs.items():
