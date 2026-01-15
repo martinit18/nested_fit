@@ -22,7 +22,7 @@ class Analysis(object):
 
     currentpath = '.'
     #print 'currentpath=', currentpath+'\n'
-    initialize = False
+    no_points = False
 
     def __init__(self,path=currentpath,loaddata=True,**kwargs):
         self.path = path
@@ -67,6 +67,8 @@ class Analysis(object):
         if path[-1]!='/' and path != None:  path = path+'/'
         #
         self.path = path
+        # initialize flag for presence of point data
+        self.no_points = False
         self.number_of_values = len(self.input_data['function']['params'])
         # Check first if is there
         if not os.path.isfile(path+'nf_output_points.txt'):
@@ -75,8 +77,9 @@ class Analysis(object):
                     with open(path+'nf_output_points.txt', 'wb') as f_out:
                         shutil.copyfileobj(f_in, f_out)
             else:
-                print('Result file nf_output_points.txt not present\n Nothing to load')
-                return None
+                print('Result file nf_output_points.txt not present\n No data for statistics loaded, just input and output results')
+                self.no_points = True
+                #return None
             
         # self.par_names = [p[0] for p in self.input_data['parameters']]
         
@@ -85,16 +88,19 @@ class Analysis(object):
         self.par_names = [line.strip() for line in f.readlines()]
         print(self.par_names)
         f.close()
-        self.df = pd.read_csv(path+'nf_output_points.txt', delim_whitespace=True, header=0,
-                #names=["weight","lnlikelihood"] + ["val_%s" % d for d in range(1, self.number_of_values+1)])
-                names=["weight","lnlikelihood"] + self.par_names)
 
-        print(self.df.columns)
-
-        print('Available parameters :', list(self.df.columns))
-
-        self.df.head()
-        self.data = self.df.values
+        # Read the points file and build the dataframe
+        if self.no_points:
+            self.df = None
+            print('No data points to load')
+        else:
+            self.df = pd.read_csv(path+'nf_output_points.txt', delim_whitespace=True, header=0,
+                    #names=["weight","lnlikelihood"] + ["val_%s" % d for d in range(1, self.number_of_values+1)])
+                    names=["weight","lnlikelihood"] + self.par_names)
+            print(self.df.columns)
+            print('Available parameters :', list(self.df.columns))
+            self.df.head()
+            self.data = self.df.values
 
     # Program version TODO: (César) Allow backward compatibility here
     def check_version(self, version_float):
@@ -721,6 +727,10 @@ class Analysis(object):
         If plotmode = 'sigmalog', plot in logarithmic mode.
         If plotmode='lin' or 'log', simple histogram (linear or logarithmic) without confidence levels. '''
 
+        if getattr(self, 'no_points', False):
+            print('No data points to load')
+            return
+
         self.path = path
 
         if bins<10:
@@ -826,6 +836,10 @@ class Analysis(object):
         and weight (color)'''
         from numpy import loadtxt, max, log, arange
         import matplotlib.pyplot as plt
+
+        if getattr(self, 'no_points', False):
+            print('No data points to load')
+            return
 
         self.path = path
 
@@ -1019,6 +1033,10 @@ class Analysis(object):
         Default value is '4'.
         '''
 
+        if getattr(self, 'no_points', False):
+            print('No data points to load')
+            return
+
         self.path = path
 
 
@@ -1159,6 +1177,10 @@ class Analysis(object):
         from numpy import arange, shape
         import matplotlib.pyplot as plt
 
+        if getattr(self, 'no_points', False):
+            print('No data points to load')
+            return
+
         # Read the data
         data = self.df.values
         ix = arange(shape(data)[0])
@@ -1189,6 +1211,10 @@ class Analysis(object):
         import matplotlib.colors as mcolors
         import matplotlib.mlab as mlab
         from scipy.interpolate import RectBivariateSpline
+
+        if getattr(self, 'no_points', False):
+            print('No data points to load')
+            return
 
         self.path = path
 
@@ -1275,6 +1301,10 @@ class Analysis(object):
         '''
         from getdist import plots
 
+        if getattr(self, 'no_points', False):
+            print('No data points to load')
+            return
+
         self.path = path
 
         if type(par_name) != str:
@@ -1291,6 +1321,10 @@ class Analysis(object):
         Interpolated histogram plot using GetDist package
         '''
         from getdist import plots
+
+        if getattr(self, 'no_points', False):
+            print('No data points to load')
+            return
 
         self.path = path
 
@@ -1312,6 +1346,10 @@ class Analysis(object):
         '''
         from getdist import plots
 
+        if getattr(self, 'no_points', False):
+            print('No data points to load')
+            return
+
         self.path = path
 
 
@@ -1328,6 +1366,10 @@ class Analysis(object):
         Interpolated histogram plot using Anesthetic package
         '''
         from anesthetic import read_chains, make_1d_axes
+
+        if getattr(self, 'no_points', False):
+            print('No data points to load')
+            return
 
         self.path = path
 
@@ -1347,6 +1389,10 @@ class Analysis(object):
         Interpolated histogram plot using Anesthetic package
         '''
         from anesthetic import read_chains, make_2d_axes
+
+        if getattr(self, 'no_points', False):
+            print('No data points to load')
+            return
 
         self.path = path
 
@@ -1369,6 +1415,10 @@ class Analysis(object):
         e.g. an.triangle_plot(['amp','sigma'],path = 'v4p5p4')
         '''
         from anesthetic import read_chains, make_2d_axes
+
+        if getattr(self, 'no_points', False):
+            print('No data points to load')
+            return
 
         self.path = path
 

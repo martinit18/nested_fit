@@ -170,7 +170,7 @@ A complete selection of input files example is given in the folder `examples` wh
 It follows a complete description of `nf_input.yaml` file.
 
 ```yaml
-version: 5.5                             # Program version
+version: 5.6                             # Program version
 calculation_mode: DATA                   # Type of calculation
 ```
 The type of calculation is spefified by `calculation_mode` variable. 
@@ -234,8 +234,8 @@ search:
     max_tries: 1000     # Maximum tries before stop (max_tries * tries_mult)
     tries_mult: 100     # Max tries multiplier
     num_tries: 1        # Number of runs
-    hard_writing: true  # True by default (if ommited)
-    max_steps: 100000   # Max number of steps before stop
+    hard_writing: true  # Write dead points on a temporary file
+    max_steps: 100000   # Max number of steps before stop (required if hard_writing false)
 ```
 
 For the moment there are, 
@@ -289,8 +289,8 @@ For the second option:
 
 ```yaml
 writing:
-    statistics:     true # True by default (if ommited)
-    all_parameters: true # True by default (if ommited)
+    statistics:     true  # Calculate parameter statistics
+    all_parameters: true  # Write nf_ouptut_points (big) file
 ```
 
 These options allows to choose what is written in the ouput files:
@@ -391,20 +391,23 @@ Examples of use of a legacy function can be found in `examples/data_analysis/aaa
 
 ## Present version and history of the past versions
 
-The present version is 5.5.4\
+The present version is 5.6.0\
 New features:
-- Add PyPI binary distribution for x86_64 macOS
-- Add PyPI binary distribution for multiple linux systems
-- Add PyPI source distribution as a default for other systems
-- Rename CLI command to `nested_fit` to use the latest installed version via pip
+- Optional management of memory of dead points (in RAM or file)
+- Optional writing of dead points information
+- Optional writing of parameter statistics (mean, standard deviation, etc.)
 
 
 Previous versions are:
+- 5.5 New RANDOM_WALK function with detailed balance respected \
+Add PyPI binary distribution for x86_64 macOS\
+Add PyPI binary distribution for multiple linux systems\
+Add PyPI source distribution as a default for other systems\
+Rename CLI command to `nested_fit` to use the latest installed version via pip\
  - 5.4 Merge of executable for data analysis and function exploration via the new calculation mode variable \
 Debug of not-yet  working feature of the version 5 compared to the version 4 \
-New outputs with maxima of each cluster \
-New RANDOM_WALK function with detailed balance respected
- - 5.3 New jupyter notebooks running in Google Colab \
+New outputs with maxima of each cluster 
+- 5.3 New jupyter notebooks running in Google Colab \
 New innterpolation functions in python library \
 Live display when sampling from python. Works in console and jupyter notebooks \
 Live display featured maximum likelihood prediction plot \

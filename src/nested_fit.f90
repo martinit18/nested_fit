@@ -391,7 +391,7 @@ PROGRAM NESTED_FIT
   CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.tries_mult', maxntries    , MANDATORY=.TRUE. )
   CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.num_tries' , ntry         , MANDATORY=.FALSE.) !      1 by default
   CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'search.hard_writing'  , hard_writing_parameters  , MANDATORY=.FALSE.) ! True by default
-  CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.max_steps' , maxstep_try  , MANDATORY=.FALSE.) ! 100000 by default
+  CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.max_steps' , maxstep_try  , MANDATORY=.NOT.hard_writing_parameters) ! 100000 by default, mandatory if not hard writing parameters
   
   ! Convergence configuration
   CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'convergence.method'   , conv_method, MANDATORY=.TRUE.)
@@ -440,10 +440,10 @@ PROGRAM NESTED_FIT
   CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'writing.statistics'  , write_statistics  , MANDATORY=.FALSE.) ! True by default
   CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'writing.all_parameters'  , write_all_parameters  , MANDATORY=.FALSE.) ! True by default 
   IF((.NOT. write_all_parameters) .AND. hard_writing_parameters .AND. write_statistics) THEN
-     CALL LOG_ERROR_HEADER()
-     CALL LOG_ERROR('hard_writing_parameters and write_statistics are set to "True" while write_all_parameters is set to "False". This is not possible.')
-     CALL LOG_ERROR('Setting write_statistics to "False"...')
-     CALL LOG_ERROR_HEADER()
+     CALL LOG_WARNING_HEADER()
+     CALL LOG_WARNING('hard_writing_parameters and write_statistics are set to "True" while write_all_parameters is set to "False". This is not possible.')
+     CALL LOG_WARNING('Setting write_statistics to "False"...')
+     CALL LOG_WARNING_HEADER()
      write_statistics = .False.
   END IF
   ! Legacy stuff required
