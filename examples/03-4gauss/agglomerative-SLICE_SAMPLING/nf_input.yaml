@@ -1,0 +1,45 @@
+version:    5.6              # Program version
+calculation_mode: DATA       # Type of calculation (DATA for data, POTENTIAL for potential landscapes, INTEGRAL for function integrals)
+datafiles:  he-histo.dat
+#specstr:    x,c,ce
+specstr:    x,c
+likelihood: GAUSSIAN
+
+function:
+  expression: QUAD_GAUSS_BG #legacy function
+  params:
+    b_g:    { value: 0.11,    step: -1, min: 0,      max: 0.3,  npar: 1 }
+    x_1:  { value: 450,     step: -1, min: 300,    max: 600,  npar: 2 }
+    x_2:  { value: 450,     step: -1, min: 300,    max: 600,  npar: 3 }
+    x_3:  { value: 450,     step: -1, min: 300,    max: 600,  npar: 4 }
+    x_4:  { value: 450,     step: -1, min: 300,    max: 600,  npar: 5 }
+    A_1:    { value: 300,     step: -1, min: 0,      max: 500,  npar: 6 }
+    A_2:    { value: 300,     step: -1, min: 0,      max: 500,  npar: 7 }
+    A_3:    { value: 300,     step: -1, min: 0,      max: 500,  npar: 8 }
+    A_4:    { value: 300,     step: -1, min: 0,      max: 500,  npar: 9 }
+    s:      { value: 20.0,    step: -1, min: 10,     max: 30,   npar: 10 }
+
+data: { xmin: 250, xmax: 650, ymin: 0, ymax: 0 }
+# data_1: { xmin: 1, xmax: 99, ymin: 0, ymax: 0 }
+# data_2: { xmin: 1, xmax: 99, ymin: 0, ymax: 0 }
+# data_3: { xmin: 1, xmax: 99, ymix: 0, ymax: 0 }
+
+search:
+  livepoints: 1000
+  method:     SLICE_SAMPLING
+  param1:     1
+  param2:     3
+  max_tries:  100
+  tries_mult: 10
+  num_tries:  1
+  max_steps:  100000
+
+convergence:
+  method:    LIKE_ACC
+  accuracy:  1.E-05
+
+clustering:
+  enabled:   true
+  method:    s
+  parameter1: 0.3
+  parameter2: 2

@@ -1,0 +1,36 @@
+version:    5.6
+calculation_mode: DATA       # Type of calculation (DATA for data, POTENTIAL for potential landscapes, INTEGRAL for function integrals)
+datafiles:  gauss_bg-x0_300-sigma_20-A_300-p_to_bg_20-bin_1.dat, gauss_bg-x0_310-sigma_20-A_150-p_to_bg_10-bin_1.dat
+filefmt: .tsv
+#specstr:    x,c,ce
+specstr:    x,c
+likelihood: GAUSSIAN
+
+function:
+  expression_1: gauss_1(x, A_1, x_1, s, b_1) = A_1 / (s \sqrt{2\pi}) \exp{-(x-x_1)^2/(2s^2)} + b_1
+  expression_2: gauss_2(x, A_2, x_1, d, s, b_2) = A_2 / (s \sqrt{2\pi}) \exp{-(x-(x_1+d))^2/(2s^2)} + b_2
+  params:
+    b_1:  { value: 0.4,     step: -1, min: 0,      max: 0.5   }
+    x_1:  { value: 250,     step: -1, min: 200,    max: 400   }
+    A_1:  { value: 500,     step: -1, min: 0,      max: 10000 }
+    s:    { value: 20.0,    step: -1, min: 0,      max: 100   }
+    b_2:  { value: 0.4,     step: -1, min: 0,      max: 0.5   }
+    d:    { value: 0.2,     step: -1, min: -10,    max: 30    }
+    A_2:  { value: 500,     step: -1, min: 0,      max: 10000 }
+
+data_1: { xmin: 0, xmax: 600, ymin: 0, ymax: 0 }
+data_2: { xmin: 0, xmax: 600, ymin: 0, ymax: 0 }
+
+search:
+  livepoints: 1000
+  method:     SLICE_SAMPLING
+  param1:     1
+  param2:     3
+  max_tries:  1000
+  tries_mult: 100
+  num_tries:  1
+  max_steps:  100000
+
+convergence:
+  method:    LIKE_ACC
+  accuracy:  1.E-05

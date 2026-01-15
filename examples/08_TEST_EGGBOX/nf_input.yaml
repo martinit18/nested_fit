@@ -1,0 +1,29 @@
+version:    5.6                 # Program version
+calculation_mode: INTEGRAL      # Type of calculation (DATA for data, POTENTIAL for potential landscapes, INTEGRAL for function integrals)
+
+function:
+  expression: TEST_EGGBOX  # Legacy function
+  params:                  # Parameters boundaries and co.
+    x:  { value: 0.5, step: -1, min: 0, max: 31.4159,  npar: 1 }
+    y:  { value: 0.5, step: -1, min: 0, max: 31.4159,  npar: 2 }
+
+search:
+  livepoints: 2000               # Number of live points
+  method:     SLICE_SAMPLING     # Search method
+  param1:     0.5                # Param 1 of chosen method (see below)
+  param2:     3                  # Param 2 of chosen method (see below)
+  max_tries:  500                # Maximum tries before stop (max_tries * tries_mult)
+  tries_mult: 3                  # Max tries multiplier
+  num_tries:  1                  # Number of runs
+  max_steps:  100000             # Max number of steps before stop
+
+convergence:
+  method:    LIKE_ACC            # Method used for convergence 
+  accuracy:  1.E-05              # Evidence final accuracy (in this case)
+
+  
+clustering:
+  enabled:   true
+  method:    k
+  #parameter1:  0.5
+  #parameter2: 0.2
