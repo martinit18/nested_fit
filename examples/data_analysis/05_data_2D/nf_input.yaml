@@ -1,4 +1,4 @@
-version:    5.5              # Program version
+version:    5.6              # Program version
 calculation_mode: DATA       # Type of calculation (DATA for data, POTENTIAL for potential landscapes, INTEGRAL for function integrals)
 datafiles:  test_matrix.dat  # Name of the data file
 specstr:    img              # Datafile layout

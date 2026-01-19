@@ -53,7 +53,7 @@ MODULE MOD_LIKELIHOOD_GEN
             CALL INIT_LIKELIHOOD_DATA()
             LOGLIKELIHOOD_WITH_TEST => LOGLIKELIHOOD_WITH_TEST_DATA
             LOGLIKELIHOOD => LOGLIKELIHOOD_DATA
-        ELSE IF (calc_mode.EQ.'POTENTIAL') THEN !------------------------
+        ELSE IF (calc_mode.EQ.'POTENTIAL' .OR. calc_mode.EQ.'Q_POTENTIAL' ) THEN !------------------------
             CALL INIT_LIKELIHOOD_POT()
             LOGLIKELIHOOD_WITH_TEST => LOGLIKELIHOOD_WITH_TEST_POT
             LOGLIKELIHOOD => LOGLIKELIHOOD_POT
@@ -74,7 +74,7 @@ MODULE MOD_LIKELIHOOD_GEN
         REAL(8), DIMENSION(npar), INTENT(IN) :: live_max, par_mean, par_median_w
         IF (calc_mode.EQ.'DATA') THEN !----------------------------------
             CALL FINAL_LIKELIHOOD_DATA(live_max,par_mean,par_median_w)
-        ELSE IF (calc_mode.EQ.'POTENTIAL') THEN !------------------------
+        ELSE IF (calc_mode.EQ.'POTENTIAL' .OR. calc_mode.EQ.'Q_POTENTIAL') THEN !------------------------
             CALL FINAL_LIKELIHOOD_POT(live_max,par_mean,par_median_w)
         ELSE IF (calc_mode.EQ.'INTEGRAL') THEN ! ------------------------
             CALL FINAL_LIKELIHOOD_INTEG(live_max,par_mean,par_median_w)
