@@ -1,0 +1,33 @@
+version:    5.6                  # Program version
+calculation_mode: Q_POTENTIAL      # Type of calculation (DATA for data, POTENTIAL for potential landscapes, INTEGRAL for function integrals)
+
+function:
+  expression: Q_ENERGY_HARM_3D     # Legacy function
+  params:                        # Parameters boundaries and co.
+    N:     { value: 1, step: -1, min: -5, max: 5,  fixed: true,  npar: 1 }
+    P:     { value: 2, step: -1, min: -5, max: 5,  fixed: true,  npar: 2 }
+    tau:   { value: 0.5, step: -1, min: -5, max: 5,  fixed: true,  npar: 3 }
+    m:     { value: 1, step: -1, min: -5, max: 5,  fixed: true,  npar: 4 }
+    omega: { value: 1, step: -1, min: -5, max: 5,  fixed: true,  npar: 5 }
+    x_11:   { value: 0.5, step: -1, min: -5, max: 5,  npar: 6 }
+    y_11:   { value: 0.5, step: -1, min: -5, max: 5,  npar: 7 }
+    z_11:   { value: 0.5, step: -1, min: -5, max: 5,  npar: 8 }
+    x_12:   { value: 0.5, step: -1, min: -5, max: 5,  npar: 9 }
+    y_12:   { value: 0.5, step: -1, min: -5, max: 5,  npar: 10 }
+    z_12:   { value: 0.5, step: -1, min: -5, max: 5,  npar: 11 }
+
+search:
+  livepoints: 1000               # Number of live points
+  method:     SLICE_SAMPLING     # Search method
+  param1:     1                  # Param 1 of chosen method (see below)
+  param2:     1                  # Param 2 of chosen method (see below)
+  max_tries:  500                # Maximum tries before stop (max_tries * tries_mult)
+  tries_mult: 3                  # Max tries multiplier
+  num_tries:  1                  # Number of runs
+  hard_writing: true             # Write dead points on a temporary file
+  # max_steps:  100000           # Max number of steps before stop (required if hard_writing false)
+
+convergence:
+  method:    ENERGY_MAX  # Method used for convergence 
+  accuracy:  -10         # Evidence final accuracy (in this case)
+  parameter: 0.01        # Minimal temperature valid for the calculation

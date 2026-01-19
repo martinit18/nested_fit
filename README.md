@@ -290,7 +290,7 @@ For the second option:
 ```yaml
 writing:
     statistics:     true  # Calculate parameter statistics
-    all_parameters: true  # Write nf_ouptut_points (big) file
+    all_parameters: true  # Write nf_output_points (big) file
 ```
 
 These options allows to choose what is written in the ouput files:
