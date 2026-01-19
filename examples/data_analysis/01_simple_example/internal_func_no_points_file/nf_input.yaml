@@ -37,5 +37,5 @@ convergence:
   # parameter2: 0.2
 
 writing:
-    statistics:     true # Calculate parameter statistics
-    all_parameters: false # Write nf_ouptut_points (big) file
+    statistics:     true  # Calculate parameter statistics
+    all_parameters: false # Write nf_output_points (big) file

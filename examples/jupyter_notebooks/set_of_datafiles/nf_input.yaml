@@ -1,0 +1,69 @@
+calculation_mode: DATA
+clustering:
+  enabled: false
+  method: k
+  parameter1: 0.5
+  parameter2: 0.2
+convergence:
+  accuracy: 1.0e-05
+  method: LIKE_ACC
+  parameter: 0.01
+data_1:
+  xmax: 650
+  xmin: 0
+data_2:
+  xmax: 650
+  xmin: 0
+datafiles: gauss_bg-x0_300-sigma_20-A_300-p_to_bg_20-bin_1.dat, gauss_bg-x0_310-sigma_20-A_150-p_to_bg_10-bin_1.dat
+filefmt: .tsv
+function:
+  expression_1: gauss_1(x, A_1, x_1, s, b_1) = \texttt{GAUSS_IF}(x, x_1, A_1, s) + b_1
+  expression_2: gauss_2(x, A_2, x_1, d, s, b_2) = \texttt{GAUSS_IF}(x, x_1+d, A_2, s) + b_2
+  params:
+    A_1:
+      max: 500
+      min: 0
+      step: -1
+      value: 300
+    A_2:
+      max: 500
+      min: 0
+      step: -1
+      value: 300
+    b_1:
+      max: 0.3
+      min: 0
+      step: -1
+      value: 0.01
+    b_2:
+      max: 0.3
+      min: 0
+      step: -1
+      value: 0.01
+    d:
+      max: 30
+      min: -10
+      step: -1
+      value: 0.2
+    s:
+      max: 30
+      min: 10
+      step: -1
+      value: 20
+    x_1:
+      max: 600
+      min: 0
+      step: -1
+      value: 454.6
+likelihood: GAUSSIAN
+search:
+  livepoints: 1000
+  max_steps: 100000
+  max_tries: 1000
+  method: SLICE_SAMPLING
+  num_tries: 1
+  param1: 0.5
+  param2: 3
+  tries_mult: 100
+specstr: x,c
+version: 5.5
