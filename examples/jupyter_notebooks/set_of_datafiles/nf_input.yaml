@@ -57,6 +57,7 @@ function:
       value: 454.6
 likelihood: GAUSSIAN
 search:
+  hard_writing: true
   livepoints: 1000
   max_steps: 100000
   max_tries: 1000
@@ -65,6 +66,8 @@ search:
   param1: 0.5
   param2: 3
   tries_mult: 100
-  hard_writing: false
 specstr: x,c
 version: 5.6
+writing:
+  all_parameters: true
+  statistics: true

@@ -7,7 +7,7 @@ MODULE MOD_LOGGER
               REAL_TO_STR_INLINE, INT_TO_STR_INLINE, INT8_TO_STR_INLINE
     PRIVATE
 
-    CHARACTER(64), PARAMETER :: log_file_name = 'nf_loglast.log'
+    CHARACTER(64), PARAMETER :: log_file_name = 'nf_output_loglast.log'
     INTEGER      , PARAMETER :: log_file_unit = 999
 
     CHARACTER(16), PARAMETER :: verbosity_levels(5) = [CHARACTER(LEN=16) :: 'none', 'error', 'warning', 'message', 'trace']

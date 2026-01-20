@@ -536,7 +536,7 @@ PROGRAM NESTED_FIT
   END IF
 
   ! If hard_writing_parameters is true, create file to save dead points
-  IF(hard_writing_parameters .AND. write_all_parameters) OPEN(50,FILE='nf_dead_points_information.txt',FORM='unformatted',STATUS= 'UNKNOWN')
+  IF(hard_writing_parameters .AND. write_all_parameters) OPEN(50,FILE='nf_output_dead_points_info.txt',FORM='unformatted',STATUS= 'UNKNOWN')
   ! If not writing all parameters, create file for additional diagnostic stuff directly
   IF(hard_writing_parameters .AND. (.NOT. write_all_parameters)) THEN
     OPEN(23,FILE='nf_output_diag.dat',STATUS= 'UNKNOWN')
@@ -818,7 +818,7 @@ PROGRAM NESTED_FIT
      CLOSE(23)
      CLOSE(24) 
      CLOSE(50)
-     OPEN(50,FILE='nf_dead_points_information.txt',FORM='unformatted',STATUS= 'UNKNOWN')
+     OPEN(50,FILE='nf_output_dead_points_info.txt',FORM='unformatted',STATUS= 'UNKNOWN')
      WRITE(50) 'DONE'
      CLOSE(50)
   ELSE IF(.NOT. hard_writing_parameters .AND. write_all_parameters) THEN

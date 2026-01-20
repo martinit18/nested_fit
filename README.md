@@ -250,7 +250,7 @@ Except for the simplest researche, the detailed balance is maybe not respected b
 -  `SLICE_SAMPLING`, `SLICE_SAMPLING_TRANSF`, and `SLICE_SAMPLING_ADAPT` par. 1: fraction of standard deviation for segment exploration, par. 2: number of jumps. Suggested values: ~1, 3-5. 
 - `UNIFORM` par. 1: fraction of standard deviation for the box size, par. 2: number of jumps. Suggested values: 0.1-1, 1.
 
-If `hard_writing` is true, the dead points are saved in the unformatted file `nf_dead_points_information.txt` during the run. The number of iterations is not limited and the content of the file is erased at the end of the run. Otherwise, the dead points are kept in memory during the run. In that case, the maximum number of iterations is given by `max_steps`. ATTENTION, if `writing: statistics` is false, the file  `nf_dead_points_information.txt` will not be written even if `search: hard_writing` is true.
+If `hard_writing` is true, the dead points are saved in the unformatted file `nf_output_dead_points_info.txt` during the run. The number of iterations is not limited and the content of the file is erased at the end of the run. Otherwise, the dead points are kept in memory during the run. In that case, the maximum number of iterations is given by `max_steps`. ATTENTION, if `writing: statistics` is false, the file  `nf_output_dead_points_info.txt` will not be written even if `search: hard_writing` is true.
 
 
 ```yaml
@@ -295,7 +295,7 @@ writing:
 
 These options allows to choose what is written in the ouput files:
 - `statistics`: if true, the mean, standard deviation, median and confidence levels of the parameters are computed and written in the `nf_output_res` files. ATTENTION, in that case, an array is created with all the points found during the run. ATTENTION, if `writing: all_parameters` is false and `search: hard_writing` is true, `writing: statistics` will be force set to FALSE if it is not.
-- `all_parameters`: if true, the `nf_output_points` files are written. ATTENTION, if false, the file  `nf_dead_points_information.txt` will not be written even if `search: hard_writing` is true.
+- `all_parameters`: if true, the `nf_output_points` files are written. ATTENTION, if false, the file  `nf_output_dead_points_info.txt` will not be written even if `search: hard_writing` is true.
 
 
 ## Function definition
