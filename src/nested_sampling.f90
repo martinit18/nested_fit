@@ -223,7 +223,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_max,live_max,
     CALL LOG_ERROR_HEADER()
   END IF
   
-  IF(hard_writing_parameters .AND. write_all_parameters) WRITE(30) evstep(1), LOGLIKELIHOOD(npar, live(1,:)), live(1,:), live_birth(1), live_rank(1)
+  IF(hard_writing_parameters .AND. write_all_parameters) WRITE(50) evstep(1), LOGLIKELIHOOD(npar, live(1,:)), live(1,:), live_birth(1), live_rank(1)
   IF(hard_writing_parameters .AND. (.NOT. write_all_parameters)) WRITE(23, *) live_birth(1), live_rank(1)
   IF(calc_mode.EQ.'POTENTIAL') THEN
     en_write = LOGLIKELIHOOD_POT_WRITE(npar, live(1,:))
@@ -529,7 +529,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_max,live_max,
            
         !IF(hard_writing_parameters) weight(1) = ADDLOG(weight(1),evstep(1))
 
-        IF(hard_writing_parameters .AND. write_all_parameters) WRITE(30) evstep(1), LOGLIKELIHOOD(npar, live_old(1,:)), live(1,:), live_birth(1), live_rank(1)
+        IF(hard_writing_parameters .AND. write_all_parameters) WRITE(50) evstep(1), LOGLIKELIHOOD(npar, live_old(1,:)), live(1,:), live_birth(1), live_rank(1)
         IF(hard_writing_parameters .AND. (.NOT. write_all_parameters)) WRITE(23, *) live_birth(1), live_rank(1)
         ! Write status
         !write(*,*) 'N step : ', n, 'Evidence at present : ', evsum ! ???? Debugging
@@ -713,7 +713,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_max,live_max,
      live_rank_final_try(:,itry) = live_rank_old
   ELSE IF (hard_writing_parameters .AND. write_all_parameters) THEN
      DO i=1,nlive
-        WRITE(30) evlast, LOGLIKELIHOOD(npar, live(i,:)), live(i,:), live_birth(i), live_rank(i)
+        WRITE(50) evlast, LOGLIKELIHOOD(npar, live(i,:)), live(i,:), live_birth(i), live_rank(i)
         !weight(1) = ADDLOG(weight(1),evlast)
      END DO
   ELSE IF (hard_writing_parameters .AND. (.NOT. write_all_parameters)) THEN

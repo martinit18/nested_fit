@@ -536,7 +536,7 @@ PROGRAM NESTED_FIT
   END IF
 
   ! If hard_writing_parameters is true, create file to save dead points
-  IF(hard_writing_parameters .AND. write_all_parameters) OPEN(30,FILE='nf_dead_points_information.txt',FORM='unformatted',STATUS= 'UNKNOWN')
+  IF(hard_writing_parameters .AND. write_all_parameters) OPEN(50,FILE='nf_dead_points_information.txt',FORM='unformatted',STATUS= 'UNKNOWN')
   ! If not writing all parameters, create file for additional diagnostic stuff directly
   IF(hard_writing_parameters .AND. (.NOT. write_all_parameters)) THEN
     OPEN(23,FILE='nf_output_diag.dat',STATUS= 'UNKNOWN')
@@ -567,7 +567,7 @@ PROGRAM NESTED_FIT
       END IF
    END DO
    
-  IF(hard_writing_parameters .AND. write_all_parameters) REWIND(UNIT=30)
+  IF(hard_writing_parameters .AND. write_all_parameters) REWIND(UNIT=50)
   IF(hard_writing_parameters .AND. (.NOT. write_all_parameters)) CLOSE(23)
   IF(calc_mode.EQ.'POTENTIAL' .OR. calc_mode.EQ.'Q_POTENTIAL') CLOSE(31)
   
@@ -643,7 +643,7 @@ PROGRAM NESTED_FIT
         DO i=1,ntry
            DO j=1,nall_try(i)
               ind=SUM(nall_try(:i-1))+j !index of the current points amongst all sampled points
-              READ(30) weight(ind), live_like_final, live_final(ind,:), &
+              READ(50) weight(ind), live_like_final, live_final(ind,:), &
                        live_birth_final,live_rank_final
               IF (j.LE.(nall_try(i)-nlive)) THEN
                  IF(DABS(weight(ind) - evsum_final_try(i)).LT.700) THEN
@@ -661,7 +661,7 @@ PROGRAM NESTED_FIT
      ELSE
         DO i=1,ntry
            DO j=1,nall_try(i)
-              READ(30) weight, live_like_final, live_final, live_birth_final,live_rank_final
+              READ(50) weight, live_like_final, live_final, live_birth_final,live_rank_final
               IF (j.LE.(nall_try(i)-nlive)) THEN
                  IF(DABS(weight(1) - evsum_final_try(i)).LT.700) THEN
                      weight_tot = weight_tot + DEXP(weight(1) - evsum_final_try(i))
@@ -698,7 +698,7 @@ PROGRAM NESTED_FIT
      weight = weight/weight_tot
   END IF  
   
-  IF(hard_writing_parameters .AND. write_all_parameters) REWIND(UNIT=30)
+  IF(hard_writing_parameters .AND. write_all_parameters) REWIND(UNIT=50)
   ! ------------Calculate the final parameters, errors and data  --------------------------
 
 
@@ -787,7 +787,7 @@ PROGRAM NESTED_FIT
         DO j=1,nall_try(i)
            IF(write_statistics) THEN ! Arrays do not have the same size
               ind=SUM(nall_try(:i-1))+j !index of the current points amongst all sampled points
-              READ(30) weight_read, live_like_final, live_final(ind,:), &
+              READ(50) weight_read, live_like_final, live_final(ind,:), &
                        live_birth_final,live_rank_final ! the unormalised weights are read
               
               live_like_mean = live_like_mean + weight(ind)*live_like_final(1) !the normalised weights are used
@@ -796,7 +796,7 @@ PROGRAM NESTED_FIT
               ! Diagnostic additional stuff
               WRITE(24,*) live_birth_final, live_rank_final
            ELSE
-              READ(30) weight, live_like_final, live_final, live_birth_final,live_rank_final
+              READ(50) weight, live_like_final, live_final, live_birth_final,live_rank_final
               !Normalise the weight
               IF (j.LE.(nall_try(i)-nlive)) THEN
                  IF(DABS(weight(1) - evsum_final_try(i)).LT.700) THEN
@@ -817,10 +817,10 @@ PROGRAM NESTED_FIT
      END DO
      CLOSE(23)
      CLOSE(24) 
-     CLOSE(30)
-     OPEN(30,FILE='nf_dead_points_information.txt',FORM='unformatted',STATUS= 'UNKNOWN')
-     WRITE(30) 'DONE'
-     CLOSE(30)
+     CLOSE(50)
+     OPEN(50,FILE='nf_dead_points_information.txt',FORM='unformatted',STATUS= 'UNKNOWN')
+     WRITE(50) 'DONE'
+     CLOSE(50)
   ELSE IF(.NOT. hard_writing_parameters .AND. write_all_parameters) THEN
      ! Data
      OPEN(23,FILE='nf_output_points.txt',STATUS= 'UNKNOWN')
