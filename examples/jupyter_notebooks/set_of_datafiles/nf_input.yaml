@@ -65,5 +65,6 @@ search:
   param1: 0.5
   param2: 3
   tries_mult: 100
+  hard_writing: false
 specstr: x,c
-version: 5.5
+version: 5.6

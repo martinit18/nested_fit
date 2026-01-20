@@ -128,6 +128,7 @@ class Analysis(object):
         with open(path+'nf_input.yaml') as f:
             input_data = yaml.load(f, Loader=SafeLoader)
         
+        
         # Quick parse on the version strings
         #if(not self.check_version(input_data['version'])):
         #    sys.exit('Wrong input file version. Please check.')
@@ -147,6 +148,8 @@ class Analysis(object):
                 int(v['fixed']) if 'fixed' in v else 0])
             i += 1
         input_data['parameters'] = parameters
+
+        
 
         return input_data
 

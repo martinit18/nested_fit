@@ -399,6 +399,7 @@ class Configurator():
                  search_maxtries=1000,
                  search_multries=100,
                  search_maxsteps=100000,
+                 hard_wrtiting=True,
 
                  conv_method='LIKE_ACC',
                  conv_accuracy=1.E-05,
@@ -408,6 +409,9 @@ class Configurator():
                  cluster_method='k',
                  cluster_parameter1=0.5,
                  cluster_parameter2=0.2,
+
+                 writing_statistics=True,
+                 writing_all_parameters=True,
 
                  keep_yaml=True,
                  **kwargs
@@ -442,6 +446,7 @@ class Configurator():
         self._config['search']['tries_mult'] = search_multries
         self._config['search']['num_tries'] = num_tries
         self._config['search']['max_steps'] = search_maxsteps
+        self._config['search']['hard_writing'] = hard_wrtiting
 
         # convergence
         self._config['convergence'] = {}
@@ -465,6 +470,12 @@ class Configurator():
 
         # expressions and params
         self._config['function'] = {}
+
+        # writing options
+        self._config['writing'] = {}
+        self._config['writing']['statistics'] = writing_statistics
+        self._config['writing']['all_parameters'] = writing_all_parameters
+
 
         self._df = []
 

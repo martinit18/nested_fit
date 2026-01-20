@@ -1,3 +1,4 @@
+calculation_mode: DATA
 clustering:
   enabled: true
   method: k
@@ -67,6 +68,7 @@ function:
       value: 454.6
 likelihood: GAUSSIAN
 search:
+  hard_writing: true
   livepoints: 1000
   max_steps: 100000
   max_tries: 1000
@@ -76,4 +78,7 @@ search:
   param2: 3
   tries_mult: 100
 specstr: x,c
-version: 5.3
+version: 5.6
+writing:
+  all_parameters: true
+  statistics: true
