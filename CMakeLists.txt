@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.10)
 
 # NOTE: (César) : If we are on macOS set the minimum supported version to 10.15
 #				  due to C++17 support.
-if(APPLE)
-	set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "" FORCE)
-endif()
+# if(APPLE)
+# 	set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "" FORCE)
+# endif()
 
 # The nested_fit version being built -> This gets copied everywhere inside the project code
 # For more info see the 'src/Mod_metadata.f90.in' file
