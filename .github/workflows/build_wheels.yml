@@ -15,10 +15,12 @@ jobs:
         include:
           - runs_on: macos-15-intel
             arch: x86_64
-            minver: "10.15"
+            # minver: "10.15"
+            minver: "15.0"
           - runs_on: macos-latest
             arch: arm64
-            minver: "11.0"
+            # minver: "11.0"
+            minver: "15.0"
           - runs_on: ubuntu-latest
             arch: x86_64
             minver: ""
