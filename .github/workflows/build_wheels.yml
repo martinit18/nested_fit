@@ -41,22 +41,22 @@ jobs:
         run: |
           brew install llvm gcc libomp
 
-      - name: Install conda (macOS)
-        if: runner.os == 'macOS'
-        uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-version: "latest"
-          activate-environment: buildenv
-          environment-file: ""
-          auto-activate-base: false
-
-      - name: Install buildtools (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          conda install -n buildenv -c conda-forge gfortran=11 libgfortran=5 libgcc libgfortran5 libcxx
-          echo "CONDA_BIN=$CONDA_PREFIX/bin" >> $GITHUB_ENV
-          echo "DYLD_FALLBACK_LIBRARY_PATH=$CONDA_PREFIX/lib" >> $GITHUB_ENV
-        shell: bash -l {0}
+      # - name: Install conda (macOS)
+      #   if: runner.os == 'macOS'
+      #   uses: conda-incubator/setup-miniconda@v2
+      #   with:
+      #     miniforge-version: "latest"
+      #     activate-environment: buildenv
+      #     environment-file: ""
+      #     auto-activate-base: false
+      #
+      # - name: Install buildtools (macOS)
+      #   if: runner.os == 'macOS'
+      #   run: |
+      #     conda install -n buildenv -c conda-forge gfortran=11 libgfortran=5 libgcc libgfortran5 libcxx
+      #     echo "CONDA_BIN=$CONDA_PREFIX/bin" >> $GITHUB_ENV
+      #     echo "DYLD_FALLBACK_LIBRARY_PATH=$CONDA_PREFIX/lib" >> $GITHUB_ENV
+      #   shell: bash -l {0}
 
       - name: Deploy pre-release
         if: startsWith(github.ref, 'refs/heads/dev')
@@ -80,10 +80,12 @@ jobs:
         uses: pypa/cibuildwheel@v3.0.1
         env:
           CIBW_ARCHS_MACOS: ${{ matrix.arch }}
+
+          # export DYLD_FALLBACK_LIBRARY_PATH=${{ env.DYLD_FALLBACK_LIBRARY_PATH }}
+          # echo "DYLD_FALLBACK_LIBRARY_PATH=$DYLD_FALLBACK_LIBRARY_PATH"
           CIBW_BEFORE_BUILD: |
             python3 -c "import os,subprocess; print('pwd', os.getcwd()); subprocess.run(['git','rev-parse','HEAD'], check=True)"
-            export DYLD_FALLBACK_LIBRARY_PATH=${{ env.DYLD_FALLBACK_LIBRARY_PATH }}
-            echo "DYLD_FALLBACK_LIBRARY_PATH=$DYLD_FALLBACK_LIBRARY_PATH"
+
           CIBW_ENVIRONMENT: >
             PATH="/usr/bin:/usr/local/bin:$PATH"
             MACOSX_DEPLOYMENT_TARGET=${{ matrix.minver }}
