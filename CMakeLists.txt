@@ -10,8 +10,9 @@ endif()
 # For more info see the 'src/Mod_metadata.f90.in' file
 # Read the version from the .toml file since this is what will be pushed to the repo
 file(READ "pyproject.toml" tomlfile)
-string(REGEX MATCH "version = \"(.+?)\"" vn ${tomlfile})
+string(REGEX MATCH "version[ \t]*=[ \t]*\"([0-9]+\.[0-9]+\.[0-9]+)(\.dev[0-9]+)?\"" vn ${tomlfile})
 set(project_version ${CMAKE_MATCH_1})
+message(STATUS ${project_version})
 
 # This is just for the clangd LSP
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
