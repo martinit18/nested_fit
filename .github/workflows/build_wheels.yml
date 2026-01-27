@@ -37,7 +37,7 @@ jobs:
       - name: Install llvm + libomp (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install llvm libomp
+          brew install llvm gcc libomp
 
       - name: Install conda (macOS)
         if: runner.os == 'macOS'
@@ -88,6 +88,7 @@ jobs:
             CMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.minver }}
             CC=$(brew --prefix llvm)/bin/clang
             CXX=$(brew --prefix llvm)/bin/clang++
+            FC=$(brew --prefix gcc)/bin/gfortran
             GIT_TERMINAL_PROMPT=0
             SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
         with:
