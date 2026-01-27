@@ -37,7 +37,7 @@ jobs:
       - name: Install llvm + libomp (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install llvm
+          brew install llvm libomp
 
       - name: Install conda (macOS)
         if: runner.os == 'macOS'
@@ -51,7 +51,7 @@ jobs:
       - name: Install buildtools (macOS)
         if: runner.os == 'macOS'
         run: |
-          conda install -n buildenv -c conda-forge gfortran=11 libgfortran=5 libgcc libgfortran5 libcxx libomp
+          conda install -n buildenv -c conda-forge gfortran=11 libgfortran=5 libgcc libgfortran5 libcxx
           echo "CONDA_BIN=$CONDA_PREFIX/bin" >> $GITHUB_ENV
           echo "DYLD_FALLBACK_LIBRARY_PATH=$CONDA_PREFIX/lib" >> $GITHUB_ENV
         shell: bash -l {0}
