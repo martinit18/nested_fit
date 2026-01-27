@@ -2,7 +2,7 @@ name: Python Build Wheels
 
 on:
   push:
-    branches: ["master"]
+    branches: ["master", "dev"]
 
 jobs:
   build_wheels:
@@ -12,7 +12,7 @@ jobs:
       matrix:
         #os: [ubuntu-latest, windows-latest, macos-13, macos-14]
         #os: [ubuntu-latest, macos-13, macos-14]
-        os: [ubuntu-latest, macos-14] # For now build for ubuntu and mac-os x64
+        os: [ubuntu-latest, macos-latest] # For now build for ubuntu and mac-os x64
         #os: [ubuntu-latest]
 
     steps:
@@ -63,6 +63,14 @@ jobs:
           echo $PATH
           echo $PWD
           git rev-parse HEAD
+
+      - name: Deploy pre-release
+        if: startsWith(github.ref, 'refs/heads/dev')
+        shell: bash
+        run: |
+          BASE_VERSION=$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])'
+          DEV_VERSION="${BASE_VERSION}.dev${GITHUB_RUN_NUMBER}"
+          sed -i "s/version = \".*\"/version = \"${DEV_VERSION}\"/" pyproject.toml
 
       - name: Build wheels (macOS)
         if: runner.os == 'macOS'
