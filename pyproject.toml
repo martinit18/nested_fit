@@ -58,7 +58,7 @@ environment = "CFLAGS='-static-libgcc -static-libstdc++' CXXFLAGS='-static-libgc
 # ]
 
 [tool.cibuildwheel.macos]
-archs = ["universal2"]
+archs = ["x86_64", "arm64"]
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64"]

@@ -10,10 +10,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        #os: [ubuntu-latest, windows-latest, macos-13, macos-14]
-        #os: [ubuntu-latest, macos-13, macos-14]
-        os: [ubuntu-latest, macos-latest] # For now build for ubuntu and mac-os x64
-        #os: [ubuntu-latest]
+        # Run for linux x86_64, macos arm64 and macos x86_64
+        os: [ubuntu-latest, macos-latest, macos-15-intel]
 
     steps:
       - uses: actions/checkout@v4
@@ -24,13 +22,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y gfortran g++ cmake make
-
-      # - name: Install build tools (Windows)
-      #   if: runner.os == 'Windows'
-      #   run: |
-      #     choco install mingw -y
-      #     echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" >> $env:GITHUB_PATH
+          sudo apt-get install -y gfortran gcc cmake make
 
       - name: Install conda (macOS)
         if: runner.os == 'macOS'
@@ -49,20 +41,6 @@ jobs:
           echo "$CONDA_PREFIX/bin" >> $GITHUB_PATH
           echo "DYLD_FALLBACK_LIBRARY_PATH=$CONDA_PREFIX/lib" >> $GITHUB_ENV
         shell: bash -l {0}
-
-      - name: Check build tools
-        run: |
-          which cmake
-          cmake --version
-          which gfortran
-          gfortran --version
-          which clang++
-          clang++ --version
-          which make
-          make --version
-          echo $PATH
-          echo $PWD
-          git rev-parse HEAD
 
       - name: Deploy pre-release
         if: startsWith(github.ref, 'refs/heads/dev')
@@ -91,18 +69,11 @@ jobs:
           CIBW_BEFORE_BUILD: |
             python3 -c "import os,subprocess; print('pwd', os.getcwd()); subprocess.run(['git','rev-parse','HEAD'], check=True)"
             GIT_TERMINAL_PROMPT=0
-            SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
+            export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
             echo "SDKROOT=$SDKROOT"
-            export SDKROOT
             echo "Adjusting PATH"
             export PATH="/usr/bin:/usr/local/bin:$PATH"
-            which make
-            which clang++
-            which gfortran
-            clang++ --version
-            gfortran --version
-            DYLD_FALLBACK_LIBRARY_PATH=${{ env.DYLD_FALLBACK_LIBRARY_PATH }}
-            export DYLD_FALLBACK_LIBRARY_PATH
+            export DYLD_FALLBACK_LIBRARY_PATH=${{ env.DYLD_FALLBACK_LIBRARY_PATH }}
             echo "DYLD_FALLBACK_LIBRARY_PATH=$DYLD_FALLBACK_LIBRARY_PATH"
           CIBW_ENVIRONMENT: >
             GIT_TERMINAL_PROMPT=0
@@ -121,13 +92,6 @@ jobs:
           package-dir: .
           output-dir: wheelhouse
           config-file: "{package}/pyproject.toml"
-
-      # - name: Re-tag wheels for Python3.x
-      #   run: |
-      #     pip install wheel-fix
-      #     for whl in wheelhouse/*.whl; do
-      #       wheel-fix --python-tag py3 --abi-tag none "$whl"
-      #     done
 
       - uses: actions/upload-artifact@v4
         with:
@@ -161,7 +125,6 @@ jobs:
       contents: read
 
     runs-on: ubuntu-latest
-    # if: github.event_name == 'release' && github.event.action == 'published'
     steps:
       - uses: actions/download-artifact@v4
         with:
