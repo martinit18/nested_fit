@@ -6,8 +6,8 @@ on:
 
 jobs:
   build_wheels:
-    name: Build wheels on ${{ matrix.os }} - ${{ matrix.arch }}
-    # runs-on: ${{ matrix.os }}
+    name: Build wheels on ${{ matrix.runs_on }} - ${{ matrix.arch }}
+    runs-on: ${{ matrix.runs_on }}
     strategy:
       fail-fast: false
       matrix:
