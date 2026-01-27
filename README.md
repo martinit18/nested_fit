@@ -48,13 +48,13 @@ Other jupyter notebook examples can be found in `examples/jupyter_notebooks`.
 > :warning: Windows support is deprecated. Compile at own risk.
 
 ### Using PIP
-For most users if you are running on Linux or MacOS (x86_64 only!), chances are you can just install directly from pip.
+For most users if you are running on Linux or MacOS, chances are you can just install directly from pip.
 ```sh
 pipx install nested_fit
 ```
 
 ### Installing from source (automatic)
-If you are not running intel x86_64 you can install via the following script:
+If you cannot use pip you can install via the following script:
 ```bash
 curl -sSL https://raw.githubusercontent.com/martinit18/nested_fit/refs/heads/master/install.sh | bash
 ```
@@ -78,7 +78,7 @@ To manually install from source the following dependencies are required:
 - g++
 - gfortran
 - python3 ( >= 3.8 )
-- pipx
+- pipx or pip
 
 If you wish to also build the python package for bindings and analysis support:
 ```bash
@@ -393,6 +393,8 @@ Examples of use of a legacy function can be found in `examples/data_analysis/aaa
 
 The present version is 5.6.0\
 New features:
+- PyPI available development builds
+- PyPI binary distribution for arm64 macOS
 - Optional management of memory of dead points (in RAM or file)
 - Optional writing of dead points information
 - Optional writing of parameter statistics (mean, standard deviation, etc.)
