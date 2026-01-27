@@ -9,8 +9,8 @@ jobs:
     name: Build wheels on ${{ matrix.os }} - ${{ matrix.arch }}
     # runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        fail-fast: false
         # Run for linux x86_64, macos arm64 and macos x86_64
         include:
           - runs_on: macos-15-intel
