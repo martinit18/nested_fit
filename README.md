@@ -391,7 +391,7 @@ Examples of use of a legacy function can be found in `examples/data_analysis/aaa
 
 ## Present version and history of the past versions
 
-The present version is 5.6.0\
+The present version is 5.6.1\
 New features:
 - PyPI available development builds
 - PyPI binary distribution for arm64 macOS
