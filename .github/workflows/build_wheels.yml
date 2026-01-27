@@ -73,6 +73,14 @@ jobs:
           if [[ "$RUNNER_OS" == "macOS" ]]; then sed -i '' "s/version = \".*\"/version = \"${DEV_VERSION}\"/" pyproject.toml; else sed -i "s/version = \".*\"/version = \"${DEV_VERSION}\"/" pyproject.toml; fi
           echo "Dev version: ${DEV_VERSION}"
 
+      - name: Fix git interactivity (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          echo "GIT_TERMINAL_PROMPT=0" >> $GITHUB_ENV
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git rev-parse HEAD
+
       - name: Build wheels (macOS)
         if: runner.os == 'macOS'
         uses: pypa/cibuildwheel@v3.0.1
@@ -81,6 +89,7 @@ jobs:
           # LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
           #SDKROOT: $(xcrun --sdk macosx --show-sdk-path)
           CIBW_BEFORE_BUILD: |
+            GIT_TERMINAL_PROMPT=0
             SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
             echo "SDKROOT=$SDKROOT"
             export SDKROOT
@@ -95,6 +104,7 @@ jobs:
             export DYLD_FALLBACK_LIBRARY_PATH
             echo "DYLD_FALLBACK_LIBRARY_PATH=$DYLD_FALLBACK_LIBRARY_PATH"
           CIBW_ENVIRONMENT: >
+            GIT_TERMINAL_PROMPT=0
             PATH="/usr/bin:/usr/local/bin:$PATH"
             MACOSX_DEPLOYMENT_TARGET=10.15
             SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
