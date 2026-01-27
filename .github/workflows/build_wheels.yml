@@ -86,15 +86,16 @@ jobs:
           CIBW_BEFORE_BUILD: |
             python3 -c "import os,subprocess; print('pwd', os.getcwd()); subprocess.run(['git','rev-parse','HEAD'], check=True)"
 
+          # PATH="/usr/bin:/usr/local/bin:$PATH"
+          # SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
           CIBW_ENVIRONMENT: >
-            PATH="/usr/bin:/usr/local/bin:$PATH"
             MACOSX_DEPLOYMENT_TARGET=${{ matrix.minver }}
             CMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.minver }}
+            CMAKE_OSX_ARCHITECTURES=${{ matrix.arch }}
             CC=$(brew --prefix llvm)/bin/clang
             CXX=$(brew --prefix llvm)/bin/clang++
             FC=$(brew --prefix gcc)/bin/gfortran
             GIT_TERMINAL_PROMPT=0
-            SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
         with:
           package-dir: .
           output-dir: wheelhouse
