@@ -89,6 +89,7 @@ jobs:
           # LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
           #SDKROOT: $(xcrun --sdk macosx --show-sdk-path)
           CIBW_BEFORE_BUILD: |
+            python3 -c "import os,subprocess; print('pwd', os.getcwd()); subprocess.run(['git','rev-parse','HEAD'], check=True)"
             GIT_TERMINAL_PROMPT=0
             SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
             echo "SDKROOT=$SDKROOT"
