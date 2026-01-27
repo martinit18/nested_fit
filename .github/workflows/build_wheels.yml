@@ -122,6 +122,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Deploy pre-release
+        if: startsWith(github.ref, 'refs/heads/dev')
+        shell: bash
+        run: |
+          BASE_VERSION=$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
+          DEV_VERSION="${BASE_VERSION}.dev${GITHUB_RUN_NUMBER}"
+          if [[ "$RUNNER_OS" == "macOS" ]]; then sed -i '' "s/version = \".*\"/version = \"${DEV_VERSION}\"/" pyproject.toml; else sed -i "s/version = \".*\"/version = \"${DEV_VERSION}\"/" pyproject.toml; fi
+          echo "Dev version: ${DEV_VERSION}"
+
       - name: Build sdist
         run: pipx run build --sdist
 

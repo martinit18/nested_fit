@@ -13,6 +13,7 @@ file(READ "pyproject.toml" tomlfile)
 string(REGEX MATCH "version[ \t]*=[ \t]*\"([0-9]+\.[0-9]+\.[0-9]+)(\.dev[0-9]+)?\"" vn ${tomlfile})
 set(project_version ${CMAKE_MATCH_1})
 message(STATUS "Build: ${CMAKE_MATCH_1}${CMAKE_MATCH_2}")
+set(dev_version "${CMAKE_MATCH_2}")
 
 # This is just for the clangd LSP
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -77,7 +78,7 @@ add_definitions("-D'PROFILED(x)'=''")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
 # Set nested fit version strings
-set(nested_fit_version_full_str "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}.${CMAKE_PROJECT_VERSION_PATCH}")
+set(nested_fit_version_full_str "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}.${CMAKE_PROJECT_VERSION_PATCH}${dev_version}")
 set(nested_fit_version_str "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}")
 string(CONCAT nested_fit_target "nested_fit" ${nested_fit_version_full_str})
 string(REPLACE "." "_" nested_fit_target_ac ${nested_fit_target})
