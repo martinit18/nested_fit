@@ -5,7 +5,7 @@ MODULE MOD_PARAMETERS
 
   ! General parameters
   CHARACTER(16)         :: calc_mode = 'DATA'
-  INTEGER(4), PARAMETER :: maxdata=10000, nsetmax=10
+  INTEGER(4), PARAMETER :: maxdata=10000, nsetmax=100
   INTEGER(4), PARAMETER :: specstrmaxcol = 32
   CHARACTER(16)         :: fileformat = '.csv'
 
