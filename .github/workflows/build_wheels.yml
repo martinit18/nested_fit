@@ -58,7 +58,7 @@ jobs:
 
       - name: Build wheels (macOS)
         if: runner.os == 'macOS'
-        uses: pypa/cibuildwheel@v3.0.1
+        uses: pypa/cibuildwheel@298ed2fb2c105540f5ed055e8a6ad78d82dd3a7e
         env:
           CIBW_ARCHS_MACOS: ${{ matrix.arch }}
 
@@ -87,7 +87,7 @@ jobs:
 
       - name: Build wheels (Linux)
         if: runner.os == 'Linux'
-        uses: pypa/cibuildwheel@v3.0.1
+        uses: pypa/cibuildwheel@298ed2fb2c105540f5ed055e8a6ad78d82dd3a7e
         with:
           package-dir: .
           output-dir: wheelhouse
