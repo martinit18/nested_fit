@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "nested_fit"
 version = "5.6.1"
 description = "The nested_fit package."
+readme = "README.md"
 
 authors = [
     {name = "Martino Trassinelli"},
