@@ -28,14 +28,14 @@ updates:
       time: "04:20"
       timezone: "UTC"
 
-      groups:
-        python-dependencies:
-          patterns:
-            - "*"
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"
 
-      labels:
-        - "dependencies"
-        - "python"
+    labels:
+      - "dependencies"
+      - "python"
 
-      open-pull-requests-limit: 5
+    open-pull-requests-limit: 5
 
