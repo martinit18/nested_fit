@@ -2,7 +2,7 @@ name: Python Build Wheels
 
 on:
   push:
-    branches: ["master", "dev"]
+    branches: ["master", "nightly"]
 
 jobs:
   build_wheels:
@@ -17,7 +17,7 @@ jobs:
             arch: x86_64
             # minver: "10.15"
             minver: "15.0"
-          - runs_on: macos-latest
+          - runs_on: macos-15
             arch: arm64
             # minver: "11.0"
             minver: "15.0"
@@ -36,27 +36,23 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gfortran gcc cmake make
 
+      # - name: Install and Setup MacPorts
+      #   if: runner.os == 'macOS'
+      #   run: |
+      #     curl -LO https://github.com/macports/macports-base/releases/download/v2.11.6/MacPorts-2.11.6-15-Sequoia.pkg
+      #     sudo installer -pkg MacPorts-2.11.6-15-Sequoia.pkg -target /
+      #     echo "macosx_deployment_target ${{ matrix.minver }}" | sudo tee -a /opt/local/etc/macports/macports.conf
+
+      # - name: Install toolchain
+      #   if: runner.os == 'macOS'
+      #   run: |
+      #     sudo /opt/local/bin/port -v selfupdate
+      #     sudo /opt/local/bin/port -N install gcc14 libomp
+
       - name: Install llvm + libomp (macOS)
         if: runner.os == 'macOS'
         run: |
           brew install llvm gcc libomp
-
-      # - name: Install conda (macOS)
-      #   if: runner.os == 'macOS'
-      #   uses: conda-incubator/setup-miniconda@v2
-      #   with:
-      #     miniforge-version: "latest"
-      #     activate-environment: buildenv
-      #     environment-file: ""
-      #     auto-activate-base: false
-      #
-      # - name: Install buildtools (macOS)
-      #   if: runner.os == 'macOS'
-      #   run: |
-      #     conda install -n buildenv -c conda-forge gfortran=11 libgfortran=5 libgcc libgfortran5 libcxx
-      #     echo "CONDA_BIN=$CONDA_PREFIX/bin" >> $GITHUB_ENV
-      #     echo "DYLD_FALLBACK_LIBRARY_PATH=$CONDA_PREFIX/lib" >> $GITHUB_ENV
-      #   shell: bash -l {0}
 
       - name: Deploy pre-release
         if: startsWith(github.ref, 'refs/heads/dev')
@@ -81,20 +77,25 @@ jobs:
         env:
           CIBW_ARCHS_MACOS: ${{ matrix.arch }}
 
-          # export DYLD_FALLBACK_LIBRARY_PATH=${{ env.DYLD_FALLBACK_LIBRARY_PATH }}
-          # echo "DYLD_FALLBACK_LIBRARY_PATH=$DYLD_FALLBACK_LIBRARY_PATH"
           CIBW_BEFORE_BUILD: |
             python3 -c "import os,subprocess; print('pwd', os.getcwd()); subprocess.run(['git','rev-parse','HEAD'], check=True)"
 
-          # PATH="/usr/bin:/usr/local/bin:$PATH"
-          # SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
+          # For macports
+          # CC=/opt/local/bin/clang
+          # CXX=/opt/local/bin/clang++
+          # FC=/opt/local/bin/gfortran
+          #
+          # CPPFLAGS="-I/opt/local/include"
+          # LDFLAGS="-L/opt/local/lib"
           CIBW_ENVIRONMENT: >
             MACOSX_DEPLOYMENT_TARGET=${{ matrix.minver }}
             CMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.minver }}
             CMAKE_OSX_ARCHITECTURES=${{ matrix.arch }}
+
             CC=$(brew --prefix llvm)/bin/clang
             CXX=$(brew --prefix llvm)/bin/clang++
             FC=$(brew --prefix gcc)/bin/gfortran
+
             GIT_TERMINAL_PROMPT=0
         with:
           package-dir: .
