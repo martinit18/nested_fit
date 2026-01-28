@@ -76,11 +76,9 @@ jobs:
             MACOSX_DEPLOYMENT_TARGET=${{ matrix.minver }}
             CMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.minver }}
             CMAKE_OSX_ARCHITECTURES=${{ matrix.arch }}
-
             CC=$(brew --prefix llvm)/bin/clang
             CXX=$(brew --prefix llvm)/bin/clang++
             FC=$(brew --prefix gcc)/bin/gfortran
-
             GIT_TERMINAL_PROMPT=0
         with:
           package-dir: .
