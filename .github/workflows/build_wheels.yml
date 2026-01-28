@@ -15,11 +15,9 @@ jobs:
         include:
           - runs_on: macos-15-intel
             arch: x86_64
-            # minver: "10.15"
             minver: "15.0"
           - runs_on: macos-15
             arch: arm64
-            # minver: "11.0"
             minver: "15.0"
           - runs_on: ubuntu-latest
             arch: x86_64
@@ -36,26 +34,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gfortran gcc cmake make
 
-      # - name: Install and Setup MacPorts
-      #   if: runner.os == 'macOS'
-      #   run: |
-      #     curl -LO https://github.com/macports/macports-base/releases/download/v2.11.6/MacPorts-2.11.6-15-Sequoia.pkg
-      #     sudo installer -pkg MacPorts-2.11.6-15-Sequoia.pkg -target /
-      #     echo "macosx_deployment_target ${{ matrix.minver }}" | sudo tee -a /opt/local/etc/macports/macports.conf
-
-      # - name: Install toolchain
-      #   if: runner.os == 'macOS'
-      #   run: |
-      #     sudo /opt/local/bin/port -v selfupdate
-      #     sudo /opt/local/bin/port -N install gcc14 libomp
-
       - name: Install llvm + libomp (macOS)
         if: runner.os == 'macOS'
         run: |
           brew install llvm gcc libomp
 
       - name: Deploy pre-release
-        if: startsWith(github.ref, 'refs/heads/dev')
+        if: startsWith(github.ref, 'refs/heads/nightly')
         shell: bash
         run: |
           BASE_VERSION=$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
