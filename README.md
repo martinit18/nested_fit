@@ -391,8 +391,9 @@ Examples of use of a legacy function can be found in `examples/data_analysis/aaa
 
 ## Present version and history of the past versions
 
-The present version is 5.6.1\
+The present version is 5.6.2\
 New features:
+- Latex input support for compound variable names (i.e. x_{sub})
 - PyPI available development builds
 - PyPI binary distribution for arm64 macOS
 - Optional management of memory of dead points (in RAM or file)
