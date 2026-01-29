@@ -10,6 +10,9 @@
 // - Supported contants  : \pi
 // - Superscript is not allowed (only for powers)
 
+// Changelog:
+// 29/01/2026 - Add support for long parameter format. (e.g. x_{time}) : César Godinho
+
 // Lets keep C++11 compliant
 #include <regex>
 #include <string>
@@ -268,6 +271,21 @@ static std::string StripInput(const std::string& input, const std::vector<std::s
     return output;
 }
 
+static std::string MangleParameter(const std::string& input)
+{
+	std::string output = RemoveAll(input, "_");
+	output = RemoveAll(output, "{");
+	output = RemoveAll(output, "}");
+	return output;
+}
+
+static std::string RemoveBrackets(const std::string& input)
+{
+	std::string output = RemoveAll(input, "{");
+	output = RemoveAll(output, "}");
+	return output;
+}
+
 static void AddMultiplicationSignsReduceVars(std::string& input, const std::vector<std::pair<std::string, std::string>>& user_funcs, const std::vector<std::string>& builtin_funcs)
 {
     ZoneScoped;
@@ -321,6 +339,7 @@ static void AddMultiplicationSignsReduceVars(std::string& input, const std::vect
                input[i] != '/' &&
                input[i] != ',' &&
                input[i] != '.' &&
+			   input[i] != '}' && // Ignore extended format parameters
                (input[i]  < '0' || input[i]  > '9') && i != static_cast<std::ptrdiff_t>(input.length());
     });
 
@@ -338,7 +357,7 @@ static void AddMultiplicationSignsReduceVars(std::string& input, const std::vect
 
     // Rule for identifiers
     ReplaceToken("\\\\pi", "PI", input); // Just so we don't match \\\\pi with the [a-z] rule
-    InsertAfterToken("\\w_.|[a-z]", "*", input, [](const std::ptrdiff_t& i, const std::string& input) -> bool {
+    InsertAfterToken("\\w_\\{.+?\\}|\\w_.|[a-z]", "*", input, [](const std::ptrdiff_t& i, const std::string& input) -> bool {
         return input[i] != ')' &&
                input[i] != '+' &&
                input[i] != '-' &&
@@ -402,7 +421,7 @@ static void AddMultiplicationSignsReduceVars(std::string& input, const std::vect
     });
 
     // Reduce identifier names before putting back function names to avoid collision
-    input = RemoveAll(input, "_");
+	input = MangleParameter(input);
 
     // Put back the user defined functions with their names
     id = 'a';
@@ -426,13 +445,58 @@ static void AddMultiplicationSignsReduceVars(std::string& input, const std::vect
     }
 }
 
+static bool ExpectFormat(const std::string& input, const std::string& expression)
+{
+	return std::regex_match(input.cbegin(), input.cend(), std::regex(expression));
+}
+
+static bool CheckParameterValidity(const std::string& param, int* error)
+{
+	if(error != nullptr) *error = LTXP_ERR_NOERR;
+	bool hasIssue = false;
+	if(param.size() == 1)
+	{
+		// This is a simple parameter syntax
+		// i.e. x
+		return true;
+	}
+	if(ExpectFormat(param, "\\w_\\{.+?\\}"))
+	{
+		// This is an extended parameter syntax
+		// i.e. x_{yz...}
+		return true;
+	}
+	else if(ExpectFormat(param, "\\w_."))
+	{
+		// This is a regular parameter syntax
+		// i.e. x_y
+		if(param.size() > 3)
+		{
+			hasIssue = true;
+		}
+	}
+	else
+	{
+		hasIssue = true;
+	}
+
+	if(hasIssue)
+	{
+		std::cout << "Error on parsing: Declared parameter `" << param << "` exceeds maximum allowed size." << std::endl;
+		std::cout << "Error on parsing: Parameters must be no larger than 3 chars (and either of the form <char>_<char> or <char>) or of the form <char>_{<char>...}." << std::endl;
+		if(error != nullptr) *error = LTXP_ERR_INVALID_PARAM_NAME;
+	}
+
+	return !hasIssue;
+}
+
 static std::vector<std::string> ExtractParameters(const std::string& stripped_input)
 {
     ZoneScoped;
     std::vector<std::string> parameters;
     std::smatch match;
     std::string::const_iterator searchStart(stripped_input.cbegin());
-    while(std::regex_search(searchStart, stripped_input.cend(), match, std::regex("\\w_.")))
+    while(std::regex_search(searchStart, stripped_input.cend(), match, std::regex("\\w_\\{.+?\\}|\\w_.")))
     {
         parameters.push_back(match.str());
         searchStart = match.suffix().first;
@@ -750,13 +814,10 @@ static std::pair<std::string, std::vector<std::string>> HandleHeader(const std::
     for(const auto& p : parameters)
     {
         const std::string tp = TrimLR(p);
-        if(tp.size() > 3)
-        {
-            std::cout << "Error on parsing: Declared parameter `" << p << "` exceeds maximum allowed size." << std::endl;
-            std::cout << "Error on parsing: Parameters must be no larger than 3 chars (and either of the form <char>_<char> or <char>)." << std::endl;
-            if(error != nullptr) *error = LTXP_ERR_INVALID_PARAM_NAME;
+		if(!CheckParameterValidity(tp, error))
+		{
             return std::make_pair("", std::vector<std::string>());
-        }
+		}
         output.second.push_back(tp);
     }
 
@@ -845,9 +906,9 @@ extern "C" ParseOutput ParseLatexToF90(const char* input_stream)
     return_val.num_params = static_cast<int>(header_out.second.size());
     for(size_t i = 0; i < header_out.second.size(); i++)
     {
-        strcat(return_val.parameter_names, (header_out.second[i] + " ").c_str());
+        strcat(return_val.parameter_names, (RemoveBrackets(header_out.second[i]) + " ").c_str());
 
-        std::string p = RemoveAll(header_out.second[i], "_").c_str();
+        std::string p = MangleParameter(header_out.second[i]).c_str();
         strcat(return_val.parameter_identifiers, (p + " ").c_str());
     }
 
