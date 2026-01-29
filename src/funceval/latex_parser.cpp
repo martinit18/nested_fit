@@ -4,7 +4,7 @@
 // Date   : 26/07/2023
 
 // Supported features :
-// - Params need to be 1 letter (+1 optional subscript letter)
+// - Params need to be 1 letter (+1 optional subscript letter) or of the form x_{<subscript_str>}
 // - Function calls need to be under \mathrm{func_name}(other_func(x)) or \texttt{func_name}(other_func(x))
 // - Supported built-ins : \frac, \sqrt, \exp, \log, \sin, \cos, \tan
 // - Supported contants  : \pi
