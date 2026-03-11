@@ -48,10 +48,37 @@ Other jupyter notebook examples can be found in `examples/jupyter_notebooks`.
 > :warning: Windows support is deprecated. Compile at own risk.
 
 ### Using PIP
-For most users if you are running on Linux or MacOS, chances are you can just install directly from pip.
+For most users if you are running on Linux or MacOS, you can just install directly from pip.
 ```sh
 pipx install nested_fit
 ```
+
+The `examples/` directory is bundled with the package. After installation you can
+copy it to a local working area in a couple of ways:
+
+* **directly from the installed site‑packages**
+
+```sh
+pkgdir=$(python -c "import os,nested_fit; print(os.path.join(os.path.dirname(nested_fit.__file__), 'examples'))")
+cp -rp "$pkgdir" ./nested_fit_examples
+```
+
+* **or grab them from GitHub with `curl` alone** – no git required.  Download
+  the repository tarball and extract just the examples directory:
+
+  ```sh
+  curl -L -o nf.tar.gz \
+       https://github.com/martinit18/nested_fit/archive/refs/heads/main.tar.gz
+  mkdir -p nested_fit_examples
+  tar -xzf nf.tar.gz --strip-components=1 nested_fit-main/examples
+  rm nf.tar.gz
+  ```
+
+  the result is a local `nested_fit_examples` tree containing all of the input
+  files and notebooks.
+Either approach gives you a local copy of the input files and notebooks without
+needing to clone the entire repository.
+
 
 ### Installing from source (automatic)
 If you cannot use pip you can install via the following script:

@@ -94,9 +94,16 @@ class Analysis(object):
             self.df = None
             print('No data points to load')
         else:
-            self.df = pd.read_csv(path+'nf_output_points.txt', delim_whitespace=True, header=0,
-                    #names=["weight","lnlikelihood"] + ["val_%s" % d for d in range(1, self.number_of_values+1)])
-                    names=["weight","lnlikelihood"] + self.par_names)
+            # pandas may raise an error if `delim_whitespace` is provided depending
+            # on the version; use a regex sep and the python engine for safe
+            # whitespace-separated parsing.
+            self.df = pd.read_csv(
+                path + 'nf_output_points.txt',
+                sep=r"\s+",
+                engine='python',
+                header=0,
+                names=["weight","lnlikelihood"] + self.par_names,
+            )
             print(self.df.columns)
             print('Available parameters :', list(self.df.columns))
             self.df.head()
