@@ -52,6 +52,7 @@ For most users if you are running on Linux or MacOS, you can just install direct
 ```sh
 pipx install nested_fit
 ```
+(If you need to install a beta version from the **nightly** branch, use the command `pip install --pre nested_fit`)
 
 The `examples/` directory is bundled with the package. After installation you can
 copy it to a local working area in a couple of ways:
