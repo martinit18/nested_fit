@@ -1,0 +1,59 @@
+calculation_mode: Q_POTENTIAL
+clustering:
+  enabled: false
+  method: k
+  # parameter1: 0.5
+  # parameter2: 0.2
+convergence:
+  accuracy: -10
+  method: ENERGY_MAX
+  parameter: 0.01
+datafiles: []
+function:
+  expression: Q_ENERGY_LJ_2D_PBC
+  params:
+    # --- Constants ---
+    N:    { fixed: true, value:   2, step: -1, min: -5.0, max: 5.0, npar: 1 }
+    P:    { fixed: true, value:   3, step: -1, min: -5.0, max: 5.0, npar: 2 }
+    tau:  { fixed: true, value: 0.5, step: -1, min: -5.0, max: 5.0, npar: 3 }
+    m:    { fixed: true, value: 1.0, step: -1, min: -5.0, max: 5.0, npar: 4 }
+    r0:   { fixed: true, value: 0.5, step: -1, min: -5.0, max: 5.0, npar: 5 }
+    
+    # --- Coordinates (Bead 1, Atom 1) ---
+    x_11: { value:  0.0, step: -1, min: -5.0, max: 5.0, npar: 6 }
+    y_11: { value:  0.0, step: -1, min: -5.0, max: 5.0, npar: 7 }
+    
+    # --- Coordinates (Bead 1, Atom 2) ---
+    x_12: { value:  0.0, step: -1, min: -5.0, max: 5.0, npar: 8 }
+    y_12: { value:  0.0, step: -1, min: -5.0, max: 5.0, npar: 9 }
+    
+    # --- Coordinates (Bead 2, Atom 1) ---
+    x_21: { value:  0.1, step: -1, min: -5.0, max: 5.0, npar: 10 }
+    y_21: { value:  0.1, step: -1, min: -5.0, max: 5.0, npar: 11 }
+    
+    # --- Coordinates (Bead 2, Atom 2) ---
+    x_22: { value:  0.1, step: -1, min: -5.0, max: 5.0, npar: 12 }
+    y_22: { value:  0.1, step: -1, min: -5.0, max: 5.0, npar: 13 }
+    
+    # --- Coordinates (Bead 3, Atom 1) ---
+    x_31: { value: -0.1, step: -1, min: -5.0, max: 5.0, npar: 14 }
+    y_31: { value: -0.1, step: -1, min: -5.0, max: 5.0, npar: 15 }
+    
+    # --- Coordinates (Bead 3, Atom 2) ---
+    x_32: { value: -0.1, step: -1, min: -5.0, max: 5.0, npar: 16 }
+    y_32: { value: -0.1, step: -1, min: -5.0, max: 5.0, npar: 17 }
+likelihood: GAUSSIAN
+search:
+  hard_writing: true
+  livepoints: 1000
+  max_steps: 100000
+  max_tries: 1000
+  method: SLICE_SAMPLING
+  num_tries: 1
+  param1: 0.5
+  param2: 3
+  tries_mult: 100
+version: 5.6
+writing:
+  all_parameters: true
+  statistics: true
