@@ -1137,8 +1137,8 @@ PROGRAM NESTED_FIT
    INTEGER                        :: numparams
    INTEGER                        :: i
    LOGICAL                        :: fix_logical = .FALSE.
-   CHARACTER(128)                 :: legacy_param_keys(1024)
-   CHARACTER(128)                 :: legacy_param_names(1024)
+   CHARACTER(128)                 :: legacy_param_keys(1024*4) ! (Damià) *4 to allow for more params in nf_input.yaml
+   CHARACTER(128)                 :: legacy_param_names(1024*4) ! (Damià) *4 to allow for more params in nf_input.yaml
    INTEGER                        :: legacy_param_count
    CHARACTER(128)                 :: splitarr(16)
    INTEGER                        :: splitarr_count

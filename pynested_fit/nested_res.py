@@ -123,7 +123,8 @@ class Analysis(object):
                 sep=r"\s+",
                 engine='python',
                 header=0,
-                names=["density","energy"]
+                names=["density","energy"],
+                usecols=[0, 1] # (Damià) if Q_POTENTIAL file also has columns V, Q, T
             )
             print(self.df_e.columns)
             print('Available parameters:', list(self.df_e.columns))
@@ -1311,8 +1312,8 @@ class Analysis(object):
 
         # Plot interpolation
         if clear: plt.clf()
-        plt.xlabel('Value of parameter ' + title1)
-        plt.ylabel('Value of parameter ' + title2)
+        plt.xlabel('Value of parameter ' + title1) # (Damià) title1 and title2 not defined in this function.
+        plt.ylabel('Value of parameter ' + title2) # I guess they should be par_name1 and par_name2. Please check.
         # Plot the 2D interpolation
         plt.axis([xmin, xmax, ymin, ymax])
         if levels:
