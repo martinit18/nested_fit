@@ -418,11 +418,11 @@ MODULE MOD_INPUTPARSE
         END DO
     END SUBROUTINE
 
-    ! Max subkeys = 1024
+    ! Max subkeys = 1024*4 ! (Damià) *4 to allow for more params in nf_input.yaml
     SUBROUTINE INPUTDATA_MAP_SUBKEYSOF(map, key, output, count)
         CLASS(InputDataMap_t)   , INTENT(INOUT), TARGET :: map
         CHARACTER(*)            , INTENT(IN)            :: key
-        CHARACTER(128)          , INTENT(OUT)           :: output(1024)
+        CHARACTER(128)          , INTENT(OUT)           :: output(1024*4) ! (Damià) *4 to allow for more params in nf_input.yaml
         INTEGER                 , INTENT(OUT)           :: count
         INTEGER                                         :: i
         TYPE(InputDataMapPair_t), POINTER               :: next

@@ -640,11 +640,12 @@ CONTAINS
     REAL(8), DIMENSION(:), INTENT(IN) :: par
     REAL(8), DIMENSION(4) :: Q_ENERGY_LJ_2D_LP_PRIOR
     REAL(8), PARAMETER :: pi=3.141592653589793d0
+    INTEGER(4), PARAMETER :: first_coord = 7
     REAL(8) ::  eps=1.
-    REAL(8), DIMENSION(SIZE(par)-5) :: x
-    REAL(8), DIMENSION(SIZE(par)-5+2*INT(par(1))) :: y
+    REAL(8), DIMENSION(SIZE(par)-(first_coord-1)) :: x
+    REAL(8), DIMENSION(SIZE(par)-(first_coord-1)+2*INT(par(1))) :: y
     !REAL(8), DIMENSION(3*INT(par(1))) :: x_c     
-    INTEGER(4) :: N, i, j, P, k, ind_xi, ind_xj, first_coord
+    INTEGER(4) :: N, i, j, P, k, ind_xi, ind_xj
     REAL(8) :: rij, ener, r0, tau, nu, m, rharm, lambda_P2, dx, dy, box_x, box_y, V, harm
     
     N = INT(par(1))
@@ -658,7 +659,7 @@ CONTAINS
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     m = par(4)
     r0 = par(5)
-    first_coord = 7 ! npar of 1st coordinate
+    ! first_coord = 7 ! npar of 1st coordinate
     lambda_P2 = 1./(m*P*tau**2)
     y(:(2*N*(P-1))) = par((first_coord+2*N):) ! First P-1 beads
     DO i=1,2*N
