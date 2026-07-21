@@ -251,7 +251,7 @@ class Analysis(object):
         # Max parameter set
         output_data['max'] = [float(lines[11+index].split()[1]) for index in range(npar)]
         
-        if input_data['writing']['statistics'] and ((not input_data['search']['hard_writing']) or input_data['writing']['all_parameters']):
+        if (not 'writing' in input_data or input_data['writing']['statistics']) or (('writing' in input_data and not input_data['search']['hard_writing']) and ('writing' in input_data and input_data['writing']['all_parameters'])):
             # Average and standard deviation of parameters
             #output_data['mean']= [[float(lines[10+npar+index].split()[1]),float(lines[10+npar+index].split()[3])] for index in range(npar)]
             output_data['mean'] = [float(lines[13+npar+index].split()[1]) for index in range(npar)]

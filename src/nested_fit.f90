@@ -7,6 +7,7 @@ PROGRAM NESTED_FIT
   !      Add PyPI binary distribution for multiple linux systems
   !      Add PyPI source distribution as a default for other systems
   !      Rename CLI command to `nested_fit` to use the latest installed version via pip
+  !      Add persistent option commands cache
   ! 5.4  Merge of executable for data analysis and function exploration
   !      New outout with max of clusters in a file
   !      New RANDOM_WALK with detailed balance respected
@@ -315,9 +316,15 @@ PROGRAM NESTED_FIT
     "Change the number of threads OpenMP runs on. Setting to 0 will use all the available.",&
     B_SET_OMP_THREADS&
   ))
+
+  ! Load argument / options cache
+  CALL OPT_LOAD_CACHE()
   
   ! Parse executable arguments
   CALL PARSE_ARGUMENTS()
+
+  ! Save argument / options cache
+  CALL OPT_SAVE_CACHE()
 
   !!!!!!!! Initiate random generator with the same seed each time !!!!!!!!!!!
 #ifdef NORNG_ON  

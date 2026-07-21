@@ -419,7 +419,7 @@ Examples of use of a legacy function can be found in `examples/data_analysis/aaa
 
 ## Present version and history of the past versions
 
-The present version is 5.6.4\
+The present version is 5.6.6\
 New features:
 - New function to visualizing the capacty heat for POTENTIAL calculations
 - Latex input support for compound variable names (i.e. x_{sub})
@@ -428,6 +428,7 @@ New features:
 - Optional management of memory of dead points (in RAM or file)
 - Optional writing of dead points information
 - Optional writing of parameter statistics (mean, standard deviation, etc.)
+- Persistent option commands cache
 
 
 Previous versions are:
