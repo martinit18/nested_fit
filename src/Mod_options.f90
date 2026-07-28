@@ -36,12 +36,10 @@ MODULE MOD_OPTIONS
     SUBROUTINE OPT_SAVE_CACHE()
         IMPLICIT NONE
 
-        WRITE(*, *) 'Saving cache...'
-
         OPEN(747, FILE=TRIM(nf_cache_folder)//'cache.opt', ACTION='write', STATUS='replace')
-        WRITE(747, *) TRIM(opt_cpp_comp_cmd)
-        WRITE(747, *) TRIM(opt_f90_comp_cmd)
-        WRITE(747, *) TRIM(opt_lnk_cmd)
+        WRITE(747, '(A)') TRIM(opt_cpp_comp_cmd)
+        WRITE(747, '(A)') TRIM(opt_f90_comp_cmd)
+        WRITE(747, '(A)') TRIM(opt_lnk_cmd)
         CLOSE(747)
     END SUBROUTINE
 END MODULE MOD_OPTIONS
