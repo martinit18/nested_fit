@@ -28,61 +28,57 @@ logging.basicConfig(
     handlers=[RichHandler(rich_tracebacks=True)]
 )
 
-# IPython interactive string print
-ipython_header_grid = RTable.grid(expand=False)
-ipython_header_grid.add_column(justify='right')
-ipython_header_grid.add_column(justify='left')
-ipython_header_grid.add_row('[b]Version[/b]', ' ' + __version__)
-if __features__ != 'Unknown':
-    ipython_header_grid.add_row(
-        '[b]OpenMP Support[/b]',
-        '[green] YES[/green]' if __features__['OpenMP'] == 'ON' else '[red] NO[/red]'
-    )
-    ipython_header_grid.add_row(
-        '[b]OpenMPI Support[/b]',
-        '[green] YES[/green]' if __features__['OpenMPI'] == 'ON' else '[red] NO[/red]'
-    )
-    ipython_header_grid.add_row('[b]Cache Location[/b]', ' ' + __cache__)
-
-    warn_grid = RTable.grid(expand=False)
-    warn_grid.add_column()
-    warns = False
-    if __features__['BUILDTYPE'] == 'Debug':
-        warn_grid.add_row(' [yellow]:warning: Debug build[/yellow]')
-        warns = True
-
-    if __features__['PPROF'] == 'ON':
-        warn_grid.add_row(' [yellow]:warning: Profiling build[/yellow]')
-        warns = True
-
-    if __features__['LTRACE'] == 'ON':
-        warn_grid.add_row(' [yellow]:warning: Trace logging ON[/yellow]')
-        warns = True
-
-    if warns:
-        ipython_header_grid.add_row('[b]Warnings[/b]', warn_grid)
-else:
-    ipython_header_grid.add_row('[b]Warnings[/b]', ' [red]:exclamation: Could not find feature list[/red]')
-    ipython_header_grid.add_row('', ' [red]:exclamation: Instalation might be corrupted[/red]')
-
-ipython_header = r'''
-[b]Quick start[/b]
-To access to the data in the same directory, run 
-> import pynested_fit as pynf 
-> an = pynf.Analysis() 
-> an.<function> 
-
-[b]Help[/b]
-Examples on how to use pynested_fit
-are available under the examples folder 
-at [link=https://github.com/martinit18/nested_fit/][blue]the repository[/blue][/link].
-
-[b]Authors[/b]
-Martino Trassinelli
-Lune Maillard
-César Godinho'''
-
 if get_env_type() == 'IPython':
+    # IPython interactive string print
+    ipython_header_grid = RTable.grid(expand=False)
+    ipython_header_grid.add_column(justify='right')
+    ipython_header_grid.add_column(justify='left')
+    ipython_header_grid.add_row('[b]Version[/b]', ' ' + __version__)
+    if __features__ != 'Unknown':
+        ipython_header_grid.add_row(
+            '[b]OpenMP Support[/b]',
+            '[green] YES[/green]' if __features__['OpenMP'] == 'ON' else '[red] NO[/red]'
+        )
+        ipython_header_grid.add_row('[b]Cache Location[/b]', ' ' + __cache__)
+
+        warn_grid = RTable.grid(expand=False)
+        warn_grid.add_column()
+        warns = False
+        if __features__['BUILDTYPE'] == 'Debug':
+            warn_grid.add_row(' [yellow]:warning: Debug build[/yellow]')
+            warns = True
+
+        if __features__['PPROF'] == 'ON':
+            warn_grid.add_row(' [yellow]:warning: Profiling build[/yellow]')
+            warns = True
+
+        if __features__['LTRACE'] == 'ON':
+            warn_grid.add_row(' [yellow]:warning: Trace logging ON[/yellow]')
+            warns = True
+
+        if warns:
+            ipython_header_grid.add_row('[b]Warnings[/b]', warn_grid)
+    else:
+        ipython_header_grid.add_row('[b]Warnings[/b]', ' [red]:exclamation: Could not find feature list[/red]')
+        ipython_header_grid.add_row('', ' [red]:exclamation: Instalation might be corrupted[/red]')
+
+    ipython_header = r'''
+    [b]Quick start[/b]
+    To access to the data in the same directory, run 
+    > import pynested_fit as pynf 
+    > an = pynf.Analysis() 
+    > an.<function> 
+
+    [b]Help[/b]
+    Examples on how to use pynested_fit
+    are available under the examples folder 
+    at [link=https://github.com/martinit18/nested_fit/][blue]the repository[/blue][/link].
+
+    [b]Authors[/b]
+    Martino Trassinelli
+    Lune Maillard
+    César Godinho'''
+
     vgrid = RTable.grid(expand=False)
     vgrid.add_column()
     vgrid.add_row(ipython_header_grid)
