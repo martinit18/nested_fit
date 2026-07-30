@@ -41,8 +41,9 @@ MODULE MOD_MATH
         error = .FALSE.
         DO idx = 1, LEN_TRIM(input_str)
            IF(((input_str(idx:idx).LT.'0').OR.(input_str(idx:idx).GT.'9')).AND.&
-              ((input_str(idx:idx).NE.'-').AND.(input_str(idx:idx).NE.'E').AND.&
-               (input_str(idx:idx).NE.'.').AND.(input_str(idx:idx).NE.'e'))) THEN
+              ((input_str(idx:idx).NE.'-').AND.(input_str(idx:idx).NE.'+').AND.&
+               (input_str(idx:idx).NE.'E').AND.(input_str(idx:idx).NE.'e').AND.&
+               (input_str(idx:idx).NE.'.'))) THEN
               error = .TRUE.
            ENDIF
         END DO
