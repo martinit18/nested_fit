@@ -38,10 +38,10 @@ if __features__ != 'Unknown':
         '[b]OpenMP Support[/b]',
         '[green] YES[/green]' if __features__['OpenMP'] == 'ON' else '[red] NO[/red]'
     )
-    ipython_header_grid.add_row(
-        '[b]OpenMPI Support[/b]',
-        '[green] YES[/green]' if __features__['OpenMPI'] == 'ON' else '[red] NO[/red]'
-    )
+    # ipython_header_grid.add_row(
+    #     '[b]OpenMPI Support[/b]',
+    #     '[green] YES[/green]' if __features__['OpenMPI'] == 'ON' else '[red] NO[/red]'
+    # )
     ipython_header_grid.add_row('[b]Cache Location[/b]', ' ' + __cache__)
 
     warn_grid = RTable.grid(expand=False)

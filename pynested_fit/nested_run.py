@@ -92,10 +92,10 @@ class NFDashboardHeader():
             '[b]OpenMP[/b]',
             ' [green]YES[/green]' if __features__['OpenMP'] == 'ON' else ' [red]NO[/red]' # type: ignore
         )
-        switches.add_row(
-            '[b]OpenMPI[/b]',
-            ' [green]YES[/green]' if __features__['OpenMPI'] == 'ON' else ' [red]NO[/red]' # type: ignore
-        )
+        # switches.add_row(
+        #     '[b]OpenMPI[/b]',
+        #     ' [green]YES[/green]' if __features__['OpenMPI'] == 'ON' else ' [red]NO[/red]' # type: ignore
+        # )
 
         top_right['left'].update(switches)
 
