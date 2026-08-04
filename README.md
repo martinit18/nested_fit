@@ -123,22 +123,23 @@ This 'hack' is done via the editable installation mode:
 git clone https://github.com/martinit18/nested_fit.git
 
 # Make build directory
-mkdir -p nested_fit/build
+cd nested_fit
+mkdir -p build
 
 # Configure (and specify install prefix if required)
-cmake -S nested_fit -B nested_fit/build -DOPENMP=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=<install_path>
+cmake -S nested_fit -B build -DOPENMP=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=<install_path>
 
 # Compile and install
-cmake --build nested_fit/build --config Release
+cmake --build build --config Release
 
 # Now you will have the nested_fit binary available at nested_fit/bin/nested_fit_xxx
 export PATH=$PATH:<your_clone_path>/nested_fit/bin
 
 # Or alternatively install from within your build tool
-cmake --build nested_fit/build --target install
+cmake --build build --target install
 
 # Now install the python library in editable mode skipping compilation
-pip install -e ./nested_fit -v
+pip install -e . -v
 ```
 
 :warning: If you have further issues please refer to the file *STEPBYSTEP_INSTALL.md*.

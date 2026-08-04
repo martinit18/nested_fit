@@ -9,8 +9,8 @@ convergence:
   method: LIKE_ACC
   parameter: 0.01
 data:
-  xmax: 650
-  xmin: 250
+  xmax: 1024
+  xmin: 1
 datafiles: he-histo.dat
 filefmt: .tsv
 function:
