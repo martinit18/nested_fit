@@ -90,5 +90,5 @@ del get_env_type
 del logging
 del RichHandler
 del rich_traceback
-del ipython_header
+# del ipython_header
 del rprint
