@@ -136,7 +136,7 @@ cmake --build build --config Release
 export PATH=$PATH:<your_clone_path>/nested_fit/bin
 
 # Or alternatively install from within your build tool
-cmake --build nested_fit/build --target install
+cmake --build build --target install
 
 # Now install the python library in editable mode skipping compilation
 pip install -e . -v
