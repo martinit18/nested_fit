@@ -16,10 +16,9 @@ Users are also required to cite the Nested Fit papers here below in their public
 
 **Reference articles of nested_fit**:
 - [A] M. Trassinelli, *Bayesian data analysis tools for atomic physics*, Nucl. Instrum. Methods B **408**, 301-312 (2017),
-[doi:10.1016/j.nimb.2017.05.030](http://dx.doi.org/10.1016/j.nimb.2017.05.030),  [	arXiv:1611.10189](https://arxiv.org/abs/1611.10189)\
-- [B] M. Trassinelli, *The Nested_fit Data Analysis Program*, Proceedings **33**, 14 (2019), [doi:10.3390/proceedings2019033014](https://doi.org/10.3390/proceedings2019033014)\
+[doi:10.1016/j.nimb.2017.05.030](http://dx.doi.org/10.1016/j.nimb.2017.05.030),  [arXiv:1611.10189](https://arxiv.org/abs/1611.10189)
+- [B] M. Trassinelli, *The Nested_fit Data Analysis Program*, Proceedings **33**, 14 (2019), [doi:10.3390/proceedings2019033014](https://doi.org/10.3390/proceedings2019033014)
 - [C] M. Trassinelli, P. Ciccodicola *Mean Shift Cluster Recognition Method Implementation in the Nested Sampling Algorithm*, Entropy **22**, 185 (2020), [doi:10.3390/e22020185](https://doi.org/10.3390/e22020185)
-\
 - [D] L. Maillard, F. Finocchi, M. Trassinelli * *Assessing Search and Unsupervised Clustering Algorithms in Nested Sampling*, Entropy **25**, 347 (2023), [doi:10.3390/e25020347](https://doi.org/10.3390/e25020347)
 
 ### Authors
@@ -41,6 +40,8 @@ email: c.godinho AT campus.fct.unl.pt
 **Quick start with google colab:** 
 [Download](https://github.com/martinit18/nested_fit/blob/dev/examples/jupyter_notebooks/quick_start_with_google_colab.ipynb)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/martinit18/nested_fit/blob/dev/examples/jupyter_notebooks/quick_start_with_google_colab.ipynb)
+
+If you want to start to use a program in the jupyter environment, start with `examples/jupyter_notebooks/simple_analysis_visu.ipynb`
 
 Other jupyter notebook examples can be found in `examples/jupyter_notebooks`.
 
@@ -422,6 +423,8 @@ Examples of use of a legacy function can be found in `examples/data_analysis/aaa
 
 The present version is 5.6.8\
 New features:
+- New 2D Lennard-Jones functions added
+- New benchmark notebook available
 - New function to visualizing the capacty heat for POTENTIAL calculations
 - Latex input support for compound variable names (i.e. x_{sub})
 - PyPI available development builds
