@@ -23,6 +23,7 @@
 #include <cassert>
 #include <fstream>
 #include <sstream>
+#include <functional>
 
 #ifdef PPROF
 #include <public/tracy/Tracy.hpp>
