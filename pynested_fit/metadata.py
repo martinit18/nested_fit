@@ -2,6 +2,7 @@ from importlib.metadata import version as imp_version
 from configparser import ConfigParser
 from subprocess import check_output
 import sys
+import os
 
 __version__ = imp_version('nested_fit')
 
@@ -10,8 +11,13 @@ __version__ = imp_version('nested_fit')
 # Other wise default to unknown features status
 def parse_features():
     try:
-        nf_cache_folder = check_output([f'nested_fit{__version__}', '--cache-location'])
-    except Exception:
+        exe = os.path.join(os.path.dirname(__file__), f'nested_fit{__version__}')
+        print(__version__)
+        print(exe)
+        nf_cache_folder = check_output([f'{exe}', '--cache-location'])
+        print(nf_cache_folder)
+    except Exception as e:
+        print(e)
         return ('Unknown', 'Unknown')
     nf_cache_folder = nf_cache_folder.decode('utf-8').strip()
     config = ConfigParser()
