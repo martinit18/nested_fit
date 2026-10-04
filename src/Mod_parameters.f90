@@ -60,4 +60,27 @@ MODULE MOD_PARAMETERS
   COMMON /func_exp/ lr
   COMMON /func_conv/ npoint, nwidth
 
+CONTAINS
+
+  SUBROUTINE COUNT_LIKELIHOOD_CALL()
+    ! Count the likelihood calls as ncall9*10^9 + ncall without serializing the threads
+    ! (a CRITICAL here would be taken at each likelihood call by all threads).
+    ! Only the thread that brings ncall to 10^9 moves 10^9 calls to ncall9,
+    ! the other threads can continue to increment ncall in the meantime.
+    INTEGER(8), PARAMETER :: ncall_max = 1000000000_8
+    INTEGER(8) :: ncall_new
+
+    !$OMP ATOMIC CAPTURE
+    ncall = ncall + 1
+    ncall_new = ncall
+    !$OMP END ATOMIC
+    IF (ncall_new.EQ.ncall_max) THEN
+       !$OMP ATOMIC UPDATE
+       ncall9 = ncall9 + 1
+       !$OMP ATOMIC UPDATE
+       ncall = ncall - ncall_max
+    END IF
+
+  END SUBROUTINE COUNT_LIKELIHOOD_CALL
+
 END MODULE MOD_PARAMETERS

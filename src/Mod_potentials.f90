@@ -98,13 +98,7 @@ CONTAINS
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
     REAL(8), DIMENSION(4) :: en_decomp ! To use with quantum potential that output the decomposition of the energy into averaged potential and replica interaction as well as the temperature
 
-    !$OMP CRITICAL
-    ncall = ncall + 1
-    IF(ncall == 1.E+9) THEN
-       ncall9=ncall9+1
-       ncall=0
-    END IF
-    !$OMP END CRITICAL
+    CALL COUNT_LIKELIHOOD_CALL()
     
     ! Select the test function
     SELECT CASE (funcid)

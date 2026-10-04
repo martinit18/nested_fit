@@ -5,7 +5,7 @@ MODULE MOD_SEARCH_NEW_POINT
   ! Module for likelihood
   USE MOD_LIKELIHOOD_GEN, ONLY: LOGLIKELIHOOD
   ! Module for cluster analysis
-  USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_on, GET_CLUSTER_MEAN_SD
+  USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_on, p_cluster_t, GET_CLUSTER_MEAN_SD
   ! Module for perfprof
   USE MOD_PERFPROF
   ! Module for logging
@@ -18,6 +18,12 @@ MODULE MOD_SEARCH_NEW_POINT
   IMPLICIT NONE
 
   REAL(8), DIMENSION(:), ALLOCATABLE :: live_ave, live_sd
+  ! Per-thread copies of the data used by the search, so that the main loop can recalculate
+  ! the original ones while the other threads are still searching (see COPY_SEARCH_DATA)
+  LOGICAL :: cluster_on_t = .false.
+  REAL(8), DIMENSION(:), ALLOCATABLE :: live_sd_t
+  REAL(8), DIMENSION(:,:,:), ALLOCATABLE :: mat_cov_t, mat_chol_t
+  !$OMP THREADPRIVATE(cluster_on_t, live_sd_t, mat_cov_t, mat_chol_t)
 !#ifdef LAPACK_ON
 !  EXTERNAL :: dpotrf, dtrtri, dtrmv
 !#endif
@@ -175,6 +181,71 @@ CONTAINS
       END SELECT
    
    END SUBROUTINE DEALLOCATE_SEARCH_NEW_POINTS
+
+   !#####################################################################################################################
+
+   SUBROUTINE COPY_SEARCH_DATA()
+      ! Copy the data used by the search (standard deviations, covariance matrix and Cholesky decomposition,
+      ! cluster information) in the variables private to the calling thread.
+      ! To call when this data cannot be modified (in the sequential part of the main loop)
+      USE MOD_PARAMETERS, ONLY: searchid
+      USE MOD_COVARIANCE_MATRIX, ONLY: mat_cov, mat_chol
+      USE MOD_CLUSTER_ANALYSIS, ONLY: p_cluster, cluster_std, cluster_mean, cluster_std_t, cluster_mean_t
+
+      cluster_on_t = cluster_on
+      SELECT CASE (searchid)
+      CASE (2,3,4)
+         CALL COPY_ARRAY_3D(mat_cov,mat_cov_t)
+         CALL COPY_ARRAY_3D(mat_chol,mat_chol_t)
+      CASE DEFAULT
+         live_sd_t = live_sd
+      END SELECT
+      IF (cluster_on) THEN
+         p_cluster_t = p_cluster
+         CALL COPY_ARRAY_2D(cluster_std,cluster_std_t)
+         CALL COPY_ARRAY_2D(cluster_mean,cluster_mean_t)
+      END IF
+
+   CONTAINS
+
+      ! The copies keep the same bounds of the original (that can start from 0 with clusters)
+      SUBROUTINE COPY_ARRAY_2D(a,a_t)
+         REAL(8), DIMENSION(:,:), ALLOCATABLE, INTENT(IN) :: a
+         REAL(8), DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: a_t
+         IF (ALLOCATED(a_t)) THEN
+            IF (ANY(LBOUND(a_t).NE.LBOUND(a)) .OR. ANY(UBOUND(a_t).NE.UBOUND(a))) DEALLOCATE(a_t)
+         END IF
+         IF (.NOT.ALLOCATED(a_t)) ALLOCATE(a_t(LBOUND(a,1):UBOUND(a,1),LBOUND(a,2):UBOUND(a,2)))
+         a_t = a
+      END SUBROUTINE COPY_ARRAY_2D
+
+      SUBROUTINE COPY_ARRAY_3D(a,a_t)
+         REAL(8), DIMENSION(:,:,:), ALLOCATABLE, INTENT(IN) :: a
+         REAL(8), DIMENSION(:,:,:), ALLOCATABLE, INTENT(INOUT) :: a_t
+         IF (ALLOCATED(a_t)) THEN
+            IF (ANY(LBOUND(a_t).NE.LBOUND(a)) .OR. ANY(UBOUND(a_t).NE.UBOUND(a))) DEALLOCATE(a_t)
+         END IF
+         IF (.NOT.ALLOCATED(a_t)) ALLOCATE(a_t(LBOUND(a,1):UBOUND(a,1),LBOUND(a,2):UBOUND(a,2),LBOUND(a,3):UBOUND(a,3)))
+         a_t = a
+      END SUBROUTINE COPY_ARRAY_3D
+
+   END SUBROUTINE COPY_SEARCH_DATA
+
+   !#####################################################################################################################
+
+   SUBROUTINE DEALLOCATE_SEARCH_DATA_COPY()
+      ! Free the copies of the calling thread
+      USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_std_t, cluster_mean_t
+
+      cluster_on_t = .false.
+      IF (ALLOCATED(live_sd_t)) DEALLOCATE(live_sd_t)
+      IF (ALLOCATED(mat_cov_t)) DEALLOCATE(mat_cov_t)
+      IF (ALLOCATED(mat_chol_t)) DEALLOCATE(mat_chol_t)
+      IF (ALLOCATED(p_cluster_t)) DEALLOCATE(p_cluster_t)
+      IF (ALLOCATED(cluster_std_t)) DEALLOCATE(cluster_std_t)
+      IF (ALLOCATED(cluster_mean_t)) DEALLOCATE(cluster_mean_t)
+
+   END SUBROUTINE DEALLOCATE_SEARCH_DATA_COPY
   
   !#####################################################################################################################
 
@@ -281,11 +352,11 @@ CONTAINS
     start_jump = live(istart,:)
 
     ! Get the momenta of the live points if cluster analysis is on 
-400 IF (cluster_on) THEN
-       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
+400 IF (cluster_on_t) THEN
+       CALL GET_CLUSTER_MEAN_SD(istart, live_sd_t, icluster, live_ave_s, live_sd_s)
     ELSE
        icluster = 0
-       live_sd_s = live_sd
+       live_sd_s = live_sd_t
     END IF
 
 
@@ -433,11 +504,11 @@ CONTAINS
     
     
     ! Get the momenta of the live points if cluster analysis is on 
-400 IF (cluster_on) THEN
-       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
+400 IF (cluster_on_t) THEN
+       CALL GET_CLUSTER_MEAN_SD(istart, live_sd_t, icluster, live_ave_s, live_sd_s)
     ELSE
        icluster = 0
-       live_sd_s = live_sd
+       live_sd_s = live_sd_t
     END IF
     
     
@@ -494,7 +565,7 @@ CONTAINS
              ! For all live points, assign a cluster number, which is used to calculate specific standard deviation
              ! for the search of the new point
 
-             IF(.not.cluster_on) THEN
+             IF(.not.cluster_on_t) THEN
                 ! Store the present live points as they are
                 !OPEN(99,FILE='nf_intermediate_live_points.dat',STATUS= 'UNKNOWN')
                 !WRITE(99,*) '# n step =',  n-1
@@ -651,11 +722,11 @@ CONTAINS
 
 
     ! Get the momenta of the live points if cluster analysis is on 
-400 IF (cluster_on) THEN
-       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
+400 IF (cluster_on_t) THEN
+       CALL GET_CLUSTER_MEAN_SD(istart, live_sd_t, icluster, live_ave_s, live_sd_s)
     ELSE
        icluster = 0
-       live_sd_s = live_sd
+       live_sd_s = live_sd_t
     END IF
 
 
@@ -712,7 +783,7 @@ CONTAINS
              ! For all live points, assign a cluster number, which is used to calculate specific standard deviation
              ! for the search of the new point
              
-             IF(.not.cluster_on) THEN
+             IF(.not.cluster_on_t) THEN
                 
                 ! My new technique: mix parameter values from different sets to hope to find a good new value
 !!$OMP PARALLEL DO
@@ -822,11 +893,11 @@ CONTAINS
 
 
     ! Get the momenta of the live points if cluster analysis is on 
-400 IF (cluster_on) THEN
-       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
+400 IF (cluster_on_t) THEN
+       CALL GET_CLUSTER_MEAN_SD(istart, live_sd_t, icluster, live_ave_s, live_sd_s)
     ELSE
        icluster = 0
-       live_sd_s = live_sd
+       live_sd_s = live_sd_t
     END IF
 
 
@@ -988,11 +1059,11 @@ CONTAINS
     start_jump = live(istart,:)
 
     ! Get the momenta of the live points if cluster analysis is on 
-600 IF (cluster_on) THEN
-       CALL GET_CLUSTER_MEAN_SD(istart, live_sd, icluster, live_ave_s, live_sd_s)
+600 IF (cluster_on_t) THEN
+       CALL GET_CLUSTER_MEAN_SD(istart, live_sd_t, icluster, live_ave_s, live_sd_s)
     ELSE
        icluster = 0
-       live_sd_s = live_sd
+       live_sd_s = live_sd_t
     END IF
 
 
@@ -1062,7 +1133,7 @@ CONTAINS
 
              frac=frac/2.0
 
-             IF(.not.cluster_on) THEN
+             IF(.not.cluster_on_t) THEN
                 ! Alternate the two techniques to find a new life point
 
                 CALL RANDOM_NUMBER(rn)
@@ -1222,14 +1293,14 @@ SUBROUTINE SLICE_SAMPLING_TRANSF(n,itry,min_live_like,live_like,live, &
     !Select only the variables that are not fixed
     start_jump=start_jump_comp(par_var)
 
-    IF(cluster_on) THEN ! Get the covariance matrix and Cholesky decomposition for the correct cluster
+    IF(cluster_on_t) THEN ! Get the covariance matrix and Cholesky decomposition for the correct cluster
        ! Identify cluster appartenance
-       icluster = p_cluster(istart)
-       live_cov=mat_cov(:,:,icluster)
-       live_chol=mat_chol(:,:,icluster)
+       icluster = p_cluster_t(istart)
+       live_cov=mat_cov_t(:,:,icluster)
+       live_chol=mat_chol_t(:,:,icluster)
     ELSE
-       live_cov=mat_cov(:,:,1)
-       live_chol=mat_chol(:,:,1)
+       live_cov=mat_cov_t(:,:,1)
+       live_chol=mat_chol_t(:,:,1)
     END IF
     ! Calculate the inverse of the Cholesky matrix
 #ifdef LAPACK_ON
@@ -1434,14 +1505,14 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
     start_jump = live(istart,:)
     
 
-    IF(cluster_on) THEN ! Get the covariance matrix and Cholesky decomposition for the correct cluster
+    IF(cluster_on_t) THEN ! Get the covariance matrix and Cholesky decomposition for the correct cluster
        ! Identify cluster appartenance
-       icluster = p_cluster(istart)       
-       live_cov=mat_cov(:,:,icluster)
-       live_chol=mat_chol(:,:,icluster)
+       icluster = p_cluster_t(istart)       
+       live_cov=mat_cov_t(:,:,icluster)
+       live_chol=mat_chol_t(:,:,icluster)
     ELSE
-       live_cov=mat_cov(:,:,1)
-       live_chol=mat_chol(:,:,1)
+       live_cov=mat_cov_t(:,:,1)
+       live_chol=mat_chol_t(:,:,1)
     END IF
 
     ! Make several consecutive casual jumps in the region with loglikelyhood > minlogll
@@ -1666,14 +1737,14 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
     start_jump=start_jump_comp(par_var)
     !live_nf=live(:,par_var)
 
-    IF(cluster_on) THEN ! Get the covariance matrix and Cholesky decomposition for the correct cluster
+    IF(cluster_on_t) THEN ! Get the covariance matrix and Cholesky decomposition for the correct cluster
        ! Identify cluster appartenance
-       icluster = p_cluster(istart)
-       live_cov=mat_cov(:,:,icluster)
-       live_chol=mat_chol(:,:,icluster)
+       icluster = p_cluster_t(istart)
+       live_cov=mat_cov_t(:,:,icluster)
+       live_chol=mat_chol_t(:,:,icluster)
     ELSE
-       live_cov=mat_cov(:,:,1)
-       live_chol=mat_chol(:,:,1)
+       live_cov=mat_cov_t(:,:,1)
+       live_chol=mat_chol_t(:,:,1)
     END IF
     CALL TRIANG_INV(dim_eff,live_chol,inv_chol) ! Calculate the inverse of the Cholesky matrix
     start_jump_t=matmul(inv_chol,start_jump) ! start jump in the new space

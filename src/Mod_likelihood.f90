@@ -843,13 +843,7 @@ CONTAINS
     INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
 
-    !$OMP CRITICAL
-    ncall=ncall+1
-    IF(ncall == 1.E+9) THEN
-       ncall9=ncall9+1
-       ncall=0
-    END IF
-    !$OMP END CRITICAL
+    CALL COUNT_LIKELIHOOD_CALL()
     
     IF (BIT_CHECK_IF(DATA_IS_1D)) THEN
        LOGLIKELIHOOD_DATA= LOGLIKELIHOOD_1D(npar, par)
@@ -873,13 +867,7 @@ CONTAINS
     INTEGER(4) :: i, j, k, np
     REAL(8) :: USERFCN_2D, xx, yy
 
-    !$OMP CRITICAL
-    ncall=ncall+1
-    IF(ncall == 1.E+9) THEN
-       ncall9=ncall9+1
-       ncall=0
-    END IF
-    !$OMP END CRITICAL
+    CALL COUNT_LIKELIHOOD_CALL()
     
     IF (BIT_CHECK_IF(DATA_IS_C).AND.BIT_CHECK_IF(DATA_IS_1D)) THEN
        ! Check if the choosen function assumes zero or negative values

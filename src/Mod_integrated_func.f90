@@ -92,13 +92,7 @@ CONTAINS
     INTEGER, INTENT(IN) :: npar
     REAL(8), DIMENSION(npar), INTENT(IN) :: par
 
-    !$OMP CRITICAL
-    ncall = ncall + 1
-    IF(ncall == 1.E+9) THEN
-       ncall9=ncall9+1
-       ncall=0
-    END IF
-    !$OMP END CRITICAL
+    CALL COUNT_LIKELIHOOD_CALL()
     
     ! Select the test function
     SELECT CASE (funcid)

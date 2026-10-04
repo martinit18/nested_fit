@@ -1,0 +1,342 @@
+calculation_mode: POTENTIAL
+clustering:
+  enabled: false
+  method: k
+  parameter1: 0.5
+  parameter2: 0.2
+convergence:
+  accuracy: -10
+  method: ENERGY_MAX
+  parameter: 0.01
+datafiles: []
+function:
+  expression: ENERGY_LJ_3D_PBC
+  params:
+    r_0:
+      fixed: true
+      max: 3
+      min: -3
+      npar: 1
+      step: -1
+      value: 0.5
+    x_1:
+      max: 3
+      min: -3
+      npar: 2
+      step: -1
+      value: 0.0
+    x_10:
+      max: 3
+      min: -3
+      npar: 29
+      step: -1
+      value: 0.0
+    x_11:
+      max: 3
+      min: -3
+      npar: 32
+      step: -1
+      value: 0.0
+    x_12:
+      max: 3
+      min: -3
+      npar: 35
+      step: -1
+      value: 0.0
+    x_13:
+      max: 3
+      min: -3
+      npar: 38
+      step: -1
+      value: 0.0
+    x_14:
+      max: 3
+      min: -3
+      npar: 41
+      step: -1
+      value: 0.0
+    x_15:
+      max: 3
+      min: -3
+      npar: 44
+      step: -1
+      value: 0.0
+    x_16:
+      max: 3
+      min: -3
+      npar: 47
+      step: -1
+      value: 0.0
+    x_17:
+      max: 3
+      min: -3
+      npar: 50
+      step: -1
+      value: 0.0
+    x_2:
+      max: 3
+      min: -3
+      npar: 5
+      step: -1
+      value: 0.0
+    x_3:
+      max: 3
+      min: -3
+      npar: 8
+      step: -1
+      value: 0.0
+    x_4:
+      max: 3
+      min: -3
+      npar: 11
+      step: -1
+      value: 0.0
+    x_5:
+      max: 3
+      min: -3
+      npar: 14
+      step: -1
+      value: 0.0
+    x_6:
+      max: 3
+      min: -3
+      npar: 17
+      step: -1
+      value: 0.0
+    x_7:
+      max: 3
+      min: -3
+      npar: 20
+      step: -1
+      value: 0.0
+    x_8:
+      max: 3
+      min: -3
+      npar: 23
+      step: -1
+      value: 0.0
+    x_9:
+      max: 3
+      min: -3
+      npar: 26
+      step: -1
+      value: 0.0
+    y_1:
+      max: 3
+      min: -3
+      npar: 3
+      step: -1
+      value: 0.0
+    y_10:
+      max: 3
+      min: -3
+      npar: 30
+      step: -1
+      value: 0.0
+    y_11:
+      max: 3
+      min: -3
+      npar: 33
+      step: -1
+      value: 0.0
+    y_12:
+      max: 3
+      min: -3
+      npar: 36
+      step: -1
+      value: 0.0
+    y_13:
+      max: 3
+      min: -3
+      npar: 39
+      step: -1
+      value: 0.0
+    y_14:
+      max: 3
+      min: -3
+      npar: 42
+      step: -1
+      value: 0.0
+    y_15:
+      max: 3
+      min: -3
+      npar: 45
+      step: -1
+      value: 0.0
+    y_16:
+      max: 3
+      min: -3
+      npar: 48
+      step: -1
+      value: 0.0
+    y_17:
+      max: 3
+      min: -3
+      npar: 51
+      step: -1
+      value: 0.0
+    y_2:
+      max: 3
+      min: -3
+      npar: 6
+      step: -1
+      value: 0.0
+    y_3:
+      max: 3
+      min: -3
+      npar: 9
+      step: -1
+      value: 0.0
+    y_4:
+      max: 3
+      min: -3
+      npar: 12
+      step: -1
+      value: 0.0
+    y_5:
+      max: 3
+      min: -3
+      npar: 15
+      step: -1
+      value: 0.0
+    y_6:
+      max: 3
+      min: -3
+      npar: 18
+      step: -1
+      value: 0.0
+    y_7:
+      max: 3
+      min: -3
+      npar: 21
+      step: -1
+      value: 0.0
+    y_8:
+      max: 3
+      min: -3
+      npar: 24
+      step: -1
+      value: 0.0
+    y_9:
+      max: 3
+      min: -3
+      npar: 27
+      step: -1
+      value: 0.0
+    z_1:
+      max: 3
+      min: -3
+      npar: 4
+      step: -1
+      value: 0.0
+    z_10:
+      max: 3
+      min: -3
+      npar: 31
+      step: -1
+      value: 0.0
+    z_11:
+      max: 3
+      min: -3
+      npar: 34
+      step: -1
+      value: 0.0
+    z_12:
+      max: 3
+      min: -3
+      npar: 37
+      step: -1
+      value: 0.0
+    z_13:
+      max: 3
+      min: -3
+      npar: 40
+      step: -1
+      value: 0.0
+    z_14:
+      max: 3
+      min: -3
+      npar: 43
+      step: -1
+      value: 0.0
+    z_15:
+      max: 3
+      min: -3
+      npar: 46
+      step: -1
+      value: 0.0
+    z_16:
+      max: 3
+      min: -3
+      npar: 49
+      step: -1
+      value: 0.0
+    z_17:
+      max: 3
+      min: -3
+      npar: 52
+      step: -1
+      value: 0.0
+    z_2:
+      max: 3
+      min: -3
+      npar: 7
+      step: -1
+      value: 0.0
+    z_3:
+      max: 3
+      min: -3
+      npar: 10
+      step: -1
+      value: 0.0
+    z_4:
+      max: 3
+      min: -3
+      npar: 13
+      step: -1
+      value: 0.0
+    z_5:
+      max: 3
+      min: -3
+      npar: 16
+      step: -1
+      value: 0.0
+    z_6:
+      max: 3
+      min: -3
+      npar: 19
+      step: -1
+      value: 0.0
+    z_7:
+      max: 3
+      min: -3
+      npar: 22
+      step: -1
+      value: 0.0
+    z_8:
+      max: 3
+      min: -3
+      npar: 25
+      step: -1
+      value: 0.0
+    z_9:
+      max: 3
+      min: -3
+      npar: 28
+      step: -1
+      value: 0.0
+likelihood: GAUSSIAN
+search:
+  hard_writing: true
+  livepoints: 1000
+  max_steps: 100000
+  max_tries: 1000
+  method: SLICE_SAMPLING
+  num_tries: 1
+  param1: 0.5
+  param2: 3
+  tries_mult: 100
+version: 5.6
+writing:
+  all_parameters: true
+  statistics: true

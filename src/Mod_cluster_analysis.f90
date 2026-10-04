@@ -13,6 +13,10 @@ MODULE MOD_CLUSTER_ANALYSIS
   INTEGER(4), PARAMETER :: ncluster_max=500 ! maximum number of clusters allowed in the analysis
   REAL(8), ALLOCATABLE, DIMENSION(:,:) :: cluster_std, cluster_mean ! standard deviation, mean of the cluster
   INTEGER(4), ALLOCATABLE, DIMENSION(:) :: p_cluster, cluster_np ! cluster number of each point and number of points in each cluster
+  ! Per-thread copies used by the search of new points (see COPY_SEARCH_DATA in MOD_SEARCH_NEW_POINT)
+  INTEGER(4), ALLOCATABLE, DIMENSION(:) :: p_cluster_t
+  REAL(8), ALLOCATABLE, DIMENSION(:,:) :: cluster_std_t, cluster_mean_t
+  !$OMP THREADPRIVATE(p_cluster_t, cluster_std_t, cluster_mean_t)
 
 
 
@@ -983,19 +987,19 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     REAL(8), DIMENSION(ndim), INTENT(OUT) :: live_ave_s, live_sd_s
     
     ! Identify cluster appartenance
-    icluster = p_cluster(istart)
+    icluster = p_cluster_t(istart)
     ! Get for the specific cluster if the cluster analysis is on
     ! Mean
-    live_ave_s(:) = cluster_mean(icluster,:)
+    live_ave_s(:) = cluster_mean_t(icluster,:)
     ! Standard deviation
-    IF(cluster_std(icluster,1).GT.0.) THEN
-       live_sd_s(:) = cluster_std(icluster,:)
+    IF(cluster_std_t(icluster,1).GT.0.) THEN
+       live_sd_s(:) = cluster_std_t(icluster,:)
     ELSE
        ! If the cluster is formed only from one point, take the standard standard deviation
        live_sd_s = live_sd
     END IF
     ! and mean
-    live_ave_s(:) = cluster_mean(icluster,:)
+    live_ave_s(:) = cluster_mean_t(icluster,:)
     
   END SUBROUTINE GET_CLUSTER_MEAN_SD
   
