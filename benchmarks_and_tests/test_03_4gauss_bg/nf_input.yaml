@@ -78,7 +78,7 @@ search:
   param2: 3
   tries_mult: 100
 specstr: x,c
-version: 5.6
+version: 5.7
 writing:
   all_parameters: true
   statistics: true

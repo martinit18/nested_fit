@@ -128,7 +128,7 @@ cd nested_fit
 mkdir -p build
 
 # Configure (and specify install prefix if required)
-cmake -S nested_fit -B build -DOPENMP=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=<install_path>
+cmake -B build -DOPENMP=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=<install_path>
 
 # Compile and install
 cmake --build build --config Release
@@ -421,21 +421,28 @@ Examples of use of a legacy function can be found in `examples/data_analysis/aaa
 
 ## Present version and history of the past versions
 
-The present version is 5.6.8\
+The present version is 5.7.0\
 New features:
-- New 2D Lennard-Jones functions added
-- New benchmark notebook available
-- New function to visualizing the capacty heat for POTENTIAL calculations
-- Latex input support for compound variable names (i.e. x_{sub})
-- PyPI available development builds
-- PyPI binary distribution for arm64 macOS
-- Optional management of memory of dead points (in RAM or file)
-- Optional writing of dead points information
-- Optional writing of parameter statistics (mean, standard deviation, etc.)
-- Persistent option commands cache
+- Asynchronous parallel search of new points: each thread adds its new point to the main loop without waiting for the search of the other threads.
+This strongly improves the parallel efficiency when the search time of new points is very variable (e.g. Lennard-Jones clusters)
+- Thread private copies of live points and of search data (standard deviations, covariance matrix, clusters) allowing their update during the search of the other threads
+- Lock-free counting of the likelihood calls (faster parallel computation for fast likelihood functions)
+- Cluster analysis using all threads also when called during the parallel search
+- Bug fixes: periodic cluster analysis with slice sampling now performed, exit flags reset between tries, maximum number of steps checked also with suppressed output
+- New Lennard-Jones benchmark (17 atoms) in the benchmark notebook
 
 
 Previous versions are:
+- 5.6 New 2D Lennard-Jones functions added \
+New benchmark notebook available \
+New function to visualizing the capacty heat for POTENTIAL calculations \
+Latex input support for compound variable names (i.e. x_{sub}) \
+PyPI available development builds \
+PyPI binary distribution for arm64 macOS \
+Optional management of memory of dead points (in RAM or file) \
+Optional writing of dead points information \
+Optional writing of parameter statistics (mean, standard deviation, etc.) \
+Persistent option commands cache
 - 5.5 New RANDOM_WALK function with detailed balance respected \
 Add PyPI binary distribution for x86_64 macOS\
 Add PyPI binary distribution for multiple linux systems\

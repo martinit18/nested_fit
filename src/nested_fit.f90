@@ -3,6 +3,25 @@ PROGRAM NESTED_FIT
   !
   ! Please read README and LICENSE files for more information
   !
+  ! 5.7  Asynchronous parallel search of new points: each thread adds its new point to the main loop
+  !      without waiting for the search of the other threads (pool of threads instead of synchronous steps)
+  !      Thread private copies of live points and of search data (standard deviations, covariance matrix,
+  !      clusters) allowing their update during the search of the other threads
+  !      Lock-free counting of the likelihood calls (atomic operations instead of critical region)
+  !      Cluster analysis using all threads also when called during the parallel search (nested parallelism)
+  !      Bug fixes: periodic cluster analysis with slice sampling now performed at each 10*nlive steps,
+  !      exit flags reset between tries, max. number of steps checked also with suppressed output
+  !      New Lennard-Jones benchmark (17 atoms) in the benchmark notebook
+  ! 5.6  New Lennard-Jones functions (optimized 3D, 2D, quantum 3D and 2D, 2D with Uniform[beta^nu] prior)
+  !      New function to visualize the heat capacity for POTENTIAL calculations and LJ postprocessing
+  !      Larger parameter spaces admitted (up to 4096 parameters)
+  !      Analysis of sets of data files working again (up to 100 files)
+  !      Latex input support for compound variable names (i.e. x_{sub})
+  !      Optional management of memory of dead points (in RAM or file)
+  !      Optional writing of dead points information
+  !      Optional writing of parameter statistics (mean, standard deviation, etc.)
+  !      New benchmark notebook available
+  !      PyPI binary distribution for arm64 macOS and PyPI available development builds
   ! 5.5  Add PyPI binary distribution for x86_64 macOS
   !      Add PyPI binary distribution for multiple linux systems
   !      Add PyPI source distribution as a default for other systems
