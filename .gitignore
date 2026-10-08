@@ -50,3 +50,6 @@ wheelhouse/
 
 # FBuild config file
 .fbuild.lua
+
+# Temporary files
+tmp/

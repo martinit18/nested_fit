@@ -84,11 +84,11 @@ if get_env_type() == 'IPython':
     vgrid.add_row(ipython_header_grid)
     vgrid.add_row(ipython_header)
     rprint(RPanel(vgrid, title=f'Welcome to {__package__}', expand=False))
+    del ipython_header
 
 # Clean the namespace
 del get_env_type
 del logging
 del RichHandler
 del rich_traceback
-# del ipython_header
 del rprint

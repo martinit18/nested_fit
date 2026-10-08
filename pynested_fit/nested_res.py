@@ -570,7 +570,7 @@ class Analysis(object):
             width = depth = 1
             # Plot
             ax_d = fig_d.add_subplot(111, projection='3d')
-            cmap = plt.cm.get_cmap('jet') # Get desired colormap - you can change this!
+            cmap = plt.get_cmap('jet') # Get desired colormap - you can change this!
             max_height = np.max(zzz)   # get range of colorbars so we can normalize
             min_height = 0.
             # scale each z to [0,1], and get their rgb values
@@ -604,7 +604,7 @@ class Analysis(object):
             width = depth = 1
             # Plot
             ax_f = fig_f.add_subplot(111, projection='3d')
-            cmap = plt.cm.get_cmap('jet') # Get desired colormap - you can change this!
+            cmap = plt.get_cmap('jet') # Get desired colormap - you can change this!
             max_height = np.max(zzz)   # get range of colorbars so we can normalize
             min_height = 0.
             # scale each z to [0,1], and get their rgb values
@@ -638,7 +638,7 @@ class Analysis(object):
             width = depth = 1
             # Plot
             ax_r = fig_r.add_subplot(111, projection='3d')
-            #cmap = plt.cm.get_cmap('jet') # Get desired colormap - you can change this!
+            #cmap = plt.get_cmap('jet') # Get desired colormap - you can change this!
             #max_height = np.max(zzz)   # get range of colorbars so we can normalize
             #min_height = 0.
             # scale each z to [0,1], and get their rgb values
@@ -893,7 +893,7 @@ class Analysis(object):
         plt.xlim(0,shape(data)[0]*1.1)
         plt.xlabel('Sort number')
         plt.ylabel('Value of parameter ' + par_name)
-        cmap=plt.cm.get_cmap('jet')
+        cmap=plt.get_cmap('jet')
         plt.scatter(ix,data[:,par_index],c=data[:,0],linewidth=0.,cmap=cmap)
         cbar = plt.colorbar()
         cbar.set_label('Weight')
@@ -948,7 +948,7 @@ class Analysis(object):
         plt.xlabel(par_name1)
         plt.ylabel(par_name2)
         #plt.ylabel('Value of parameter ' + title)
-        #cmap=plt.cm.get_cmap('jet')
+        #cmap=plt.get_cmap('jet')
         for i in range(ncl): plt.plot(data[data[:,0]==i][:,par_index1],data[data[:,0]==i][:,par_index2],'o')
         plt.tight_layout()
 
@@ -1047,7 +1047,7 @@ class Analysis(object):
         plt.xlabel(par_name1)
         plt.ylabel(par_name2)
         #plt.ylabel('Value of parameter ' + title)
-        #cmap=plt.cm.get_cmap('jet')
+        #cmap=plt.get_cmap('jet')
         plt.plot(data[:,par_index1],data[:,par_index2],'ob')
         plt.tight_layout()
 
@@ -1114,11 +1114,11 @@ class Analysis(object):
 
         # Choose the cmap for likelihood plots
         if cmap == 'normal':
-            cmap=plt.cm.get_cmap('jet')
+            cmap=plt.get_cmap('jet')
         elif cmap == 'accurate':
-            cmap=plt.cm.get_cmap('gist_ncar')
+            cmap=plt.get_cmap('gist_ncar')
         elif cmap == 'moreaccurate':
-            cmap=plt.cm.get_cmap('prism')
+            cmap=plt.get_cmap('prism')
 
         # Plot histogram
         plt.clf()
@@ -1304,11 +1304,11 @@ class Analysis(object):
 
         # Choose the cmap for likelihood plots
         if cmap == 'normal':
-            cmap=plt.cm.get_cmap('jet')
+            cmap=plt.get_cmap('jet')
         elif cmap == 'accurate':
-            cmap=plt.cm.get_cmap('spectral')
+            cmap=plt.get_cmap('nipy_spectral')
         elif cmap == 'moreaccurate':
-            cmap=plt.cm.get_cmap('prism')
+            cmap=plt.get_cmap('prism')
 
         # Plot interpolation
         if clear: plt.clf()

@@ -15,6 +15,7 @@
 
 // Lets keep C++11 compliant
 #include <regex>
+#include <functional>
 #include <string>
 #include <cstring>
 #include <iostream>
