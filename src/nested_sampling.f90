@@ -79,6 +79,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_max,live_max,
   REAL(8), DIMENSION(4) :: en_write                   ! Vector for writing in energy file  
   ! Rest
   INTEGER(4) :: i, j, l, n, jlim, it
+  INTEGER(4) :: jlow, jhigh, jmid   ! binary search bounds for the insertion point
   REAL(8) :: ADDLOG, rn, gval
   REAL(8) :: moving_eff_avg = 0.
   CHARACTER :: info_string*4096
@@ -363,12 +364,27 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_max,live_max,
         IF (live_like_new(it).GT.live_like(nlive)) THEN
             jlim = nlive
         ELSE
-            DO j=1,nlive-1
-              IF (live_like_new(it).GT.live_like(j).AND.live_like_new(it).LE.live_like(j+1)) THEN
-                 jlim = j
-                 EXIT
-              END IF
+            ! live_like is kept sorted in ascending order, so the insertion point can be
+            ! found by bisection instead of a linear scan. This is O(log nlive) rather
+            ! than O(nlive) and matters a lot for large nlive, where this loop runs once
+            ! per accepted point and averages ~nlive/2 iterations.
+            !
+            ! Invariant: live_like(jlow) < live_like_new(it) <= live_like(jhigh).
+            ! It holds initially because live_like_new(it) > min_live_like = live_like(1)
+            ! (checked above) and live_like_new(it) <= live_like(nlive) in this branch.
+            ! On exit jhigh = jlow + 1, so jlim = jlow is the same index the linear scan
+            ! returned, including when live_like contains repeated values.
+            jlow  = 1
+            jhigh = nlive
+            DO WHILE (jhigh - jlow .GT. 1)
+               jmid = (jlow + jhigh)/2
+               IF (live_like(jmid).LT.live_like_new(it)) THEN
+                  jlow = jmid
+               ELSE
+                  jhigh = jmid
+               END IF
             END DO
+            jlim = jlow
          END IF
          
         ! Store old values
