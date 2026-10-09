@@ -127,6 +127,8 @@ SUBROUTINE CALC_MAT_COV(pts,np,D,icluster,cov) !calculates the covariance matrix
   REAL(8), DIMENSION(D,D), INTENT(OUT) :: cov
   REAL(8), DIMENSION(D) :: mean, mean_prov
   INTEGER(4) :: i, j
+  ! Minimal work (np*D*D) to run in parallel, below the thread creation costs more than the gain
+  INTEGER(8), PARAMETER :: par_threshold = 200000_8
 
   IF (cluster_on) THEN
     ! Get for the specific cluster if the cluster analysis is on
@@ -137,7 +139,8 @@ SUBROUTINE CALC_MAT_COV(pts,np,D,icluster,cov) !calculates the covariance matrix
          mean_prov(i)=SUM(pts(:,i))/np
        END DO
        !$OMP END SIMD
-       !!$OMP SIMD
+       ! Parallel over the columns (nested parallelism when called from the parallel search)
+       !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(i) IF(INT(np,8)*D*D.GT.par_threshold)
        DO j=1,D
          !$OMP SIMD
          DO i=j,D
@@ -146,14 +149,15 @@ SUBROUTINE CALC_MAT_COV(pts,np,D,icluster,cov) !calculates the covariance matrix
          END DO
          !$OMP END SIMD
        END DO
-       !!$OMP END SIMD
+       !$OMP END PARALLEL DO
     ELSE IF(icluster==0) THEN
        !$OMP SIMD
        DO i=1,D
          mean(i)=SUM(pts(:,i))/np
        END DO
        !$OMP END SIMD
-       !!$OMP SIMD
+       ! Parallel over the columns (nested parallelism when called from the parallel search)
+       !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(i) IF(INT(np,8)*D*D.GT.par_threshold)
        DO j=1,D
          !$OMP SIMD
          DO i=j,D
@@ -162,14 +166,15 @@ SUBROUTINE CALC_MAT_COV(pts,np,D,icluster,cov) !calculates the covariance matrix
          END DO
          !$OMP END SIMD
        END DO
-       !!$OMP END SIMD
+       !$OMP END PARALLEL DO
     ELSE
        !$OMP SIMD
        DO i=1,D
          mean(i)=SUM(pts(:,i),MASK=(p_cluster==icluster))/cluster_np(icluster)
        END DO
        !$OMP END SIMD
-       !!$OMP SIMD
+       ! Parallel over the columns (nested parallelism when called from the parallel search)
+       !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(i) IF(INT(np,8)*D*D.GT.par_threshold)
        DO j=1,D
          !$OMP SIMD
          DO i=j,D
@@ -178,7 +183,7 @@ SUBROUTINE CALC_MAT_COV(pts,np,D,icluster,cov) !calculates the covariance matrix
          END DO
          !$OMP END SIMD
        END DO
-       !!$OMP END SIMD
+       !$OMP END PARALLEL DO
     END IF
   ELSE
     !$OMP SIMD
@@ -186,7 +191,8 @@ SUBROUTINE CALC_MAT_COV(pts,np,D,icluster,cov) !calculates the covariance matrix
       mean(i)=SUM(pts(:,i))/np
     END DO
     !$OMP END SIMD
-    !!$OMP SIMD
+    ! Parallel over the columns (nested parallelism when called from the parallel search)
+    !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(i) IF(INT(np,8)*D*D.GT.par_threshold)
      DO j=1,D
        !$OMP SIMD
       DO i=j,D
@@ -195,7 +201,7 @@ SUBROUTINE CALC_MAT_COV(pts,np,D,icluster,cov) !calculates the covariance matrix
       END DO
       !$OMP END SIMD
     END DO
-    !!$OMP END SIMD
+    !$OMP END PARALLEL DO
   END IF
 END SUBROUTINE CALC_MAT_COV
 

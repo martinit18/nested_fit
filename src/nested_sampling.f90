@@ -69,7 +69,9 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_max,live_max,
   LOGICAL :: done, recalc_needed               ! Shared: end of the search, search data to recompute
   INTEGER(4) :: n_calc_max                     ! Shared: recalculation period of the search data
   INTEGER(4) :: max_levels_save = 1            ! OpenMP max. active levels before the pool
+  INTEGER(4) :: cluster_gen                    ! Shared: number of cluster analyses done during the pool
   LOGICAL :: stop_search                       ! Private copy of done
+  INTEGER(4) :: cluster_gen_s                  ! Private copy of cluster_gen at the start of the search
   INTEGER(4) :: n_s                            ! Private copy of n
   REAL(8) :: min_like_s                        ! Private copy of min_live_like
   REAL(8), ALLOCATABLE, DIMENSION(:) :: live_like_s   ! Private copy of live_like
@@ -266,6 +268,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_max,live_max,
   normal_exit = .false.
   early_exit = .false.
   recalc_needed = .false.
+  cluster_gen = 0
   ! Recalculate the search data each n_calc_max new points (as before, at least once per nth points)
   n_calc_max = MAX(nth, CEILING(0.05*nlive))
 
@@ -274,7 +277,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_max,live_max,
   !$ CALL OMP_SET_MAX_ACTIVE_LEVELS(MAX(max_levels_save,2))
 
   !$OMP PARALLEL NUM_THREADS(nth) DEFAULT(SHARED) &
-  !$OMP& PRIVATE(it,n_s,min_like_s,live_s,live_like_s,stop_search)
+  !$OMP& PRIVATE(it,n_s,min_like_s,live_s,live_like_s,stop_search,cluster_gen_s)
   it = 1
   !$ it = OMP_GET_THREAD_NUM() + 1
   ALLOCATE(live_s(nlive,npar),live_like_s(nlive))
@@ -288,6 +291,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_max,live_max,
         min_like_s = min_live_like
         live_like_s = live_like
         live_s = live
+        cluster_gen_s = cluster_gen
         CALL COPY_SEARCH_DATA()
      END IF
      !$OMP END CRITICAL (ns_main_state)
@@ -300,7 +304,12 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_max,live_max,
      ! Main loop step with the new point
      !$OMP CRITICAL (ns_main_state)
      IF (.NOT. done) THEN
-        IF (too_many_tries(it)) THEN
+        IF (cluster_gen_s.NE.cluster_gen) THEN
+           ! A cluster analysis has been done during the search: the cluster number of the new point
+           ! (and a possible failure of the search) refers to the old clusters. The point is discarded
+           ! (this depends only on the timing of the search, not on the point, so there is no bias)
+           CONTINUE
+        ELSE IF (too_many_tries(it)) THEN
            CALL MANAGE_TOO_MANY_TRIES()
         ELSE IF (live_like_new(it).GT.min_live_like) THEN
            ! The live points have changed during the search:
@@ -502,6 +511,7 @@ CONTAINS
        make_cluster_internal = .false.
        n_call_cluster_it = n_call_cluster_it+1
        n_call_cluster = n_call_cluster+1
+       cluster_gen = cluster_gen+1
     ELSE
        CALL REMAKE_CALC(live)
     END IF

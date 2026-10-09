@@ -1299,6 +1299,7 @@ SUBROUTINE SLICE_SAMPLING_TRANSF(n,itry,min_live_like,live_like,live, &
        live_cov=mat_cov_t(:,:,icluster)
        live_chol=mat_chol_t(:,:,icluster)
     ELSE
+       icluster = 0
        live_cov=mat_cov_t(:,:,1)
        live_chol=mat_chol_t(:,:,1)
     END IF
@@ -1511,6 +1512,7 @@ SUBROUTINE SLICE_SAMPLING(n,itry,min_live_like,live_like,live, &
        live_cov=mat_cov_t(:,:,icluster)
        live_chol=mat_chol_t(:,:,icluster)
     ELSE
+       icluster = 0
        live_cov=mat_cov_t(:,:,1)
        live_chol=mat_chol_t(:,:,1)
     END IF
@@ -1743,6 +1745,7 @@ SUBROUTINE SLICE_SAMPLING_ADAPT(n,itry,min_live_like,live_like,live, &
        live_cov=mat_cov_t(:,:,icluster)
        live_chol=mat_chol_t(:,:,icluster)
     ELSE
+       icluster = 0
        live_cov=mat_cov_t(:,:,1)
        live_chol=mat_chol_t(:,:,1)
     END IF
