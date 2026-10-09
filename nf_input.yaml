@@ -1,4 +1,4 @@
-version:    5.0
+version:    5.7
 datafiles:  quadratic.dat
 specstr:    x,c,ce
 # specstr: x,c

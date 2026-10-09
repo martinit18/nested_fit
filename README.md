@@ -200,7 +200,7 @@ A complete selection of input files example is given in the folder `examples` wh
 It follows a complete description of `nf_input.yaml` file.
 
 ```yaml
-version: 5.6                             # Program version
+version: 5.7                             # Program version
 calculation_mode: DATA                   # Type of calculation
 ```
 The type of calculation is spefified by `calculation_mode` variable. 
@@ -421,7 +421,7 @@ Examples of use of a legacy function can be found in `examples/data_analysis/aaa
 
 ## Present version and history of the past versions
 
-The present version is 5.7.0\
+The present version is 5.7.1\
 New features:
 - Asynchronous parallel search of new points: each thread adds its new point to the main loop without waiting for the search of the other threads.
 This strongly improves the parallel efficiency when the search time of new points is very variable (e.g. Lennard-Jones clusters)
@@ -430,6 +430,10 @@ This strongly improves the parallel efficiency when the search time of new point
 - Cluster analysis using all threads also when called during the parallel search
 - Bug fixes: periodic cluster analysis with slice sampling now performed, exit flags reset between tries, maximum number of steps checked also with suppressed output
 - New Lennard-Jones benchmark (17 atoms) in the benchmark notebook
+- Faster KNN cluster analysis (same clusters, 15-25 times faster): incremental search of the nearest neighbours, union-find merging of the clusters and parallel computation
+- Parallel calculation of the covariance matrix (used by slice sampling)
+- Binary search (bisection) for placing the new live point among the sorted live points
+- Bug fix: possible crash when a cluster analysis is performed during the parallel search of new points
 
 
 Previous versions are:

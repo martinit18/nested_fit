@@ -39,4 +39,4 @@ search:
   param2: 3
   tries_mult: 100
 specstr: x,c,ce
-version: 5.4
+version: 5.7

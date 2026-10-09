@@ -3,7 +3,12 @@ PROGRAM NESTED_FIT
   !
   ! Please read README and LICENSE files for more information
   !
-  ! 5.7  Asynchronous parallel search of new points: each thread adds its new point to the main loop
+  ! 5.7  Asynchronous parallel search of new points: each thread adds its new point to the main loop 
+  !      Faster KNN cluster analysis (same clusters, 15-25 times faster): incremental search of the
+  !      nearest neighbours, union-find merging of the clusters and parallel computation
+  !      Parallel calculation of the covariance matrix (used by slice sampling)
+  !      Binary search (bisection) for placing the new live point among the sorted live points
+  !      Bug fix: possible crash when a cluster analysis is performed during the parallel search of new points
   !      without waiting for the search of the other threads (pool of threads instead of synchronous steps)
   !      Thread private copies of live points and of search data (standard deviations, covariance matrix,
   !      clusters) allowing their update during the search of the other threads
