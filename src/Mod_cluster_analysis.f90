@@ -598,17 +598,15 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
     USE MOD_TIMESTAMP, ONLY: timestamp
     INTEGER(4), INTENT(IN) :: np_in, ndim_in
     REAL(8), INTENT(IN), DIMENSION(np_in,ndim_in) :: p_in
-    INTEGER(4) :: i, j, k, l, clust_min, clust_max, icluster
-    REAL(8), DIMENSION(np_in,ndim_in) :: p
-    INTEGER(4), DIMENSION(np_in) :: p_cluster_new, p_cluster_old
-    INTEGER(4) :: ncluster_new, ncluster_old, ncluster_temp
+    INTEGER(4) :: i, j, l, icluster
+    REAL(8), DIMENSION(ndim_in,np_in) :: pt
+    INTEGER(4), DIMENSION(np_in) :: p_cluster_new
+    INTEGER(4) :: ncluster_new, ncluster_temp
     REAL(8), DIMENSION(np_in,np_in) :: dist_pt
-    INTEGER(4), DIMENSION(np_in,np_in) :: knn_mat
     REAL(8), DIMENSION(:,:), ALLOCATABLE :: dist_pt_temp
     INTEGER(4) :: np_temp
     INTEGER(4), DIMENSION(:), ALLOCATABLE :: in_cluster, p_cluster_temp
 
-    p=p_in
     np = np_in
     ndim = ndim_in
     np_temp=0
@@ -616,58 +614,19 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
 
     CALL LOG_TRACE('Starting KNN cluster analysis...')
 
-    !!$OMP PARALLEL
-    !!$OMP DO
-    DO i=1,np
-      p_cluster_new(i) = i
-      p_cluster_old(i) = i
-    END DO
-    !!$OMP END DO
-
-    !!$OMP DO PRIVATE(j)
-    DO i=1,np  ! distance matrix
-    dist_pt(i,i)=0
-      DO j=i+1,np
-        dist_pt(i,j)=NORM2(p(i,:)-p(j,:))
-        dist_pt(j,i)=dist_pt(i,j)
-      END DO
-    END DO
-    !!$OMP END DO
-    !!$OMP END PARALLEL
-
-
-    DO k=2,np
-      CALL FIND_KNN(dist_pt,knn_mat(:,:k),k,np)
+    ! Distance matrix. The points are transposed so that the coordinates of each point are contiguous,
+    ! and each thread computes full columns (contiguous writes, no symmetric write between threads)
+    pt = TRANSPOSE(p_in)
+    !$OMP PARALLEL DO SCHEDULE(STATIC) PRIVATE(i)
+    DO j=1,np
       DO i=1,np
-        DO j=i+1,np
-          IF(ANY(knn_mat(i,:k)==j) .AND. ANY(knn_mat(j,:k)==i)) THEN ! if i and j are among each other's k nearest neighbours, their clusters are joined
-            clust_min=min(p_cluster_new(i),p_cluster_new(j))
-            clust_max=max(p_cluster_new(i),p_cluster_new(j))
-            IF(clust_min/=clust_max) THEN
-              !!!!!$OMP PARALLEL WORKSHARE
-              WHERE(p_cluster_new==clust_max)
-                p_cluster_new=clust_min
-              ELSEWHERE(p_cluster_new>clust_max) !new label for the other clusters
-                p_cluster_new=p_cluster_new-1
-              END WHERE
-              !!!!!$OMP END PARALLEL WORKSHARE
-            END IF
-          END IF
-        END DO
+        dist_pt(i,j)=NORM2(pt(:,i)-pt(:,j))
       END DO
-      ncluster_new=int(maxval(p_cluster_new))
-      IF(ALL(p_cluster_new==p_cluster_old)) THEN !check if the clustering is the same for two consecutive value of k
-        EXIT
-      ELSE IF (ncluster_new==1) THEN !check if there only one cluster
-        EXIT
-      ELSE
-        ncluster_old=ncluster_new !update the information
-        p_cluster_old=p_cluster_new
-        DO l=1,np
-          p_cluster_new(l) = l
-        END DO
-      END IF
     END DO
+    !$OMP END PARALLEL DO
+
+    ! Clusters of mutual k nearest neighbours
+    CALL MUTUAL_KNN_CLUSTERS(dist_pt,np,ncluster_new,p_cluster_new)
 
     IF(ncluster_new>1) THEN !if more than one cluster, do the analysis for each cluster found
       icluster=1
@@ -767,76 +726,135 @@ SUBROUTINE DBSCAN_CLUSTER_ANALYSIS(np_in,ndim_in,p_in)
 
   !--------------------------------------------------------------------------------------------------------------
 
-  SUBROUTINE FIND_KNN(dist,knn,k, nb_pt)
-    INTEGER(4), INTENT(IN) :: nb_pt, k
-    REAL(8), DIMENSION(nb_pt,nb_pt), INTENT(IN):: dist
-    INTEGER(4), DIMENSION(nb_pt,k), INTENT(OUT) :: knn
-    INTEGER(4) :: i, j
+  SUBROUTINE MUTUAL_KNN_CLUSTERS(dist,np,ncl,p_cl)
+    ! Clusters of points that are among each other's k nearest neighbours,
+    ! for k = 2, 3, ... until the clusters do not change between two consecutive k (or only one cluster).
+    ! The clusters are the connected components of the graph of mutual k nearest neighbours,
+    ! numbered by order of their point of smallest index.
+    ! For each k, only the new (k-th) neighbour of each point is calculated, and the mutual neighbours
+    ! are searched only among the k neighbours of each point.
+    INTEGER(4), INTENT(IN) :: np
+    REAL(8), DIMENSION(np,np), INTENT(IN) :: dist
+    INTEGER(4), INTENT(OUT) :: ncl
+    INTEGER(4), DIMENSION(np), INTENT(OUT) :: p_cl
+    INTEGER(4), DIMENSION(:,:), ALLOCATABLE :: knn, knn_tmp    ! knn(m,i): m-th nearest neighbour of point i
+    LOGICAL, DIMENSION(:,:), ALLOCATABLE :: mutual           ! mutual(m,i): i and knn(m,i) are mutual neighbours
+    INTEGER(4), DIMENSION(np) :: p_cl_old, parent, root_label
+    INTEGER(4) :: i, j, k, m, kcap, ri, rj
 
-    knn(:,1)=MINLOC(dist, DIM=1)
-    DO i=2,k
+    kcap = MIN(np,32)
+    ALLOCATE(knn(kcap,np),mutual(kcap,np))
+
+    ! The nearest "neighbour" is the point itself (distance 0)
+    !$OMP PARALLEL DO SCHEDULE(STATIC)
+    DO i=1,np
+      knn(1,i)=MINLOC(dist(:,i),DIM=1)
+    END DO
+    !$OMP END PARALLEL DO
+
+    DO i=1,np
+      p_cl(i) = i
+      p_cl_old(i) = i
+    END DO
+    ncl = np
+
+    DO k=2,np
+      IF (k.GT.kcap) THEN
+        ! Increase the storage for the neighbours
+        kcap = MIN(np,2*kcap)
+        ALLOCATE(knn_tmp(kcap,np))
+        knn_tmp(1:k-1,:) = knn(1:k-1,:)
+        CALL MOVE_ALLOC(knn_tmp,knn)
+        DEALLOCATE(mutual)
+        ALLOCATE(mutual(kcap,np))
+      END IF
+
+      ! k-th nearest neighbour of each point: the closest point beyond the (k-1)-th one
       !$OMP PARALLEL DO SCHEDULE(STATIC)
-      DO j=1,nb_pt
-        knn(j,i)=MINLOC(dist(:,j), MASK=(dist(:,j)>dist(knn(j,i-1),j)),DIM=1)
+      DO i=1,np
+        IF (knn(k-1,i).GT.0) THEN
+          knn(k,i)=MINLOC(dist(:,i), MASK=(dist(:,i)>dist(knn(k-1,i),i)), DIM=1)
+        ELSE
+          knn(k,i)=0
+        END IF
       END DO
       !$OMP END PARALLEL DO
+
+      ! Mutual neighbours (pairs i < j only, each pair is checked once)
+      !$OMP PARALLEL DO SCHEDULE(DYNAMIC,64) PRIVATE(m,j)
+      DO i=1,np
+        DO m=1,k
+          j=knn(m,i)
+          mutual(m,i) = .FALSE.
+          IF (j.GT.i) mutual(m,i) = ANY(knn(1:k,j).EQ.i)
+        END DO
+      END DO
+      !$OMP END PARALLEL DO
+
+      ! Join the clusters of mutual neighbours (union-find)
+      DO i=1,np
+        parent(i) = i
+      END DO
+      DO i=1,np
+        DO m=1,k
+          IF (mutual(m,i)) THEN
+            ri = FIND_ROOT(i)
+            rj = FIND_ROOT(knn(m,i))
+            IF (ri.NE.rj) parent(MAX(ri,rj)) = MIN(ri,rj)
+          END IF
+        END DO
+      END DO
+
+      ! Number the clusters by order of their point of smallest index
+      root_label = 0
+      ncl = 0
+      DO i=1,np
+        ri = FIND_ROOT(i)
+        IF (root_label(ri).EQ.0) THEN
+          ncl = ncl + 1
+          root_label(ri) = ncl
+        END IF
+        p_cl(i) = root_label(ri)
+      END DO
+
+      IF(ALL(p_cl==p_cl_old)) THEN !check if the clustering is the same for two consecutive value of k
+        EXIT
+      ELSE IF (ncl==1) THEN !check if there only one cluster
+        EXIT
+      ELSE
+        p_cl_old=p_cl
+      END IF
     END DO
 
+    DEALLOCATE(knn,mutual)
 
-  END SUBROUTINE FIND_KNN
+  CONTAINS
+
+    INTEGER(4) FUNCTION FIND_ROOT(i0)
+      ! Root of the cluster of point i0, with path halving
+      INTEGER(4), INTENT(IN) :: i0
+      INTEGER(4) :: r
+      r = i0
+      DO WHILE (parent(r).NE.r)
+        parent(r) = parent(parent(r))
+        r = parent(r)
+      END DO
+      FIND_ROOT = r
+    END FUNCTION FIND_ROOT
+
+  END SUBROUTINE MUTUAL_KNN_CLUSTERS
 
   !--------------------------------------------------------------------------------------------------------------
 
   SUBROUTINE MAKE_SUB_CLUSTERS(dist_pt,np,ncluster2,p_cluster2)
+    ! Clusters of mutual k nearest neighbours within an already found cluster
     INTEGER(4), INTENT(IN) :: np
     INTEGER(4), INTENT(OUT) :: ncluster2
     INTEGER(4), DIMENSION(np), INTENT(OUT) :: p_cluster2
     REAL(8), DIMENSION(np,np), INTENT(IN) :: dist_pt
-    INTEGER(4), DIMENSION(np,np) :: knn_mat
-    INTEGER(4) :: i, j, k, l, clust_min, clust_max
-    INTEGER(4), DIMENSION(np) :: p_cluster_new, p_cluster_old
-    INTEGER(4) :: ncluster_new, ncluster_old
 
+    CALL MUTUAL_KNN_CLUSTERS(dist_pt,np,ncluster2,p_cluster2)
 
-    DO i=1,np
-      p_cluster_new(i) = i
-      p_cluster_old(i) = i
-    END DO
-
-    DO k=2,np
-      CALL FIND_KNN(dist_pt,knn_mat(:,:k),k,np)
-      DO i=1,np
-        DO j=i+1,np
-          IF(ANY(knn_mat(i,:k)==j) .AND. ANY(knn_mat(j,:k)==i)) THEN
-            clust_min=min(p_cluster_new(i),p_cluster_new(j))
-            clust_max=max(p_cluster_new(i),p_cluster_new(j))
-            IF(clust_min/=clust_max) THEN
-              !!!!!$OMP PARALLEL WORKSHARE
-              WHERE(p_cluster_new==clust_max)
-                p_cluster_new=clust_min
-              ELSEWHERE(p_cluster_new>clust_max)
-                p_cluster_new=p_cluster_new-1
-              END WHERE
-              !!!!!$OMP END PARALLEL WORKSHARE
-            END IF
-          END IF
-        END DO
-      END DO
-      ncluster_new=int(maxval(p_cluster_new))
-      IF(ALL(p_cluster_new==p_cluster_old)) THEN
-        EXIT
-      ELSE IF (ncluster_new==1) THEN
-        EXIT
-      ELSE
-        ncluster_old=ncluster_new
-        p_cluster_old=p_cluster_new
-        DO l=1,np
-          p_cluster_new(l) = l
-        END DO
-      END IF
-    END DO
-    p_cluster2=p_cluster_new
-    ncluster2=ncluster_new
   END SUBROUTINE MAKE_SUB_CLUSTERS
 
   !--------------------------------------------------------------------------------------------------------------
