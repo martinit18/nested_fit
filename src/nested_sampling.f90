@@ -548,7 +548,8 @@ CONTAINS
   SUBROUTINE ADD_NEW_POINT(ith)
     ! Main loop step: insert the new point found by the thread ith and calculate the evidence
     INTEGER(4), INTENT(IN) :: ith
-    INTEGER(4) :: j, jlim
+    INTEGER(4) :: jlim
+    INTEGER(4) :: jlow, jhigh, jmid   ! binary search bounds for the insertion point
 
     n = n + 1
     n_call_cluster_it=0
@@ -565,13 +566,28 @@ CONTAINS
     jlim=0
     IF (live_like_new(ith).GT.live_like(nlive)) THEN
        jlim = nlive
-    ELSE
-       DO j=1,nlive-1
-          IF (live_like_new(ith).GT.live_like(j).AND.live_like_new(ith).LE.live_like(j+1)) THEN
-             jlim = j
-             EXIT
+    ELSE IF (live_like_new(ith).GT.live_like(1)) THEN
+       ! live_like is kept sorted in ascending order, so the insertion point can be
+       ! found by bisection instead of a linear scan: O(log nlive) rather than O(nlive).
+       ! This matters for large nlive, all the more since this runs inside the
+       ! ns_main_state critical section, where the other threads wait.
+       !
+       ! Invariant: live_like(jlow) < live_like_new(ith) <= live_like(jhigh).
+       ! On exit jhigh = jlow + 1, so jlim = jlow is the same index the linear scan
+       ! returned, including when live_like contains repeated values.
+       ! If live_like_new(ith) <= live_like(1) (or is NaN), jlim stays 0 and the
+       ! error check below is triggered, as with the linear scan.
+       jlow  = 1
+       jhigh = nlive
+       DO WHILE (jhigh - jlow .GT. 1)
+          jmid = (jlow + jhigh)/2
+          IF (live_like(jmid).LT.live_like_new(ith)) THEN
+             jlow = jmid
+          ELSE
+             jhigh = jmid
           END IF
        END DO
+       jlim = jlow
     END IF
 
     ! Store old values
