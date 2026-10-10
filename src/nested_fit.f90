@@ -560,7 +560,7 @@ PROGRAM NESTED_FIT
          !CALL NESTED_SAMPLING(itry,maxstep_try,nall_try(itry),evsum_final_try(1), &
          !   live_like_final_try(:,1),live_birth_final_try(:,1),live_rank_final_try(:,1),weight_try(:,1),&
          !   live_final_try(:,:,1),live_like_max_try(itry),live_max_try(:,itry), 0, 0)
-         CALL NESTED_SAMPLING(itry,maxstep_try,nall_try(itry),evsum_final_try(1), &
+         CALL NESTED_SAMPLING(itry,maxstep_try,nall_try(itry),evsum_final_try(itry), &
             live_like_max_try(itry),live_max_try(:,itry), 0, 0)
       ELSE
          !CALL NESTED_SAMPLING(itry,maxstep_try,nall_try(itry),evsum_final_try(itry), &
