@@ -60,6 +60,22 @@ needs; the driver is the only other requirement, no CUDA toolkit. The likelihood
 the GPU, on at most 8 threads, whenever a startup self-test finds that faster than all the CPU
 threads together, and on the CPU otherwise, with one log line saying which. Details and controls in `src/gpu/README.md`.
 
+### What must be installed on the machine
+
+nested_fit compiles your model at run time, so two compilers are needed on every machine it runs
+on, with the pip wheel as much as with a source build; without them a run stops before sampling.
+
+| system | compilers | GPU (optional) |
+|---|---|---|
+| Ubuntu, Debian | `sudo apt install gfortran g++` | NVIDIA driver, then `pip install "nested_fit[cuda]"` |
+| Fedora, RHEL, Rocky | `sudo dnf install gcc-gfortran gcc-c++` | same |
+| macOS | `brew install gcc` (gfortran) and `xcode-select --install` (clang++) | no GPU support on macOS |
+| conda environments | `conda install -c conda-forge gfortran cxx-compiler` | as above |
+
+The Linux wheel needs glibc 2.28 or newer (Ubuntu 20.04, Debian 10, RHEL 8 and later); older
+systems build from source, see below. On an AMD GPU the ROCm runtime with hipRTC plays the role of
+the driver and the `[cuda]` extra; that path is written and has not been run yet.
+
 The `examples/` directory is bundled with the package. After installation you can
 copy it to a local working area in a couple of ways:
 
