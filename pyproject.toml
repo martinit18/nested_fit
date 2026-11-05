@@ -67,6 +67,8 @@ archs = ["x86_64", "arm64"]
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64"]
+# -fPIE/-pie: auditwheel's patchelf corrupts an EXEC-type executable (the wheel segfaulted at startup); a PIE one it handles.
+environment = "CFLAGS='-static-libgcc -static-libstdc++ -fPIE' CXXFLAGS='-static-libgcc -static-libstdc++ -fPIE' FFLAGS='-static-libgfortran -fPIE' LDFLAGS='-pie'"
 
 [tool.setuptools_scm]
 fallback_version = "1.0.0"
