@@ -624,6 +624,22 @@ MODULE MOD_AUTOFUNC
         IF(ANY([ CHARACTER(8) :: 'cpp', 'cxx', 'c++', 'inl' ].EQ.ext)) HAS_VALID_CPP_EXT = .TRUE.
     END FUNCTION 
 
+    SUBROUTINE TOOL_NOT_FOUND(cmd)
+        ! The shell could not run the compiler or linker of a run-time compile command: say which
+        ! program is missing and how to install it, instead of the runtime's "Invalid command line"
+        ! error and its backtrace.
+        CHARACTER(LEN=*), INTENT(IN) :: cmd
+        INTEGER :: i
+        i = INDEX(cmd, ' ')
+        IF(i.EQ.0) i = LEN_TRIM(cmd) + 1
+        CALL LOG_ERROR_HEADER()
+        CALL LOG_ERROR('`'//cmd(1:i-1)//'` was not found. nested_fit compiles your model at run time and needs gfortran and g++ installed.')
+        CALL LOG_ERROR('Ubuntu/Debian: sudo apt install gfortran g++ ; Fedora/RHEL: sudo dnf install gcc-gfortran gcc-c++ ; macOS: brew install gcc')
+        CALL LOG_ERROR('See "What must be installed on the machine" in README.md. Aborting Execution...')
+        CALL LOG_ERROR_HEADER()
+        STOP 2   ! a non-zero exit code, as the runtime error gave before, for the scripts that call nested_fit
+    END SUBROUTINE
+
     SUBROUTINE COMPILE_CACHE_FUNC_NATIVE(filename, write_metadata)
         CHARACTER(LEN=*),   INTENT(IN) :: filename
         LOGICAL, OPTIONAL , INTENT(IN) :: write_metadata
@@ -635,7 +651,7 @@ MODULE MOD_AUTOFUNC
         CHARACTER(128) :: ext_help_text
         CHARACTER(64)  :: compiler_spec
         CHARACTER(512) :: output
-        INTEGER        :: status
+        INTEGER        :: status, cstat
         LOGICAL        :: write_meta_ = .TRUE.
 
         CHARACTER(c_char), DIMENSION(:), POINTER :: c_input_lang
@@ -687,7 +703,8 @@ MODULE MOD_AUTOFUNC
 
         CALL LOG_TRACE('Compiling native function `'//TRIM(parsed_data%function_name)//'` from file `'//TRIM(filename)//'`.')
         
-        CALL EXECUTE_COMMAND_LINE(TRIM(compiler_spec)//' '//TRIM(filename)//' -o '//TRIM(nf_cache_folder)//'user/'//TRIM(parsed_data%function_name)//'.o', EXITSTAT=status)
+        CALL EXECUTE_COMMAND_LINE(TRIM(compiler_spec)//' '//TRIM(filename)//' -o '//TRIM(nf_cache_folder)//'user/'//TRIM(parsed_data%function_name)//'.o', EXITSTAT=status, CMDSTAT=cstat)
+        IF(cstat.NE.0 .OR. status.EQ.127) CALL TOOL_NOT_FOUND(TRIM(compiler_spec))
         IF(status.NE.0) THEN
             CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Failed to compile the function provided.')
@@ -726,7 +743,7 @@ MODULE MOD_AUTOFUNC
         CHARACTER(LEN=512), INTENT(IN) :: original_data
         LOGICAL, OPTIONAL , INTENT(IN) :: write_metadata
         CHARACTER(LEN=128)             :: filename
-        INTEGER                        :: status
+        INTEGER                        :: status, cstat
         CHARACTER(128)                 :: funcname, funcname_lowercase
         INTEGER                        :: argc
         CHARACTER(512)                 :: expression
@@ -789,7 +806,8 @@ MODULE MOD_AUTOFUNC
             WRITE(77,'(a)') 'end function '//TRIM(funcname)
         CLOSE(77)
 
-        CALL EXECUTE_COMMAND_LINE(TRIM(opt_f90_comp_cmd)//' '//TRIM(filename)//' -o '//TRIM(nf_cache_folder)//'user/'//TRIM(funcname)//TRIM(obj_ext), EXITSTAT=status)
+        CALL EXECUTE_COMMAND_LINE(TRIM(opt_f90_comp_cmd)//' '//TRIM(filename)//' -o '//TRIM(nf_cache_folder)//'user/'//TRIM(funcname)//TRIM(obj_ext), EXITSTAT=status, CMDSTAT=cstat)
+        IF(cstat.NE.0 .OR. status.EQ.127) CALL TOOL_NOT_FOUND(TRIM(opt_f90_comp_cmd))
         IF(status.NE.0) THEN
             CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Failed to compile the function provided.')
@@ -850,7 +868,7 @@ MODULE MOD_AUTOFUNC
         INTEGER, INTENT(IN)                      :: mfg_nparams
 
         CHARACTER(128)                 :: filename
-        INTEGER                        :: status
+        INTEGER                        :: status, cstat
         CHARACTER(128)                 :: mfg_lowercase
         INTEGER                        :: argc
         CHARACTER(512)                 :: expression
@@ -902,7 +920,8 @@ MODULE MOD_AUTOFUNC
             WRITE(77,'(a)') 'end function '//TRIM(mfg_name)
         CLOSE(77)
 
-        CALL EXECUTE_COMMAND_LINE(TRIM(opt_f90_comp_cmd)//' '//TRIM(filename)//' -o '//TRIM(nf_cache_folder)//'user/'//TRIM(mfg_name)//TRIM(obj_ext), EXITSTAT=status)
+        CALL EXECUTE_COMMAND_LINE(TRIM(opt_f90_comp_cmd)//' '//TRIM(filename)//' -o '//TRIM(nf_cache_folder)//'user/'//TRIM(mfg_name)//TRIM(obj_ext), EXITSTAT=status, CMDSTAT=cstat)
+        IF(cstat.NE.0 .OR. status.EQ.127) CALL TOOL_NOT_FOUND(TRIM(opt_f90_comp_cmd))
         IF(status.NE.0) THEN
             CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Failed to compile the function provided.')
@@ -918,9 +937,10 @@ MODULE MOD_AUTOFUNC
     END SUBROUTINE
 
     SUBROUTINE RECOMPILE_CACHE()
-        INTEGER :: status
+        INTEGER :: status, cstat
 
-        CALL EXECUTE_COMMAND_LINE(TRIM(opt_lnk_cmd)//' '//TRIM(nf_cache_folder)//'*/*'//TRIM(obj_ext)//' -o '//TRIM(dll_name), EXITSTAT=status)
+        CALL EXECUTE_COMMAND_LINE(TRIM(opt_lnk_cmd)//' '//TRIM(nf_cache_folder)//'*/*'//TRIM(obj_ext)//' -o '//TRIM(dll_name), EXITSTAT=status, CMDSTAT=cstat)
+        IF(cstat.NE.0 .OR. status.EQ.127) CALL TOOL_NOT_FOUND(TRIM(opt_lnk_cmd))
         IF(status.NE.0) THEN
             CALL LOG_ERROR_HEADER()
             CALL LOG_ERROR('Failed to link the function provided.')

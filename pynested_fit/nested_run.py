@@ -12,6 +12,7 @@ from rich.table import Table as RTable
 from rich import box as rbox
 import importlib.util
 import os
+from .compilers import require_compilers
 
 
 def _backend_env():
@@ -597,6 +598,7 @@ class Configurator():
         - output_mode='full': full output with graphs (not working on mac yet)
         '''
         nf_bin = self._get_nf_realpath()
+        require_compilers()
 
         self._write_yaml_file(path)
 
