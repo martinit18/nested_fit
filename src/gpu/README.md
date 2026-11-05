@@ -71,22 +71,24 @@ is the same work as writing the Fortran was.
   dependent, and far more than the evidence tolerates.
 
 **Threads.** `search.gpu_threads` (env `NESTED_FIT_GPU_THREADS`): how many of the OpenMP
-threads evaluate on the GPU; the others keep the CPU closed forms, so both are busy. -1 (default)
-leaves the choice to the startup self-test, from r = one evaluation on one CPU thread over one on
-the GPU: r ≤ 1, the GPU is not used; 1 < r < threads, 2 threads on the GPU and the others on
-their cores, never below the cores alone (measured 1.47× the GPU alone in double on an RTX A4000,
-where two device threads evaluate 108 times per second and eight 83); r ≥ threads, up to 8
-threads on the GPU and the rest on the cores (8 streams saturate an RTX A4000 in per-term
-precision, 2 do not). An explicit number is kept as given.
+threads evaluate on the GPU; the others keep the CPU closed forms. -1 (default) leaves the choice
+to the startup self-test, from r = one evaluation on one CPU thread over one on the GPU: when
+4 r < threads the GPU is not used, otherwise the run keeps at most 8 threads, all of them on the
+GPU. Measured on an EPYC 7452 (128 threads) with an RTX A4000, per-term precision, 100 steps of
+the Voigt model: 8 threads on the GPU 26 s; 128 threads on the GPU 60 s (more in-flight
+evaluations, 93 ms per launch); 8 on the GPU and 120 on the CPU over 900 s (the CPU threads starve
+the ones feeding the GPU). An explicit number is kept as given, that many on the GPU and the rest
+on the CPU: `gpu_threads: 2` with the other threads on the cores was 1.47× the GPU alone in double
+precision on an 8-thread host, and is a setting, not a default.
 
 **Startup self-test.** When a device is used, the likelihood is evaluated on both backends at
 three points of the prior box before sampling starts. The log reports the largest relative
 difference and the time of one evaluation on the device against one CPU thread; above 10⁻⁸
 in double, or 10⁻⁶ in per-term mixed precision, the device is refused and the run continues
 on the CPU. A wrong port of a user function cannot reach the evidence. With `device: auto` the
-GPU is also refused when one evaluation on it is not faster than one CPU thread (a cheap model on
-a few thousand points: every example of the suite); between one thread and all of them together it
-gets a share of the threads (see Threads); `device: cuda` forces it on every thread up to 8.
+GPU is also refused when, fed by 8 threads, it would not beat the CPU threads together, i.e. when
+4 r < threads (a cheap model on a few thousand points: every example of the suite); otherwise the
+run keeps at most 8 threads, all on the GPU (see Threads); `device: cuda` forces the GPU.
 
 One parameter vector per launch: about break-even with a CPU thread at ~1000 data points of a
 cheap model, growing with data size and with the cost per point. Batching the search's
@@ -101,7 +103,7 @@ its `nf_input.yaml` alone, and `nf_output_res.json` records `input.search.device
 search:
   device:         auto     # auto (default) | cuda | hip | cpu
   gpu_min_points: 0        # use the GPU only above this many data points
-  gpu_threads:    -1       # threads that evaluate on the GPU (-1: decided by the self-test), the others on the CPU
+  gpu_threads:    -1       # -1 (default): the self-test keeps at most 8 threads, all on the GPU; N: N on the GPU, the others on the CPU
   gpu_precision:  auto     # auto (default: mixed if the model uses NF_TERM) | double | mixed
 ```
 

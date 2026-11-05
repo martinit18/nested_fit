@@ -396,7 +396,7 @@ CONTAINS
     ! one evaluation on the device against one CPU thread.
     REAL(8), DIMENSION(npar) :: p
     REAL(8) :: cpu, dev, t_cpu, t_dev, worst, tol, r
-    INTEGER, PARAMETER :: streams_max = 8   ! host threads launching on the GPU at once (measured on an RTX A4000: 8 streams saturate it in per-term precision, 2 do not)
+    INTEGER, PARAMETER :: streams_max = 8   ! threads the run keeps when the GPU is used: 8 saturate an RTX A4000 in per-term precision (2 do not, 128 are 2.3x slower)
     INTEGER(8) :: t0, t1, rate
     INTEGER :: k
     CHARACTER(LEN=16) :: name
@@ -427,36 +427,39 @@ CONTAINS
     ! and a heavy one is faster on the GPU by 20-200x per evaluation (measured: a 284-term Voigt
     ! model on 16 501 points). r = the ratio of the two self-test timings, one evaluation on one
     ! CPU thread over one on the GPU. With search.gpu_threads left to -1:
-    !   r <= 1          the GPU does not beat one thread: not used (search.device: cuda forces it)
-    !   1 < r < nth     a split: 2 threads on the GPU, the others keep computing on their cores, so
-    !                   the total is never below the cores alone (measured 1.47x the GPU alone)
-    !   r >= nth        the GPU takes up to streams_max threads, the rest stay on the cores
-    ! An explicit gpu_threads is kept as given.
+    !   4 r < nth   the GPU, fed by 8 threads, does not beat the CPU threads together (8 streams
+    !               deliver about half their nominal rate on a workstation GPU): not used;
+    !               search.device: cuda forces it
+    !   otherwise   the run keeps MIN(nth, 8) threads, all of them on the GPU. More host threads
+    !               only add in-flight evaluations (128 threads on the GPU: 2.3x slower than 8),
+    !               and CPU threads beside the GPU threads starve them (8 on the GPU + 120 on the
+    !               CPU: 6x slower than 8 alone), both measured on an EPYC 7452 with an RTX A4000.
+    ! An explicit gpu_threads is kept as given: that many on the GPU, the others on the CPU.
     r = t_cpu/t_dev
     IF (gpu_threads_auto) THEN
-       IF (r >= DBLE(nth) .OR. TRIM(gpu_pref) /= 'auto') THEN
-          gpu_threads = MIN(nth, streams_max)
-       ELSE IF (r > 1d0) THEN
-          gpu_threads = MIN(nth, 2)
+       IF (TRIM(gpu_pref) /= 'auto' .OR. 4d0*r >= DBLE(nth)) THEN
+          nth = MIN(nth, streams_max)
+          gpu_threads = nth
        ELSE
           gpu_threads = 0
        END IF
     END IF
     IF (gpu_threads == 0) THEN
        gpu_on = .FALSE.
-       WRITE(msg, '(a,es9.2,a,es9.2,a)') 'GPU: not used (one evaluation ', t_dev*1d3, ' ms on the GPU vs ', t_cpu*1d3, &
-            ' ms on one CPU thread: not faster than one thread; search.device: cuda forces the GPU)'
+       WRITE(msg, '(a,es9.2,a,es9.2,a,f7.1,a,i0,a)') 'GPU: not used (one evaluation ', t_dev*1d3, ' ms on the GPU vs ', t_cpu*1d3, &
+            ' ms on one CPU thread, ', r, 'x: fed by 8 threads it does not beat the ', nth, ' CPU threads together; search.device: cuda forces it)'
        CALL LOG_MESSAGE(TRIM(msg))
     ELSE IF (worst > tol .OR. worst /= worst) THEN
        gpu_on = .FALSE.
        WRITE(msg, '(a,a,a,es8.1,a)') 'GPU: not used (self-test failed: ', TRIM(name), ' precision differs from the CPU by more than ', tol, ' in log L)'
        CALL LOG_MESSAGE(TRIM(msg))
-    ELSE IF (gpu_threads > 0 .AND. gpu_threads < nth) THEN
+    ELSE IF (gpu_threads < nth) THEN
        WRITE(msg, '(a,i0,a,i0,a,f7.1,a,i0,a)') 'GPU: used on ', gpu_threads, ' of ', nth, ' threads (one evaluation ', r, &
             'x one CPU thread); the other ', nth - gpu_threads, ' threads stay on the CPU'
        CALL LOG_MESSAGE(TRIM(msg))
     ELSE
-       WRITE(msg, '(a,i0,a,f7.1,a)') 'GPU: used on all ', nth, ' threads (one evaluation ', r, 'x one CPU thread)'
+       WRITE(msg, '(a,i0,a,f7.1,a)') 'GPU: used; the run keeps ', nth, ' threads, all on the GPU (one evaluation ', r, &
+            'x one CPU thread; more host threads were measured slower)'
        CALL LOG_MESSAGE(TRIM(msg))
     END IF
   END SUBROUTINE GPU_SELF_TEST

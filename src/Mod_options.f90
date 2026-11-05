@@ -22,7 +22,8 @@ MODULE MOD_OPTIONS
     ! function, compiled for the device at run time. params[i] is the parameter with npar = i+1.
     CHARACTER(LEN=512) :: opt_gpu_source = ''
     ! `search.gpu_threads`: how many of the OpenMP threads evaluate on the device; the others
-    ! use the CPU, so both are busy. -1 (default): decided by the startup self-test (GPU_SELF_TEST).
+    ! use the CPU, so both are busy. -1 (default): decided by the startup self-test, which keeps
+    ! at most 8 threads, all on the GPU, when it uses the GPU (GPU_SELF_TEST).
     INTEGER :: opt_gpu_threads = -1
     ! `search.gpu_precision`: 'auto' (default: 'mixed' when the model marks its terms with
     ! NF_TERM, 'double' otherwise), 'double' (the CPU's closed forms, the CPU's bits) or 'mixed'
