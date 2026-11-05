@@ -426,7 +426,7 @@ Examples of use of a legacy function can be found in `examples/data_analysis/aaa
 
 ## Present version and history of the past versions
 
-The present version is 5.7.1\
+The present version is 5.8.0\
 New features:
 - Asynchronous parallel search of new points: each thread adds its new point to the main loop without waiting for the search of the other threads.
 This strongly improves the parallel efficiency when the search time of new points is very variable (e.g. Lennard-Jones clusters)
