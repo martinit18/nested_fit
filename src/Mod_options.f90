@@ -14,6 +14,13 @@ MODULE MOD_OPTIONS
     CHARACTER(LEN=128) :: opt_input_file = 'nf_input.yaml'
     LOGICAL :: opt_suppress_output = .FALSE.
     LOGICAL :: opt_file_has_header = .FALSE.
+    ! GPU backend, from the input file (`search.device`, `search.gpu_min_points`); the
+    ! environment (NESTED_FIT_DEVICE, NESTED_FIT_GPU_MIN_POINTS) overrides both.
+    CHARACTER(LEN=128) :: opt_device = 'auto'
+    INTEGER :: opt_gpu_min_points = 0
+    ! `function.gpu_source`: a C file defining nf_user(x, params) for a legacy (Fortran) user
+    ! function, compiled for the device at run time. params[i] is the parameter with npar = i+1.
+    CHARACTER(LEN=512) :: opt_gpu_source = ''
     
     CHARACTER(LEN=512) :: opt_cpp_comp_cmd = 'g++ -c -shared -O3 -w -fPIC'
     CHARACTER(LEN=512) :: opt_f90_comp_cmd = 'gfortran -cpp -c -shared -O3 -w -fPIC -ffree-line-length-0'

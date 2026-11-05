@@ -19,6 +19,8 @@ MODULE MOD_LIKELIHOOD
   
   ! String manipulation
   USE MOD_STRUTIL
+  USE MOD_GPU, ONLY: gpu_on, gpu_pref, nf_gpu_loglike, nf_gpu_device_name, GPU_SETUP, C_STR, READ_TEXT_FILE
+  !$ USE omp_lib, ONLY: omp_get_thread_num
 
   !$ USE OMP_LIB
 
@@ -337,6 +339,95 @@ CONTAINS
 
   END SUBROUTINE
 
+  SUBROUTINE GPU_SETUP_DATA()
+    ! Hand the data and the user function to the GPU backend. Sets gpu_on; one log line either way.
+    USE MOD_AUTOFUNC, ONLY: gpu_c_body, gpu_param_ids, gpu_npar
+    CHARACTER(LEN=:), ALLOCATABLE :: src
+    INTEGER :: like_kind, n, n_par
+    CHARACTER(512) :: why
+    gpu_on = .FALSE.
+    IF (.NOT.BIT_CHECK_IF(DATA_IS_1D) .OR. BIT_CHECK_IF(DATA_IS_SET) .OR. nset.NE.1) THEN
+       CALL LOG_MESSAGE('GPU: not used (only 1D single-set data is supported yet)')
+       RETURN
+    END IF
+    n = ndata_set(1)
+    IF (LEN_TRIM(opt_gpu_source) > 0) THEN
+       ! a device source written by the user takes the full parameter vector, as the legacy Fortran does
+       CALL READ_TEXT_FILE(TRIM(opt_gpu_source), src, why)
+       IF (LEN_TRIM(why) > 0) THEN
+          CALL LOG_MESSAGE('GPU: not used ('//TRIM(why)//')')
+          RETURN
+       END IF
+       n_par = npar
+    ELSE
+       src = TRIM(gpu_c_body)
+       n_par = gpu_npar
+    END IF
+    IF (BIT_CHECK_IF(DATA_IS_C)) THEN
+       like_kind = 0
+    ELSE IF (loglikefuncid.EQ.0) THEN
+       like_kind = 1
+    ELSE
+       like_kind = 2
+    END IF
+    IF (ALLOCATED(nc_err)) THEN
+       CALL GPU_SETUP(x(1:n,1), nc(1:n,1), nc_err(1:n,1), n, like_kind, nth, src, gpu_param_ids, n_par, why, opt_device, opt_gpu_min_points)
+    ELSE   ! counts data carry no error column; kind 0 never reads it
+       CALL GPU_SETUP(x(1:n,1), nc(1:n,1), nc(1:n,1), n, like_kind, nth, src, gpu_param_ids, n_par, why, opt_device, opt_gpu_min_points)
+    END IF
+    IF (gpu_on) THEN
+       why = ''
+       CALL LOG_MESSAGE('GPU: likelihood on '//TRIM(C_STR(nf_gpu_device_name()))//' (double precision)'//TRIM(why))
+       CALL GPU_SELF_TEST()
+    ELSE
+       CALL LOG_MESSAGE('GPU: not used ('//TRIM(why)//')')
+    END IF
+  END SUBROUTINE GPU_SETUP_DATA
+
+  SUBROUTINE GPU_SELF_TEST()
+    ! The same evidence needs the same likelihood: the device evaluates it at three points of
+    ! the prior box against the CPU. It must agree to double-precision reduction noise, or
+    ! the device is refused. Also the first measurement a user sees:
+    ! one evaluation on the device against one CPU thread.
+    REAL(8), DIMENSION(npar) :: p
+    REAL(8) :: cpu, dev, t_cpu, t_dev, worst
+    INTEGER(8) :: t0, t1, rate
+    INTEGER :: k
+    CHARACTER(512) :: msg
+    worst = 0d0; t_cpu = HUGE(1d0); t_dev = HUGE(1d0)
+    CALL SYSTEM_CLOCK(COUNT_RATE=rate)
+    DO k = 1, 3
+       p = par_bnd1 + (0.1d0 + 0.4d0*(k-1))*(par_bnd2 - par_bnd1)
+       WHERE (par_fix == 1) p = par_in
+       gpu_on = .FALSE.
+       CALL SYSTEM_CLOCK(t0); cpu = LOGLIKELIHOOD_1D(npar, p); CALL SYSTEM_CLOCK(t1)
+       t_cpu = MIN(t_cpu, DBLE(t1 - t0)/DBLE(rate))
+       gpu_on = .TRUE.
+       dev = nf_gpu_loglike(p, npar, 0) + const_ll   ! the first launch carries the warm-up
+       CALL SYSTEM_CLOCK(t0); dev = nf_gpu_loglike(p, npar, 0) + const_ll; CALL SYSTEM_CLOCK(t1)
+       t_dev = MIN(t_dev, DBLE(t1 - t0)/DBLE(rate))
+       worst = MAX(worst, ABS(dev - cpu)/MAX(1d0, ABS(cpu)))
+    END DO
+    WRITE(msg, '(a,es8.1,a,es9.2,a,es9.2,a,f8.1,a)') 'GPU: self-test: max relative difference to the CPU ', worst, &
+         '; one evaluation ', t_dev*1d3, ' ms on the device, ', t_cpu*1d3, ' ms on one CPU thread (', t_cpu/t_dev, 'x)'
+    CALL LOG_MESSAGE(TRIM(msg))
+    ! The decision "install and it decides": with device = auto the card is used only when it
+    ! beats the CPU threads together. One evaluation per launch costs ~20 us on the host side,
+    ! so a cheap model on a few thousand points is faster on the cores (measured: every example
+    ! of the suite), and a heavy one is faster on the card by 20-200x (measured: a 284-term Voigt
+    ! model on 16 501 points). The ratio of the two self-test timings, against the thread count,
+    ! is that boundary; search.device = cuda/hip (or NESTED_FIT_DEVICE) forces the card regardless.
+    IF (TRIM(gpu_pref) == 'auto' .AND. t_cpu/t_dev < DBLE(nth)) THEN
+       gpu_on = .FALSE.
+       WRITE(msg, '(a,es9.2,a,es9.2,a,i0,a)') 'GPU: not used (one evaluation ', t_dev*1d3, ' ms on the device vs ', t_cpu*1d3, &
+            ' ms on one CPU thread: the ', nth, ' CPU threads are faster together; search.device: cuda forces the card)'
+       CALL LOG_MESSAGE(TRIM(msg))
+    ELSE IF (worst > 1d-8 .OR. worst /= worst) THEN
+       gpu_on = .FALSE.
+       CALL LOG_MESSAGE('GPU: not used (self-test failed: the device and the CPU disagree on the likelihood in double precision)')
+    END IF
+  END SUBROUTINE GPU_SELF_TEST
+
   SUBROUTINE INIT_LIKELIHOOD_DATA()
     ! Initialize the normal likelihood with data files and special function
 
@@ -352,6 +443,8 @@ CONTAINS
 
     ! Initialize likelihood function
     CALL INIT_LIKELIHOOD_FUNC()
+    ! GPU backend (no-op without a device or an expressible function)
+    CALL GPU_SETUP_DATA()
 
     ! Free the spec string map
     CALL specstr_ordermap%free() ! NOTE(César): This is safe for a non-inited map
@@ -938,8 +1031,15 @@ CONTAINS
     !
     REAL(8) :: ll_tmp, rk, rk2
     REAL(8), DIMENSION(ndata, nset) :: enc
-    INTEGER(4) :: i, k
-    
+    INTEGER(4) :: i, k, tid
+
+    ! GPU backend: same closed forms, evaluated on the device; const_ll added here as below.
+    IF (gpu_on) THEN
+       tid = 0
+       !$ tid = omp_get_thread_num()
+       LOGLIKELIHOOD_1D = nf_gpu_loglike(par, npar, tid) + const_ll
+       RETURN
+    END IF
     ! Calculate LIKELIHOOD
     ll_tmp = 0.
     

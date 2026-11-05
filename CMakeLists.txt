@@ -122,6 +122,7 @@ set(SRC_FILES_COMM
     src/Mod_userfcn.f90
 
     src/Mod_logger.f90
+    src/Mod_gpu.f90
 
     src/Mod_perfprof.f90
 
@@ -296,7 +297,18 @@ if(LAPACK)
     endif()
 endif()
 
-target_link_libraries(${nested_fit_target} PUBLIC dl)
+# GPU likelihood backend: plain C++, loads libcuda/libnvrtc with dlopen at run time.
+# Builds everywhere; a no-op where there is no driver. See src/gpu/nf_gpu.h.
+# Static: the binary stays a single file, so packaging and pynested_fit are unchanged.
+add_library(nf_gpu STATIC src/gpu/nf_gpu.cpp)
+file(READ ${CMAKE_SOURCE_DIR}/src/gpu/nf_device_lib.h NF_DEVICE_LIB_SRC)
+configure_file(${CMAKE_SOURCE_DIR}/src/gpu/nf_device_lib_src.h.in ${CMAKE_BINARY_DIR}/gpu/nf_device_lib_src.h @ONLY)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/src/gpu/nf_device_lib.h)
+target_include_directories(nf_gpu PRIVATE ${CMAKE_BINARY_DIR}/gpu)
+set_target_properties(nf_gpu PROPERTIES CXX_STANDARD 17 POSITION_INDEPENDENT_CODE ON)
+target_link_libraries(nf_gpu PRIVATE dl)
+
+target_link_libraries(${nested_fit_target} PUBLIC dl nf_gpu)
 target_link_libraries(${nested_fit_target} PRIVATE TracyClient)
 target_include_directories(${nested_fit_target} PRIVATE ${tracy_SOURCE_DIR})
 
