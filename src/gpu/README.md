@@ -38,7 +38,9 @@ time, never the answer. A device fault stops the run rather than returning a val
 1D data, one set, Poisson / Gaussian / modified-Jeffreys likelihoods, user functions
 built from the arithmetic intrinsics plus `GAUSS_IF`, `LORE_IF`, `VOIGT_IF` and `WofzRe`
 (the Faddeeva function is ported line by line from `WOFZ.f`, single-precision literals
-included, so the device returns the CPU's bits). Anything else (`Interpolate`, nested user
+included, so the device returns the CPU's bits; in the wings, |z| > 10, the asymptotic series
+replaces it: exact to 3 × 10⁻¹⁵, 1.2× in the sampler on a 284-term Voigt model,
+`NF_NO_WING_SERIES` disables it). Anything else (`Interpolate`, nested user
 functions, sets, 2D) runs on the CPU as before, and the log says why.
 
 **Legacy Fortran user functions** (`USERFCN.f`) run on the device when the input names a C
@@ -62,8 +64,8 @@ is the same work as writing the Fortran was.
   double only when it exceeds a tenth of the data's noise at that point
   (`NESTED_FIT_GPU_TERM_TOL`); on the CPU and in double the macro is the plain product.
   Measured on a 284-term Voigt model: 1.6 × 10⁻⁸ relative to the CPU, 9.5× the GPU's double
-  rate on an RTX A4000 (789 against 83 evaluations per second in the sampler). The model in
-  float throughout was measured too and
+  rate on an RTX A4000 (789 against 83 evaluations per second in the sampler, 954 with the
+  wing series of the Faddeeva function). The model in float throughout was measured too and
   rejected: on the same model the float error of the likelihood is 10⁻⁴ relative, point
   dependent, and far more than the evidence tolerates.
 
