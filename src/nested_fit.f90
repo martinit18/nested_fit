@@ -424,6 +424,7 @@ PROGRAM NESTED_FIT
   CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'search.device'    , opt_device   , MANDATORY=.FALSE.) ! 'auto' by default: GPU if present, else CPU
   CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.gpu_min_points', opt_gpu_min_points, MANDATORY=.FALSE.) ! 0 by default
   CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'function.gpu_source'  , opt_gpu_source  , MANDATORY=.FALSE.) ! device source of a legacy user function
+  CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.gpu_threads'   , opt_gpu_threads , MANDATORY=.FALSE.) ! -1 by default: every thread uses the device
   CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'search.hard_writing'  , hard_writing_parameters  , MANDATORY=.FALSE.) ! True by default
   CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.max_steps' , maxstep_try  , MANDATORY=.NOT.hard_writing_parameters) ! 100000 by default, mandatory if not hard writing parameters
   
@@ -1013,6 +1014,7 @@ PROGRAM NESTED_FIT
    CALL json%push('input.search.livepoints', nlive)
    CALL json%push('input.search.device', TRIM(opt_device))
    CALL json%push('input.function.gpu_source', TRIM(opt_gpu_source))
+   CALL json%push('input.search.gpu_threads', opt_gpu_threads)
    CALL json%push('input.search.method', TRIM(search_method))
    CALL json%push('input.search.param1', search_par1)
    CALL json%push('input.search.param2', search_par2)

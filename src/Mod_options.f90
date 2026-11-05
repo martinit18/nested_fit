@@ -21,6 +21,9 @@ MODULE MOD_OPTIONS
     ! `function.gpu_source`: a C file defining nf_user(x, params) for a legacy (Fortran) user
     ! function, compiled for the device at run time. params[i] is the parameter with npar = i+1.
     CHARACTER(LEN=512) :: opt_gpu_source = ''
+    ! `search.gpu_threads`: how many of the OpenMP threads evaluate on the device; the others
+    ! use the CPU, so both are busy. -1 (default) = all of them.
+    INTEGER :: opt_gpu_threads = -1
     
     CHARACTER(LEN=512) :: opt_cpp_comp_cmd = 'g++ -c -shared -O3 -w -fPIC'
     CHARACTER(LEN=512) :: opt_f90_comp_cmd = 'gfortran -cpp -c -shared -O3 -w -fPIC -ffree-line-length-0'

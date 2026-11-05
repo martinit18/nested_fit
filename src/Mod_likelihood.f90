@@ -19,7 +19,7 @@ MODULE MOD_LIKELIHOOD
   
   ! String manipulation
   USE MOD_STRUTIL
-  USE MOD_GPU, ONLY: gpu_on, gpu_pref, nf_gpu_loglike, nf_gpu_device_name, GPU_SETUP, C_STR, READ_TEXT_FILE
+  USE MOD_GPU, ONLY: gpu_on, gpu_threads, gpu_pref, nf_gpu_loglike, nf_gpu_device_name, GPU_SETUP, C_STR, READ_TEXT_FILE
   !$ USE omp_lib, ONLY: omp_get_thread_num
 
   !$ USE OMP_LIB
@@ -371,12 +371,16 @@ CONTAINS
        like_kind = 2
     END IF
     IF (ALLOCATED(nc_err)) THEN
-       CALL GPU_SETUP(x(1:n,1), nc(1:n,1), nc_err(1:n,1), n, like_kind, nth, src, gpu_param_ids, n_par, why, opt_device, opt_gpu_min_points)
+       CALL GPU_SETUP(x(1:n,1), nc(1:n,1), nc_err(1:n,1), n, like_kind, nth, src, gpu_param_ids, n_par, why, opt_device, opt_gpu_min_points, opt_gpu_threads)
     ELSE   ! counts data carry no error column; kind 0 never reads it
-       CALL GPU_SETUP(x(1:n,1), nc(1:n,1), nc(1:n,1), n, like_kind, nth, src, gpu_param_ids, n_par, why, opt_device, opt_gpu_min_points)
+       CALL GPU_SETUP(x(1:n,1), nc(1:n,1), nc(1:n,1), n, like_kind, nth, src, gpu_param_ids, n_par, why, opt_device, opt_gpu_min_points, opt_gpu_threads)
     END IF
     IF (gpu_on) THEN
-       why = ''
+       IF (gpu_threads > 0 .AND. gpu_threads < nth) THEN
+          WRITE(why, '(a,i0,a,i0,a)') ' on ', gpu_threads, ' of ', nth, ' threads, the others on the CPU'
+       ELSE
+          why = ''
+       END IF
        CALL LOG_MESSAGE('GPU: likelihood on '//TRIM(C_STR(nf_gpu_device_name()))//' (double precision)'//TRIM(why))
        CALL GPU_SELF_TEST()
     ELSE
@@ -1037,8 +1041,10 @@ CONTAINS
     IF (gpu_on) THEN
        tid = 0
        !$ tid = omp_get_thread_num()
-       LOGLIKELIHOOD_1D = nf_gpu_loglike(par, npar, tid) + const_ll
-       RETURN
+       IF (gpu_threads < 0 .OR. tid < gpu_threads) THEN
+          LOGLIKELIHOOD_1D = nf_gpu_loglike(par, npar, tid) + const_ll
+          RETURN
+       END IF
     END IF
     ! Calculate LIKELIHOOD
     ll_tmp = 0.

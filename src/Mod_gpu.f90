@@ -4,6 +4,7 @@ MODULE MOD_GPU
   USE, INTRINSIC :: iso_c_binding
   IMPLICIT NONE
   LOGICAL :: gpu_on = .FALSE.
+  INTEGER :: gpu_threads = -1   ! threads 0..gpu_threads-1 evaluate on the device, the rest on the CPU; -1 = all
   CHARACTER(LEN=16) :: gpu_pref = 'auto'   ! the device preference in force: NESTED_FIT_DEVICE, else search.device
 
   INTERFACE
@@ -69,9 +70,9 @@ CONTAINS
   END FUNCTION
 
   ! Decide, upload, compile. Returns a one-line reason in `why` when the GPU is not used.
-  SUBROUTINE GPU_SETUP(x, nc, nc_err, ndata, like_kind, nthreads, c_body, param_ids, npar, why, device_pref, min_points_pref)
+  SUBROUTINE GPU_SETUP(x, nc, nc_err, ndata, like_kind, nthreads, c_body, param_ids, npar, why, device_pref, min_points_pref, threads_pref)
     REAL(8), DIMENSION(*), INTENT(IN) :: x, nc, nc_err
-    INTEGER, INTENT(IN) :: ndata, like_kind, nthreads, npar, min_points_pref
+    INTEGER, INTENT(IN) :: ndata, like_kind, nthreads, npar, min_points_pref, threads_pref
     CHARACTER(LEN=*), INTENT(IN) :: c_body, param_ids, device_pref
     CHARACTER(LEN=*), INTENT(OUT) :: why
     CHARACTER(LEN=32) :: env
@@ -111,6 +112,14 @@ CONTAINS
     END IF
     IF (nf_gpu_set_function(TRIM(c_body)//c_null_char, TRIM(param_ids)//c_null_char, npar) /= 0) THEN
       why = C_STR(nf_gpu_last_error())
+      CALL nf_gpu_free()
+      RETURN
+    END IF
+    gpu_threads = threads_pref
+    CALL GET_ENVIRONMENT_VARIABLE('NESTED_FIT_GPU_THREADS', env, STATUS=st)
+    IF (st == 0) READ(env, *, IOSTAT=st) gpu_threads
+    IF (gpu_threads == 0) THEN
+      why = 'gpu_threads = 0'
       CALL nf_gpu_free()
       RETURN
     END IF
