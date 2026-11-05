@@ -24,6 +24,10 @@ MODULE MOD_OPTIONS
     ! `search.gpu_threads`: how many of the OpenMP threads evaluate on the device; the others
     ! use the CPU, so both are busy. -1 (default) = all of them.
     INTEGER :: opt_gpu_threads = -1
+    ! `search.gpu_precision`: 'double' (default: the CPU's closed forms, the CPU's bits) or
+    ! 'mixed' (per-term: NF_TERM terms in float, the large ones in double; 7-10x the double
+    ! rate on consumer and workstation cards). Env NESTED_FIT_GPU_PRECISION overrides.
+    CHARACTER(LEN=16) :: opt_gpu_precision = 'double'
     
     CHARACTER(LEN=512) :: opt_cpp_comp_cmd = 'g++ -c -shared -O3 -w -fPIC'
     CHARACTER(LEN=512) :: opt_f90_comp_cmd = 'gfortran -cpp -c -shared -O3 -w -fPIC -ffree-line-length-0'

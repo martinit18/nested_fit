@@ -9,6 +9,7 @@
 #include "nf_device_lib_src.h"
 #include <algorithm>
 #include <atomic>
+#include <regex>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -78,6 +79,7 @@ struct State {
     void* ctx = nullptr; void* mod = nullptr; void* kern = nullptr;
     devptr dx = 0, dnc = 0, derr = 0;
     std::vector<void*> streams; std::vector<devptr> dpar, dout, dpart, dcount; int nblocks = 1;
+    bool mixed = false;   // per-term precision (NF_TERM): the terms in float, the large ones in double
     std::string name, err;
 } S;
 
@@ -189,7 +191,16 @@ void make_current() { if (S.vendor == Vendor::cuda) S.a.ctxSetCurrent(S.ctx); el
 // the last block to finish adds the block partials in a fixed order. Double precision, no
 // fast-math: the same closed forms as LOGLIKELIHOOD_1D, the same bits run after run. The
 // source is plain CUDA C that hipRTC also accepts.
-std::string program(const std::string& body, const std::string& ids) {
+// Per-term precision needs a float copy of the model: the library and the user's function
+// compiled once more with `double` meaning `float` and every literal made a float, so no
+// operation of that copy falls back to fp64; the residuals and the sum stay in double.
+std::string single_literals(std::string s) {
+    // std::regex has no lookbehind: the character before the literal is matched and kept
+    static const std::regex lit(R"((^|[^\w.])(\d+\.\d*(?:[eE][-+]?\d+)?|\d+[eE][-+]?\d+)(?![fF\d.]))");
+    return std::regex_replace(s, lit, "$1$2f");
+}
+
+std::string program(const std::string& body, const std::string& ids, bool mixed) {
     std::ostringstream p, u;
     if (S.vendor == Vendor::hip) p << "#include <hip/hip_runtime.h>\n";
     if (body.find("nf_user") != std::string::npos) {
@@ -201,12 +212,33 @@ std::string program(const std::string& body, const std::string& ids) {
         while (std::getline(ss, id, ',')) if (!id.empty()) u << "  const double " << id << " = params[" << i++ << "];\n";
         u << "  return " << body << ";\n}\n";
     }
-    p << NF_DEVICE_LIB << "\n" << u.str();
+    if (mixed) {
+        // per-term precision: the model twice, in float (nf32) and in double (nf64); in nf64 an
+        // NF_TERM is evaluated in float first and in double only when it is large against the
+        // noise scale of the data point (nf_scale, set per thread by the kernel)
+        const char* tol = env("NESTED_FIT_GPU_TERM_TOL");
+        p << "#define NF_TERM_TOL " << (tol && *tol ? tol : "0.1") << "f\n"
+             "__shared__ float nf_scale[256];\n"
+             "namespace nf32 {\n#define NF_TERM(mult, f, ...) ((mult)*f(__VA_ARGS__))\n#define NF_SINGLE 1\n#define double float\n"
+          << single_literals(NF_DEVICE_LIB) << "\n" << single_literals(u.str())
+          << "#undef double\n#undef NF_SINGLE\n#undef NF_TERM\n}\n"
+             "template <class G> __device__ __forceinline__ double nf_term_select(double mult, float v32, G g64){\n"
+             "  if (fabsf((float)mult*v32) > NF_TERM_TOL*nf_scale[threadIdx.x]) return mult*g64();\n"
+             "  return mult*(double)v32; }\n"
+             "namespace nf64 {\n#define NF_TERM(mult, f, ...) nf_term_select((mult), nf32::f(__VA_ARGS__), [&]{ return f(__VA_ARGS__); })\n"
+          << NF_DEVICE_LIB << "\n" << u.str() << "#undef NF_TERM\n}\n";
+    }
+    else p << NF_DEVICE_LIB << "\n" << u.str();
     p << "extern \"C\" __global__ void nf_loglike(const double* __restrict__ x, const double* __restrict__ nc,"
          " const double* __restrict__ err, int n, int kind, const double* __restrict__ params,"
          " double* partial, unsigned int* count, double* out){\n"
          "  __shared__ double red[256]; __shared__ int last; double acc = 0.0;\n";
-    p << "  for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < n; i += gridDim.x*blockDim.x){ double m = nf_user(x[i], params);\n";
+    if (mixed)
+        p << "  for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < n; i += gridDim.x*blockDim.x){\n"
+             "    nf_scale[threadIdx.x] = (kind == 0) ? sqrtf(fmaxf((float)nc[i], 1.0f)) : (float)err[i];\n"
+             "    double m = nf64::nf_user(x[i], params);\n";
+    else
+        p << "  for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < n; i += gridDim.x*blockDim.x){ double m = nf_user(x[i], params);\n";
     p <<
          "    if (kind == 0) acc += nc[i]*log(m) - m;\n"
          "    else if (kind == 1){ double d = nc[i]-m; acc -= d*d/(2.0*err[i]*err[i]); }\n"
@@ -263,6 +295,7 @@ void die(int r, const char* what) {
 } // namespace
 
 void nf_gpu_set_preference(const char* device) { if (device && *device && !S.probed) g_pref = device; }
+void nf_gpu_set_precision(const char* precision) { const char c = precision ? precision[0] : 'd'; S.mixed = (c == 'm' || c == 'M'); }
 int nf_gpu_available(void) { if (!S.probed) probe(); return S.available ? 1 : 0; }
 const char* nf_gpu_device_name(void) { return nf_gpu_available() ? S.name.c_str() : ""; }
 const char* nf_gpu_last_error(void) { return S.err.c_str(); }
@@ -293,7 +326,7 @@ int nf_gpu_set_function(const char* c_body, const char* param_ids, int npar) {
     S.npar = npar;
     for (int t = 0; t < S.nthreads; ++t) if (!ok(S.a.memAlloc(&S.dpar[t], sizeof(double) * (npar > 0 ? npar : 1)), "memAlloc")) return 2;
     const std::string ids = param_ids ? param_ids : "";
-    if (!compile(program(c_body, ids), S.mod, S.kern)) return 3;
+    if (!compile(program(c_body, ids, S.mixed), S.mod, S.kern)) return 3;
     S.ready = true; return 0;
 }
 
@@ -302,8 +335,8 @@ int nf_gpu_set_function(const char* c_body, const char* param_ids, int npar) {
 struct LaunchStats {
     std::atomic<unsigned long long> n{0}, ns{0};
     ~LaunchStats() {
-        if (n > 0) std::fprintf(stderr, "GPU: %llu likelihood evaluations on the device, %.3f ms each as seen by the host threads\n",
-                                static_cast<unsigned long long>(n), 1e-6 * ns / n);
+        if (n > 0) std::fprintf(stderr, "GPU: %llu likelihood evaluations on the device in %s precision, %.3f ms each as seen by the host threads\n",
+                                static_cast<unsigned long long>(n), S.mixed ? "per-term mixed" : "double", 1e-6 * ns / n);
     }
 } g_stats;
 

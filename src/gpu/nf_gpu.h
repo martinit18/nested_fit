@@ -9,6 +9,7 @@ extern "C" {
 // Preference from the input file: "auto", "cuda", "hip", "cpu". The NESTED_FIT_DEVICE
 // environment variable takes precedence. Call before nf_gpu_available().
 void nf_gpu_set_preference(const char* device);
+void nf_gpu_set_precision(const char* precision);   /* "double" (default) or "mixed": NF_TERM terms in single, the large ones in double */
 // 1 if a vendor runtime loads and at least one device answers; 0 otherwise.
 int nf_gpu_available(void);
 // Human-readable device name, or "" when unavailable.

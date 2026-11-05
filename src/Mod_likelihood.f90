@@ -19,7 +19,7 @@ MODULE MOD_LIKELIHOOD
   
   ! String manipulation
   USE MOD_STRUTIL
-  USE MOD_GPU, ONLY: gpu_on, gpu_threads, gpu_pref, nf_gpu_loglike, nf_gpu_device_name, GPU_SETUP, C_STR, READ_TEXT_FILE
+  USE MOD_GPU, ONLY: gpu_on, gpu_threads, gpu_mixed, gpu_pref, nf_gpu_loglike, nf_gpu_device_name, GPU_SETUP, C_STR, READ_TEXT_FILE
   !$ USE omp_lib, ONLY: omp_get_thread_num
 
   !$ USE OMP_LIB
@@ -371,9 +371,9 @@ CONTAINS
        like_kind = 2
     END IF
     IF (ALLOCATED(nc_err)) THEN
-       CALL GPU_SETUP(x(1:n,1), nc(1:n,1), nc_err(1:n,1), n, like_kind, nth, src, gpu_param_ids, n_par, why, opt_device, opt_gpu_min_points, opt_gpu_threads)
+       CALL GPU_SETUP(x(1:n,1), nc(1:n,1), nc_err(1:n,1), n, like_kind, nth, src, gpu_param_ids, n_par, why, opt_device, opt_gpu_min_points, opt_gpu_threads, opt_gpu_precision)
     ELSE   ! counts data carry no error column; kind 0 never reads it
-       CALL GPU_SETUP(x(1:n,1), nc(1:n,1), nc(1:n,1), n, like_kind, nth, src, gpu_param_ids, n_par, why, opt_device, opt_gpu_min_points, opt_gpu_threads)
+       CALL GPU_SETUP(x(1:n,1), nc(1:n,1), nc(1:n,1), n, like_kind, nth, src, gpu_param_ids, n_par, why, opt_device, opt_gpu_min_points, opt_gpu_threads, opt_gpu_precision)
     END IF
     IF (gpu_on) THEN
        IF (gpu_threads > 0 .AND. gpu_threads < nth) THEN
@@ -381,7 +381,11 @@ CONTAINS
        ELSE
           why = ''
        END IF
-       CALL LOG_MESSAGE('GPU: likelihood on '//TRIM(C_STR(nf_gpu_device_name()))//' (double precision)'//TRIM(why))
+       IF (gpu_mixed) THEN
+          CALL LOG_MESSAGE('GPU: likelihood on '//TRIM(C_STR(nf_gpu_device_name()))//' (per-term mixed precision: NF_TERM in single, large terms in double)'//TRIM(why))
+       ELSE
+          CALL LOG_MESSAGE('GPU: likelihood on '//TRIM(C_STR(nf_gpu_device_name()))//' (double precision)'//TRIM(why))
+       END IF
        CALL GPU_SELF_TEST()
     ELSE
        CALL LOG_MESSAGE('GPU: not used ('//TRIM(why)//')')
@@ -390,15 +394,20 @@ CONTAINS
 
   SUBROUTINE GPU_SELF_TEST()
     ! The same evidence needs the same likelihood: the device evaluates it at three points of
-    ! the prior box against the CPU. It must agree to double-precision reduction noise, or
-    ! the device is refused. Also the first measurement a user sees:
+    ! the prior box against the CPU. Double must agree to double-precision reduction noise and
+    ! per-term mixed to 1e-6, or the device is refused. Also the first measurement a user sees:
     ! one evaluation on the device against one CPU thread.
     REAL(8), DIMENSION(npar) :: p
-    REAL(8) :: cpu, dev, t_cpu, t_dev, worst
+    REAL(8) :: cpu, dev, t_cpu, t_dev, worst, tol
     INTEGER(8) :: t0, t1, rate
     INTEGER :: k
+    CHARACTER(LEN=16) :: name
     CHARACTER(512) :: msg
     worst = 0d0; t_cpu = HUGE(1d0); t_dev = HUGE(1d0)
+    name = 'double'; tol = 1d-8
+    IF (gpu_mixed) THEN
+       name = 'mixed (per-term)'; tol = 1d-6
+    END IF
     CALL SYSTEM_CLOCK(COUNT_RATE=rate)
     DO k = 1, 3
        p = par_bnd1 + (0.1d0 + 0.4d0*(k-1))*(par_bnd2 - par_bnd1)
@@ -412,7 +421,7 @@ CONTAINS
        t_dev = MIN(t_dev, DBLE(t1 - t0)/DBLE(rate))
        worst = MAX(worst, ABS(dev - cpu)/MAX(1d0, ABS(cpu)))
     END DO
-    WRITE(msg, '(a,es8.1,a,es9.2,a,es9.2,a,f8.1,a)') 'GPU: self-test: max relative difference to the CPU ', worst, &
+    WRITE(msg, '(a,a,a,es8.1,a,es9.2,a,es9.2,a,f8.1,a)') 'GPU: self-test, ', TRIM(name), ': max relative difference to the CPU ', worst, &
          '; one evaluation ', t_dev*1d3, ' ms on the device, ', t_cpu*1d3, ' ms on one CPU thread (', t_cpu/t_dev, 'x)'
     CALL LOG_MESSAGE(TRIM(msg))
     ! The decision "install and it decides": with device = auto the card is used only when it
@@ -426,9 +435,10 @@ CONTAINS
        WRITE(msg, '(a,es9.2,a,es9.2,a,i0,a)') 'GPU: not used (one evaluation ', t_dev*1d3, ' ms on the device vs ', t_cpu*1d3, &
             ' ms on one CPU thread: the ', nth, ' CPU threads are faster together; search.device: cuda forces the card)'
        CALL LOG_MESSAGE(TRIM(msg))
-    ELSE IF (worst > 1d-8 .OR. worst /= worst) THEN
+    ELSE IF (worst > tol .OR. worst /= worst) THEN
        gpu_on = .FALSE.
-       CALL LOG_MESSAGE('GPU: not used (self-test failed: the device and the CPU disagree on the likelihood in double precision)')
+       WRITE(msg, '(a,a,a,es8.1,a)') 'GPU: not used (self-test failed: ', TRIM(name), ' precision differs from the CPU by more than ', tol, ' in log L)'
+       CALL LOG_MESSAGE(TRIM(msg))
     END IF
   END SUBROUTINE GPU_SELF_TEST
 

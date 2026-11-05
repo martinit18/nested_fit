@@ -5,6 +5,13 @@
 #define NF_DEV __device__ __forceinline__
 #endif
 #define NF_PI 3.141592653589793
+// An additive term of a model: NF_TERM(multiplier, function, args...) = multiplier*function(args...).
+// Under per-term precision (search.gpu_precision: mixed) the device evaluates the
+// term in single precision and again in double only when it is large against the data's
+// noise at that point; elsewhere, and on the CPU, it is the plain product.
+#ifndef NF_TERM
+#define NF_TERM(mult, f, ...) ((mult)*f(__VA_ARGS__))
+#endif
 
 NF_DEV double GAUSS_IF(double x, double x0, double amp, double sigma) {
   double e = (x - x0)*(x - x0)/(2.0*sigma*sigma);
@@ -27,7 +34,11 @@ NF_DEV double nf_powi(double x, int m) {
 // are single precision here, so the device returns the CPU's values. Returns 1 where the
 // Fortran sets FLAG (overflow), with u = v = 0.
 NF_DEV int nf_wofz(double xi, double yi, double* uo, double* vo) {
+#ifdef NF_SINGLE
+  const double FACTOR = 1.12837916709551257388f, RMAXREAL = 1e30f, RMAXEXP = 87.0f, RMAXGONI = 1e7f;
+#else
   const double FACTOR = 1.12837916709551257388, RMAXREAL = 0.5e154, RMAXEXP = 708.503061461606, RMAXGONI = 3.53711887601422e15;
+#endif
   const double xabs = fabs(xi), yabs = fabs(yi), x = xabs/(double)6.3f, y = yabs/(double)4.4f;
   double u = 0.0, v = 0.0, u2 = 0.0, v2 = 0.0;
   *uo = 0.0; *vo = 0.0;
