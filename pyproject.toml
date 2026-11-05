@@ -70,6 +70,8 @@ archs = ["x86_64", "arm64"]
 archs = ["x86_64"]
 # libquadmath static too: the executable then needs no bundled library, so auditwheel's patchelf never rewrites it (it corrupted it: the nightly wheels segfaulted at startup).
 environment = "CFLAGS='-static-libgcc -static-libstdc++' CXXFLAGS='-static-libgcc -static-libstdc++' FFLAGS='-static-libgfortran -static-libquadmath'"
+# libgomp is not bundled either: nested_fit needs gfortran at run time (it compiles the model's expression), and gfortran brings libgomp.
+repair-wheel-command = "auditwheel repair --exclude libgomp.so.1 -w {dest_dir} {wheel}"
 
 [tool.setuptools_scm]
 fallback_version = "1.0.0"
