@@ -55,6 +55,11 @@ pipx install nested_fit
 ```
 (If you need to install a beta version from the **nightly** branch, use the command `pip install --pre nested_fit`)
 
+With an NVIDIA GPU, `pipx install "nested_fit[cuda]"` adds the runtime compiler the GPU backend
+needs; the driver is the only other requirement, no CUDA toolkit. The likelihood then runs on
+the GPU when that is faster than the CPU threads together, and on the CPU otherwise, with one
+log line saying which. Details and controls in `src/gpu/README.md`.
+
 The `examples/` directory is bundled with the package. After installation you can
 copy it to a local working area in a couple of ways:
 

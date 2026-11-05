@@ -34,6 +34,10 @@ dependencies = [
 	"plotext"
 ]
 
+[project.optional-dependencies]
+# GPU on NVIDIA without a CUDA toolkit: the driver plus this runtime compiler is all the backend needs.
+cuda = ["nvidia-cuda-nvrtc-cu12"]
+
 [project.scripts]
 nested_fit = "pynested_fit.cliw:main"
 

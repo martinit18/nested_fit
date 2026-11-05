@@ -10,6 +10,21 @@ from rich.layout import Layout as RLayout
 from rich.panel import Panel as RPanel
 from rich.table import Table as RTable
 from rich import box as rbox
+import importlib.util
+import os
+
+
+def _backend_env():
+    # The binary looks for the GPU runtime compiler itself; point it at the pip wheel when present.
+    env = os.environ.copy()
+    if 'NESTED_FIT_NVRTC_PATH' not in env:
+        spec = importlib.util.find_spec('nvidia.cuda_nvrtc')
+        if spec and spec.submodule_search_locations:
+            lib = pathlib.Path(list(spec.submodule_search_locations)[0]) / 'lib'
+            found = sorted(lib.glob('libnvrtc.so*')) + sorted(lib.glob('nvrtc64_*.dll'))
+            if found:
+                env['NESTED_FIT_NVRTC_PATH'] = str(found[0])
+    return env
 # from rich.text import Text as RText
 # from rich.progress import Progress as RProgress
 # from rich.progress import BarColumn as RBarColumn
@@ -399,6 +414,7 @@ class Configurator():
                  search_maxtries=1000,
                  search_multries=100,
                  search_maxsteps=100000,
+                 device='auto',
                  hard_wrtiting=True,
 
                  conv_method='LIKE_ACC',
@@ -440,6 +456,7 @@ class Configurator():
         self._config['search'] = {}
         self._config['search']['livepoints'] = livepoints
         self._config['search']['method'] = search_method
+        self._config['search']['device'] = device
         self._config['search']['param1'] = search_params[0]
         self._config['search']['param2'] = search_params[1]
         self._config['search']['max_tries'] = search_maxtries
@@ -589,6 +606,7 @@ class Configurator():
                 [nf_bin, '-lo', '-v', 'error'],
                 stdout=subprocess.PIPE,
                 cwd=pathlib.Path(path).resolve(),
+                env=_backend_env(),
                 encoding='utf-8',
                 text=True
             )
@@ -611,7 +629,8 @@ class Configurator():
             self._nf_process = subprocess.Popen(
                 [nf_bin],
                 stdout=subprocess.PIPE, # NOTE: (Cesar) PIPE for errors
-                cwd=pathlib.Path(path).resolve()
+                cwd=pathlib.Path(path).resolve(),
+                env=_backend_env()
             )
 
             while self._nf_process.poll() is None:
@@ -627,6 +646,7 @@ class Configurator():
                 [nf_bin],
                 stdout=subprocess.PIPE,
                 cwd=pathlib.Path(path).resolve(),
+                env=_backend_env(),
                 encoding='utf-8',
                 text=True
             )
