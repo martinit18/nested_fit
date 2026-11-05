@@ -19,7 +19,7 @@ MODULE MOD_LIKELIHOOD
   
   ! String manipulation
   USE MOD_STRUTIL
-  USE MOD_GPU, ONLY: gpu_on, gpu_threads, gpu_mixed, gpu_pref, nf_gpu_loglike, nf_gpu_device_name, GPU_SETUP, C_STR, READ_TEXT_FILE
+  USE MOD_GPU, ONLY: gpu_on, gpu_threads, gpu_mixed, gpu_pref, gpu_precision_auto, gpu_threads_auto, nf_gpu_loglike, nf_gpu_device_name, GPU_SETUP, C_STR, READ_TEXT_FILE
   !$ USE omp_lib, ONLY: omp_get_thread_num
 
   !$ USE OMP_LIB
@@ -376,15 +376,12 @@ CONTAINS
        CALL GPU_SETUP(x(1:n,1), nc(1:n,1), nc(1:n,1), n, like_kind, nth, src, gpu_param_ids, n_par, why, opt_device, opt_gpu_min_points, opt_gpu_threads, opt_gpu_precision)
     END IF
     IF (gpu_on) THEN
-       IF (gpu_threads > 0 .AND. gpu_threads < nth) THEN
-          WRITE(why, '(a,i0,a,i0,a)') ' on ', gpu_threads, ' of ', nth, ' threads, the others on the CPU'
-       ELSE
-          why = ''
-       END IF
+       why = ''
+       IF (gpu_precision_auto) why = ', chosen from the model'
        IF (gpu_mixed) THEN
-          CALL LOG_MESSAGE('GPU: likelihood on '//TRIM(C_STR(nf_gpu_device_name()))//' (per-term mixed precision: NF_TERM in single, large terms in double)'//TRIM(why))
+          CALL LOG_MESSAGE('GPU: '//TRIM(C_STR(nf_gpu_device_name()))//' found; per-term mixed precision (NF_TERM terms in single, the large ones in double'//TRIM(why)//')')
        ELSE
-          CALL LOG_MESSAGE('GPU: likelihood on '//TRIM(C_STR(nf_gpu_device_name()))//' (double precision)'//TRIM(why))
+          CALL LOG_MESSAGE('GPU: '//TRIM(C_STR(nf_gpu_device_name()))//' found; double precision'//TRIM(why))
        END IF
        CALL GPU_SELF_TEST()
     ELSE
@@ -398,7 +395,8 @@ CONTAINS
     ! per-term mixed to 1e-6, or the device is refused. Also the first measurement a user sees:
     ! one evaluation on the device against one CPU thread.
     REAL(8), DIMENSION(npar) :: p
-    REAL(8) :: cpu, dev, t_cpu, t_dev, worst, tol
+    REAL(8) :: cpu, dev, t_cpu, t_dev, worst, tol, r
+    INTEGER, PARAMETER :: streams_max = 8   ! host threads launching on the GPU at once (measured on an RTX A4000: 8 streams saturate it in per-term precision, 2 do not)
     INTEGER(8) :: t0, t1, rate
     INTEGER :: k
     CHARACTER(LEN=16) :: name
@@ -424,20 +422,41 @@ CONTAINS
     WRITE(msg, '(a,a,a,es8.1,a,es9.2,a,es9.2,a,f8.1,a)') 'GPU: self-test, ', TRIM(name), ': max relative difference to the CPU ', worst, &
          '; one evaluation ', t_dev*1d3, ' ms on the device, ', t_cpu*1d3, ' ms on one CPU thread (', t_cpu/t_dev, 'x)'
     CALL LOG_MESSAGE(TRIM(msg))
-    ! The decision "install and it decides": with device = auto the card is used only when it
-    ! beats the CPU threads together. One evaluation per launch costs ~20 us on the host side,
-    ! so a cheap model on a few thousand points is faster on the cores (measured: every example
-    ! of the suite), and a heavy one is faster on the card by 20-200x (measured: a 284-term Voigt
-    ! model on 16 501 points). The ratio of the two self-test timings, against the thread count,
-    ! is that boundary; search.device = cuda/hip (or NESTED_FIT_DEVICE) forces the card regardless.
-    IF (TRIM(gpu_pref) == 'auto' .AND. t_cpu/t_dev < DBLE(nth)) THEN
+    ! The decision "install and it decides". One launch costs ~20 us on the host side, so a cheap
+    ! model on a few thousand points is faster on the cores (measured: every example of the suite)
+    ! and a heavy one is faster on the GPU by 20-200x per evaluation (measured: a 284-term Voigt
+    ! model on 16 501 points). r = the ratio of the two self-test timings, one evaluation on one
+    ! CPU thread over one on the GPU. With search.gpu_threads left to -1:
+    !   r <= 1          the GPU does not beat one thread: not used (search.device: cuda forces it)
+    !   1 < r < nth     a split: 2 threads on the GPU, the others keep computing on their cores, so
+    !                   the total is never below the cores alone (measured 1.47x the GPU alone)
+    !   r >= nth        the GPU takes up to streams_max threads, the rest stay on the cores
+    ! An explicit gpu_threads is kept as given.
+    r = t_cpu/t_dev
+    IF (gpu_threads_auto) THEN
+       IF (r >= DBLE(nth) .OR. TRIM(gpu_pref) /= 'auto') THEN
+          gpu_threads = MIN(nth, streams_max)
+       ELSE IF (r > 1d0) THEN
+          gpu_threads = MIN(nth, 2)
+       ELSE
+          gpu_threads = 0
+       END IF
+    END IF
+    IF (gpu_threads == 0) THEN
        gpu_on = .FALSE.
-       WRITE(msg, '(a,es9.2,a,es9.2,a,i0,a)') 'GPU: not used (one evaluation ', t_dev*1d3, ' ms on the device vs ', t_cpu*1d3, &
-            ' ms on one CPU thread: the ', nth, ' CPU threads are faster together; search.device: cuda forces the card)'
+       WRITE(msg, '(a,es9.2,a,es9.2,a)') 'GPU: not used (one evaluation ', t_dev*1d3, ' ms on the GPU vs ', t_cpu*1d3, &
+            ' ms on one CPU thread: not faster than one thread; search.device: cuda forces the GPU)'
        CALL LOG_MESSAGE(TRIM(msg))
     ELSE IF (worst > tol .OR. worst /= worst) THEN
        gpu_on = .FALSE.
        WRITE(msg, '(a,a,a,es8.1,a)') 'GPU: not used (self-test failed: ', TRIM(name), ' precision differs from the CPU by more than ', tol, ' in log L)'
+       CALL LOG_MESSAGE(TRIM(msg))
+    ELSE IF (gpu_threads > 0 .AND. gpu_threads < nth) THEN
+       WRITE(msg, '(a,i0,a,i0,a,f7.1,a,i0,a)') 'GPU: used on ', gpu_threads, ' of ', nth, ' threads (one evaluation ', r, &
+            'x one CPU thread); the other ', nth - gpu_threads, ' threads stay on the CPU'
+       CALL LOG_MESSAGE(TRIM(msg))
+    ELSE
+       WRITE(msg, '(a,i0,a,f7.1,a)') 'GPU: used on all ', nth, ' threads (one evaluation ', r, 'x one CPU thread)'
        CALL LOG_MESSAGE(TRIM(msg))
     END IF
   END SUBROUTINE GPU_SELF_TEST

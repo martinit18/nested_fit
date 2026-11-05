@@ -6,6 +6,8 @@ MODULE MOD_GPU
   LOGICAL :: gpu_on = .FALSE.
   INTEGER :: gpu_threads = -1   ! threads 0..gpu_threads-1 evaluate on the device, the rest on the CPU; -1 = all
   LOGICAL :: gpu_mixed = .FALSE.    ! per-term precision: NF_TERM terms in single, the large ones in double
+  LOGICAL :: gpu_precision_auto = .FALSE.   ! the precision was chosen from the model (search.gpu_precision: auto)
+  LOGICAL :: gpu_threads_auto = .FALSE.     ! the thread split is left to the self-test (search.gpu_threads: -1)
   CHARACTER(LEN=16) :: gpu_pref = 'auto'   ! the device preference in force: NESTED_FIT_DEVICE, else search.device
 
   INTERFACE
@@ -119,6 +121,9 @@ CONTAINS
     prec = precision_pref
     CALL GET_ENVIRONMENT_VARIABLE('NESTED_FIT_GPU_PRECISION', env, STATUS=st)
     IF (st == 0 .AND. LEN_TRIM(env) > 0) prec = env
+    gpu_precision_auto = (prec(1:1) == 'a' .OR. prec(1:1) == 'A')
+    ! auto: a model that marks its additive terms with NF_TERM asked for per-term precision
+    IF (gpu_precision_auto) prec = MERGE('mixed ', 'double', INDEX(c_body, 'NF_TERM') > 0)
     gpu_mixed = (prec(1:1) == 'm' .OR. prec(1:1) == 'M')
     CALL nf_gpu_set_precision(TRIM(prec)//c_null_char)
     IF (nf_gpu_set_function(TRIM(c_body)//c_null_char, TRIM(param_ids)//c_null_char, npar) /= 0) THEN
@@ -129,6 +134,7 @@ CONTAINS
     gpu_threads = threads_pref
     CALL GET_ENVIRONMENT_VARIABLE('NESTED_FIT_GPU_THREADS', env, STATUS=st)
     IF (st == 0) READ(env, *, IOSTAT=st) gpu_threads
+    gpu_threads_auto = (gpu_threads < 0)
     IF (gpu_threads == 0) THEN
       why = 'gpu_threads = 0'
       CALL nf_gpu_free()
