@@ -52,7 +52,8 @@ nested_fit = "pynested_fit.cliw:main"
 build = "cp*"
 
 # Force old toolchain (we don't use anything that requires glibc >= 2.17 dynamically)
-manylinux-x86_64-image = "manylinux2014"
+# manylinux_2_28 (glibc >= 2.28, 2018): its GCC 14 can link libquadmath statically, see [tool.cibuildwheel.linux]
+manylinux-x86_64-image = "manylinux_2_28"
 
 # Now statically link to libgcc / stdlib / libgfortran
 environment = "CFLAGS='-static-libgcc -static-libstdc++' CXXFLAGS='-static-libgcc -static-libstdc++' FFLAGS='-static-libgfortran'"
@@ -67,8 +68,8 @@ archs = ["x86_64", "arm64"]
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64"]
-# -fPIE/-pie: auditwheel's patchelf corrupts an EXEC-type executable (the wheel segfaulted at startup); a PIE one it handles.
-environment = "CFLAGS='-static-libgcc -static-libstdc++ -fPIE' CXXFLAGS='-static-libgcc -static-libstdc++ -fPIE' FFLAGS='-static-libgfortran -fPIE' LDFLAGS='-pie'"
+# libquadmath static too: the executable then needs no bundled library, so auditwheel's patchelf never rewrites it (it corrupted it: the nightly wheels segfaulted at startup).
+environment = "CFLAGS='-static-libgcc -static-libstdc++' CXXFLAGS='-static-libgcc -static-libstdc++' FFLAGS='-static-libgfortran -static-libquadmath'"
 
 [tool.setuptools_scm]
 fallback_version = "1.0.0"
