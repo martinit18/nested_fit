@@ -18,6 +18,11 @@ MODULE MOD_AUTOFUNC
     USE iso_c_binding
     IMPLICIT NONE
     
+    ! What the GPU backend needs from the last compiled LaTeX function: its C body,
+    ! the parameter identifiers in params() order, and their count. '' when not expressible.
+    CHARACTER(512), PUBLIC :: gpu_c_body = '', gpu_param_ids = ''
+    INTEGER,        PUBLIC :: gpu_npar = 0
+
     PUBLIC :: COMPILE_CACHE_FUNC, &
         COMPILE_CACHE_MFG, &
         COMPILE_CACHE_FUNC_NATIVE, &
@@ -53,6 +58,7 @@ MODULE MOD_AUTOFUNC
         INTEGER(c_int) :: num_builtin
 
         TYPE(c_ptr)    :: infixcode_f90
+        TYPE(c_ptr)    :: infixcode_c
         INTEGER(c_int) :: error
     END TYPE ParseOutput_t
 
@@ -70,6 +76,7 @@ MODULE MOD_AUTOFUNC
         INTEGER                                  :: num_builtin
 
         CHARACTER(512)                           :: infixcode_f90
+        CHARACTER(512)                           :: infixcode_c
         INTEGER                                  :: error
 
         LOGICAL                                  :: valid = .FALSE.
@@ -361,6 +368,7 @@ MODULE MOD_AUTOFUNC
 
         ! Infix code string
         CALL C_F_STRING_I(c_type%infixcode_f90, f_type%infixcode_f90)
+        CALL C_F_STRING_I(c_type%infixcode_c, f_type%infixcode_c)
 
         ! Number of function arguments
         CALL C_F_INTEGER_ARRAY(c_type%func_argc, f_type%func_argc, f_type%num_funcs)
@@ -770,6 +778,14 @@ MODULE MOD_AUTOFUNC
             END DO
             WRITE(77,'(a)') char(9)
             WRITE(77,'(a)') char(9)//TRIM(funcname)//' = '//TRIM(expression)
+            ! Keep what the GPU backend needs, in the same params() order as written above
+            gpu_c_body    = parse_data%infixcode_c
+            gpu_npar      = parse_data%num_params
+            gpu_param_ids = ''
+            DO i = 1, parse_data%num_params
+                IF (i.GT.1) gpu_param_ids = TRIM(gpu_param_ids)//','
+                gpu_param_ids = TRIM(gpu_param_ids)//TRIM(parse_data%parameter_identifiers(i))
+            END DO
             WRITE(77,'(a)') 'end function '//TRIM(funcname)
         CLOSE(77)
 

@@ -42,6 +42,7 @@ extern "C" struct ParseOutput
     char* builtin_custom;        // The detected custom built in functions (declared inside internal_funcs.f90)
     int   num_builtin;           // The number of custom built in calls
     char* infixcode_f90;         // The latex code converted to f90 for compilation
+    char* infixcode_c;           // The same expression in C syntax for the GPU backend; "" when not expressible
     int   error;                 // The error code of the last error
 };
 
@@ -519,6 +520,45 @@ static std::vector<std::string> ExtractParameters(const std::string& stripped_in
     return parameters;
 }
 
+// Fortran `a**b` -> C `pow(a,b)`. Rightmost first, so `a**b**c` keeps its right
+// associativity; an operand is a parenthesised group (with any call name before it),
+// or an identifier/number, with an optional unary sign on the right.
+static std::string PowToC(std::string s)
+{
+    auto isid = [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '.'; };
+    auto group_back = [&](size_t i) { int d = 0; do { --i; if(s[i] == ')') ++d; else if(s[i] == '(') --d; } while(i > 0 && d > 0); return i; };
+    auto group_fwd  = [&](size_t i) { int d = 0; do { if(s[i] == '(') ++d; else if(s[i] == ')') --d; ++i; } while(i < s.size() && d > 0); return i; };
+    for(size_t p = s.rfind("**"); p != std::string::npos; p = s.rfind("**"))
+    {
+        size_t l = p;      while(l > 0 && s[l - 1] == ' ') --l;
+        size_t lstart = (l > 0 && s[l - 1] == ')') ? group_back(l) : l;
+        while(lstart > 0 && isid(s[lstart - 1])) --lstart;
+        size_t r = p + 2;  while(r < s.size() && s[r] == ' ') ++r;
+        size_t rend = r;   if(rend < s.size() && (s[rend] == '-' || s[rend] == '+')) ++rend;
+        if(rend < s.size() && s[rend] == '(') rend = group_fwd(rend);
+        else { while(rend < s.size() && isid(s[rend])) ++rend; if(rend < s.size() && s[rend] == '(') rend = group_fwd(rend); }
+        s = s.substr(0, lstart) + "pow(" + s.substr(lstart, l - lstart) + "," + s.substr(r, rend - r) + ")" + s.substr(rend);
+    }
+    return s;
+}
+
+// The f90 expression in C syntax for the GPU backend, or "" when it uses something the
+// device build does not provide (Voigt/Faddeeva, spline interpolation, nested user
+// functions). Only the internal functions with device implementations are allowed.
+static std::string ToCExpression(const std::string& f90, int num_user_funcs)
+{
+    if(num_user_funcs > 0) return "";
+    for(const char* banned : { "Interpolate(" }) if(f90.find(banned) != std::string::npos) return "";   // VOIGT_IF/WofzRe are in the device library
+    std::string s = f90;
+    s = std::regex_replace(s, std::regex("SIGN\\(REAL\\(1\\.0, 8\\),"), "copysign(1.0,");
+    static const std::pair<const char*, const char*> renames[] = {
+        { "EXP", "exp" }, { "LOG", "log" }, { "SIN", "sin" }, { "COS", "cos" }, { "TAN", "tan" },
+        { "ASIN", "asin" }, { "ACOS", "acos" }, { "ATAN", "atan" }, { "GAMMA", "tgamma" }, { "ABS", "fabs" }, { "ERF", "erf" } };
+    for(const auto& rn : renames) s = std::regex_replace(s, std::regex(std::string("\\b") + rn.first + "\\("), std::string(rn.second) + "(");
+    s = std::regex_replace(s, std::regex("(\\d)[dD]([+-]?\\d+)"), "$1e$2");   // Fortran double exponent
+    return PowToC(s);
+}
+
 static std::vector<std::string> StringSplit(const std::string& input, const char delimiter)
 {
     ZoneScoped;
@@ -890,6 +930,10 @@ extern "C" ParseOutput ParseLatexToF90(const char* input_stream)
     return_val.infixcode_f90 = (char*)malloc(sizeof(char) * (infix_code.size() + 1));
     strcpy(return_val.infixcode_f90, infix_code.c_str());
 
+    const std::string infix_c = ToCExpression(infix_code, static_cast<int>(functions.size()));
+    return_val.infixcode_c = (char*)malloc(sizeof(char) * (infix_c.size() + 1));
+    strcpy(return_val.infixcode_c, infix_c.c_str());
+
     return_val.functions = (char*)malloc(sizeof(char) * 4096);
     return_val.functions[0] = 0;
     return_val.num_funcs = static_cast<int>(functions.size());
@@ -936,6 +980,7 @@ extern "C" void FreeParseOutput(ParseOutput* output)
         if(output->builtin_custom)        free(output->builtin_custom);
         // if(output->constants)          free(output->constants);
         if(output->infixcode_f90)         free(output->infixcode_f90);
+        if(output->infixcode_c)           free(output->infixcode_c);
     }
 }
 
