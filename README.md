@@ -443,7 +443,7 @@ A legacy function of your own does not need a copy into `src/` and a rebuild: pu
 ```yaml
 function:
   expression: TM_STEP_ANCHOR_FULL2   # FUNCTION TM_STEP_ANCHOR_FULL2(x, npar, val) in the file below
-  source: tm_lines.f                 # .f, .F, .for, .f90 or .F90
+  source: tm_lines.f                 # .f, .F, .for, .f90 or .F90; or a C file, see below
   params:
     ...                              # with npar, as for any legacy function
 ```
@@ -454,6 +454,12 @@ with the library's own functions, so it can call `VOIGT`, `GAUSS_BG`, ... as a f
 the whole `USERFCN.f` with your functions added works too. The functions that read the `func_exp` and `func_conv` COMMON
 blocks are the exception: from a file they see their own copy of those blocks. On a GPU, `gpu_source` beside `source`
 gives the device the same function in C (see `src/gpu/README.md`).
+
+The file can be C instead (`.c`, `.cc`, `.cpp`, `.cxx`): then it defines `double nf_user(double x, const double* params)`,
+with `params[i]` the parameter of `npar: i+1`, and the profiles `GAUSS_IF`, `LORE_IF`, `VOIGT_IF`, `erf`, `exp`, ... in
+scope. The same file is compiled for the CPU, behind a wrapper with the legacy calling convention, and for the GPU when
+there is one: one source, both sides, and the startup self-test compares the two compilers. `src/gpu/README.md` has the
+conventions and the `NF_TERM` markers that give per-term precision on the GPU.
 
 *Additional information can be found in the reference articles.*
 

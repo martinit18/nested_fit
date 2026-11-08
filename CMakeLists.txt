@@ -274,6 +274,13 @@ rm_link_resources(
 )
 
 rm_link_resources(
+	NAME "DeviceLib"
+	TARGET ${nested_fit_target}
+	FILES ${CMAKE_SOURCE_DIR}/src/gpu/nf_device_lib.h
+	OUTDIR "sys"
+)
+
+rm_link_resources(
 	NAME "ManifestFile"
 	TARGET ${nested_fit_target}
 	FILES ${CMAKE_BINARY_DIR}/manifest.txt

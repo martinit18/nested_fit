@@ -56,6 +56,8 @@ The file is plain C with the device library in scope (`VOIGT_IF`, `erf`, `exp`, 
 for the GPU at hand like an expression is; the CPU keeps calling the Fortran. Writing the C
 is the same work as writing the Fortran was. The Fortran itself can come from a file beside the
 input (`function.source`, see the main README): then neither side needs a rebuild of nested_fit.
+And `function.source` can be the C file itself: the CPU compiles it with g++ behind a wrapper
+with the legacy calling convention, the GPU with NVRTC, no `gpu_source` and no Fortran at all.
 
 **Precision.** `search.gpu_precision` (env `NESTED_FIT_GPU_PRECISION`):
 

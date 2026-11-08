@@ -42,6 +42,7 @@ MODULE MOD_AUTOFUNC
         GET_CACHE, &
         cache_entry_t, &
         HAS_VALID_CPP_EXT, &
+        HAS_VALID_C_EXT, &
         HAS_VALID_F90_EXT
     PRIVATE
 
@@ -625,6 +626,15 @@ MODULE MOD_AUTOFUNC
         IF(ANY([ CHARACTER(8) :: 'cpp', 'cxx', 'c++', 'inl' ].EQ.ext)) HAS_VALID_CPP_EXT = .TRUE.
     END FUNCTION 
 
+    FUNCTION HAS_VALID_C_EXT(string)
+        ! A C or C++ file as function.source: nf_user(x, params), the GPU convention, on both sides
+        CHARACTER(LEN=*), INTENT(IN)  :: string
+        CHARACTER(32)                 :: ext
+        LOGICAL                       :: HAS_VALID_C_EXT
+        CALL FILENAME_FIND_EXT(string, ext)
+        HAS_VALID_C_EXT = ANY([ CHARACTER(8) :: 'c', 'cc', 'cpp', 'cxx', 'c++' ].EQ.ext)
+    END FUNCTION
+
     SUBROUTINE TOOL_NOT_FOUND(cmd)
         ! The shell could not run the compiler or linker of a run-time compile command: say which
         ! program is missing and how to install it, instead of the runtime's "Invalid command line"
@@ -1058,23 +1068,24 @@ MODULE MOD_AUTOFUNC
         CLOSE(u)
     END SUBROUTINE
 
-    ! `function.source`: the user's Fortran file compiled at run time into a library of its own,
-    ! named by the hash of its content and of the compile commands: an edited file is rebuilt,
-    ! an unchanged one is loaded as it is. It is linked with the cached objects (sys/), so it can
-    ! call the library's VOIGT, GAUSS_BG, ... (sys/legacy/) and a copy of the whole USERFCN.f links
-    ! too (the user's definitions win). The function is the legacy convention FUNCTION NAME(x, npar, val),
-    ! reached by its external Fortran symbol.
+    ! `function.source`: the user's file compiled at run time into a library of its own, named by
+    ! the hash of its content and of the compile commands: an edited file is rebuilt, an unchanged
+    ! one is loaded as it is. A Fortran file holds the legacy convention FUNCTION NAME(x, npar, val),
+    ! reached by its external symbol; it is linked with the cached objects (sys/), so it can call
+    ! the library's VOIGT, GAUSS_BG, ... (sys/legacy/), and a copy of the whole USERFCN.f links too
+    ! (the user's definitions win). A C file holds nf_user(x, params) as the GPU compiles it, and
+    ! is compiled for the CPU behind a wrapper with the legacy ABI: one file for both sides.
     SUBROUTINE LOAD_SOURCE_FUNC(path, funcname, procaddr)
         CHARACTER(LEN=*), INTENT(IN)  :: path, funcname
         TYPE(c_funptr),   INTENT(OUT) :: procaddr
         CHARACTER(LEN=:), ALLOCATABLE :: text
-        CHARACTER(LEN=1024) :: dir, lib, obj
+        CHARACTER(LEN=1024) :: dir, lib, obj, wrap, full
         CHARACTER(LEN=512)  :: base, cmd
         CHARACTER(LEN=128)  :: symbol
         CHARACTER(LEN=32)   :: ext, key
         INTEGER(4) :: h_text, h_cmd
-        INTEGER    :: status, cstat, i
-        LOGICAL    :: exist
+        INTEGER    :: status, cstat, i, u
+        LOGICAL    :: exist, is_c
         TYPE(c_ptr) :: handle
 
         INQUIRE(FILE=path, EXIST=exist)
@@ -1085,15 +1096,18 @@ MODULE MOD_AUTOFUNC
             CALL HALT_EXECUTION()
         ENDIF
         CALL FILENAME_FIND_EXT(path, ext)
-        IF(.NOT.ANY([ CHARACTER(8) :: 'f', 'F', 'for', 'f90', 'F90' ].EQ.ext)) THEN
+        is_c = HAS_VALID_C_EXT(path)
+        IF(.NOT.is_c .AND. .NOT.ANY([ CHARACTER(8) :: 'f', 'F', 'for', 'f90', 'F90' ].EQ.ext)) THEN
             CALL LOG_ERROR_HEADER()
-            CALL LOG_ERROR('function.source: `'//TRIM(path)//'` is not a Fortran file (.f, .F, .for, .f90, .F90).')
+            CALL LOG_ERROR('function.source: `'//TRIM(path)//'` is neither a Fortran file (.f, .F, .for, .f90, .F90) nor a C one (.c, .cc, .cpp, .cxx).')
             CALL LOG_ERROR_HEADER()
             CALL HALT_EXECUTION()
         ENDIF
+        symbol = funcname
+        CALL STR_TO_LOWER(symbol)
 
         CALL READ_FILE_BYTES(path, text)
-        cmd = TRIM(opt_f90_comp_cmd)//' '//TRIM(opt_lnk_cmd)//' '//version_full
+        cmd = TRIM(MERGE(opt_cpp_comp_cmd, opt_f90_comp_cmd, is_c))//' '//TRIM(opt_lnk_cmd)//' '//version_full
         CALL MURMURHASH2_32(text, LEN(text), h_text)
         CALL MURMURHASH2_32(cmd, LEN_TRIM(cmd), h_cmd)
         WRITE(key, '(z8.8,z8.8,z8.8)') h_text, LEN(text), h_cmd
@@ -1109,8 +1123,25 @@ MODULE MOD_AUTOFUNC
             CALL ENSURE_DIRECTORY(TRIM(dir)//'obj/')   ! two levels down: out of reach of the one-level object glob of the LaTeX cache link
             obj = TRIM(dir)//'obj/'//TRIM(base)//TRIM(obj_ext)
             CALL LOG_MESSAGE('Function source: compiling '//TRIM(path))
-            CALL EXECUTE_COMMAND_LINE(TRIM(opt_f90_comp_cmd)//' -ffixed-line-length-0 '//TRIM(path)//' -o '//TRIM(obj), EXITSTAT=status, CMDSTAT=cstat)
-            IF(cstat.NE.0 .OR. status.EQ.127) CALL TOOL_NOT_FOUND(TRIM(opt_f90_comp_cmd))
+            IF(is_c) THEN
+                ! the wrapper includes the device library (NF_DEV empty: plain functions) and the user's file
+                CALL GETCWD(full)
+                IF(path(1:1).NE.'/') full = TRIM(full)//'/'//TRIM(path)
+                IF(path(1:1).EQ.'/') full = path
+                wrap = TRIM(dir)//'obj/'//TRIM(base)//'_wrap.cpp'
+                OPEN(NEWUNIT=u, FILE=TRIM(wrap), STATUS='replace', ACTION='write')
+                WRITE(u, '(a)') '#include <math.h>'
+                WRITE(u, '(a)') '#define NF_DEV'
+                WRITE(u, '(a)') '#include "'//TRIM(nf_cache_folder)//'sys/nf_device_lib.h"'
+                WRITE(u, '(a)') '#include "'//TRIM(full)//'"'
+                WRITE(u, '(a)') 'extern "C" double '//TRIM(symbol)//'_(const double* x, const int* npar, const double* p){ (void)npar; return nf_user(*x, p); }'
+                CLOSE(u)
+                CALL EXECUTE_COMMAND_LINE(TRIM(opt_cpp_comp_cmd)//' '//TRIM(wrap)//' -o '//TRIM(obj), EXITSTAT=status, CMDSTAT=cstat)
+                IF(cstat.NE.0 .OR. status.EQ.127) CALL TOOL_NOT_FOUND(TRIM(opt_cpp_comp_cmd))
+            ELSE
+                CALL EXECUTE_COMMAND_LINE(TRIM(opt_f90_comp_cmd)//' -ffixed-line-length-0 '//TRIM(path)//' -o '//TRIM(obj), EXITSTAT=status, CMDSTAT=cstat)
+                IF(cstat.NE.0 .OR. status.EQ.127) CALL TOOL_NOT_FOUND(TRIM(opt_f90_comp_cmd))
+            ENDIF
             IF(status.NE.0) THEN
                 CALL LOG_ERROR_HEADER()
                 CALL LOG_ERROR('function.source: `'//TRIM(path)//'` does not compile (see the compiler messages above).')
@@ -1146,8 +1177,6 @@ MODULE MOD_AUTOFUNC
             CALL LOG_ERROR_HEADER()
             CALL HALT_EXECUTION()
         ENDIF
-        symbol = funcname
-        CALL STR_TO_LOWER(symbol)
         procaddr = dlsym(handle, TRIM(symbol)//'_'//c_null_char)
         IF(.NOT.c_associated(procaddr)) THEN
             CALL LOG_ERROR_HEADER()

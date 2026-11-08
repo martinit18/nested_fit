@@ -341,19 +341,29 @@ CONTAINS
 
   SUBROUTINE GPU_SETUP_DATA()
     ! Hand the data and the user function to the GPU backend. Sets gpu_on; one log line either way.
-    USE MOD_AUTOFUNC, ONLY: gpu_c_body, gpu_param_ids, gpu_npar
+    USE MOD_AUTOFUNC, ONLY: gpu_c_body, gpu_param_ids, gpu_npar, HAS_VALID_C_EXT
     CHARACTER(LEN=:), ALLOCATABLE :: src
     INTEGER :: like_kind, n, n_par
-    CHARACTER(512) :: why
+    CHARACTER(512) :: why, dev_source
     gpu_on = .FALSE.
     IF (.NOT.BIT_CHECK_IF(DATA_IS_1D) .OR. BIT_CHECK_IF(DATA_IS_SET) .OR. nset.NE.1) THEN
        CALL LOG_MESSAGE('GPU: not used (only 1D single-set data is supported yet)')
        RETURN
     END IF
     n = ndata_set(1)
-    IF (LEN_TRIM(opt_gpu_source) > 0) THEN
-       ! a device source written by the user takes the full parameter vector, as the legacy Fortran does
-       CALL READ_TEXT_FILE(TRIM(opt_gpu_source), src, why)
+    ! a device source written by the user takes the full parameter vector, as the legacy Fortran
+    ! does: function.gpu_source, or function.source itself when it is the C file
+    dev_source = opt_gpu_source
+    IF (LEN_TRIM(dev_source) == 0 .AND. LEN_TRIM(opt_function_source) > 0) THEN
+       IF (HAS_VALID_C_EXT(TRIM(opt_function_source))) THEN
+          dev_source = opt_function_source
+       ELSE
+          CALL LOG_MESSAGE('GPU: not used (function.source is Fortran; function.gpu_source gives the device the same function in C)')
+          RETURN
+       END IF
+    END IF
+    IF (LEN_TRIM(dev_source) > 0) THEN
+       CALL READ_TEXT_FILE(TRIM(dev_source), src, why)
        IF (LEN_TRIM(why) > 0) THEN
           CALL LOG_MESSAGE('GPU: not used ('//TRIM(why)//')')
           RETURN
