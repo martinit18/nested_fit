@@ -424,6 +424,7 @@ PROGRAM NESTED_FIT
   CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'search.device'    , opt_device   , MANDATORY=.FALSE.) ! 'auto' by default: GPU if present, else CPU
   CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.gpu_min_points', opt_gpu_min_points, MANDATORY=.FALSE.) ! 0 by default
   CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'function.gpu_source'  , opt_gpu_source  , MANDATORY=.FALSE.) ! device source of a legacy user function
+  CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'function.source'      , opt_function_source, MANDATORY=.FALSE.) ! Fortran file compiled at run time, legacy convention
   CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.gpu_threads'   , opt_gpu_threads , MANDATORY=.FALSE.) ! -1 by default: the self-test decides
   CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'search.gpu_precision' , opt_gpu_precision, MANDATORY=.FALSE.) ! 'auto' by default
   CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'search.hard_writing'  , hard_writing_parameters  , MANDATORY=.FALSE.) ! True by default
@@ -1015,6 +1016,7 @@ PROGRAM NESTED_FIT
    CALL json%push('input.search.livepoints', nlive)
    CALL json%push('input.search.device', TRIM(opt_device))
    CALL json%push('input.function.gpu_source', TRIM(opt_gpu_source))
+   CALL json%push('input.function.source', TRIM(opt_function_source))
    CALL json%push('input.search.gpu_threads', opt_gpu_threads)
    CALL json%push('input.search.gpu_precision', TRIM(opt_gpu_precision))
    CALL json%push('input.search.method', TRIM(search_method))
@@ -1189,8 +1191,8 @@ PROGRAM NESTED_FIT
    PROFILED(CONFIGURE_USERFUNCTION)
 
    IF(calc_mode.EQ.'DATA') THEN
-      ! Is it a legacy function?
-      LEGACY_USERFCN = IS_LEGACY_USERFCN(funcname(1))
+      ! Is it a legacy function? A bare name with function.source is one too: defined in that file
+      LEGACY_USERFCN = IS_LEGACY_USERFCN(funcname(1)) .OR. (LEN_TRIM(opt_function_source).GT.0 .AND. INDEX(funcname(1), '=').EQ.0)
    ELSE
       ! All integrated functions potentials are legacy function (for the moment)
       LEGACY_USERFCN = .TRUE.
@@ -1540,6 +1542,8 @@ PROGRAM NESTED_FIT
       CALL LOG_MESSAGE('Cache deleted.')
       CALL LOG_MESSAGE_HEADER()
       CALL DEL_FOLDER_RECURSIVE(nf_cache_folder//'user/')
+      CALL DEL_FOLDER_RECURSIVE(nf_cache_folder//'source/')
+      CALL DEL_FOLDER_RECURSIVE(nf_cache_folder//'sys/')   ! refilled by the next start
       CALL DEL_FILE(nf_cache_folder//'func_names.dat')
    ELSE
       CALL LOG_MESSAGE_HEADER()

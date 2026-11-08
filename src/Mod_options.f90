@@ -21,6 +21,10 @@ MODULE MOD_OPTIONS
     ! `function.gpu_source`: a C file defining nf_user(x, params) for a legacy (Fortran) user
     ! function, compiled for the device at run time. params[i] is the parameter with npar = i+1.
     CHARACTER(LEN=512) :: opt_gpu_source = ''
+    ! `function.source`: a Fortran file beside the input, compiled at run time into its own
+    ! library, defining the function named by `function.expression` in the legacy convention
+    ! FUNCTION NAME(x, npar, val). No copy into src/, no rebuild of nested_fit.
+    CHARACTER(LEN=512) :: opt_function_source = ''
     ! `search.gpu_threads`: how many of the OpenMP threads evaluate on the device; the others
     ! use the CPU, so both are busy. -1 (default): decided by the startup self-test, which keeps
     ! at most 8 threads, all on the GPU, when it uses the GPU (GPU_SELF_TEST).

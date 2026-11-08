@@ -6,6 +6,8 @@ MODULE MOD_USERFCN
     USE MOD_LOGGER
     USE MOD_AUTOFUNC
     USE MOD_PARAMETERS
+    USE MOD_OPTIONS, ONLY: opt_function_source
+    USE, INTRINSIC :: iso_c_binding, ONLY: c_funptr, C_F_PROCPOINTER
     IMPLICIT NONE
 
     PUBLIC :: USERFCN, USERFCN_SET, IS_LEGACY_USERFCN, SET_USERFUNC_PROCPTR, SET_USERFUNC_SET_PROCPTR
@@ -292,8 +294,13 @@ MODULE MOD_USERFCN
         CHARACTER(512), INTENT(IN) :: funcname
         CHARACTER(128)             :: func_header
         LOGICAL                    :: loaded_ok
+        TYPE(c_funptr)             :: procaddr
 
-        IF(.NOT.LEGACY_USERFCN) THEN
+        IF(LEGACY_USERFCN .AND. LEN_TRIM(opt_function_source).GT.0) THEN
+            ! The legacy function comes from the user's file, compiled at run time
+            CALL LOAD_SOURCE_FUNC(TRIM(opt_function_source), TRIM(funcname), procaddr)
+            CALL C_F_PROCPOINTER(procaddr, USERFCN)
+        ELSE IF(.NOT.LEGACY_USERFCN) THEN
             func_header = TRIM(funcname(1:INDEX(funcname, '(')-1))
             CALL LOG_TRACE('Setting user function pointer named => '//TRIM(func_header))
 
@@ -319,8 +326,13 @@ MODULE MOD_USERFCN
         CHARACTER(128)              :: func_header
         LOGICAL                     :: loaded_ok
         INTEGER                     :: i
+        TYPE(c_funptr)              :: procaddr
 
-        IF(.NOT.LEGACY_USERFCN) THEN
+        IF(LEGACY_USERFCN .AND. LEN_TRIM(opt_function_source).GT.0) THEN
+            ! The legacy set function comes from the user's file, compiled at run time
+            CALL LOAD_SOURCE_FUNC(TRIM(opt_function_source), TRIM(funcname(1)), procaddr)
+            CALL C_F_PROCPOINTER(procaddr, USERFCN_SET)
+        ELSE IF(.NOT.LEGACY_USERFCN) THEN
             ! Setup the user function for each available set
             DO i = 1, nset
                 func_header = TRIM(funcname(i)(1:INDEX(funcname(i), '(')-1))

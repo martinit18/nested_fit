@@ -139,6 +139,14 @@ set(SRC_EXTERNAL_FUNCS
     src/Mod_timestamp.f90   # NOTE :(César) Required for logging from the shared lib
     src/functions/WOFZ.f
 )
+# The legacy library, cached apart (sys/legacy/): a function.source file links it, to call VOIGT,
+# GAUSS_BG, ...; the LaTeX cache does not, since an expression may reuse those names.
+set(SRC_LEGACY_FUNCS
+    src/USERFCN.f
+    src/USERFCN_SET.f
+    src/rinteg.f
+    src/shirley_fitpack.f90
+)
 
 file(GLOB SRC_DIERCKX RELATIVE ${CMAKE_SOURCE_DIR} src/DIERCKX/*.f)
 file(GLOB SRC_SLATEC  RELATIVE ${CMAKE_SOURCE_DIR} src/SLATEC/*.f)
@@ -208,20 +216,28 @@ endif()
 set_source_files_properties(${SRC_DIERCKX} PROPERTIES COMPILE_FLAGS "${SRC_DIERCKX_OBJ_FLAGS}")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(SRC_EXTERNAL_FUNCS_OBJ_FLAGS "-fPIC -fno-semantic-interposition -static -O3 -Wall -ffree-line-length-0")
+    set(SRC_EXTERNAL_FUNCS_OBJ_FLAGS "-fPIC -fno-semantic-interposition -static -O3 -Wall -ffree-line-length-0 -ffixed-line-length-0")
 else()
-    set(SRC_EXTERNAL_FUNCS_OBJ_FLAGS "-fPIC -fno-semantic-interposition -static -O0 -g -Wall -ffree-line-length-0")
+    set(SRC_EXTERNAL_FUNCS_OBJ_FLAGS "-fPIC -fno-semantic-interposition -static -O0 -g -Wall -ffree-line-length-0 -ffixed-line-length-0")
 endif()
-set_source_files_properties(${SRC_EXTERNAL_FUNCS} PROPERTIES COMPILE_FLAGS "${SRC_EXTERNAL_FUNCS_OBJ_FLAGS}")
+set_source_files_properties(${SRC_EXTERNAL_FUNCS} ${SRC_LEGACY_FUNCS} PROPERTIES COMPILE_FLAGS "${SRC_EXTERNAL_FUNCS_OBJ_FLAGS}")
 
 set(SRC_EXTERNAL_ALL ${SRC_EXTERNAL_FUNCS} ${SRC_DIERCKX})
 add_library(internal_functions OBJECT ${SRC_EXTERNAL_ALL})
+add_library(legacy_functions OBJECT ${SRC_LEGACY_FUNCS})
+add_dependencies(legacy_functions internal_functions)   # the .mod of MOD_LOGGER
 
 set(OBJ_RES_FILES "")
 foreach(src_file IN LISTS SRC_EXTERNAL_ALL)
 	get_filename_component(src_dir ${src_file} DIRECTORY)
 	get_filename_component(base_ext ${src_file} NAME)
 	list(APPEND OBJ_RES_FILES ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/internal_functions.dir/${src_dir}/${base_ext}.o)
+endforeach()
+set(LEGACY_OBJ_RES_FILES "")
+foreach(src_file IN LISTS SRC_LEGACY_FUNCS)
+	get_filename_component(src_dir ${src_file} DIRECTORY)
+	get_filename_component(base_ext ${src_file} NAME)
+	list(APPEND LEGACY_OBJ_RES_FILES ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/legacy_functions.dir/${src_dir}/${base_ext}.o)
 endforeach()
 
 add_executable(${nested_fit_target}
@@ -247,6 +263,14 @@ rm_link_resources(
 	FILES ${OBJ_RES_FILES}
 	DEPENDS internal_functions
 	OUTDIR "sys"
+)
+
+rm_link_resources(
+	NAME "LegacyObjFiles"
+	TARGET ${nested_fit_target}
+	FILES ${LEGACY_OBJ_RES_FILES}
+	DEPENDS legacy_functions
+	OUTDIR "sys/legacy"
 )
 
 rm_link_resources(

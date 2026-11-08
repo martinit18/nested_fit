@@ -438,6 +438,23 @@ N.B. the function file has to be in the analysis folder where you execute the pr
 Legacy functions are listed in USERFCN*.f files. They need the additional configuration parameter `npar`. 
 Examples of use of a legacy function can be found in `examples/data_analysis/aaa_simple_example/legacy_func_input` directory.
 
+A legacy function of your own does not need a copy into `src/` and a rebuild: put the Fortran file beside the input and name it:
+
+```yaml
+function:
+  expression: TM_STEP_ANCHOR_FULL2   # FUNCTION TM_STEP_ANCHOR_FULL2(x, npar, val) in the file below
+  source: tm_lines.f                 # .f, .F, .for, .f90 or .F90
+  params:
+    ...                              # with npar, as for any legacy function
+```
+
+The file is compiled at run time into a library of its own, kept under `~/.nested_fit/source/` and named by the hash of its
+content: an edited file is rebuilt at the next run, an unchanged one is loaded as it is, the log says which. It is linked
+with the library's own functions, so it can call `VOIGT`, `GAUSS_BG`, ... as a function in `USERFCN.f` does, and a copy of
+the whole `USERFCN.f` with your functions added works too. The functions that read the `func_exp` and `func_conv` COMMON
+blocks are the exception: from a file they see their own copy of those blocks. On a GPU, `gpu_source` beside `source`
+gives the device the same function in C (see `src/gpu/README.md`).
+
 *Additional information can be found in the reference articles.*
 
 ## Present version and history of the past versions

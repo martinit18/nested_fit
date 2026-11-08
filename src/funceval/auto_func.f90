@@ -37,6 +37,7 @@ MODULE MOD_AUTOFUNC
         PARSE_LATEX, &
         PARSE_LATEX_DEALLOC, &
         GET_USER_FUNC_PROCPTR, &
+        LOAD_SOURCE_FUNC, &
         GET_CACHE_SIZE, &
         GET_CACHE, &
         cache_entry_t, &
@@ -1040,6 +1041,120 @@ MODULE MOD_AUTOFUNC
         ENDIF
 
         RETURN
+    END SUBROUTINE
+
+    SUBROUTINE READ_FILE_BYTES(path, text)
+        CHARACTER(LEN=*), INTENT(IN) :: path
+        CHARACTER(LEN=:), ALLOCATABLE, INTENT(OUT) :: text
+        INTEGER :: u, sz, ios
+        OPEN(NEWUNIT=u, FILE=path, ACCESS='stream', FORM='unformatted', STATUS='old', ACTION='read', IOSTAT=ios)
+        IF(ios.NE.0) THEN
+            text = ''
+            RETURN
+        ENDIF
+        INQUIRE(UNIT=u, SIZE=sz)
+        ALLOCATE(CHARACTER(LEN=sz) :: text)
+        READ(u, IOSTAT=ios) text
+        CLOSE(u)
+    END SUBROUTINE
+
+    ! `function.source`: the user's Fortran file compiled at run time into a library of its own,
+    ! named by the hash of its content and of the compile commands: an edited file is rebuilt,
+    ! an unchanged one is loaded as it is. It is linked with the cached objects (sys/), so it can
+    ! call the library's VOIGT, GAUSS_BG, ... (sys/legacy/) and a copy of the whole USERFCN.f links
+    ! too (the user's definitions win). The function is the legacy convention FUNCTION NAME(x, npar, val),
+    ! reached by its external Fortran symbol.
+    SUBROUTINE LOAD_SOURCE_FUNC(path, funcname, procaddr)
+        CHARACTER(LEN=*), INTENT(IN)  :: path, funcname
+        TYPE(c_funptr),   INTENT(OUT) :: procaddr
+        CHARACTER(LEN=:), ALLOCATABLE :: text
+        CHARACTER(LEN=1024) :: dir, lib, obj
+        CHARACTER(LEN=512)  :: base, cmd
+        CHARACTER(LEN=128)  :: symbol
+        CHARACTER(LEN=32)   :: ext, key
+        INTEGER(4) :: h_text, h_cmd
+        INTEGER    :: status, cstat, i
+        LOGICAL    :: exist
+        TYPE(c_ptr) :: handle
+
+        INQUIRE(FILE=path, EXIST=exist)
+        IF(.NOT.exist) THEN
+            CALL LOG_ERROR_HEADER()
+            CALL LOG_ERROR('function.source: file not found: '//TRIM(path))
+            CALL LOG_ERROR_HEADER()
+            CALL HALT_EXECUTION()
+        ENDIF
+        CALL FILENAME_FIND_EXT(path, ext)
+        IF(.NOT.ANY([ CHARACTER(8) :: 'f', 'F', 'for', 'f90', 'F90' ].EQ.ext)) THEN
+            CALL LOG_ERROR_HEADER()
+            CALL LOG_ERROR('function.source: `'//TRIM(path)//'` is not a Fortran file (.f, .F, .for, .f90, .F90).')
+            CALL LOG_ERROR_HEADER()
+            CALL HALT_EXECUTION()
+        ENDIF
+
+        CALL READ_FILE_BYTES(path, text)
+        cmd = TRIM(opt_f90_comp_cmd)//' '//TRIM(opt_lnk_cmd)//' '//version_full
+        CALL MURMURHASH2_32(text, LEN(text), h_text)
+        CALL MURMURHASH2_32(cmd, LEN_TRIM(cmd), h_cmd)
+        WRITE(key, '(z8.8,z8.8,z8.8)') h_text, LEN(text), h_cmd
+        i = INDEX(path, '/', BACK=.TRUE.)
+        base = path(i+1:)
+        dir = TRIM(nf_cache_folder)//'source/'
+        lib = TRIM(dir)//TRIM(base)//'-'//TRIM(key)//'.so'
+
+        INQUIRE(FILE=lib, EXIST=exist)
+        IF(exist) THEN
+            CALL LOG_MESSAGE('Function source: '//TRIM(path)//' unchanged, library taken from the cache')
+        ELSE
+            CALL ENSURE_DIRECTORY(TRIM(dir)//'obj/')   ! two levels down: out of reach of the one-level object glob of the LaTeX cache link
+            obj = TRIM(dir)//'obj/'//TRIM(base)//TRIM(obj_ext)
+            CALL LOG_MESSAGE('Function source: compiling '//TRIM(path))
+            CALL EXECUTE_COMMAND_LINE(TRIM(opt_f90_comp_cmd)//' -ffixed-line-length-0 '//TRIM(path)//' -o '//TRIM(obj), EXITSTAT=status, CMDSTAT=cstat)
+            IF(cstat.NE.0 .OR. status.EQ.127) CALL TOOL_NOT_FOUND(TRIM(opt_f90_comp_cmd))
+            IF(status.NE.0) THEN
+                CALL LOG_ERROR_HEADER()
+                CALL LOG_ERROR('function.source: `'//TRIM(path)//'` does not compile (see the compiler messages above).')
+                CALL LOG_ERROR_HEADER()
+                CALL HALT_EXECUTION()
+            ENDIF
+#ifdef _WIN32
+            CALL EXECUTE_COMMAND_LINE('del /q '//TRIM(dir)//TRIM(base)//'-*.so')   ! the earlier versions of this file
+#else
+            CALL EXECUTE_COMMAND_LINE('rm -f '//TRIM(dir)//TRIM(base)//'-*.so')
+#endif
+            CALL EXECUTE_COMMAND_LINE(TRIM(opt_lnk_cmd)//' -Wl,--allow-multiple-definition '//TRIM(obj)//' '// &
+                TRIM(nf_cache_folder)//'sys/*'//TRIM(obj_ext)//' '//TRIM(nf_cache_folder)//'sys/legacy/*'//TRIM(obj_ext)// &
+                ' -o '//TRIM(lib), EXITSTAT=status, CMDSTAT=cstat)
+            IF(cstat.NE.0 .OR. status.EQ.127) CALL TOOL_NOT_FOUND(TRIM(opt_lnk_cmd))
+            IF(status.NE.0) THEN
+                CALL LOG_ERROR_HEADER()
+                CALL LOG_ERROR('function.source: `'//TRIM(path)//'` does not link (see the linker messages above).')
+                CALL LOG_ERROR_HEADER()
+                CALL HALT_EXECUTION()
+            ENDIF
+#ifdef _WIN32
+            CALL EXECUTE_COMMAND_LINE('del /q '//TRIM(obj))
+#else
+            CALL EXECUTE_COMMAND_LINE('rm -f '//TRIM(obj))
+#endif
+        ENDIF
+
+        handle = dlopen(TRIM(lib)//c_null_char, 1)
+        IF(.NOT.c_associated(handle)) THEN
+            CALL LOG_ERROR_HEADER()
+            CALL LOG_ERROR('function.source: could not load '//TRIM(lib))
+            CALL LOG_ERROR_HEADER()
+            CALL HALT_EXECUTION()
+        ENDIF
+        symbol = funcname
+        CALL STR_TO_LOWER(symbol)
+        procaddr = dlsym(handle, TRIM(symbol)//'_'//c_null_char)
+        IF(.NOT.c_associated(procaddr)) THEN
+            CALL LOG_ERROR_HEADER()
+            CALL LOG_ERROR('function.source: no FUNCTION '//TRIM(funcname)//'(x, npar, val) in '//TRIM(path))
+            CALL LOG_ERROR_HEADER()
+            CALL HALT_EXECUTION()
+        ENDIF
     END SUBROUTINE
 
     SUBROUTINE GET_USER_FUNC_PROCPTR(name, proc, loaded)

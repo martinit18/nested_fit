@@ -5,7 +5,7 @@ MODULE MOD_METADATA
     IMPLICIT NONE
 
     PUBLIC :: INIT_NF_CACHE, nf_cache_folder, version_full, version, parallel_on,&
-              static_seed, exec_target_name
+              static_seed, exec_target_name, ENSURE_DIRECTORY
 
     ! Version static flags
     CHARACTER(LEN=*), PARAMETER :: version_full = '@nested_fit_version_full_str@'
@@ -37,6 +37,13 @@ MODULE MOD_METADATA
             LOGICAL(c_bool) :: output
         END FUNCTION
 
+        FUNCTION COPY_CACHE_DATA_LEGACY(cache_root) RESULT(output) BIND(c, name='CopyCacheDataLegacyObjFiles')
+            USE, INTRINSIC :: ISO_C_BINDING
+            IMPLICIT NONE
+            CHARACTER(c_char), INTENT(IN), DIMENSION(*) :: cache_root
+            LOGICAL(c_bool) :: output
+        END FUNCTION
+
         FUNCTION COPY_CACHE_DATA_MAN(cache_root) RESULT(output) BIND(c, name='CopyCacheDataManifestFile')
             USE, INTRINSIC :: ISO_C_BINDING
             IMPLICIT NONE
@@ -47,6 +54,15 @@ MODULE MOD_METADATA
 
     PRIVATE
     CONTAINS
+        ! MAKE_DIRECTORY_F reports an existing directory as a failure; this creates it only when missing
+        SUBROUTINE ENSURE_DIRECTORY(path)
+            IMPLICIT NONE
+            CHARACTER(LEN=*), INTENT(IN) :: path
+            LOGICAL :: exists
+            INQUIRE(FILE=path, EXIST=exists)
+            IF(.NOT.exists) CALL MAKE_DIRECTORY_F(path)
+        END SUBROUTINE
+
         SUBROUTINE MAKE_DIRECTORY_F(path)
             USE ISO_C_BINDING
             IMPLICIT NONE
@@ -70,15 +86,17 @@ MODULE MOD_METADATA
             IMPLICIT NONE
             CHARACTER(LEN=*), INTENT(IN)  :: cache_root
             LOGICAL         , INTENT(OUT) :: result
-            LOGICAL :: obj_result, man_result
+            LOGICAL :: obj_result, leg_result, man_result
             CHARACTER(c_char), DIMENSION(:), POINTER :: c_path
 
+            CALL ENSURE_DIRECTORY(TRIM(cache_root)//'sys/legacy/')
             CALL F_C_STRING_ALLOC_I(cache_root, c_path)
             obj_result = COPY_CACHE_DATA_OBJ(c_path(1))
+            leg_result = COPY_CACHE_DATA_LEGACY(c_path(1))
             man_result = COPY_CACHE_DATA_MAN(c_path(1)) 
             CALL F_C_STRING_DEALLOC_I(c_path)
 
-            result = obj_result.AND.man_result
+            result = obj_result.AND.leg_result.AND.man_result
         END SUBROUTINE
 
         SUBROUTINE F_C_STRING_ALLOC_I(f_string, c_string)
@@ -157,9 +175,30 @@ MODULE MOD_METADATA
             ! Create or get the cache directory
             CALL GET_CACHE_DIR(cache_created)
 
-            ! Populate the cache if it does not exist
-            IF(cache_created) THEN
+            ! Populate the cache if it does not exist, or if another version filled sys/
+            IF(cache_created .OR. TRIM(SYS_CACHE_VERSION()).NE.version_full) THEN
                 CALL POPULATE_CACHE()
+                CALL WRITE_SYS_CACHE_VERSION()
             ENDIF
+        END SUBROUTINE
+
+        ! sys/ holds the object files of this build; a newer binary writes its own set over them
+        FUNCTION SYS_CACHE_VERSION() RESULT(stamp)
+            IMPLICIT NONE
+            CHARACTER(LEN=128) :: stamp
+            INTEGER :: u, ios
+            stamp = ''
+            OPEN(NEWUNIT=u, FILE=TRIM(nf_cache_folder)//'sys/version', STATUS='old', ACTION='read', IOSTAT=ios)
+            IF(ios.NE.0) RETURN
+            READ(u, '(a)', IOSTAT=ios) stamp
+            CLOSE(u)
+        END FUNCTION
+
+        SUBROUTINE WRITE_SYS_CACHE_VERSION()
+            IMPLICIT NONE
+            INTEGER :: u
+            OPEN(NEWUNIT=u, FILE=TRIM(nf_cache_folder)//'sys/version', STATUS='replace', ACTION='write')
+            WRITE(u, '(a)') version_full
+            CLOSE(u)
         END SUBROUTINE
 END MODULE MOD_METADATA
