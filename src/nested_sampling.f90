@@ -22,6 +22,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_max,live_max,
   USE MOD_CLUSTER_ANALYSIS, ONLY: cluster_on, make_cluster_internal, p_cluster, cluster_np, DEALLOCATE_CLUSTER, MAKE_CLUSTER_ANALYSIS, GET_CLUSTER_MEAN_SD, WRITE_CLUSTER_DATA
   ! Module for optionals
   USE MOD_OPTIONS
+  USE MOD_GPU, ONLY: gpu_on, GPU_SCHEDULE
+  USE MOD_LIKELIHOOD, ONLY: GPU_FINAL_CHECK
   ! Module for logging
   USE MOD_LOGGER
   ! Module for proffiling
@@ -271,6 +273,7 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_max,live_max,
   cluster_gen = 0
   ! Recalculate the search data each n_calc_max new points (as before, at least once per nth points)
   n_calc_max = MAX(nth, CEILING(0.05*nlive))
+  IF (gpu_on) CALL GPU_SCHEDULE((MAXVAL(live_like) - MINVAL(live_like))/nlive, live(MAXLOC(live_like, 1),:), npar)
 
   ! Allow nested parallel regions, so that the cluster analysis (called in the pool) can use all threads
   !$ max_levels_save = OMP_GET_MAX_ACTIVE_LEVELS()
@@ -334,6 +337,8 @@ SUBROUTINE NESTED_SAMPLING(itry,maxstep,nall,evsum_final,live_like_max,live_max,
 
   ! Store the number of steps
   nstep_final = n
+
+  IF (gpu_on) CALL GPU_FINAL_CHECK(nlive, npar, live, live_like)
 
   !------------ Calculate the total evidence with the last live points ---------------------
 601 CONTINUE
@@ -517,6 +522,7 @@ CONTAINS
     END IF
     n_calc = 0
     recalc_needed = .false.
+    IF (gpu_on) CALL GPU_SCHEDULE((MAXVAL(live_like) - min_live_like)/nlive, live(MAXLOC(live_like, 1),:), npar)
   END SUBROUTINE RECALC_SEARCH_DATA
 
   ! ___________________________________________________________________________________________

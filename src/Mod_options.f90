@@ -25,6 +25,11 @@ MODULE MOD_OPTIONS
     ! library, defining the function named by `function.expression` in the legacy convention
     ! FUNCTION NAME(x, npar, val). No copy into src/, no rebuild of nested_fit.
     CHARACTER(LEN=512) :: opt_function_source = ''
+    ! `search.gpu_tolerance`: the error allowed on log L by the mixed precision of the GPU, in
+    ! log L units. The startup self-test measures the error at a ladder of thresholds and the
+    ! run uses the loosest one that meets it; while the live points are far apart the sampler
+    ! allows more, down to this at the end. 0.01 is far below the evidence uncertainty of any run.
+    REAL(8) :: opt_gpu_tolerance = 1d-2
     ! `search.gpu_threads`: how many of the OpenMP threads evaluate on the device; the others
     ! use the CPU, so both are busy. -1 (default): decided by the startup self-test, which keeps
     ! at most 8 threads, all on the GPU, when it uses the GPU (GPU_SELF_TEST).

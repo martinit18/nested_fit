@@ -61,17 +61,42 @@ with the legacy calling convention, the GPU with NVRTC, no `gpu_source` and no F
 
 **Precision.** `search.gpu_precision` (env `NESTED_FIT_GPU_PRECISION`):
 
-* `auto` (default): `mixed` when the model marks its terms with `NF_TERM`, `double` otherwise.
+* `auto` (default): `mixed`.
 * `double`: the CPU's closed forms, the CPU's bits.
-* `mixed`: per-term precision. A model written with `NF_TERM(multiplier, function, args...)`
-  around its additive terms has each term evaluated in single precision and recomputed in
-  double only when it exceeds a tenth of the data's noise at that point
-  (`NESTED_FIT_GPU_TERM_TOL`); on the CPU and in double the macro is the plain product.
-  Measured on a 284-term Voigt model: 1.6 × 10⁻⁸ relative to the CPU, 9.5× the GPU's double
-  rate on an RTX A4000 (789 against 83 evaluations per second in the sampler, 954 with the
-  wing series of the Faddeeva function). The model in float throughout was measured too and
-  rejected: on the same model the float error of the likelihood is 10⁻⁴ relative, point
-  dependent, and far more than the evidence tolerates.
+* `mixed`: single precision where the model is small against the noise of the data point,
+  double elsewhere. Per term when the model marks its additive terms with
+  `NF_TERM(multiplier, function, args...)`: each term is evaluated in single precision and
+  recomputed in double only when it exceeds the threshold times the noise at that point (on
+  the CPU and in double the macro is the plain product). Per point otherwise, for an
+  expression, a `gpu_source` without markers or a translated Fortran function: the whole
+  model at the point in single precision, recomputed in double where its value exceeds the
+  threshold times the noise. Measured on a 284-term Voigt model with markers at the threshold
+  0.1: 1.6 × 10⁻⁸ relative to the CPU, 9.5× the GPU's double rate on an RTX A4000 (789 against
+  83 evaluations per second in the sampler, 954 with the wing series of the Faddeeva function).
+
+**Tolerance.** `search.gpu_tolerance` (env `NESTED_FIT_GPU_TOLERANCE`, default 0.01): the error
+allowed on log L by the mixed precision, in log L units, the quantity a user can state about
+their analysis (0.01 is far below the evidence uncertainty of any realistic run). The
+threshold is not a setting: the self-test measures the error at a ladder of thresholds, all
+single to all double, at three points of the prior box, and the run takes the loosest one
+that meets the tolerance. Along the run the sampler asks for more while the live points are
+far apart, one percent of the mean log L gap between neighbouring live points, so the first
+part of a run is in single precision, and tightens to the tolerance as they converge
+(`GPU_SCHEDULE`, called at each recalculation of the search data; the ladder is measured
+again there, at the best live point and on the device, because the error of single precision
+grows with the residuals and the prior-box points of the self-test overstate it by orders of
+magnitude). At the end, the final live points are re-evaluated on the CPU, the largest
+difference in log L is printed against the tolerance, and the CPU values replace the device
+ones before the final evidence: the certificate of the run, and a run cut by `max_steps`
+stays comparable with a CPU run cut at the same step. Measured on an RTX A4000, Gonçalo's
+Tm model, 200 live points, 100 steps: double 54 ms per launch, per-term with the schedule
+1.77 ms, all single 1.76 ms, per-point without markers 2.09 ms (1.56 ms over 500 steps); the
+threshold stays at all single for the first 500 steps, the live-point gap being still 3 × 10⁴
+in log L, where all single differs from double by 6 to 32 in log L at the best live point
+(94 at the prior-box points). test_12 as an expression on the GPU, which converges: the
+threshold moved between all single and 100 as the gap reached 1 in log L, log Z −951.19 and
+−951.32 in two runs against −951.3 ± 0.12, final live points within 5 × 10⁻⁴. Half
+precision does not apply to this arithmetic (three digits, no erf, overflow at 65 504).
 
 **Threads.** `search.gpu_threads` (env `NESTED_FIT_GPU_THREADS`): how many of the OpenMP
 threads evaluate on the GPU; the others keep the CPU closed forms. -1 (default) leaves the choice
@@ -85,10 +110,11 @@ on the CPU: `gpu_threads: 2` with the other threads on the cores was 1.47× the 
 precision on an 8-thread host, and is a setting, not a default.
 
 **Startup self-test.** When a device is used, the likelihood is evaluated on both backends at
-three points of the prior box before sampling starts. The log reports the largest relative
-difference and the time of one evaluation on the device against one CPU thread; above 10⁻⁸
-in double, or 10⁻⁶ in per-term mixed precision, the device is refused and the run continues
-on the CPU. A wrong port of a user function cannot reach the evidence. With `device: auto` the
+three points of the prior box before sampling starts, in double. The log reports the largest
+relative difference and the time of one evaluation on the device against one CPU thread;
+above 10⁻⁸ the device is refused and the run continues on the CPU: a wrong port of a user
+function cannot reach the evidence. In mixed precision the same points then measure the error
+at each threshold of the ladder (see Tolerance). With `device: auto` the
 GPU is also refused when, fed by 8 threads, it would not beat the CPU threads together, i.e. when
 4 r < threads (a cheap model on a few thousand points: every example of the suite); otherwise the
 run keeps at most 8 threads, all on the GPU (see Threads); `device: cuda` forces the GPU.
@@ -107,7 +133,8 @@ search:
   device:         auto     # auto (default) | cuda | hip | cpu
   gpu_min_points: 0        # use the GPU only above this many data points
   gpu_threads:    -1       # -1 (default): the self-test keeps at most 8 threads, all on the GPU; N: N on the GPU, the others on the CPU
-  gpu_precision:  auto     # auto (default: mixed if the model uses NF_TERM) | double | mixed
+  gpu_precision:  auto     # auto (default: mixed, per term with NF_TERM markers, per point otherwise) | double | mixed
+  gpu_tolerance:  0.01     # error allowed on log L by the mixed precision, at the end of the run
 ```
 
 Environment variables override the file (useful for sweeps without editing it):
@@ -116,7 +143,7 @@ Environment variables override the file (useful for sweeps without editing it):
 * `function.gpu_source` (input file only) — device source of a legacy user function, see above.
 * `NESTED_FIT_GPU_INDEX=n` — device index (default 0).
 * `NESTED_FIT_GPU_MIN_POINTS=n` — as above.
-* `NESTED_FIT_GPU_THREADS=n`, `NESTED_FIT_GPU_PRECISION=double|mixed`, `NESTED_FIT_GPU_TERM_TOL=0.1` — as above.
+* `NESTED_FIT_GPU_THREADS=n`, `NESTED_FIT_GPU_PRECISION=double|mixed`, `NESTED_FIT_GPU_TOLERANCE=0.01` — as above.
 * `NESTED_FIT_GPU_ARCH=gfx90a` — HIP only: target architecture, if hipRTC's default is wrong.
 * `NESTED_FIT_NVRTC_PATH`, `NESTED_FIT_CUDA_PATH`, `NESTED_FIT_HIP_PATH`, `NESTED_FIT_HIPRTC_PATH` —
   full path to a library when it is not on the loader's search path (pynested_fit sets

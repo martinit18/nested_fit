@@ -79,7 +79,9 @@ struct State {
     void* ctx = nullptr; void* mod = nullptr; void* kern = nullptr;
     devptr dx = 0, dnc = 0, derr = 0;
     std::vector<void*> streams; std::vector<devptr> dpar, dout, dpart, dcount; int nblocks = 1;
-    bool mixed = false;   // per-term precision (NF_TERM): the terms in float, the large ones in double
+    bool mixed = false;   // single precision where the model is small against the noise: per term (NF_TERM) or per point
+    bool per_point = false;   // mixed without NF_TERM markers: the whole model in float, recomputed in double where large
+    std::atomic<float> tol{0.1f};   // the threshold of the mixed rule, in noise units, read at every launch
     std::string name, err;
 } S;
 
@@ -191,17 +193,20 @@ void make_current() { if (S.vendor == Vendor::cuda) S.a.ctxSetCurrent(S.ctx); el
 // the last block to finish adds the block partials in a fixed order. Double precision, no
 // fast-math: the same closed forms as LOGLIKELIHOOD_1D, the same bits run after run. The
 // source is plain CUDA C that hipRTC also accepts.
-// Per-term precision needs a float copy of the model: the library and the user's function
+// Mixed precision needs a float copy of the model: the library and the user's function
 // compiled once more with `double` meaning `float` and every literal made a float, so no
 // operation of that copy falls back to fp64; the residuals and the sum stay in double.
+// With NF_TERM markers the choice is made per term; without, per data point: the whole
+// model in float, and again in double where its value is large against the noise there.
 std::string single_literals(std::string s) {
     // std::regex has no lookbehind: the character before the literal is matched and kept
     static const std::regex lit(R"((^|[^\w.])(\d+\.\d*(?:[eE][-+]?\d+)?|\d+[eE][-+]?\d+)(?![fF\d.]))");
     return std::regex_replace(s, lit, "$1$2f");
 }
 
-std::string program(const std::string& body, const std::string& ids, bool mixed) {
+std::string program(const std::string& body, const std::string& ids, bool mixed, int npar) {
     std::ostringstream p, u;
+    S.per_point = mixed && body.find("NF_TERM") == std::string::npos;
     if (S.vendor == Vendor::hip) p << "#include <hip/hip_runtime.h>\n";
     if (body.find("nf_user") != std::string::npos) {
         u << body << "\n";   // a complete device source (function.gpu_source): it defines nf_user itself
@@ -213,30 +218,38 @@ std::string program(const std::string& body, const std::string& ids, bool mixed)
         u << "  return " << body << ";\n}\n";
     }
     if (mixed) {
-        // per-term precision: the model twice, in float (nf32) and in double (nf64); in nf64 an
-        // NF_TERM is evaluated in float first and in double only when it is large against the
-        // noise scale of the data point (nf_scale, set per thread by the kernel)
-        const char* tol = env("NESTED_FIT_GPU_TERM_TOL");
-        p << "#define NF_TERM_TOL " << (tol && *tol ? tol : "0.1") << "f\n"
-             "__shared__ float nf_scale[256];\n"
+        // the model twice, in float (nf32) and in double (nf64). Per term: in nf64 an NF_TERM is
+        // evaluated in float first and in double only when it is large against the noise scale
+        // of the data point (nf_scale, set per thread by the kernel) times the threshold nf_tol,
+        // a launch argument. Per point: the kernel applies the same test to the whole model.
+        p << "__shared__ float nf_scale[256]; __shared__ float nf_tol;\n"
              "namespace nf32 {\n#define NF_TERM(mult, f, ...) ((mult)*f(__VA_ARGS__))\n#define NF_SINGLE 1\n#define double float\n"
           << single_literals(NF_DEVICE_LIB) << "\n" << single_literals(u.str())
           << "#undef double\n#undef NF_SINGLE\n#undef NF_TERM\n}\n"
              "template <class G> __device__ __forceinline__ double nf_term_select(double mult, float v32, G g64){\n"
-             "  if (fabsf((float)mult*v32) > NF_TERM_TOL*nf_scale[threadIdx.x]) return mult*g64();\n"
+             "  if (fabsf((float)mult*v32) > nf_tol*nf_scale[threadIdx.x]) return mult*g64();\n"
              "  return mult*(double)v32; }\n"
              "namespace nf64 {\n#define NF_TERM(mult, f, ...) nf_term_select((mult), nf32::f(__VA_ARGS__), [&]{ return f(__VA_ARGS__); })\n"
           << NF_DEVICE_LIB << "\n" << u.str() << "#undef NF_TERM\n}\n";
+        if (S.per_point) p << "__shared__ float nf_pf[" << (npar > 0 ? npar : 1) << "];\n";
     }
     else p << NF_DEVICE_LIB << "\n" << u.str();
     p << "extern \"C\" __global__ void nf_loglike(const double* __restrict__ x, const double* __restrict__ nc,"
-         " const double* __restrict__ err, int n, int kind, const double* __restrict__ params,"
+         " const double* __restrict__ err, int n, int kind, const double* __restrict__ params, float tol,"
          " double* partial, unsigned int* count, double* out){\n"
          "  __shared__ double red[256]; __shared__ int last; double acc = 0.0;\n";
-    if (mixed)
-        p << "  for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < n; i += gridDim.x*blockDim.x){\n"
-             "    nf_scale[threadIdx.x] = (kind == 0) ? sqrtf(fmaxf((float)nc[i], 1.0f)) : (float)err[i];\n"
-             "    double m = nf64::nf_user(x[i], params);\n";
+    if (mixed) {
+        p << "  if (threadIdx.x == 0) nf_tol = tol;\n";
+        if (S.per_point) p << "  for (int k = threadIdx.x; k < " << (npar > 0 ? npar : 1) << "; k += blockDim.x) nf_pf[k] = (float)params[k];\n";
+        p << "  __syncthreads();\n"
+             "  for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < n; i += gridDim.x*blockDim.x){\n"
+             "    nf_scale[threadIdx.x] = (kind == 0) ? sqrtf(fmaxf((float)nc[i], 1.0f)) : (float)err[i];\n";
+        if (S.per_point)
+            p << "    float m32 = nf32::nf_user((float)x[i], nf_pf);\n"
+                 "    double m = (fabsf(m32) > nf_tol*nf_scale[threadIdx.x]) ? nf64::nf_user(x[i], params) : (double)m32;\n";
+        else
+            p << "    double m = nf64::nf_user(x[i], params);\n";
+    }
     else
         p << "  for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < n; i += gridDim.x*blockDim.x){ double m = nf_user(x[i], params);\n";
     p <<
@@ -296,6 +309,7 @@ void die(int r, const char* what) {
 
 void nf_gpu_set_preference(const char* device) { if (device && *device && !S.probed) g_pref = device; }
 void nf_gpu_set_precision(const char* precision) { const char c = precision ? precision[0] : 'd'; S.mixed = (c == 'm' || c == 'M'); }
+void nf_gpu_set_tolerance(double threshold) { S.tol.store(static_cast<float>(threshold)); }
 int nf_gpu_available(void) { if (!S.probed) probe(); return S.available ? 1 : 0; }
 const char* nf_gpu_device_name(void) { return nf_gpu_available() ? S.name.c_str() : ""; }
 const char* nf_gpu_last_error(void) { return S.err.c_str(); }
@@ -326,7 +340,7 @@ int nf_gpu_set_function(const char* c_body, const char* param_ids, int npar) {
     S.npar = npar;
     for (int t = 0; t < S.nthreads; ++t) if (!ok(S.a.memAlloc(&S.dpar[t], sizeof(double) * (npar > 0 ? npar : 1)), "memAlloc")) return 2;
     const std::string ids = param_ids ? param_ids : "";
-    if (!compile(program(c_body, ids, S.mixed), S.mod, S.kern)) return 3;
+    if (!compile(program(c_body, ids, S.mixed, npar), S.mod, S.kern)) return 3;
     S.ready = true; return 0;
 }
 
@@ -336,17 +350,17 @@ struct LaunchStats {
     std::atomic<unsigned long long> n{0}, ns{0};
     ~LaunchStats() {
         if (n > 0) std::fprintf(stderr, "GPU: %llu likelihood evaluations on the device in %s precision, %.3f ms each as seen by the host threads\n",
-                                static_cast<unsigned long long>(n), S.mixed ? "per-term mixed" : "double", 1e-6 * ns / n);
+                                static_cast<unsigned long long>(n), S.mixed ? (S.per_point ? "per-point mixed" : "per-term mixed") : "double", 1e-6 * ns / n);
     }
 } g_stats;
 
-double nf_gpu_loglike(const double* par, int npar, int thread_id) {
+static double launch(const double* par, int npar, int thread_id, float tol) {
     int t = (thread_id < 0 || thread_id >= S.nthreads) ? 0 : thread_id;
     auto t0 = std::chrono::steady_clock::now();
     void* st = S.streams[t]; double out = 0.0; int r;
     make_current();
     if ((r = S.a.memcpyHtoDAsync(S.dpar[t], par, sizeof(double) * npar, st))) die(r, "memcpyHtoDAsync");
-    void* args[] = { &S.dx, &S.dnc, &S.derr, &S.ndata, &S.like_kind, &S.dpar[t], &S.dpart[t], &S.dcount[t], &S.dout[t] };
+    void* args[] = { &S.dx, &S.dnc, &S.derr, &S.ndata, &S.like_kind, &S.dpar[t], &tol, &S.dpart[t], &S.dcount[t], &S.dout[t] };
     if ((r = S.a.launchKernel(S.kern, static_cast<unsigned>(S.nblocks), 1, 1, 256, 1, 1, 0, st, args, nullptr))) die(r, "launchKernel");
     if ((r = S.a.memcpyDtoHAsync(&out, S.dout[t], sizeof(double), st))) die(r, "memcpyDtoHAsync");
     if ((r = S.a.streamSynchronize(st))) die(r, "streamSynchronize");
@@ -354,6 +368,8 @@ double nf_gpu_loglike(const double* par, int npar, int thread_id) {
     g_stats.ns += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - t0).count();
     return out;
 }
+double nf_gpu_loglike(const double* par, int npar, int thread_id) { return launch(par, npar, thread_id, S.tol.load()); }
+double nf_gpu_loglike_at(const double* par, int npar, int thread_id, double threshold) { return launch(par, npar, thread_id, static_cast<float>(threshold)); }
 
 void nf_gpu_free(void) {
     if (!S.available) return;

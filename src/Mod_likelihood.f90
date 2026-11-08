@@ -19,7 +19,9 @@ MODULE MOD_LIKELIHOOD
   
   ! String manipulation
   USE MOD_STRUTIL
-  USE MOD_GPU, ONLY: gpu_on, gpu_threads, gpu_mixed, gpu_pref, gpu_precision_auto, gpu_threads_auto, nf_gpu_loglike, nf_gpu_device_name, GPU_SETUP, C_STR, READ_TEXT_FILE
+  USE MOD_GPU, ONLY: gpu_on, gpu_threads, gpu_mixed, gpu_per_point, gpu_pref, gpu_precision_auto, gpu_threads_auto, gpu_tolerance, &
+       gpu_nladder, gpu_ladder, gpu_ladder_err, gpu_threshold_now, gpu_nth_before, nf_gpu_loglike, nf_gpu_set_tolerance, &
+       nf_gpu_device_name, GPU_SETUP, GPU_THRESHOLD_FOR, C_STR, READ_TEXT_FILE
   !$ USE omp_lib, ONLY: omp_get_thread_num
 
   !$ USE OMP_LIB
@@ -381,14 +383,16 @@ CONTAINS
        like_kind = 2
     END IF
     IF (ALLOCATED(nc_err)) THEN
-       CALL GPU_SETUP(x(1:n,1), nc(1:n,1), nc_err(1:n,1), n, like_kind, nth, src, gpu_param_ids, n_par, why, opt_device, opt_gpu_min_points, opt_gpu_threads, opt_gpu_precision)
+       CALL GPU_SETUP(x(1:n,1), nc(1:n,1), nc_err(1:n,1), n, like_kind, nth, src, gpu_param_ids, n_par, why, opt_device, opt_gpu_min_points, opt_gpu_threads, opt_gpu_precision, opt_gpu_tolerance)
     ELSE   ! counts data carry no error column; kind 0 never reads it
-       CALL GPU_SETUP(x(1:n,1), nc(1:n,1), nc(1:n,1), n, like_kind, nth, src, gpu_param_ids, n_par, why, opt_device, opt_gpu_min_points, opt_gpu_threads, opt_gpu_precision)
+       CALL GPU_SETUP(x(1:n,1), nc(1:n,1), nc(1:n,1), n, like_kind, nth, src, gpu_param_ids, n_par, why, opt_device, opt_gpu_min_points, opt_gpu_threads, opt_gpu_precision, opt_gpu_tolerance)
     END IF
     IF (gpu_on) THEN
        why = ''
        IF (gpu_precision_auto) why = ', chosen from the model'
-       IF (gpu_mixed) THEN
+       IF (gpu_mixed .AND. gpu_per_point) THEN
+          CALL LOG_MESSAGE('GPU: '//TRIM(C_STR(nf_gpu_device_name()))//' found; per-point mixed precision (the model in single where it is small against the noise, in double elsewhere'//TRIM(why)//')')
+       ELSE IF (gpu_mixed) THEN
           CALL LOG_MESSAGE('GPU: '//TRIM(C_STR(nf_gpu_device_name()))//' found; per-term mixed precision (NF_TERM terms in single, the large ones in double'//TRIM(why)//')')
        ELSE
           CALL LOG_MESSAGE('GPU: '//TRIM(C_STR(nf_gpu_device_name()))//' found; double precision'//TRIM(why))
@@ -401,35 +405,61 @@ CONTAINS
 
   SUBROUTINE GPU_SELF_TEST()
     ! The same evidence needs the same likelihood: the device evaluates it at three points of
-    ! the prior box against the CPU. Double must agree to double-precision reduction noise and
-    ! per-term mixed to 1e-6, or the device is refused. Also the first measurement a user sees:
-    ! one evaluation on the device against one CPU thread.
+    ! the prior box against the CPU, in double, and must agree to double-precision reduction
+    ! noise or it is refused (a wrong device function). In mixed precision the same three
+    ! points measure the error in log L at every threshold of the ladder, all single to all
+    ! double; the run then takes the loosest threshold that meets the tolerance (and looser
+    ! ones while the live points are far apart, see GPU_SCHEDULE). Also the first measurement
+    ! a user sees: one evaluation on the device against one CPU thread.
     REAL(8), DIMENSION(npar) :: p
-    REAL(8) :: cpu, dev, t_cpu, t_dev, worst, tol, r
+    REAL(8), DIMENSION(3) :: cpu
+    REAL(8) :: dev, t_cpu, t_dev, worst, tol, r, thr
     INTEGER, PARAMETER :: streams_max = 8   ! threads the run keeps when the GPU is used: 8 saturate an RTX A4000 in per-term precision (2 do not, 128 are 2.3x slower)
     INTEGER(8) :: t0, t1, rate
-    INTEGER :: k
+    INTEGER :: k, j
     CHARACTER(LEN=16) :: name
     CHARACTER(512) :: msg
     worst = 0d0; t_cpu = HUGE(1d0); t_dev = HUGE(1d0)
     name = 'double'; tol = 1d-8
-    IF (gpu_mixed) THEN
-       name = 'mixed (per-term)'; tol = 1d-6
-    END IF
+    IF (gpu_mixed) name = MERGE('mixed/point', 'mixed/term ', gpu_per_point)
     CALL SYSTEM_CLOCK(COUNT_RATE=rate)
+    gpu_nth_before = nth
     DO k = 1, 3
-       p = par_bnd1 + (0.1d0 + 0.4d0*(k-1))*(par_bnd2 - par_bnd1)
-       WHERE (par_fix == 1) p = par_in
+       p = SELF_TEST_POINT(k)
        gpu_on = .FALSE.
-       CALL SYSTEM_CLOCK(t0); cpu = LOGLIKELIHOOD_1D(npar, p); CALL SYSTEM_CLOCK(t1)
+       CALL SYSTEM_CLOCK(t0); cpu(k) = LOGLIKELIHOOD_1D(npar, p); CALL SYSTEM_CLOCK(t1)
        t_cpu = MIN(t_cpu, DBLE(t1 - t0)/DBLE(rate))
        gpu_on = .TRUE.
        dev = nf_gpu_loglike(p, npar, 0) + const_ll   ! the first launch carries the warm-up
        CALL SYSTEM_CLOCK(t0); dev = nf_gpu_loglike(p, npar, 0) + const_ll; CALL SYSTEM_CLOCK(t1)
        t_dev = MIN(t_dev, DBLE(t1 - t0)/DBLE(rate))
-       worst = MAX(worst, ABS(dev - cpu)/MAX(1d0, ABS(cpu)))
+       IF (.NOT.gpu_mixed) worst = MAX(worst, ABS(dev - cpu(k))/MAX(1d0, ABS(cpu(k))))
     END DO
-    WRITE(msg, '(a,a,a,es8.1,a,es9.2,a,es9.2,a,f8.1,a)') 'GPU: self-test, ', TRIM(name), ': max relative difference to the CPU ', worst, &
+    IF (gpu_mixed) THEN
+       ! the error in log L at each threshold; made monotone from the double end, where the
+       ! three points only sample the reduction noise
+       DO j = 1, gpu_nladder
+          CALL nf_gpu_set_tolerance(gpu_ladder(j))
+          gpu_ladder_err(j) = 0d0
+          DO k = 1, 3
+             p = SELF_TEST_POINT(k)
+             dev = nf_gpu_loglike(p, npar, 0) + const_ll
+             gpu_ladder_err(j) = MAX(gpu_ladder_err(j), ABS(dev - cpu(k)))
+          END DO
+       END DO
+       DO j = gpu_nladder - 1, 1, -1
+          gpu_ladder_err(j) = MAX(gpu_ladder_err(j), gpu_ladder_err(j+1))
+       END DO
+       worst = gpu_ladder_err(gpu_nladder)/MAX(1d0, MAXVAL(ABS(cpu)))   ! all double: the translation check
+       thr = GPU_THRESHOLD_FOR(gpu_tolerance)
+       gpu_threshold_now = thr
+       CALL nf_gpu_set_tolerance(thr)
+       WRITE(msg, '(a,es8.1,a,es8.1,a,es8.1,a,es8.1,a)') 'GPU: precision: all single differs from the CPU by ', gpu_ladder_err(1), &
+            ' in log L, all double by ', gpu_ladder_err(gpu_nladder), '; the tolerance ', gpu_tolerance, ' is met from the threshold ', thr, &
+            ' (noise units), used at the end of the run; the first steps run in single'
+       CALL LOG_MESSAGE(TRIM(msg))
+    END IF
+    WRITE(msg, '(a,a,a,es8.1,a,es9.2,a,es9.2,a,f8.1,a)') 'GPU: self-test, ', TRIM(name), ': max relative difference to the CPU in double ', worst, &
          '; one evaluation ', t_dev*1d3, ' ms on the device, ', t_cpu*1d3, ' ms on one CPU thread (', t_cpu/t_dev, 'x)'
     CALL LOG_MESSAGE(TRIM(msg))
     ! The decision "install and it decides". One launch costs ~20 us on the host side, so a cheap
@@ -461,7 +491,8 @@ CONTAINS
        CALL LOG_MESSAGE(TRIM(msg))
     ELSE IF (worst > tol .OR. worst /= worst) THEN
        gpu_on = .FALSE.
-       WRITE(msg, '(a,a,a,es8.1,a)') 'GPU: not used (self-test failed: ', TRIM(name), ' precision differs from the CPU by more than ', tol, ' in log L)'
+       WRITE(msg, '(a,es8.1,a)') 'GPU: not used (self-test failed: in double the device differs from the CPU by more than ', tol, &
+            ' in log L, relative: the device function is not the CPU one)'
        CALL LOG_MESSAGE(TRIM(msg))
     ELSE IF (gpu_threads < nth) THEN
        WRITE(msg, '(a,i0,a,i0,a,f7.1,a,i0,a)') 'GPU: used on ', gpu_threads, ' of ', nth, ' threads (one evaluation ', r, &
@@ -473,6 +504,48 @@ CONTAINS
        CALL LOG_MESSAGE(TRIM(msg))
     END IF
   END SUBROUTINE GPU_SELF_TEST
+
+  FUNCTION SELF_TEST_POINT(k) RESULT(p)
+    ! Three points of the prior box: 10, 50 and 90 % of every range, fixed parameters at their value
+    INTEGER, INTENT(IN) :: k
+    REAL(8), DIMENSION(npar) :: p
+    p = par_bnd1 + (0.1d0 + 0.4d0*(k-1))*(par_bnd2 - par_bnd1)
+    WHERE (par_fix == 1) p = par_in
+  END FUNCTION
+
+  SUBROUTINE GPU_FINAL_CHECK(nl, np, live, live_like)
+    ! The certificate of a GPU run: the final live points, which hold the posterior mass, are
+    ! re-evaluated on the CPU in double; the largest difference in log L is printed against the
+    ! tolerance and the CPU values replace the device ones, so the final evidence is built from
+    ! them whatever precision the points were born at. A run that stops before its live points
+    ! converge (max_steps) keeps points born at the loose early precision: the difference is
+    ! then above the tolerance and says so, and the replacement makes its evidence comparable
+    ! with a CPU run cut at the same step. Called by the sampler after its main loop.
+    INTEGER, INTENT(IN) :: nl, np
+    REAL(8), INTENT(IN) :: live(nl, np)
+    REAL(8), INTENT(INOUT) :: live_like(nl)
+    REAL(8) :: worst, cpu
+    INTEGER :: i
+    CHARACTER(512) :: msg
+    IF (.NOT.gpu_on) RETURN
+    gpu_on = .FALSE.
+    worst = 0d0
+    !$OMP PARALLEL DO PRIVATE(cpu) REDUCTION(MAX:worst) NUM_THREADS(gpu_nth_before)
+    DO i = 1, nl
+       cpu = LOGLIKELIHOOD_1D(np, live(i,:))
+       worst = MAX(worst, ABS(cpu - live_like(i)))
+       live_like(i) = cpu
+    END DO
+    !$OMP END PARALLEL DO
+    gpu_on = .TRUE.
+    WRITE(msg, '(a,i0,a,es8.1,a,es8.1,a,es8.1,a)') 'GPU: the ', nl, ' final live points re-evaluated on the CPU, which the final evidence uses: largest difference in log L ', &
+         worst, ' (tolerance ', gpu_tolerance, ', last threshold ', gpu_threshold_now, ')'
+    IF (worst > gpu_tolerance .OR. worst /= worst) THEN
+       CALL LOG_WARNING(TRIM(msg)//': above the tolerance, the live points had not converged (run cut by max_steps?)')
+    ELSE
+       CALL LOG_MESSAGE(TRIM(msg))
+    END IF
+  END SUBROUTINE GPU_FINAL_CHECK
 
   SUBROUTINE INIT_LIKELIHOOD_DATA()
     ! Initialize the normal likelihood with data files and special function

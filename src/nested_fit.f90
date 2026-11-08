@@ -427,6 +427,7 @@ PROGRAM NESTED_FIT
   CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'function.source'      , opt_function_source, MANDATORY=.FALSE.) ! Fortran file compiled at run time, legacy convention
   CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.gpu_threads'   , opt_gpu_threads , MANDATORY=.FALSE.) ! -1 by default: the self-test decides
   CALL FIELD_FROM_INPUT_CHARACTER(input_config, 'search.gpu_precision' , opt_gpu_precision, MANDATORY=.FALSE.) ! 'auto' by default
+  CALL FIELD_FROM_INPUT_REAL     (input_config, 'search.gpu_tolerance' , opt_gpu_tolerance, MANDATORY=.FALSE.) ! 0.01 in log L by default
   CALL FIELD_FROM_INPUT_LOGICAL  (input_config, 'search.hard_writing'  , hard_writing_parameters  , MANDATORY=.FALSE.) ! True by default
   CALL FIELD_FROM_INPUT_INTEGER  (input_config, 'search.max_steps' , maxstep_try  , MANDATORY=.NOT.hard_writing_parameters) ! 100000 by default, mandatory if not hard writing parameters
   
@@ -1019,6 +1020,7 @@ PROGRAM NESTED_FIT
    CALL json%push('input.function.source', TRIM(opt_function_source))
    CALL json%push('input.search.gpu_threads', opt_gpu_threads)
    CALL json%push('input.search.gpu_precision', TRIM(opt_gpu_precision))
+   CALL json%push('input.search.gpu_tolerance', opt_gpu_tolerance)
    CALL json%push('input.search.method', TRIM(search_method))
    CALL json%push('input.search.param1', search_par1)
    CALL json%push('input.search.param2', search_par2)
