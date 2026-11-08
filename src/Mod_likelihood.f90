@@ -536,18 +536,38 @@ CONTAINS
 
   END SUBROUTINE INIT_LIKELIHOOD_FUNC
 
+  FUNCTION COUNT_LINES(namefile) RESULT(n)
+    ! Records of a text file: the size of the arrays a data file is read into
+    CHARACTER(LEN=*), INTENT(IN) :: namefile
+    INTEGER(4) :: n, u, ios
+    n = 0
+    OPEN(NEWUNIT=u, FILE=namefile, STATUS='old', ACTION='read', IOSTAT=ios)
+    IF (ios.NE.0) RETURN
+    DO
+       READ(u, '(a)', IOSTAT=ios)
+       IF (ios.NE.0) EXIT
+       n = n + 1
+    END DO
+    CLOSE(u)
+  END FUNCTION COUNT_LINES
+
   SUBROUTINE READ_DATA()
     ! Subroutine to read data files
-    INTEGER(4) :: k=0
-    !  REAL(8), DIMENSION(maxdata,nsetmax) :: x_tmp=0, nc_tmp=0, nc_err_tmp=0
-    REAL(8), DIMENSION(maxdata,nsetmax) :: x_tmp=0, y_tmp=0, xe_tmp=0, ye_tmp=0, c_tmp=0, ce_tmp=0
-    
+    INTEGER(4) :: k=0, nlines
+    ! Sized by the longest file: a data file has no fixed maximum length
+    REAL(8), ALLOCATABLE, DIMENSION(:,:) :: x_tmp, y_tmp, xe_tmp, ye_tmp, c_tmp, ce_tmp
 
     ! READ DATA, calculate the constants for the likelihood function
     ! Initialize
     ndata = 0
     ndata_set = 0
     const_ll = 0.
+
+    nlines = 1
+    DO k=1, nset
+      nlines = MAX(nlines, COUNT_LINES(TRIM(filename(k))))
+    END DO
+    ALLOCATE(x_tmp(nlines,nset), y_tmp(nlines,nset), xe_tmp(nlines,nset), ye_tmp(nlines,nset), c_tmp(nlines,nset), ce_tmp(nlines,nset))
 
     DO k=1, nset
       CALL LOG_TRACE('Reading file: '//TRIM(filename(k)))
@@ -645,7 +665,7 @@ CONTAINS
    CHARACTER                  , INTENT(IN)  :: namefile*64
    REAL(8)                    , INTENT(IN)  :: minx, maxx, miny, maxy
    INTEGER(4)                 , INTENT(OUT) :: datan
-   REAL(8), DIMENSION(maxdata), INTENT(OUT) :: x_tmp, y_tmp, xe_tmp, ye_tmp, c_tmp, ce_tmp
+   REAL(8), DIMENSION(:), INTENT(OUT) :: x_tmp, y_tmp, xe_tmp, ye_tmp, c_tmp, ce_tmp
 
    CHARACTER(64)                            :: cvars(specstrmaxcol)
    INTEGER                                  :: ncols, expected_ncols, i, j, nd
@@ -695,7 +715,7 @@ CONTAINS
 
    ! Open file and read for non image data format
    OPEN(10,file=namefile,status='old')
-   DO i=1, maxdata
+   DO i=1, SIZE(x_tmp)
       READ(10,'(a)',END=20) line
 
       ! Format the line according to the specifiers (CSV)
