@@ -552,8 +552,9 @@ static std::string ToCExpression(const std::string& f90, int num_user_funcs)
     std::string s = f90;
     s = std::regex_replace(s, std::regex("SIGN\\(REAL\\(1\\.0, 8\\),"), "copysign(1.0,");
     static const std::pair<const char*, const char*> renames[] = {
-        { "EXP", "exp" }, { "LOG", "log" }, { "SIN", "sin" }, { "COS", "cos" }, { "TAN", "tan" },
-        { "ASIN", "asin" }, { "ACOS", "acos" }, { "ATAN", "atan" }, { "GAMMA", "tgamma" }, { "ABS", "fabs" }, { "ERF", "erf" } };
+        { "EXP", "exp" }, { "LOG", "log" }, { "SQRT", "sqrt" }, { "SIN", "sin" }, { "COS", "cos" }, { "TAN", "tan" },
+        { "SINH", "sinh" }, { "COSH", "cosh" }, { "TANH", "tanh" }, { "LOG10", "log10" },
+        { "ASIN", "asin" }, { "ACOS", "acos" }, { "ATAN", "atan" }, { "GAMMA", "tgamma" }, { "ABS", "fabs" }, { "ERF", "erf" }, { "ERFC", "erfc" } };
     for(const auto& rn : renames) s = std::regex_replace(s, std::regex(std::string("\\b") + rn.first + "\\("), std::string(rn.second) + "(");
     s = std::regex_replace(s, std::regex("(\\d)[dD]([+-]?\\d+)"), "$1e$2");   // Fortran double exponent
     return PowToC(s);

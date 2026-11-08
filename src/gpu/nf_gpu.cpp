@@ -200,7 +200,7 @@ void make_current() { if (S.vendor == Vendor::cuda) S.a.ctxSetCurrent(S.ctx); el
 // model in float, and again in double where its value is large against the noise there.
 std::string single_literals(std::string s) {
     // std::regex has no lookbehind: the character before the literal is matched and kept
-    static const std::regex lit(R"((^|[^\w.])(\d+\.\d*(?:[eE][-+]?\d+)?|\d+[eE][-+]?\d+)(?![fF\d.]))");
+    static const std::regex lit(R"((^|[^\w.])(\d+\.\d*(?:[eE][-+]?\d+)?|\.\d+(?:[eE][-+]?\d+)?|\d+[eE][-+]?\d+)(?![fF\d.]))");   // 1.0, 1., .5, 1e-3
     return std::regex_replace(s, lit, "$1$2f");
 }
 
