@@ -72,6 +72,10 @@ on, with the pip wheel as much as with a source build; without them a run stops 
 | macOS | `brew install gcc` (gfortran) and `xcode-select --install` (clang++) | no GPU support on macOS |
 | conda environments | `conda install -c conda-forge gfortran cxx-compiler` | as above |
 
+A Fortran model (`function.source: file.f`) reaches the GPU through an automatic translation to C that needs `f2c`
+(`sudo apt install f2c`, `sudo dnf install f2c`); without it the model runs on the CPU and the log says so. A C
+model or an expression needs nothing more.
+
 The Linux wheel needs glibc 2.28 or newer (Ubuntu 20.04, Debian 10, RHEL 8 and later); older
 systems build from source, see below. On an AMD GPU the ROCm runtime with hipRTC plays the role of
 the driver and the `[cuda]` extra; that path is written and has not been run yet.
@@ -452,8 +456,10 @@ The file is compiled at run time into a library of its own, kept under `~/.neste
 content: an edited file is rebuilt at the next run, an unchanged one is loaded as it is, the log says which. It is linked
 with the library's own functions, so it can call `VOIGT`, `GAUSS_BG`, ... as a function in `USERFCN.f` does, and a copy of
 the whole `USERFCN.f` with your functions added works too. The functions that read the `func_exp` and `func_conv` COMMON
-blocks are the exception: from a file they see their own copy of those blocks. On a GPU, `gpu_source` beside `source`
-gives the device the same function in C (see `src/gpu/README.md`).
+blocks are the exception: from a file they see their own copy of those blocks. On a GPU the file is translated to C at
+run time, automatically, with `f2c` (`sudo apt install f2c`): the GPU runs C, and the translation is compared with your
+Fortran by the self-test before the sampling starts. Without `f2c` the run says so and stays on the CPU; `gpu_source`
+beside `source` gives the device a C file written by hand instead (see `src/gpu/README.md`).
 
 The file can be C instead (`.c`, `.cc`, `.cpp`, `.cxx`): then it defines `double nf_user(double x, const double* params)`,
 with `params[i]` the parameter of `npar: i+1`, and the profiles `GAUSS_IF`, `LORE_IF`, `VOIGT_IF`, `erf`, `exp`, ... in

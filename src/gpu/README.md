@@ -58,6 +58,17 @@ is the same work as writing the Fortran was. The Fortran itself can come from a 
 input (`function.source`, see the main README): then neither side needs a rebuild of nested_fit.
 And `function.source` can be the C file itself: the CPU compiles it with g++ behind a wrapper
 with the legacy calling convention, the GPU with NVRTC, no `gpu_source` and no Fortran at all.
+A Fortran `function.source` without `gpu_source` is translated to C for the device at run time,
+with the machine's `f2c` (`f2c_bridge.cpp`): the file is put in the form f2c reads, only the
+functions the model calls are kept, f2c's C gets the device qualifiers, its DATA tables go to
+constant memory, and `sys/nf_f2c_shim.h` supplies f2c's runtime and the legacy entry points
+(WOFZ with the wing series, VOIGT_IF, ...) over the device library. The result is cached beside
+the compiled library under the same content key. Without f2c the run says so and stays on the
+CPU. Measured on Gonçalo's model with his `USERFCN.f` as the only input: the translation agrees
+with his Fortran to 6.5e-16 and runs at 2.6 ms per launch in the single-precision phase against
+1.8 ms for the hand-written C twin (f2c's by-reference style), 17 ms in double; the first run
+pays about a minute of compiles, the next ones take the library and the translation from the
+cache.
 
 **Precision.** `search.gpu_precision` (env `NESTED_FIT_GPU_PRECISION`):
 

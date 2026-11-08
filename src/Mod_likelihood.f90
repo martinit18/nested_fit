@@ -21,7 +21,7 @@ MODULE MOD_LIKELIHOOD
   USE MOD_STRUTIL
   USE MOD_GPU, ONLY: gpu_on, gpu_threads, gpu_mixed, gpu_per_point, gpu_pref, gpu_precision_auto, gpu_threads_auto, gpu_tolerance, &
        gpu_nladder, gpu_ladder, gpu_ladder_err, gpu_threshold_now, gpu_nth_before, nf_gpu_loglike, nf_gpu_set_tolerance, &
-       nf_gpu_device_name, GPU_SETUP, GPU_THRESHOLD_FOR, C_STR, READ_TEXT_FILE
+       nf_gpu_device_name, GPU_SETUP, GPU_DEVICE_PRESENT, GPU_THRESHOLD_FOR, C_STR, READ_TEXT_FILE
   !$ USE omp_lib, ONLY: omp_get_thread_num
 
   !$ USE OMP_LIB
@@ -343,7 +343,7 @@ CONTAINS
 
   SUBROUTINE GPU_SETUP_DATA()
     ! Hand the data and the user function to the GPU backend. Sets gpu_on; one log line either way.
-    USE MOD_AUTOFUNC, ONLY: gpu_c_body, gpu_param_ids, gpu_npar, HAS_VALID_C_EXT
+    USE MOD_AUTOFUNC, ONLY: gpu_c_body, gpu_param_ids, gpu_npar, HAS_VALID_C_EXT, DEVICE_SOURCE_FROM_FORTRAN
     CHARACTER(LEN=:), ALLOCATABLE :: src
     INTEGER :: like_kind, n, n_par
     CHARACTER(512) :: why, dev_source
@@ -353,15 +353,22 @@ CONTAINS
        RETURN
     END IF
     n = ndata_set(1)
+    IF (.NOT.GPU_DEVICE_PRESENT(opt_device, why)) THEN
+       CALL LOG_MESSAGE('GPU: not used ('//TRIM(why)//')')
+       RETURN
+    END IF
     ! a device source written by the user takes the full parameter vector, as the legacy Fortran
     ! does: function.gpu_source, or function.source itself when it is the C file
     dev_source = opt_gpu_source
     IF (LEN_TRIM(dev_source) == 0 .AND. LEN_TRIM(opt_function_source) > 0) THEN
        IF (HAS_VALID_C_EXT(TRIM(opt_function_source))) THEN
           dev_source = opt_function_source
-       ELSE
-          CALL LOG_MESSAGE('GPU: not used (function.source is Fortran; function.gpu_source gives the device the same function in C)')
-          RETURN
+       ELSE   ! Fortran: translated to C for the device, automatically
+          CALL DEVICE_SOURCE_FROM_FORTRAN(TRIM(opt_function_source), TRIM(funcname(1)), dev_source, why)
+          IF (LEN_TRIM(why) > 0) THEN
+             CALL LOG_MESSAGE('GPU: not used ('//TRIM(why)//')')
+             RETURN
+          END IF
        END IF
     END IF
     IF (LEN_TRIM(dev_source) > 0) THEN

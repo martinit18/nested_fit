@@ -101,6 +101,33 @@ CONTAINS
     END DO
   END FUNCTION
 
+  ! Is there a device to prepare a source for? The checks GPU_SETUP makes first, so that nothing is translated or
+  ! read for a machine without a GPU or a run that asked for the CPU.
+  FUNCTION GPU_DEVICE_PRESENT(device_pref, why) RESULT(present)
+    CHARACTER(LEN=*), INTENT(IN) :: device_pref
+    CHARACTER(LEN=*), INTENT(OUT) :: why
+    LOGICAL :: present
+    CHARACTER(LEN=32) :: env
+    INTEGER :: st
+    present = .FALSE.
+    why = ''
+    CALL GET_ENVIRONMENT_VARIABLE('NESTED_FIT_DEVICE', env, STATUS=st)
+    IF (st == 0 .AND. TRIM(env) == 'cpu') THEN
+      why = 'NESTED_FIT_DEVICE=cpu'
+      RETURN
+    END IF
+    IF (st /= 0 .AND. TRIM(device_pref) == 'cpu') THEN
+      why = 'search.device: cpu'
+      RETURN
+    END IF
+    CALL nf_gpu_set_preference(TRIM(device_pref)//c_null_char)
+    IF (nf_gpu_available() == 0) THEN
+      why = C_STR(nf_gpu_last_error())
+      RETURN
+    END IF
+    present = .TRUE.
+  END FUNCTION
+
   ! Decide, upload, compile. Returns a one-line reason in `why` when the GPU is not used.
   SUBROUTINE GPU_SETUP(x, nc, nc_err, ndata, like_kind, nthreads, c_body, param_ids, npar, why, device_pref, min_points_pref, threads_pref, precision_pref, tolerance_pref)
     REAL(8), DIMENSION(*), INTENT(IN) :: x, nc, nc_err

@@ -23,6 +23,10 @@ MODULE MOD_AUTOFUNC
     CHARACTER(512), PUBLIC :: gpu_c_body = '', gpu_param_ids = ''
     INTEGER,        PUBLIC :: gpu_npar = 0
 
+    ! The function.source last loaded: its cache key and base name, for the device source made from it
+    CHARACTER(LEN=512), PUBLIC :: source_base = ''
+    CHARACTER(LEN=32),  PUBLIC :: source_key = ''
+
     PUBLIC :: COMPILE_CACHE_FUNC, &
         COMPILE_CACHE_MFG, &
         COMPILE_CACHE_FUNC_NATIVE, &
@@ -38,6 +42,7 @@ MODULE MOD_AUTOFUNC
         PARSE_LATEX_DEALLOC, &
         GET_USER_FUNC_PROCPTR, &
         LOAD_SOURCE_FUNC, &
+        DEVICE_SOURCE_FROM_FORTRAN, &
         GET_CACHE_SIZE, &
         GET_CACHE, &
         cache_entry_t, &
@@ -189,6 +194,18 @@ MODULE MOD_AUTOFUNC
         END FUNCTION
     END INTERFACE
     
+    ! f2c_bridge.cpp interface
+    INTERFACE
+        FUNCTION nf_f2c_translate(fortran_file, function, shim_path, work_dir, out_path, err, errlen) BIND(c, name='nf_f2c_translate')
+            USE iso_c_binding
+            IMPLICIT NONE
+            CHARACTER(c_char), INTENT(IN)  :: fortran_file(*), function(*), shim_path(*), work_dir(*), out_path(*)
+            CHARACTER(c_char), INTENT(OUT) :: err(*)
+            INTEGER(c_int), VALUE          :: errlen
+            INTEGER(c_int)                 :: nf_f2c_translate
+        END FUNCTION
+    END INTERFACE
+
     ! native_parser.cpp interface
     INTERFACE
         FUNCTION ParseNativeFunc(lang, filename) RESULT(output) BIND(c,name="ParseNativeFunc")
@@ -1115,6 +1132,8 @@ MODULE MOD_AUTOFUNC
         base = path(i+1:)
         dir = TRIM(nf_cache_folder)//'source/'
         lib = TRIM(dir)//TRIM(base)//'-'//TRIM(key)//'.so'
+        source_base = base
+        source_key = key
 
         INQUIRE(FILE=lib, EXIST=exist)
         IF(exist) THEN
@@ -1183,6 +1202,36 @@ MODULE MOD_AUTOFUNC
             CALL LOG_ERROR('function.source: no FUNCTION '//TRIM(funcname)//'(x, npar, val) in '//TRIM(path))
             CALL LOG_ERROR_HEADER()
             CALL HALT_EXECUTION()
+        ENDIF
+    END SUBROUTINE
+
+    ! The device source of a Fortran function.source: f2c at run time (f2c_bridge.cpp), cached beside the library
+    ! under the same content key, so an edited file is translated again and an unchanged one is not.
+    SUBROUTINE DEVICE_SOURCE_FROM_FORTRAN(path, funcname, out, why)
+        CHARACTER(LEN=*), INTENT(IN)  :: path, funcname
+        CHARACTER(LEN=*), INTENT(OUT) :: out, why
+        CHARACTER(KIND=c_char, LEN=512) :: err
+        CHARACTER(LEN=1024) :: dir
+        INTEGER :: status, i
+        LOGICAL :: exist
+        why = ''
+        dir = TRIM(nf_cache_folder)//'source/'
+        out = TRIM(dir)//TRIM(source_base)//'-'//TRIM(source_key)//'.c'
+        INQUIRE(FILE=out, EXIST=exist)
+        IF(exist) THEN
+            CALL LOG_MESSAGE('Function source: '//TRIM(path)//' already translated for the device, taken from the cache')
+            RETURN
+        ENDIF
+        CALL ENSURE_DIRECTORY(TRIM(dir)//'obj/')
+        CALL LOG_MESSAGE('Function source: translating '//TRIM(path)//' to C for the device (f2c)')
+        err = ''
+        status = nf_f2c_translate(TRIM(path)//c_null_char, TRIM(funcname)//c_null_char, &
+            TRIM(nf_cache_folder)//'sys/nf_f2c_shim.h'//c_null_char, TRIM(dir)//'obj'//c_null_char, TRIM(out)//c_null_char, err, 512)
+        IF(status.NE.0) THEN
+            i = INDEX(err, c_null_char)
+            IF(i.EQ.0) i = LEN(err) + 1
+            why = err(1:i-1)
+            out = ''
         ENDIF
     END SUBROUTINE
 

@@ -199,6 +199,7 @@ set(SRC_FILES_CXX
     src/helper/console.cpp
     src/helper/utils.cpp
     src/funceval/native_parser.cpp
+    src/funceval/f2c_bridge.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/latex_parser.cpp
 )
 set(SRC_FILES_CXX_AC
@@ -277,6 +278,13 @@ rm_link_resources(
 	NAME "DeviceLib"
 	TARGET ${nested_fit_target}
 	FILES ${CMAKE_SOURCE_DIR}/src/gpu/nf_device_lib.h
+	OUTDIR "sys"
+)
+
+rm_link_resources(
+	NAME "F2cShim"
+	TARGET ${nested_fit_target}
+	FILES ${CMAKE_SOURCE_DIR}/src/gpu/nf_f2c_shim.h
 	OUTDIR "sys"
 )
 

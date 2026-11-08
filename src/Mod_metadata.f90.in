@@ -51,6 +51,13 @@ MODULE MOD_METADATA
             LOGICAL(c_bool) :: output
         END FUNCTION
 
+        FUNCTION COPY_CACHE_DATA_F2C(cache_root) RESULT(output) BIND(c, name='CopyCacheDataF2cShim')
+            USE, INTRINSIC :: ISO_C_BINDING
+            IMPLICIT NONE
+            CHARACTER(c_char), INTENT(IN), DIMENSION(*) :: cache_root
+            LOGICAL(c_bool) :: output
+        END FUNCTION
+
         FUNCTION COPY_CACHE_DATA_MAN(cache_root) RESULT(output) BIND(c, name='CopyCacheDataManifestFile')
             USE, INTRINSIC :: ISO_C_BINDING
             IMPLICIT NONE
@@ -93,7 +100,7 @@ MODULE MOD_METADATA
             IMPLICIT NONE
             CHARACTER(LEN=*), INTENT(IN)  :: cache_root
             LOGICAL         , INTENT(OUT) :: result
-            LOGICAL :: obj_result, leg_result, lib_result, man_result
+            LOGICAL :: obj_result, leg_result, lib_result, f2c_result, man_result
             CHARACTER(c_char), DIMENSION(:), POINTER :: c_path
 
             CALL ENSURE_DIRECTORY(TRIM(cache_root)//'sys/legacy/')
@@ -101,10 +108,11 @@ MODULE MOD_METADATA
             obj_result = COPY_CACHE_DATA_OBJ(c_path(1))
             leg_result = COPY_CACHE_DATA_LEGACY(c_path(1))
             lib_result = COPY_CACHE_DATA_DEVLIB(c_path(1))
+            f2c_result = COPY_CACHE_DATA_F2C(c_path(1))
             man_result = COPY_CACHE_DATA_MAN(c_path(1)) 
             CALL F_C_STRING_DEALLOC_I(c_path)
 
-            result = obj_result.AND.leg_result.AND.lib_result.AND.man_result
+            result = obj_result.AND.leg_result.AND.lib_result.AND.f2c_result.AND.man_result
         END SUBROUTINE
 
         SUBROUTINE F_C_STRING_ALLOC_I(f_string, c_string)
@@ -183,8 +191,9 @@ MODULE MOD_METADATA
             ! Create or get the cache directory
             CALL GET_CACHE_DIR(cache_created)
 
-            ! Populate the cache if it does not exist, or if another version filled sys/
-            IF(cache_created .OR. TRIM(SYS_CACHE_VERSION()).NE.version_full) THEN
+            ! Populate the cache if it does not exist, if another version filled sys/, or if a file this
+            ! build ships is missing from it (a rebuild under the same version)
+            IF(cache_created .OR. TRIM(SYS_CACHE_VERSION()).NE.version_full .OR. .NOT.SYS_CACHE_COMPLETE()) THEN
                 CALL POPULATE_CACHE()
                 CALL WRITE_SYS_CACHE_VERSION()
             ENDIF
@@ -200,6 +209,15 @@ MODULE MOD_METADATA
             IF(ios.NE.0) RETURN
             READ(u, '(a)', IOSTAT=ios) stamp
             CLOSE(u)
+        END FUNCTION
+
+        FUNCTION SYS_CACHE_COMPLETE() RESULT(complete)
+            IMPLICIT NONE
+            LOGICAL :: complete, e1, e2, e3
+            INQUIRE(FILE=TRIM(nf_cache_folder)//'sys/nf_device_lib.h', EXIST=e1)
+            INQUIRE(FILE=TRIM(nf_cache_folder)//'sys/nf_f2c_shim.h', EXIST=e2)
+            INQUIRE(FILE=TRIM(nf_cache_folder)//'sys/legacy/USERFCN.f.o', EXIST=e3)
+            complete = e1.AND.e2.AND.e3
         END FUNCTION
 
         SUBROUTINE WRITE_SYS_CACHE_VERSION()
